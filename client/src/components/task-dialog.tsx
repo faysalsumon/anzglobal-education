@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,20 +27,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  CalendarIcon,
-  ListTodo,
-  Loader2,
-  User,
-  MessageSquare,
-  Send,
-  AtSign,
-} from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
+import { CalendarIcon, ListTodo, Loader2, User } from "lucide-react";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { TaskNoteWithAuthor } from "@shared/schema";
+import { useAuth } from "@/hooks/useAuth";
+import { TaskInlineNotes } from "@/components/task-inline-notes";
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title is too long"),
@@ -131,192 +124,6 @@ const STATUS_LABELS: Record<string, string> = {
   on_hold: "On Hold",
 };
 
-function renderNoteContent(content: string) {
-  const parts = content.split(/(@\S+(?:\s+\S+)?)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("@")) {
-      return (
-        <span key={i} className="text-primary font-medium">
-          {part}
-        </span>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
-}
-
-function NoteComposer({
-  taskId,
-  teamMembers,
-  onNoteAdded,
-}: {
-  taskId: string;
-  teamMembers: TeamMember[];
-  onNoteAdded: () => void;
-}) {
-  const { toast } = useToast();
-  const [noteText, setNoteText] = useState("");
-  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [mentionStart, setMentionStart] = useState<number>(-1);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const filteredMembers = mentionQuery !== null
-    ? teamMembers.filter((m) => {
-        const fullName = `${m.firstName || ""} ${m.lastName || ""}`.toLowerCase().trim();
-        const email = m.email.toLowerCase();
-        const q = mentionQuery.toLowerCase();
-        return fullName.includes(q) || email.includes(q);
-      }).slice(0, 6)
-    : [];
-
-  const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    setNoteText(val);
-
-    const cursor = e.target.selectionStart ?? val.length;
-    const textBefore = val.slice(0, cursor);
-    const atMatch = textBefore.match(/@(\w*)$/);
-    if (atMatch) {
-      setMentionQuery(atMatch[1]);
-      setMentionStart(cursor - atMatch[0].length);
-    } else {
-      setMentionQuery(null);
-      setMentionStart(-1);
-    }
-  }, []);
-
-  const insertMention = useCallback((member: TeamMember) => {
-    const fullName = `${member.firstName || ""} ${member.lastName || ""}`.trim() || member.email;
-    const before = noteText.slice(0, mentionStart);
-    const after = noteText.slice(textareaRef.current?.selectionStart ?? noteText.length);
-    const inserted = `@${fullName} `;
-    const newText = before + inserted + after;
-    setNoteText(newText);
-    setMentionQuery(null);
-    setMentionStart(-1);
-    setMentionedUserIds(prev => prev.includes(member.id) ? prev : [...prev, member.id]);
-    setTimeout(() => {
-      if (textareaRef.current) {
-        const pos = before.length + inserted.length;
-        textareaRef.current.focus();
-        textareaRef.current.setSelectionRange(pos, pos);
-      }
-    }, 0);
-  }, [noteText, mentionStart]);
-
-  const addNoteMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", `/api/tasks/${taskId}/notes`, {
-        content: noteText.trim(),
-        mentionedUserIds: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
-      });
-    },
-    onSuccess: () => {
-      setNoteText("");
-      setMentionedUserIds([]);
-      setMentionQuery(null);
-      onNoteAdded();
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to add note",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (mentionQuery !== null && filteredMembers.length > 0) {
-      if (e.key === "Escape") {
-        setMentionQuery(null);
-        e.preventDefault();
-      }
-    }
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      if (noteText.trim()) addNoteMutation.mutate();
-    }
-  };
-
-  return (
-    <div className="relative">
-      <div className="relative">
-        <Textarea
-          ref={textareaRef}
-          value={noteText}
-          onChange={handleTextChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Add a note or update… Type @ to mention a team member"
-          className="min-h-[80px] pr-10 resize-none"
-          data-testid="textarea-task-note"
-        />
-        <AtSign className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
-      </div>
-
-      {mentionQuery !== null && filteredMembers.length > 0 && (
-        <div
-          ref={dropdownRef}
-          className="absolute z-50 w-64 bg-popover border rounded-md shadow-md py-1 bottom-full mb-1 left-0"
-          data-testid="mention-dropdown"
-        >
-          {filteredMembers.map((member) => {
-            const fullName = `${member.firstName || ""} ${member.lastName || ""}`.trim() || member.email;
-            const initials = `${member.firstName?.charAt(0) || ""}${member.lastName?.charAt(0) || ""}`.toUpperCase() || "U";
-            return (
-              <button
-                key={member.id}
-                type="button"
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover-elevate text-left"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  insertMention(member);
-                }}
-                data-testid={`mention-option-${member.id}`}
-              >
-                <Avatar className="h-6 w-6 shrink-0">
-                  <AvatarImage src={member.profileImageUrl || undefined} alt={fullName} />
-                  <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-                </Avatar>
-                <div className="min-w-0">
-                  <p className="font-medium truncate">{fullName}</p>
-                  <p className="text-xs text-muted-foreground truncate">{member.email}</p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      <div className="flex justify-between items-center mt-2">
-        <p className="text-xs text-muted-foreground">
-          Type <span className="font-mono bg-muted px-1 rounded">@</span> to tag someone &middot; <span className="font-mono bg-muted px-1 rounded">⌘↵</span> to submit
-        </p>
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => addNoteMutation.mutate()}
-          disabled={!noteText.trim() || addNoteMutation.isPending}
-          data-testid="button-add-note"
-        >
-          {addNoteMutation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4 mr-1" />
-          )}
-          Add Note
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export function TaskDialog({
   open,
   onOpenChange,
@@ -325,6 +132,7 @@ export function TaskDialog({
   onSuccess,
 }: TaskDialogProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const isEditing = !!task;
 
   const form = useForm<TaskFormValues>({
@@ -380,16 +188,6 @@ export function TaskDialog({
   });
 
   const applications = applicationsData?.applications || [];
-
-  const { data: notes = [], isLoading: notesLoading, refetch: refetchNotes } = useQuery<TaskNoteWithAuthor[]>({
-    queryKey: ["/api/tasks", task?.id, "notes"],
-    queryFn: async () => {
-      const res = await fetch(`/api/tasks/${task!.id}/notes`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch notes");
-      return res.json();
-    },
-    enabled: isEditing && open && !!task?.id,
-  });
 
   const createMutation = useMutation({
     mutationFn: async (data: TaskFormValues) => {
@@ -725,81 +523,10 @@ export function TaskDialog({
           </form>
         </Form>
 
-        {/* Notes & Updates thread — only shown when editing */}
-        {isEditing && (
+        {isEditing && task && (
           <>
             <Separator className="my-2" />
-            <div className="space-y-3" data-testid="task-notes-section">
-              <h3 className="flex items-center gap-2 text-sm font-semibold">
-                <MessageSquare className="h-4 w-4" />
-                Notes & Updates
-                {notes.length > 0 && (
-                  <span className="text-xs text-muted-foreground font-normal">
-                    ({notes.length})
-                  </span>
-                )}
-              </h3>
-
-              {/* Notes list */}
-              <div className="space-y-3 max-h-64 overflow-y-auto pr-1" data-testid="notes-list">
-                {notesLoading ? (
-                  <div className="space-y-2">
-                    {[1, 2].map(i => (
-                      <div key={i} className="flex gap-2">
-                        <div className="h-7 w-7 rounded-full bg-muted animate-pulse shrink-0" />
-                        <div className="flex-1 space-y-1">
-                          <div className="h-3 w-24 bg-muted animate-pulse rounded" />
-                          <div className="h-3 w-full bg-muted animate-pulse rounded" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : notes.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic py-2">
-                    No notes yet — add the first update below
-                  </p>
-                ) : (
-                  notes.map((note) => {
-                    const authorName = note.author
-                      ? `${note.author.firstName || ""} ${note.author.lastName || ""}`.trim() || "Team Member"
-                      : "Team Member";
-                    const initials = note.author
-                      ? `${note.author.firstName?.charAt(0) || ""}${note.author.lastName?.charAt(0) || ""}`.toUpperCase() || "TM"
-                      : "TM";
-                    return (
-                      <div key={note.id} className="flex gap-2" data-testid={`note-item-${note.id}`}>
-                        <Avatar className="h-7 w-7 shrink-0 mt-0.5">
-                          <AvatarImage src={note.author?.profileImageUrl || undefined} alt={authorName} />
-                          <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-baseline gap-2 flex-wrap">
-                            <span className="text-xs font-semibold">{authorName}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {note.createdAt
-                                ? formatDistanceToNow(new Date(note.createdAt), { addSuffix: true })
-                                : ""}
-                            </span>
-                          </div>
-                          <p className="text-sm mt-0.5 break-words leading-relaxed">
-                            {renderNoteContent(note.content)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* Compose new note */}
-              <NoteComposer
-                taskId={task!.id}
-                teamMembers={teamMembers}
-                onNoteAdded={() => {
-                  queryClient.invalidateQueries({ queryKey: ["/api/tasks", task!.id, "notes"] });
-                }}
-              />
-            </div>
+            <TaskInlineNotes taskId={task.id} currentUserId={user?.id ?? null} />
           </>
         )}
       </DialogContent>

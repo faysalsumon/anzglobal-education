@@ -28,7 +28,9 @@ import {
   Edit,
   ArrowRight,
   UserCircle,
+  MessageSquare,
 } from "lucide-react";
+import { TaskInlineNotes } from "@/components/task-inline-notes";
 import { format, formatDistanceToNow, isPast, isToday, isTomorrow } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -88,6 +90,7 @@ export function MyTasksPanel() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskWithRelations | null>(null);
+  const [expandedNoteTaskId, setExpandedNoteTaskId] = useState<string | null>(null);
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery<TaskWithRelations[]>({
     queryKey: ["/api/tasks/my-tasks"],
@@ -181,7 +184,17 @@ export function MyTasksPanel() {
     return { text: `Due ${format(date, "MMM d")}`, className: "text-muted-foreground" };
   };
 
-  const TaskItem = ({ task, onEdit }: { task: TaskWithRelations; onEdit: (task: TaskWithRelations) => void }) => {
+  const TaskItem = ({
+    task,
+    onEdit,
+    isExpanded,
+    onToggleExpand,
+  }: {
+    task: TaskWithRelations;
+    onEdit: (task: TaskWithRelations) => void;
+    isExpanded: boolean;
+    onToggleExpand: () => void;
+  }) => {
     const priority = priorityConfig[task.priority];
     const status = statusConfig[task.status];
     const PriorityIcon = priority.icon;
@@ -199,76 +212,92 @@ export function MyTasksPanel() {
 
     return (
       <div
-        className="flex items-start gap-3 p-3 rounded-lg border bg-card hover-elevate"
+        className="rounded-lg border bg-card"
         data-testid={`task-item-${task.id}`}
       >
-        <Checkbox
-          checked={task.status === "completed"}
-          onCheckedChange={() => completeTaskMutation.mutate(task.id)}
-          disabled={completeTaskMutation.isPending || task.status === "completed"}
-          data-testid={`checkbox-task-${task.id}`}
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className={`font-medium text-sm ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
-              {task.title}
-            </span>
-            <Badge className={priority.color} variant="outline">
-              <PriorityIcon className="h-3 w-3 mr-1" />
-              {priority.label}
-            </Badge>
-            <Badge className={status.color} variant="outline">
-              {status.label}
-            </Badge>
-          </div>
-          {task.description && (
-            <p className="text-sm text-muted-foreground line-clamp-1 mb-1">{task.description}</p>
-          )}
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            {dueDisplay && (
-              <span className={`flex items-center gap-1 ${dueDisplay.className}`}>
-                <Clock className="h-3 w-3" />
-                {dueDisplay.text}
+        <div className="flex items-start gap-3 p-3">
+          <Checkbox
+            checked={task.status === "completed"}
+            onCheckedChange={() => completeTaskMutation.mutate(task.id)}
+            disabled={completeTaskMutation.isPending || task.status === "completed"}
+            data-testid={`checkbox-task-${task.id}`}
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className={`font-medium text-sm ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
+                {task.title}
               </span>
-            )}
-            {/* Show who this task is assigned to if I'm the creator */}
-            {isCreator && !isAssignee && assigneeName && (
-              <span className="flex items-center gap-1 text-primary">
-                <ArrowRight className="h-3 w-3" />
-                {assigneeName}
-              </span>
-            )}
-            {/* Show who created this if I'm the assignee and didn't create it */}
-            {isAssignee && !isCreator && creatorName && (
-              <span className="flex items-center gap-1 text-muted-foreground">
-                <UserCircle className="h-3 w-3" />
-                from {creatorName}
-              </span>
-            )}
-            {task.application && (
-              <Link href={`/admin/applications/${task.application.id}`}>
-                <span className="flex items-center gap-1 text-primary cursor-pointer hover:underline">
-                  <ArrowUpRight className="h-3 w-3" />
-                  {task.application.applicationNumber || "View Application"}
-                </span>
-              </Link>
-            )}
-            {task.category && (
-              <Badge variant="secondary" className="text-xs">
-                {task.category.replace(/_/g, " ")}
+              <Badge className={priority.color} variant="outline">
+                <PriorityIcon className="h-3 w-3 mr-1" />
+                {priority.label}
               </Badge>
+              <Badge className={status.color} variant="outline">
+                {status.label}
+              </Badge>
+            </div>
+            {task.description && (
+              <p className="text-sm text-muted-foreground line-clamp-1 mb-1">{task.description}</p>
             )}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              {dueDisplay && (
+                <span className={`flex items-center gap-1 ${dueDisplay.className}`}>
+                  <Clock className="h-3 w-3" />
+                  {dueDisplay.text}
+                </span>
+              )}
+              {isCreator && !isAssignee && assigneeName && (
+                <span className="flex items-center gap-1 text-primary">
+                  <ArrowRight className="h-3 w-3" />
+                  {assigneeName}
+                </span>
+              )}
+              {isAssignee && !isCreator && creatorName && (
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  <UserCircle className="h-3 w-3" />
+                  from {creatorName}
+                </span>
+              )}
+              {task.application && (
+                <Link href={`/admin/applications/${task.application.id}`}>
+                  <span className="flex items-center gap-1 text-primary cursor-pointer hover:underline">
+                    <ArrowUpRight className="h-3 w-3" />
+                    {task.application.applicationNumber || "View Application"}
+                  </span>
+                </Link>
+              )}
+              {task.category && (
+                <Badge variant="secondary" className="text-xs">
+                  {task.category.replace(/_/g, " ")}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center pt-1.5 mt-1.5 border-t border-border/40">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                data-testid={`button-toggle-comments-${task.id}`}
+              >
+                <MessageSquare className="h-3 w-3" />
+                {isExpanded ? "Hide comments" : "Comments"}
+              </button>
+            </div>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            onClick={() => onEdit(task)}
+            data-testid={`button-edit-task-${task.id}`}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="shrink-0"
-          onClick={() => onEdit(task)}
-          data-testid={`button-edit-task-${task.id}`}
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
+        {isExpanded && (
+          <div className="border-t border-border/40 px-4 py-3">
+            <TaskInlineNotes taskId={task.id} currentUserId={user?.id ?? null} />
+          </div>
+        )}
       </div>
     );
   };
@@ -440,10 +469,13 @@ export function MyTasksPanel() {
                     Overdue ({overdueTasks.length})
                   </h4>
                   {overdueTasks.map(task => (
-                    <TaskItem key={task.id} task={task} onEdit={(t) => {
-                      setEditingTask(t);
-                      setTaskDialogOpen(true);
-                    }} />
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      onEdit={(t) => { setEditingTask(t); setTaskDialogOpen(true); }}
+                      isExpanded={expandedNoteTaskId === task.id}
+                      onToggleExpand={() => setExpandedNoteTaskId(prev => prev === task.id ? null : task.id)}
+                    />
                   ))}
                 </div>
               )}
@@ -454,10 +486,13 @@ export function MyTasksPanel() {
                     Due Today ({todayTasks.length})
                   </h4>
                   {todayTasks.map(task => (
-                    <TaskItem key={task.id} task={task} onEdit={(t) => {
-                      setEditingTask(t);
-                      setTaskDialogOpen(true);
-                    }} />
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      onEdit={(t) => { setEditingTask(t); setTaskDialogOpen(true); }}
+                      isExpanded={expandedNoteTaskId === task.id}
+                      onToggleExpand={() => setExpandedNoteTaskId(prev => prev === task.id ? null : task.id)}
+                    />
                   ))}
                 </div>
               )}
@@ -468,10 +503,13 @@ export function MyTasksPanel() {
                     Upcoming ({upcomingTasks.length})
                   </h4>
                   {upcomingTasks.map(task => (
-                    <TaskItem key={task.id} task={task} onEdit={(t) => {
-                      setEditingTask(t);
-                      setTaskDialogOpen(true);
-                    }} />
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      onEdit={(t) => { setEditingTask(t); setTaskDialogOpen(true); }}
+                      isExpanded={expandedNoteTaskId === task.id}
+                      onToggleExpand={() => setExpandedNoteTaskId(prev => prev === task.id ? null : task.id)}
+                    />
                   ))}
                 </div>
               )}
@@ -482,10 +520,13 @@ export function MyTasksPanel() {
                     No Due Date
                   </h4>
                   {sortedTasks.filter(t => !t.dueDate && t.status !== "completed").map(task => (
-                    <TaskItem key={task.id} task={task} onEdit={(t) => {
-                      setEditingTask(t);
-                      setTaskDialogOpen(true);
-                    }} />
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      onEdit={(t) => { setEditingTask(t); setTaskDialogOpen(true); }}
+                      isExpanded={expandedNoteTaskId === task.id}
+                      onToggleExpand={() => setExpandedNoteTaskId(prev => prev === task.id ? null : task.id)}
+                    />
                   ))}
                 </div>
               )}

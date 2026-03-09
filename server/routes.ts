@@ -17175,6 +17175,39 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
+  // Edit a task note
+  app.patch("/api/tasks/:id/notes/:noteId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const { content } = req.body;
+      if (!content?.trim()) return res.status(400).json({ message: "Content is required" });
+
+      const note = await storage.updateTaskNote(req.params.noteId, content.trim());
+      res.json(note);
+    } catch (error: any) {
+      console.error("Error updating task note:", error);
+      res.status(500).json({ message: "Failed to update task note" });
+    }
+  });
+
+  // Delete a task note
+  app.delete("/api/tasks/:id/notes/:noteId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      await storage.deleteTaskNote(req.params.noteId);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting task note:", error);
+      res.status(500).json({ message: "Failed to delete task note" });
+    }
+  });
+
   // Get workload summary for all team members
   app.get("/api/tasks/workload-summary", isAuthenticated, async (req: any, res) => {
     try {

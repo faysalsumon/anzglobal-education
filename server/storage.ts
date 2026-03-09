@@ -347,6 +347,8 @@ export interface IStorage {
   completeTask(id: string): Promise<Task>;
   getTaskNotes(taskId: string): Promise<TaskNoteWithAuthor[]>;
   createTaskNote(data: InsertTaskNote): Promise<TaskNote>;
+  updateTaskNote(noteId: string, content: string): Promise<TaskNote>;
+  deleteTaskNote(noteId: string): Promise<void>;
   
   // Application internal notes operations
   getNoteById(id: string): Promise<ApplicationInternalNote | undefined>;
@@ -2119,6 +2121,19 @@ export class DatabaseStorage implements IStorage {
   async createTaskNote(data: InsertTaskNote): Promise<TaskNote> {
     const [note] = await db.insert(taskNotes).values(data).returning();
     return note;
+  }
+
+  async updateTaskNote(noteId: string, content: string): Promise<TaskNote> {
+    const [note] = await db
+      .update(taskNotes)
+      .set({ content })
+      .where(eq(taskNotes.id, noteId))
+      .returning();
+    return note;
+  }
+
+  async deleteTaskNote(noteId: string): Promise<void> {
+    await db.delete(taskNotes).where(eq(taskNotes.id, noteId));
   }
 
   // Application internal notes operations
