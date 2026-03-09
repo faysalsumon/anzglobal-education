@@ -4566,6 +4566,8 @@ export const insertFollowUpReminderSchema = createInsertSchema(followUpReminders
   completedAt: true,
   notificationSent: true,
   notificationSentAt: true,
+}).extend({
+  reminderAt: z.coerce.date(),
 });
 
 export type FollowUpReminder = typeof followUpReminders.$inferSelect;
