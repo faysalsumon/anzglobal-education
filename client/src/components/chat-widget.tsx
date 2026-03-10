@@ -65,6 +65,13 @@ export function ChatWidget() {
     return () => window.removeEventListener("open-chat-widget", handleOpenChat);
   }, []);
 
+  // Create a conversation whenever the chat is opened, regardless of how it was opened
+  useEffect(() => {
+    if (isOpen && !conversationId && !createConversationMutation.isPending) {
+      createConversationMutation.mutate();
+    }
+  }, [isOpen]);
+
   // Custom markdown components for CTA buttons
   const markdownComponents: Components = useMemo(() => ({
     a: ({ href, children }) => {
@@ -193,13 +200,8 @@ export function ChatWidget() {
     const willBeOpen = !isOpen;
     setIsOpen(willBeOpen);
     setIsMinimized(false);
-    
     if (willBeOpen) {
       setUnreadCount(0);
-      // Create conversation if we don't have one
-      if (!conversationId && !createConversationMutation.isPending) {
-        createConversationMutation.mutate();
-      }
     }
   };
 
