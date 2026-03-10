@@ -5322,7 +5322,9 @@ export type InsertAttendanceBreak = z.infer<typeof insertAttendanceBreakSchema>;
 export const emailAccounts = pgTable("email_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   label: varchar("label", { length: 100 }).notNull(),
+  displayName: varchar("display_name", { length: 100 }),
   email: varchar("email", { length: 255 }).notNull().unique(),
+  accountType: varchar("account_type", { length: 20 }).notNull().default("group"), // 'personal' | 'group'
   imapHost: varchar("imap_host", { length: 255 }).notNull(),
   imapPort: integer("imap_port").notNull().default(993),
   smtpHost: varchar("smtp_host", { length: 255 }).notNull(),
@@ -5334,6 +5336,32 @@ export const emailAccounts = pgTable("email_accounts", {
 export const insertEmailAccountSchema = createInsertSchema(emailAccounts).omit({ id: true, createdAt: true });
 export type EmailAccount = typeof emailAccounts.$inferSelect;
 export type InsertEmailAccount = z.infer<typeof insertEmailAccountSchema>;
+
+// App passwords for each mail account (stored in DB, managed by platform admin)
+export const emailAccountSecrets = pgTable("email_account_secrets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: varchar("account_id").notNull().references(() => emailAccounts.id, { onDelete: "cascade" }),
+  appPassword: text("app_password").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export const insertEmailAccountSecretSchema = createInsertSchema(emailAccountSecrets).omit({ id: true, createdAt: true, updatedAt: true });
+export type EmailAccountSecret = typeof emailAccountSecrets.$inferSelect;
+export type InsertEmailAccountSecret = z.infer<typeof insertEmailAccountSecretSchema>;
+
+// Access control: which admin users can access which mail accounts
+export const emailAccountAccess = pgTable("email_account_access", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: varchar("account_id").notNull().references(() => emailAccounts.id, { onDelete: "cascade" }),
+  adminUserId: varchar("admin_user_id").notNull(),
+  canSend: boolean("can_send").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [
+  unique().on(t.accountId, t.adminUserId),
+]);
+export const insertEmailAccountAccessSchema = createInsertSchema(emailAccountAccess).omit({ id: true, createdAt: true });
+export type EmailAccountAccess = typeof emailAccountAccess.$inferSelect;
+export type InsertEmailAccountAccess = z.infer<typeof insertEmailAccountAccessSchema>;
 
 export const emailCache = pgTable("email_cache", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

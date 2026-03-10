@@ -133,7 +133,6 @@ export function AdminMobileBottomNav({
     const roleMap: Record<string, string> = {
       cto: "CTO",
       branch_manager: "Branch Manager",
-      branch_manager: "Branch Manager",
       asst_branch_manager: "Asst. Branch Manager",
       senior_consultant: "Senior Consultant",
       junior_consultant: "Consultant",

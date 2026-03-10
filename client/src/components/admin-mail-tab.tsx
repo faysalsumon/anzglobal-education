@@ -2,7 +2,6 @@ import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
-import { useRegion } from "@/context/RegionContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +18,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
   Mail,
@@ -30,8 +36,6 @@ import {
   Reply,
   Forward,
   Trash2,
-  Star,
-  StarOff,
   Paperclip,
   Inbox,
   AlertCircle,
@@ -39,9 +43,23 @@ import {
   Pencil,
   Eye,
   EyeOff,
+  Settings,
+  Building,
+  Globe,
 } from "lucide-react";
+import { AdminMailAccountsPanel } from "@/components/admin-mail-accounts-panel";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
+
+interface UserMailAccount {
+  id: string;
+  email: string;
+  label: string;
+  displayName: string | null;
+  accountType: string;
+  regionCode: string | null;
+  canSend: boolean;
+}
 
 interface MailFolder {
   name: string;
@@ -129,21 +147,64 @@ function formatFileSize(bytes: number): string {
 
 // ─── Not Configured State ─────────────────────────────────────────────────
 
-function NotConfigured({ region }: { region: string }) {
+function NotConfigured({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center">
       <div className="p-4 rounded-full bg-muted">
         <Mail className="h-8 w-8 text-muted-foreground" />
       </div>
       <div>
-        <h3 className="font-semibold text-lg">Mail Not Configured</h3>
-        <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-          Set the <code className="bg-muted px-1 rounded text-xs">ZOHO_EMAIL_{region}</code> and{" "}
-          <code className="bg-muted px-1 rounded text-xs">ZOHO_APP_PASS_{region}</code> environment
-          variables to connect the Zoho inbox.
-        </p>
+        <h3 className="font-semibold text-lg">No Mail Access</h3>
+        {isSuperAdmin ? (
+          <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+            No mail accounts are configured yet. Use the account manager to add Zoho mail accounts and assign access to team members.
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+            You haven't been assigned to any mail accounts yet. Ask a platform admin to grant you access.
+          </p>
+        )}
       </div>
     </div>
+  );
+}
+
+// ─── Account Switcher ──────────────────────────────────────────────────────
+
+function AccountSwitcher({
+  accounts,
+  selectedId,
+  onChange,
+}: {
+  accounts: UserMailAccount[];
+  selectedId: string;
+  onChange: (id: string) => void;
+}) {
+  if (accounts.length <= 1) return null;
+
+  return (
+    <Select value={selectedId} onValueChange={onChange}>
+      <SelectTrigger
+        className="h-8 text-xs w-full"
+        data-testid="select-mail-account"
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {accounts.map((acc) => (
+          <SelectItem key={acc.id} value={acc.id}>
+            <div className="flex items-center gap-2">
+              {acc.accountType === "group" ? (
+                <Globe className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+              ) : (
+                <Building className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+              )}
+              <span>{acc.displayName || acc.label}</span>
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -154,11 +215,15 @@ function ComposeDialog({
   onClose,
   initialData,
   accountEmail,
+  accountId,
+  canSend,
 }: {
   open: boolean;
   onClose: () => void;
   initialData: ComposeData;
   accountEmail: string;
+  accountId: string;
+  canSend: boolean;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -173,7 +238,7 @@ function ComposeDialog({
 
   const sendMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(endpoint, {
+      return apiRequest(`${endpoint}?accountId=${accountId}`, {
         method: "POST",
         body: JSON.stringify({
           to: data.to,
@@ -208,6 +273,11 @@ function ComposeDialog({
           <div className="text-xs text-muted-foreground">
             From: <span className="font-medium">{accountEmail}</span>
           </div>
+          {!canSend && (
+            <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+              You have read-only access to this inbox. Contact a platform admin to enable sending.
+            </div>
+          )}
           <div className="space-y-1">
             <Label htmlFor="compose-to" className="text-xs">To</Label>
             <Input
@@ -264,7 +334,7 @@ function ComposeDialog({
             <Button
               type="button"
               onClick={() => sendMutation.mutate()}
-              disabled={sendMutation.isPending || !data.to || !data.subject}
+              disabled={sendMutation.isPending || !data.to || !data.subject || !canSend}
               data-testid="button-compose-send"
             >
               {sendMutation.isPending ? (
@@ -288,42 +358,76 @@ function FolderPanel({
   isLoading,
   selectedFolder,
   onSelectFolder,
+  accounts,
+  selectedAccountId,
+  onSelectAccount,
   accountLabel,
   accountEmail,
   onCompose,
   onSync,
   isSyncing,
+  isSuperAdmin,
+  onManageAccounts,
 }: {
   folders: MailFolder[];
   isLoading: boolean;
   selectedFolder: string;
   onSelectFolder: (path: string) => void;
+  accounts: UserMailAccount[];
+  selectedAccountId: string;
+  onSelectAccount: (id: string) => void;
   accountLabel: string;
   accountEmail: string;
   onCompose: () => void;
   onSync: () => void;
   isSyncing: boolean;
+  isSuperAdmin: boolean;
+  onManageAccounts: () => void;
 }) {
   return (
     <div className="flex flex-col h-full border-r bg-muted/20">
       {/* Header */}
       <div className="p-3 border-b space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold truncate">{accountLabel}</p>
-            <p className="text-[11px] text-muted-foreground truncate">{accountEmail}</p>
+        <div className="flex items-center justify-between gap-1">
+          <div className="flex-1 min-w-0">
+            {accounts.length > 1 ? (
+              <AccountSwitcher
+                accounts={accounts}
+                selectedId={selectedAccountId}
+                onChange={onSelectAccount}
+              />
+            ) : (
+              <>
+                <p className="text-xs font-semibold truncate">{accountLabel}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{accountEmail}</p>
+              </>
+            )}
           </div>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            onClick={onSync}
-            disabled={isSyncing}
-            data-testid="button-mail-sync"
-            title="Sync inbox"
-          >
-            <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin")} />
-          </Button>
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={onSync}
+              disabled={isSyncing}
+              data-testid="button-mail-sync"
+              title="Sync inbox"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin")} />
+            </Button>
+            {isSuperAdmin && (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={onManageAccounts}
+                data-testid="button-manage-mail-accounts"
+                title="Manage mail accounts"
+              >
+                <Settings className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         </div>
         <Button
           type="button"
@@ -384,7 +488,6 @@ function MessageListPanel({
   isLoading,
   selectedUid,
   onSelectMessage,
-  folder,
   searchQuery,
   onSearchChange,
 }: {
@@ -392,7 +495,6 @@ function MessageListPanel({
   isLoading: boolean;
   selectedUid: string | null;
   onSelectMessage: (uid: string) => void;
-  folder: string;
   searchQuery: string;
   onSearchChange: (q: string) => void;
 }) {
@@ -517,6 +619,8 @@ function MessageListPanel({
 function EmailReaderPanel({
   uid,
   folder,
+  accountId,
+  canSend,
   onBack,
   onReply,
   onForward,
@@ -524,6 +628,8 @@ function EmailReaderPanel({
 }: {
   uid: string;
   folder: string;
+  accountId: string;
+  canSend: boolean;
   onBack: () => void;
   onReply: (email: FullEmail) => void;
   onForward: (email: FullEmail) => void;
@@ -535,11 +641,12 @@ function EmailReaderPanel({
   const [showRaw, setShowRaw] = useState(false);
 
   const { data: email, isLoading, error } = useQuery<FullEmail>({
-    queryKey: ["/api/mail/messages", uid, folder],
+    queryKey: ["/api/mail/messages", accountId, uid, folder],
     queryFn: async () => {
-      const res = await fetch(`/api/mail/messages/${uid}?folder=${encodeURIComponent(folder)}`, {
-        credentials: "include",
-      });
+      const res = await fetch(
+        `/api/mail/messages/${uid}?folder=${encodeURIComponent(folder)}&accountId=${accountId}`,
+        { credentials: "include" }
+      );
       if (!res.ok) throw new Error("Failed to load email");
       return res.json();
     },
@@ -548,9 +655,10 @@ function EmailReaderPanel({
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(`/api/mail/messages/${uid}?folder=${encodeURIComponent(folder)}`, {
-        method: "DELETE",
-      });
+      return apiRequest(
+        `/api/mail/messages/${uid}?folder=${encodeURIComponent(folder)}&accountId=${accountId}`,
+        { method: "DELETE" }
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/mail/messages"] });
@@ -608,26 +716,30 @@ function EmailReaderPanel({
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1" />
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          onClick={() => email && onReply(email)}
-          data-testid="button-email-reply"
-          title="Reply"
-        >
-          <Reply className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          onClick={() => email && onForward(email)}
-          data-testid="button-email-forward"
-          title="Forward"
-        >
-          <Forward className="h-4 w-4" />
-        </Button>
+        {canSend && (
+          <>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => email && onReply(email)}
+              data-testid="button-email-reply"
+              title="Reply"
+            >
+              <Reply className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => email && onForward(email)}
+              data-testid="button-email-forward"
+              title="Forward"
+            >
+              <Forward className="h-4 w-4" />
+            </Button>
+          </>
+        )}
         <Button
           type="button"
           size="icon"
@@ -657,10 +769,7 @@ function EmailReaderPanel({
 
       {/* Email header */}
       <div className="px-5 py-4 border-b flex-shrink-0 space-y-1">
-        <h2
-          className="font-semibold text-base leading-snug"
-          data-testid="email-subject"
-        >
+        <h2 className="font-semibold text-base leading-snug" data-testid="email-subject">
           {email.subject || "(no subject)"}
         </h2>
         <div className="flex items-start gap-2.5 mt-2">
@@ -750,9 +859,36 @@ function EmailReaderPanel({
 type MobileView = "folders" | "list" | "reader";
 
 export function AdminMailTab() {
-  const { regionCode } = useRegion();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Admin role check (from session) — we check by fetching config
+  const { data: configData } = useQuery<{
+    configured: boolean;
+    accountCount: number;
+    email: string | null;
+    label: string | null;
+  }>({ queryKey: ["/api/mail/config"], staleTime: 60000 });
+
+  // Fetch user's accessible accounts
+  const { data: accountsData, isLoading: accountsLoading } = useQuery<{
+    accounts: UserMailAccount[];
+  }>({ queryKey: ["/api/mail/my-accounts"], staleTime: 60000 });
+
+  // Fetch admin check for management panel
+  const { data: adminAccountsData } = useQuery<{ accounts: any[] }>({
+    queryKey: ["/api/mail/accounts"],
+    staleTime: 60000,
+    retry: false,
+  });
+  const isSuperAdmin = adminAccountsData !== undefined; // 403 = not admin, data = is admin
+
+  const userAccounts = accountsData?.accounts || [];
+
+  // Selected account
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+  const currentAccountId = selectedAccountId || userAccounts[0]?.id || "";
+  const currentAccount = userAccounts.find((a) => a.id === currentAccountId) || userAccounts[0];
 
   const [selectedFolder, setSelectedFolder] = useState("INBOX");
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
@@ -766,56 +902,64 @@ export function AdminMailTab() {
     subject: "",
     body: "",
   });
+  const [showAccountManager, setShowAccountManager] = useState(false);
 
-  // Check if mail is configured
-  const { data: config } = useQuery<{ configured: boolean; region: string; email: string | null; label: string | null }>({
-    queryKey: ["/api/mail/config"],
-    staleTime: 60000,
-  });
-
-  // Fetch folders
-  const { data: foldersData, isLoading: foldersLoading, refetch: refetchFolders } = useQuery<{
+  // Fetch folders for selected account
+  const { data: foldersData, isLoading: foldersLoading } = useQuery<{
     folders: MailFolder[];
     account: string;
+    accountId: string;
     label: string;
+    canSend: boolean;
   }>({
-    queryKey: ["/api/mail/folders"],
+    queryKey: ["/api/mail/folders", currentAccountId],
+    queryFn: async () => {
+      const url = currentAccountId
+        ? `/api/mail/folders?accountId=${currentAccountId}`
+        : "/api/mail/folders";
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load folders");
+      return res.json();
+    },
     staleTime: 30000,
-    enabled: config?.configured === true,
+    enabled: userAccounts.length > 0,
   });
 
   // Fetch message list
-  const { data: messagesData, isLoading: messagesLoading, refetch: refetchMessages } = useQuery<{
+  const { data: messagesData, isLoading: messagesLoading } = useQuery<{
     messages: MailMessage[];
     total: number;
     page: number;
     limit: number;
     folder: string;
   }>({
-    queryKey: ["/api/mail/messages", selectedFolder],
+    queryKey: ["/api/mail/messages", currentAccountId, selectedFolder],
     queryFn: async () => {
-      const res = await fetch(
-        `/api/mail/messages?folder=${encodeURIComponent(selectedFolder)}&limit=50`,
-        { credentials: "include" }
-      );
+      const params = new URLSearchParams({
+        folder: selectedFolder,
+        limit: "50",
+        ...(currentAccountId ? { accountId: currentAccountId } : {}),
+      });
+      const res = await fetch(`/api/mail/messages?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to load messages");
       return res.json();
     },
     staleTime: 60000,
-    enabled: config?.configured === true,
+    enabled: userAccounts.length > 0,
   });
 
   // Sync mutation
   const syncMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("/api/mail/sync", {
+      const params = currentAccountId ? `?accountId=${currentAccountId}` : "";
+      return apiRequest(`/api/mail/sync${params}`, {
         method: "POST",
         body: JSON.stringify({ folder: selectedFolder }),
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/mail/messages"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/mail/folders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/mail/messages", currentAccountId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/mail/folders", currentAccountId] });
       toast({ title: "Inbox synced" });
     },
     onError: (err: any) => {
@@ -823,12 +967,20 @@ export function AdminMailTab() {
     },
   });
 
+  const handleSelectAccount = useCallback((id: string) => {
+    setSelectedAccountId(id);
+    setSelectedFolder("INBOX");
+    setSelectedUid(null);
+    setMobileView("list");
+    queryClient.invalidateQueries({ queryKey: ["/api/mail/folders", id] });
+    queryClient.invalidateQueries({ queryKey: ["/api/mail/messages", id] });
+  }, [queryClient]);
+
   const handleSelectMessage = useCallback((uid: string) => {
     setSelectedUid(uid);
     setMobileView("reader");
-    // Optimistically mark as read in cache
     queryClient.setQueryData(
-      ["/api/mail/messages", selectedFolder],
+      ["/api/mail/messages", currentAccountId, selectedFolder],
       (old: any) => {
         if (!old) return old;
         return {
@@ -839,7 +991,7 @@ export function AdminMailTab() {
         };
       }
     );
-  }, [selectedFolder, queryClient]);
+  }, [currentAccountId, selectedFolder, queryClient]);
 
   const handleSelectFolder = useCallback((path: string) => {
     setSelectedFolder(path);
@@ -876,59 +1028,98 @@ export function AdminMailTab() {
     setComposeOpen(true);
   }, []);
 
-  const handleDelete = useCallback((uid: string) => {
+  const handleDelete = useCallback(() => {
     setSelectedUid(null);
     setMobileView("list");
   }, []);
 
-  // Not configured state
-  if (config && !config.configured) {
-    return <NotConfigured region={config.region} />;
+  // Loading state
+  if (accountsLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // No accounts: show admin manager or "no access" state
+  if (userAccounts.length === 0 && !accountsLoading) {
+    if (showAccountManager && isSuperAdmin) {
+      return <AdminMailAccountsPanel onClose={() => setShowAccountManager(false)} />;
+    }
+    return (
+      <div className="flex flex-col h-full">
+        {isSuperAdmin && (
+          <div className="flex justify-end p-3 border-b">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAccountManager(true)}
+              data-testid="button-open-account-manager"
+            >
+              <Settings className="h-3.5 w-3.5 mr-2" />
+              Manage Mail Accounts
+            </Button>
+          </div>
+        )}
+        <NotConfigured isSuperAdmin={isSuperAdmin} />
+      </div>
+    );
+  }
+
+  // Show account manager
+  if (showAccountManager) {
+    return <AdminMailAccountsPanel onClose={() => setShowAccountManager(false)} />;
   }
 
   const folders = foldersData?.folders || [];
   const messages = messagesData?.messages || [];
-  const accountEmail = foldersData?.account || config?.email || "";
-  const accountLabel = foldersData?.label || config?.label || "Mail";
+  const accountEmail = foldersData?.account || currentAccount?.email || "";
+  const accountLabel = foldersData?.label || currentAccount?.displayName || currentAccount?.label || "Mail";
+  const canSend = foldersData?.canSend ?? currentAccount?.canSend ?? true;
+
+  const folderPanelProps = {
+    folders,
+    isLoading: foldersLoading,
+    selectedFolder,
+    onSelectFolder: handleSelectFolder,
+    accounts: userAccounts,
+    selectedAccountId: currentAccountId,
+    onSelectAccount: handleSelectAccount,
+    accountLabel,
+    accountEmail,
+    onCompose: handleCompose,
+    onSync: () => syncMutation.mutate(),
+    isSyncing: syncMutation.isPending,
+    isSuperAdmin,
+    onManageAccounts: () => setShowAccountManager(true),
+  };
 
   return (
     <div className="flex h-full overflow-hidden" data-testid="admin-mail-tab">
       {/* ── Desktop: 3-column layout ── */}
       <div className="hidden lg:flex h-full w-full overflow-hidden">
-        {/* Folder panel — fixed 220px */}
         <div className="w-56 flex-shrink-0 overflow-hidden">
-          <FolderPanel
-            folders={folders}
-            isLoading={foldersLoading}
-            selectedFolder={selectedFolder}
-            onSelectFolder={handleSelectFolder}
-            accountLabel={accountLabel}
-            accountEmail={accountEmail}
-            onCompose={handleCompose}
-            onSync={() => syncMutation.mutate()}
-            isSyncing={syncMutation.isPending}
-          />
+          <FolderPanel {...folderPanelProps} />
         </div>
-
-        {/* Message list panel — fixed 360px */}
         <div className="w-[360px] flex-shrink-0 overflow-hidden">
           <MessageListPanel
             messages={messages}
             isLoading={messagesLoading}
             selectedUid={selectedUid}
             onSelectMessage={handleSelectMessage}
-            folder={selectedFolder}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
           />
         </div>
-
-        {/* Email reader panel — flex-1 */}
         <div className="flex-1 min-w-0 overflow-hidden">
           {selectedUid ? (
             <EmailReaderPanel
               uid={selectedUid}
               folder={selectedFolder}
+              accountId={currentAccountId}
+              canSend={canSend}
               onBack={() => setSelectedUid(null)}
               onReply={handleReply}
               onForward={handleForward}
@@ -947,17 +1138,7 @@ export function AdminMailTab() {
       <div className="flex lg:hidden h-full w-full overflow-hidden">
         {mobileView === "folders" && (
           <div className="w-full overflow-hidden">
-            <FolderPanel
-              folders={folders}
-              isLoading={foldersLoading}
-              selectedFolder={selectedFolder}
-              onSelectFolder={handleSelectFolder}
-              accountLabel={accountLabel}
-              accountEmail={accountEmail}
-              onCompose={handleCompose}
-              onSync={() => syncMutation.mutate()}
-              isSyncing={syncMutation.isPending}
-            />
+            <FolderPanel {...folderPanelProps} />
           </div>
         )}
 
@@ -993,7 +1174,6 @@ export function AdminMailTab() {
               isLoading={messagesLoading}
               selectedUid={selectedUid}
               onSelectMessage={handleSelectMessage}
-              folder={selectedFolder}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
             />
@@ -1005,6 +1185,8 @@ export function AdminMailTab() {
             <EmailReaderPanel
               uid={selectedUid}
               folder={selectedFolder}
+              accountId={currentAccountId}
+              canSend={canSend}
               onBack={() => {
                 setSelectedUid(null);
                 setMobileView("list");
@@ -1024,6 +1206,8 @@ export function AdminMailTab() {
           onClose={() => setComposeOpen(false)}
           initialData={composeData}
           accountEmail={accountEmail}
+          accountId={currentAccountId}
+          canSend={canSend}
         />
       )}
     </div>

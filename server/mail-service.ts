@@ -3,12 +3,13 @@ import nodemailer from "nodemailer";
 import sanitizeHtml from "sanitize-html";
 import { simpleParser } from "mailparser";
 import { db } from "./db";
-import { emailCache, emailBodyCache } from "../shared/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { emailCache, emailBodyCache, emailAccounts, emailAccountSecrets, emailAccountAccess } from "../shared/schema";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 
-// ─── Account resolution ────────────────────────────────────────────────────
+// ─── Account types ─────────────────────────────────────────────────────────
 
 export interface MailAccount {
+  id: string;
   email: string;
   password: string;
   imapHost: string;
@@ -16,9 +17,104 @@ export interface MailAccount {
   smtpHost: string;
   smtpPort: number;
   label: string;
-  regionCode: string;
+  displayName?: string;
+  accountType: string;
+  regionCode?: string | null;
+  canSend: boolean;
 }
 
+// ─── Account resolution ────────────────────────────────────────────────────
+
+/**
+ * Get all mail accounts a given user has access to.
+ * Returns DB-configured accounts first; falls back to env-var accounts if none configured.
+ */
+export async function getAccountsForUser(userId: string): Promise<MailAccount[]> {
+  const rows = await db
+    .select({
+      account: emailAccounts,
+      secret: emailAccountSecrets,
+      access: emailAccountAccess,
+    })
+    .from(emailAccountAccess)
+    .innerJoin(emailAccounts, eq(emailAccountAccess.accountId, emailAccounts.id))
+    .innerJoin(emailAccountSecrets, eq(emailAccountSecrets.accountId, emailAccounts.id))
+    .where(
+      and(
+        eq(emailAccountAccess.adminUserId, userId),
+        eq(emailAccounts.isActive, true)
+      )
+    );
+
+  if (rows.length > 0) {
+    return rows.map((r) => ({
+      id: r.account.id,
+      email: r.account.email,
+      password: r.secret.appPassword,
+      imapHost: r.account.imapHost,
+      imapPort: r.account.imapPort,
+      smtpHost: r.account.smtpHost,
+      smtpPort: r.account.smtpPort,
+      label: r.account.label,
+      displayName: r.account.displayName || undefined,
+      accountType: r.account.accountType,
+      regionCode: r.account.regionCode,
+      canSend: r.access.canSend,
+    }));
+  }
+
+  // Fallback: env-var accounts
+  return getEnvVarAccounts();
+}
+
+/**
+ * Get a single specific account by ID, verifying the user has access.
+ */
+export async function getAccountById(accountId: string, userId: string): Promise<MailAccount | null> {
+  // Check if it's a DB account
+  const rows = await db
+    .select({
+      account: emailAccounts,
+      secret: emailAccountSecrets,
+      access: emailAccountAccess,
+    })
+    .from(emailAccountAccess)
+    .innerJoin(emailAccounts, eq(emailAccountAccess.accountId, emailAccounts.id))
+    .innerJoin(emailAccountSecrets, eq(emailAccountSecrets.accountId, emailAccounts.id))
+    .where(
+      and(
+        eq(emailAccountAccess.adminUserId, userId),
+        eq(emailAccounts.id, accountId),
+        eq(emailAccounts.isActive, true)
+      )
+    )
+    .limit(1);
+
+  if (rows.length > 0) {
+    const r = rows[0];
+    return {
+      id: r.account.id,
+      email: r.account.email,
+      password: r.secret.appPassword,
+      imapHost: r.account.imapHost,
+      imapPort: r.account.imapPort,
+      smtpHost: r.account.smtpHost,
+      smtpPort: r.account.smtpPort,
+      label: r.account.label,
+      displayName: r.account.displayName || undefined,
+      accountType: r.account.accountType,
+      regionCode: r.account.regionCode,
+      canSend: r.access.canSend,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Legacy: env-var based account resolution by region code.
+ * Kept as fallback when no DB accounts are configured.
+ */
 export function getAccountForRegion(regionCode?: string | null): MailAccount | null {
   const region = (regionCode || "AU").toUpperCase();
 
@@ -27,6 +123,7 @@ export function getAccountForRegion(regionCode?: string | null): MailAccount | n
     const password = process.env.ZOHO_APP_PASS_BD;
     if (!email || !password) return null;
     return {
+      id: "env-bd",
       email,
       password,
       imapHost: "imap.zoho.com",
@@ -34,7 +131,9 @@ export function getAccountForRegion(regionCode?: string | null): MailAccount | n
       smtpHost: "smtp.zoho.com",
       smtpPort: 465,
       label: "ANZ Bangladesh",
+      accountType: "group",
       regionCode: "BD",
+      canSend: true,
     };
   }
 
@@ -42,6 +141,7 @@ export function getAccountForRegion(regionCode?: string | null): MailAccount | n
   const password = process.env.ZOHO_APP_PASS_AU;
   if (!email || !password) return null;
   return {
+    id: "env-au",
     email,
     password,
     imapHost: "imap.zoho.com",
@@ -49,8 +149,55 @@ export function getAccountForRegion(regionCode?: string | null): MailAccount | n
     smtpHost: "smtp.zoho.com",
     smtpPort: 465,
     label: "ANZ Australia",
+    accountType: "group",
     regionCode: "AU",
+    canSend: true,
   };
+}
+
+function getEnvVarAccounts(): MailAccount[] {
+  const accounts: MailAccount[] = [];
+  const au = getAccountForRegion("AU");
+  if (au) accounts.push(au);
+  const bd = getAccountForRegion("BD");
+  if (bd) accounts.push(bd);
+  return accounts;
+}
+
+// ─── Admin: list all accounts (for management panel) ──────────────────────
+
+export async function getAllAccountsWithAccess(): Promise<{
+  account: typeof emailAccounts.$inferSelect;
+  hasSecret: boolean;
+  accessCount: number;
+}[]> {
+  const accounts = await db
+    .select()
+    .from(emailAccounts)
+    .orderBy(emailAccounts.createdAt);
+
+  const results = await Promise.all(
+    accounts.map(async (acc) => {
+      const secret = await db
+        .select({ id: emailAccountSecrets.id })
+        .from(emailAccountSecrets)
+        .where(eq(emailAccountSecrets.accountId, acc.id))
+        .limit(1);
+
+      const access = await db
+        .select({ id: emailAccountAccess.id })
+        .from(emailAccountAccess)
+        .where(eq(emailAccountAccess.accountId, acc.id));
+
+      return {
+        account: acc,
+        hasSecret: secret.length > 0,
+        accessCount: access.length,
+      };
+    })
+  );
+
+  return results;
 }
 
 // ─── IMAP client factory ───────────────────────────────────────────────────
@@ -107,7 +254,6 @@ export async function listFolders(account: MailAccount): Promise<MailFolder[]> {
     await client.logout().catch(() => {});
   }
 
-  // Sort: Inbox first, then Sent, Drafts, Spam, Trash, others
   const ORDER: Record<string, number> = {
     INBOX: 0,
     "\\Sent": 1,
@@ -142,7 +288,6 @@ export async function syncFolder(
       const total = mailbox?.exists || 0;
       if (total === 0) return 0;
 
-      // Fetch the latest N messages by sequence range
       const start = Math.max(1, total - limit + 1);
       const range = `${start}:*`;
 
@@ -256,7 +401,7 @@ export async function getEmailBody(
 
   if (cached.length > 0) {
     const c = cached[0];
-    const meta = cached[0].attachmentsMeta ? JSON.parse(cached[0].attachmentsMeta!) : [];
+    const meta = c.attachmentsMeta ? JSON.parse(c.attachmentsMeta) : [];
     const headerEntry = await db
       .select()
       .from(emailCache)
@@ -334,7 +479,6 @@ export async function getEmailBody(
       const toList = (parsed.to as any)?.value?.map((a: any) => a.address).filter(Boolean).join(", ") || "";
       const ccList = (parsed.cc as any)?.value?.map((a: any) => a.address).filter(Boolean).join(", ") || "";
 
-      // Upsert body cache
       await db
         .insert(emailBodyCache)
         .values({
@@ -352,7 +496,6 @@ export async function getEmailBody(
           set: { htmlBody: sanitized, textBody: textBody.substring(0, 100000), fetchedAt: new Date() },
         });
 
-      // Update cache entry - mark read, add snippet
       const snippet = textBody.replace(/\s+/g, " ").substring(0, 250);
       await db
         .update(emailCache)
@@ -409,8 +552,10 @@ export async function sendEmail(opts: SendEmailOptions): Promise<void> {
     auth: { user: opts.account.email, pass: opts.account.password },
   });
 
+  const displayFrom = opts.account.displayName || opts.account.label;
+
   await transport.sendMail({
-    from: `"${opts.account.label}" <${opts.account.email}>`,
+    from: `"${displayFrom}" <${opts.account.email}>`,
     to: opts.to,
     cc: opts.cc,
     bcc: opts.bcc,
@@ -470,7 +615,6 @@ export async function moveToTrash(
     await client.connect();
     const lock = await client.getMailboxLock(folder);
     try {
-      // Try moving to Trash mailbox
       const folders = await client.list();
       const trashFolder = folders.find(
         (f) => f.specialUse === "\\Trash" || f.name.toLowerCase().includes("trash")
@@ -488,7 +632,6 @@ export async function moveToTrash(
     await client.logout().catch(() => {});
   }
 
-  // Remove from cache
   await db
     .delete(emailCache)
     .where(
@@ -568,17 +711,43 @@ export function startBackgroundSync(): void {
   if (syncInterval) return;
 
   const doSync = async () => {
-    const regions = ["AU", "BD"];
-    for (const region of regions) {
+    // Sync all active DB accounts
+    try {
+      const dbAccounts = await db
+        .select({
+          account: emailAccounts,
+          secret: emailAccountSecrets,
+        })
+        .from(emailAccounts)
+        .innerJoin(emailAccountSecrets, eq(emailAccountSecrets.accountId, emailAccounts.id))
+        .where(eq(emailAccounts.isActive, true));
+
+      for (const row of dbAccounts) {
+        const acc: MailAccount = {
+          id: row.account.id,
+          email: row.account.email,
+          password: row.secret.appPassword,
+          imapHost: row.account.imapHost,
+          imapPort: row.account.imapPort,
+          smtpHost: row.account.smtpHost,
+          smtpPort: row.account.smtpPort,
+          label: row.account.label,
+          accountType: row.account.accountType,
+          regionCode: row.account.regionCode,
+          canSend: true,
+        };
+        await syncFolder(acc, "INBOX", 50).catch(() => {});
+      }
+    } catch {}
+
+    // Also sync env-var accounts as fallback
+    for (const region of ["AU", "BD"]) {
       const account = getAccountForRegion(region);
       if (!account) continue;
-      try {
-        await syncFolder(account, "INBOX", 50);
-      } catch {}
+      await syncFolder(account, "INBOX", 50).catch(() => {});
     }
   };
 
-  // Run every 2 minutes
   syncInterval = setInterval(doSync, 2 * 60 * 1000);
 }
 

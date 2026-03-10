@@ -58,6 +58,7 @@ The platform adheres to ANZ Global Education's brand identity, using a specific 
 - **Maps & Location**: Google Maps integration for campus locations and map-based search.
 - **Level 2 Content Blocks CMS**: Admin-facing CMS for static website content.
 - **People / HR Module (Attendance)**: HR/team management hub with attendance tracking, webcam photo capture, time tracking, and RBAC-scoped reports.
+- **Zoho Mail In-Dashboard Client**: Full email client embedded in the admin dashboard. Supports multiple Zoho accounts (personal + group/shared inboxes). Platform admins manage accounts centrally via a Mail Account Manager UI (CTO/platform_admin only). Each account stores credentials (Zoho app passwords) in the `emailAccountSecrets` DB table. Access control is per-user via `emailAccountAccess` join table. Users with multiple accounts can switch between them via a dropdown. Features: 3-panel layout (folders, message list, reader), HTML email rendering in sandboxed iframe, compose/reply/forward dialogs, attachment display, sync, read/unread toggle, delete. Legacy fallback: if no DB accounts are set up, env vars `ZOHO_EMAIL_AU`/`ZOHO_APP_PASS_AU`/`ZOHO_EMAIL_BD`/`ZOHO_APP_PASS_BD` are used automatically.
 - **Notification Settings Management**: Admin UI for managing global notification defaults, per-user overrides, and customizable email templates.
 - **Meta Pixel Marketing Analytics**: Region-aware Meta (Facebook) Pixel integration for tracking key user actions.
 - **Course-Level Visibility**: Courses can be set to 'public' or 'private', controlling visibility to logged-in students or all users.
@@ -90,4 +91,4 @@ The platform adheres to ANZ Global Education's brand identity, using a specific 
 - **Object Storage**: Replit Object Storage.
 - **CDN**: Google Fonts CDN.
 - **Mapping/Location**: Google Maps JavaScript API, Google Places API.
-- **Email Service**: Resend API.
+- **Email Service**: Resend API (transactional), Zoho Mail (team IMAP/SMTP via imapflow + nodemailer).
