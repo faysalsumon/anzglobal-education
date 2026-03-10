@@ -33,6 +33,7 @@ interface AttendanceRecord {
   clockOutAt: string | null;
   clockOutPhotoPath: string | null;
   totalMinutes: number | null;
+  totalBreakMinutes?: number | null;
   workDate: string;
   firstName: string | null;
   lastName: string | null;
@@ -369,7 +370,7 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
                   <th className="text-left p-3 font-medium text-muted-foreground hidden sm:table-cell">Date</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Clock In</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Clock Out</th>
-                  <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Hours</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Hours / Break</th>
                   <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">Location</th>
                   <th className="text-left p-3 font-medium text-muted-foreground hidden xl:table-cell">IP Address</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Photos</th>
@@ -417,7 +418,14 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
                       )}
                     </td>
                     <td className="p-3 hidden md:table-cell" data-testid={`text-hours-${record.id}`}>
-                      {formatMinutes(record.totalMinutes)}
+                      <div className="flex flex-col gap-0.5">
+                        <span>{formatMinutes(record.totalMinutes)}</span>
+                        {record.totalBreakMinutes != null && record.totalBreakMinutes > 0 && (
+                          <span className="text-xs text-muted-foreground" data-testid={`text-break-${record.id}`}>
+                            Break: {formatMinutes(record.totalBreakMinutes)}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-3 hidden lg:table-cell" data-testid={`text-location-${record.id}`}>
                       {record.location ? (

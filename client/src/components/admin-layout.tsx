@@ -8,12 +8,22 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Home } from "lucide-react";
 import { AdminMegaSidebar } from "@/components/admin-mega-sidebar";
 import { FloatingChatBar } from "@/components/floating-chat-bar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
 import { useAuth } from "@/hooks/useAuth";
+import { useInactivityLogout } from "@/hooks/useInactivityLogout";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -59,6 +69,10 @@ export function AdminLayout({
   
   const derivedTab = activeTab || getTabFromPath(location);
   const isMarketingExecutive = adminRole === "marketing_executive" || adminRole === "support_staff";
+
+  const { showWarning, secondsRemaining, stayLoggedIn } = useInactivityLogout({
+    enabled: hasFullAdminAccess,
+  });
 
   useEffect(() => {
     const handler = () => setIsChatOpen(true);
@@ -124,6 +138,26 @@ export function AdminLayout({
           <AdminMessagesTab inSheet />
         </SheetContent>
       </Sheet>
+
+      <AlertDialog open={showWarning}>
+        <AlertDialogContent data-testid="dialog-inactivity-warning">
+          <AlertDialogHeader>
+            <AlertDialogTitle>You're about to be signed out</AlertDialogTitle>
+            <AlertDialogDescription>
+              You've been inactive for a while. You will be automatically signed out in{" "}
+              <span className="font-semibold text-foreground" data-testid="text-seconds-remaining">
+                {secondsRemaining} second{secondsRemaining !== 1 ? "s" : ""}
+              </span>
+              .
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction type="button" onClick={stayLoggedIn} data-testid="button-stay-signed-in">
+              Stay Signed In
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -5304,3 +5304,15 @@ export const insertAttendanceRecordSchema = createInsertSchema(attendanceRecords
 });
 export type AttendanceRecord = typeof attendanceRecords.$inferSelect;
 export type InsertAttendanceRecord = z.infer<typeof insertAttendanceRecordSchema>;
+
+export const attendanceBreaks = pgTable("attendance_breaks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  attendanceRecordId: varchar("attendance_record_id").notNull().references(() => attendanceRecords.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  breakStartAt: timestamp("break_start_at").notNull().defaultNow(),
+  breakEndAt: timestamp("break_end_at"),
+  totalBreakMinutes: integer("total_break_minutes"),
+});
+export const insertAttendanceBreakSchema = createInsertSchema(attendanceBreaks).omit({ id: true });
+export type AttendanceBreak = typeof attendanceBreaks.$inferSelect;
+export type InsertAttendanceBreak = z.infer<typeof insertAttendanceBreakSchema>;

@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import { STATUS_DOT_COLORS } from "@/components/status-picker";
 import { Progress } from "@/components/ui/progress";
 import {
   Table,
@@ -38,10 +40,23 @@ interface TeamMemberWorkload {
   activeApplications: number;
 }
 
+interface TeamStatusMember {
+  id: string;
+  availabilityStatus: string | null;
+  customStatusText: string | null;
+}
+
 export function TeamWorkloadPanel() {
   const { data: workloadData = [], isLoading } = useQuery<TeamMemberWorkload[]>({
     queryKey: ["/api/tasks/workload-summary"],
   });
+
+  const { data: teamStatuses = [] } = useQuery<TeamStatusMember[]>({
+    queryKey: ["/api/admin/team-status"],
+    refetchInterval: 30000,
+  });
+
+  const statusMap = new Map(teamStatuses.map(m => [m.id, m]));
 
   const totalTasks = workloadData.reduce((sum, m) => sum + m.totalTasks, 0);
   const totalPending = workloadData.reduce((sum, m) => sum + m.pendingTasks, 0);
@@ -207,19 +222,30 @@ export function TeamWorkloadPanel() {
                       <TableRow key={member.userId} data-testid={`workload-row-${member.userId}`}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={member.profileImageUrl || undefined} />
-                              <AvatarFallback className="text-xs">
-                                {getInitials(member.firstName, member.lastName, member.email)}
-                              </AvatarFallback>
-                            </Avatar>
+                            <div className="relative flex-shrink-0">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={member.profileImageUrl || undefined} />
+                                <AvatarFallback className="text-xs">
+                                  {getInitials(member.firstName, member.lastName, member.email)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span
+                                className={cn(
+                                  "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
+                                  STATUS_DOT_COLORS[statusMap.get(member.userId)?.availabilityStatus || "available"] ?? STATUS_DOT_COLORS.available
+                                )}
+                                data-testid={`status-dot-${member.userId}`}
+                              />
+                            </div>
                             <div>
                               <p className="font-medium text-sm">
                                 {member.firstName && member.lastName
                                   ? `${member.firstName} ${member.lastName}`
                                   : member.email || "Unknown"}
                               </p>
-                              <p className="text-xs text-muted-foreground">{member.email}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {statusMap.get(member.userId)?.customStatusText || member.email}
+                              </p>
                             </div>
                           </div>
                         </TableCell>

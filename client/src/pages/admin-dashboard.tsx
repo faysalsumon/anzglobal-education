@@ -46,6 +46,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { performLogout } from "@/lib/logout";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
+import { useInactivityLogout } from "@/hooks/useInactivityLogout";
 import { useLocation, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -429,6 +430,10 @@ export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const { signOut } = useSupabaseAuth();
+
+  const { showWarning: showInactivityWarning, secondsRemaining: inactivitySeconds, stayLoggedIn } = useInactivityLogout({
+    enabled: !!isAdmin,
+  });
 
   const handleLogout = () => {
     performLogout(signOut);
@@ -4123,6 +4128,26 @@ export default function AdminDashboard() {
       isMarketingExecutive={isMarketingExecutive}
       onLogout={handleLogout}
     />
+
+    <AlertDialog open={showInactivityWarning}>
+      <AlertDialogContent data-testid="dialog-inactivity-warning">
+        <AlertDialogHeader>
+          <AlertDialogTitle>You're about to be signed out</AlertDialogTitle>
+          <AlertDialogDescription>
+            You've been inactive for a while. You will be automatically signed out in{" "}
+            <span className="font-semibold text-foreground" data-testid="text-seconds-remaining">
+              {inactivitySeconds} second{inactivitySeconds !== 1 ? "s" : ""}
+            </span>
+            .
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogAction type="button" onClick={stayLoggedIn} data-testid="button-stay-signed-in">
+            Stay Signed In
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }

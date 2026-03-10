@@ -5,6 +5,7 @@ import { isAuthenticated } from "./supabase-middleware";
 import { checkAdminAccess } from "./routes";
 import {
   attendanceRecords,
+  attendanceBreaks,
   users,
   branches,
   type AttendanceRecord,
@@ -267,6 +268,16 @@ export function registerAttendanceRoutes(app: Express) {
 
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+      const breakTotalsSubquery = db
+        .select({
+          attendanceRecordId: attendanceBreaks.attendanceRecordId,
+          totalBreakMinutes: sum(attendanceBreaks.totalBreakMinutes).as("total_break_minutes"),
+        })
+        .from(attendanceBreaks)
+        .where(isNotNull(attendanceBreaks.breakEndAt))
+        .groupBy(attendanceBreaks.attendanceRecordId)
+        .as("break_totals");
+
       const [records, [{ total }]] = await Promise.all([
         db
           .select({
@@ -289,10 +300,12 @@ export function registerAttendanceRoutes(app: Express) {
             profileImageUrl: users.profileImageUrl,
             userBranchId: users.branchId,
             branchName: branches.name,
+            totalBreakMinutes: breakTotalsSubquery.totalBreakMinutes,
           })
           .from(attendanceRecords)
           .innerJoin(users, eq(attendanceRecords.userId, users.id))
           .leftJoin(branches, eq(attendanceRecords.branchId, branches.id))
+          .leftJoin(breakTotalsSubquery, eq(attendanceRecords.id, breakTotalsSubquery.attendanceRecordId))
           .where(whereClause)
           .orderBy(desc(attendanceRecords.clockInAt))
           .limit(limitNum)
@@ -367,6 +380,133 @@ export function registerAttendanceRoutes(app: Express) {
     } catch (err) {
       console.error("[Attendance] GET /admin/attendance/stats error:", err);
       res.status(500).json({ message: "Failed to fetch attendance stats" });
+    }
+  });
+
+  // GET /api/attendance/break-status — current user's active break
+  app.get("/api/attendance/break-status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const adminAccess = await checkAdminAccess(userId);
+      if (!adminAccess) return res.status(403).json({ message: "Admin access required" });
+
+      const [openRecord] = await db
+        .select()
+        .from(attendanceRecords)
+        .where(and(eq(attendanceRecords.userId, userId), isNull(attendanceRecords.clockOutAt)))
+        .orderBy(desc(attendanceRecords.clockInAt))
+        .limit(1);
+
+      if (!openRecord) {
+        return res.json({ clockedIn: false, onBreak: false, activeBreak: null });
+      }
+
+      const [activeBreak] = await db
+        .select()
+        .from(attendanceBreaks)
+        .where(and(eq(attendanceBreaks.attendanceRecordId, openRecord.id), isNull(attendanceBreaks.breakEndAt)))
+        .orderBy(desc(attendanceBreaks.breakStartAt))
+        .limit(1);
+
+      res.json({
+        clockedIn: true,
+        onBreak: !!activeBreak,
+        activeBreak: activeBreak ? { id: activeBreak.id, breakStartAt: activeBreak.breakStartAt } : null,
+      });
+    } catch (err) {
+      console.error("[Attendance] GET /break-status error:", err);
+      res.status(500).json({ message: "Failed to get break status" });
+    }
+  });
+
+  // POST /api/attendance/break-start — start a break
+  app.post("/api/attendance/break-start", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const adminAccess = await checkAdminAccess(userId);
+      if (!adminAccess) return res.status(403).json({ message: "Admin access required" });
+
+      const [openRecord] = await db
+        .select()
+        .from(attendanceRecords)
+        .where(and(eq(attendanceRecords.userId, userId), isNull(attendanceRecords.clockOutAt)))
+        .orderBy(desc(attendanceRecords.clockInAt))
+        .limit(1);
+
+      if (!openRecord) {
+        return res.status(400).json({ message: "You must be clocked in to start a break" });
+      }
+
+      const [existingBreak] = await db
+        .select()
+        .from(attendanceBreaks)
+        .where(and(eq(attendanceBreaks.attendanceRecordId, openRecord.id), isNull(attendanceBreaks.breakEndAt)))
+        .limit(1);
+
+      if (existingBreak) {
+        return res.status(409).json({ message: "You are already on a break" });
+      }
+
+      const [newBreak] = await db
+        .insert(attendanceBreaks)
+        .values({ attendanceRecordId: openRecord.id, userId, breakStartAt: new Date() })
+        .returning();
+
+      // Auto-set status to away
+      await db.update(users).set({ availabilityStatus: "away", lastStatusUpdate: new Date() }).where(eq(users.id, userId));
+
+      res.json({ break: newBreak });
+    } catch (err) {
+      console.error("[Attendance] POST /break-start error:", err);
+      res.status(500).json({ message: "Failed to start break" });
+    }
+  });
+
+  // POST /api/attendance/break-end — end active break
+  app.post("/api/attendance/break-end", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const adminAccess = await checkAdminAccess(userId);
+      if (!adminAccess) return res.status(403).json({ message: "Admin access required" });
+
+      const [openRecord] = await db
+        .select()
+        .from(attendanceRecords)
+        .where(and(eq(attendanceRecords.userId, userId), isNull(attendanceRecords.clockOutAt)))
+        .orderBy(desc(attendanceRecords.clockInAt))
+        .limit(1);
+
+      if (!openRecord) {
+        return res.status(404).json({ message: "No active shift found" });
+      }
+
+      const [activeBreak] = await db
+        .select()
+        .from(attendanceBreaks)
+        .where(and(eq(attendanceBreaks.attendanceRecordId, openRecord.id), isNull(attendanceBreaks.breakEndAt)))
+        .orderBy(desc(attendanceBreaks.breakStartAt))
+        .limit(1);
+
+      if (!activeBreak) {
+        return res.status(404).json({ message: "No active break found" });
+      }
+
+      const now = new Date();
+      const totalBreakMinutes = Math.round((now.getTime() - activeBreak.breakStartAt.getTime()) / 60000);
+
+      const [updatedBreak] = await db
+        .update(attendanceBreaks)
+        .set({ breakEndAt: now, totalBreakMinutes })
+        .where(eq(attendanceBreaks.id, activeBreak.id))
+        .returning();
+
+      // Auto-set status back to available
+      await db.update(users).set({ availabilityStatus: "available", lastStatusUpdate: new Date() }).where(eq(users.id, userId));
+
+      res.json({ break: updatedBreak, totalBreakMinutes });
+    } catch (err) {
+      console.error("[Attendance] POST /break-end error:", err);
+      res.status(500).json({ message: "Failed to end break" });
     }
   });
 
