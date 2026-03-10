@@ -87,6 +87,7 @@ import { ListPagination } from "@/components/list-pagination";
 import { AdminApiKeysPanel } from "@/components/admin-api-keys-panel";
 import { AdminNotificationSettingsPanel } from "@/components/admin-notification-settings-panel";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
+import { AdminMailTab } from "@/components/admin-mail-tab";
 import { AdminMobileBottomNav } from "@/components/admin-mobile-bottom-nav";
 import { ClockInButton } from "@/components/clock-in-button";
 import { AttendancePanel } from "@/components/attendance-panel";
@@ -485,7 +486,7 @@ export default function AdminDashboard() {
   
   // Initialize activeTab from hash OR query parameters (for notification deep-linking)
   const getInitialTab = () => {
-    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings', 'notification-settings', 'attendance'];
+    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance'];
     const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team', 'notification-settings', 'attendance'];
     const ctoOnlyTabs = ['ai-settings'];
     const superAdminOnlyTabs = ['role-management', 'profile-management'];
@@ -548,6 +549,7 @@ export default function AdminDashboard() {
     'role-management': 'Role Management',
     'profile-management': 'Permission Profiles',
     'messages': 'Messages',
+    'email': 'Email',
     'notification-settings': 'Notification Settings',
     'attendance': 'Attendance',
     'api-keys': 'Partner API',
@@ -571,7 +573,7 @@ export default function AdminDashboard() {
     const searchParams = new URLSearchParams(searchString);
     const tabFromQuery = searchParams.get('tab');
     if (tabFromQuery && tabFromQuery !== activeTab) {
-      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings', 'notification-settings'];
+      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings'];
       if (validTabs.includes(tabFromQuery)) {
         setActiveTab(tabFromQuery);
       }
@@ -1999,6 +2001,10 @@ export default function AdminDashboard() {
           ) : activeTab === "messages" ? (
             <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
               <AdminMessagesTab />
+            </div>
+          ) : activeTab === "email" ? (
+            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <AdminMailTab />
             </div>
           ) : (
           <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">

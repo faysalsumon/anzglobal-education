@@ -16543,6 +16543,11 @@ Sitemap: ${baseUrl}/sitemap.xml
   registerAttendanceRoutes(app);
   console.log('Attendance routes registered for People/HR module');
 
+  // Register Zoho Mail routes
+  const { registerMailRoutes } = await import('./mail-routes');
+  registerMailRoutes(app);
+  console.log('Mail routes registered');
+
   // ========== Activity Logs API ==========
   
   // Get all activity logs (admin only) with optional filtering

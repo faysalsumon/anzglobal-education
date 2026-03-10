@@ -5316,3 +5316,61 @@ export const attendanceBreaks = pgTable("attendance_breaks", {
 export const insertAttendanceBreakSchema = createInsertSchema(attendanceBreaks).omit({ id: true });
 export type AttendanceBreak = typeof attendanceBreaks.$inferSelect;
 export type InsertAttendanceBreak = z.infer<typeof insertAttendanceBreakSchema>;
+
+// ─── Zoho Mail Cache Tables ────────────────────────────────────────────────
+
+export const emailAccounts = pgTable("email_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  label: varchar("label", { length: 100 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  imapHost: varchar("imap_host", { length: 255 }).notNull(),
+  imapPort: integer("imap_port").notNull().default(993),
+  smtpHost: varchar("smtp_host", { length: 255 }).notNull(),
+  smtpPort: integer("smtp_port").notNull().default(465),
+  isActive: boolean("is_active").notNull().default(true),
+  regionCode: varchar("region_code", { length: 10 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export const insertEmailAccountSchema = createInsertSchema(emailAccounts).omit({ id: true, createdAt: true });
+export type EmailAccount = typeof emailAccounts.$inferSelect;
+export type InsertEmailAccount = z.infer<typeof insertEmailAccountSchema>;
+
+export const emailCache = pgTable("email_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  uid: varchar("uid", { length: 50 }).notNull(),
+  account: varchar("account", { length: 255 }).notNull(),
+  folder: varchar("folder", { length: 255 }).notNull().default("INBOX"),
+  fromAddress: varchar("from_address", { length: 500 }),
+  fromName: varchar("from_name", { length: 255 }),
+  toAddresses: text("to_addresses"),
+  subject: varchar("subject", { length: 1000 }),
+  snippet: text("snippet"),
+  sentAt: timestamp("sent_at"),
+  isRead: boolean("is_read").notNull().default(false),
+  isStarred: boolean("is_starred").notNull().default(false),
+  hasAttachments: boolean("has_attachments").notNull().default(false),
+  threadId: varchar("thread_id", { length: 255 }),
+  fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+}, (t) => [
+  unique().on(t.uid, t.account, t.folder),
+]);
+export const insertEmailCacheSchema = createInsertSchema(emailCache).omit({ id: true });
+export type EmailCacheEntry = typeof emailCache.$inferSelect;
+export type InsertEmailCacheEntry = z.infer<typeof insertEmailCacheSchema>;
+
+export const emailBodyCache = pgTable("email_body_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  uid: varchar("uid", { length: 50 }).notNull(),
+  account: varchar("account", { length: 255 }).notNull(),
+  folder: varchar("folder", { length: 255 }).notNull().default("INBOX"),
+  htmlBody: text("html_body"),
+  textBody: text("text_body"),
+  rawHeaders: text("raw_headers"),
+  attachmentsMeta: text("attachments_meta"),
+  fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+}, (t) => [
+  unique().on(t.uid, t.account, t.folder),
+]);
+export const insertEmailBodyCacheSchema = createInsertSchema(emailBodyCache).omit({ id: true });
+export type EmailBodyCache = typeof emailBodyCache.$inferSelect;
+export type InsertEmailBodyCache = z.infer<typeof insertEmailBodyCacheSchema>;

@@ -49,6 +49,7 @@ import {
   Wrench,
   ChevronRight,
   UserCheck,
+  Mail,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -149,6 +150,7 @@ export function AdminMobileBottomNav({
       icon: Briefcase,
       colorClass: "text-blue-600 bg-blue-50 dark:bg-blue-950/60 dark:text-blue-400",
       items: [
+        { icon: Mail, label: "Email", value: "email", show: true },
         { icon: ListTodo, label: "My Tasks", value: "my-tasks", show: true },
         { icon: BarChart3, label: "Team Workload", value: "team-workload", show: isCTO },
       ],
