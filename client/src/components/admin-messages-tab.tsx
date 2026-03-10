@@ -35,6 +35,9 @@ import {
   Mic,
   Laptop,
   X,
+  UserPlus,
+  UserMinus,
+  Settings2,
 } from "lucide-react";
 import { format, isToday, isYesterday, isThisWeek, parseISO } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -214,6 +217,20 @@ type Channel = {
   memberCount: number;
   lastMessage?: Message | null;
   unreadCount: number;
+  memberRole?: string;
+  createdById?: string | null;
+};
+
+type ChannelMember = {
+  id: string;
+  userId: string;
+  role: string;
+  joinedAt: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  profileImageUrl: string | null;
+  availabilityStatus: string;
 };
 
 type AdminTeamMember = {
@@ -235,7 +252,7 @@ type ChatView = {
 };
 
 export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}) {
-  const { user } = useAuth();
+  const { user, adminRole, isCTO, isBranchManager } = useAuth();
   const { isConnected, lastMessage, sendMessage } = useWebSocket();
   const { toast } = useToast();
   const [activeView, setActiveView] = useState<ChatView | null>(null);
@@ -255,6 +272,8 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionAnchor, setMentionAnchor] = useState<number>(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isMemberPanelOpen, setIsMemberPanelOpen] = useState(false);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
 
   const currentUser = user as any;
   const currentUserId = currentUser?.id || currentUser?.claims?.sub;
@@ -272,6 +291,47 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
 
   const { data: allTeamMembers = [] } = useQuery<Pick<AdminTeamMember, 'id' | 'firstName' | 'lastName' | 'email' | 'profileImageUrl' | 'availabilityStatus' | 'customStatusText'>[]>({
     queryKey: ["/api/admin/team-status"],
+    refetchInterval: 30000,
+  });
+
+  const canCreateChannel = isCTO || isBranchManager || adminRole === 'ceo';
+
+  const teamStatusMap = useMemo(() => {
+    const m = new Map<string, { availabilityStatus: string; customStatusText?: string | null }>();
+    for (const tm of allTeamMembers) {
+      m.set(tm.id, { availabilityStatus: tm.availabilityStatus, customStatusText: tm.customStatusText });
+    }
+    return m;
+  }, [allTeamMembers]);
+
+  const activeChannelId = activeView?.type === 'channel' ? activeView.id : null;
+  const activeChannel = channels.find(c => c.id === activeChannelId);
+  const activeChannelMemberRole = activeChannel?.memberRole;
+  const canManageMembers = canCreateChannel || activeChannelMemberRole === 'admin';
+
+  const { data: channelMembersData = [] } = useQuery<ChannelMember[]>({
+    queryKey: ['/api/channels', activeChannelId, 'members'],
+    enabled: !!activeChannelId && isMemberPanelOpen,
+  });
+
+  const addMemberMutation = useMutation({
+    mutationFn: async (targetUserId: string) =>
+      apiRequest('POST', `/api/channels/${activeChannelId}/members`, { userId: targetUserId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/channels', activeChannelId, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/channels'] });
+    },
+    onError: () => toast({ title: 'Failed to add member', variant: 'destructive' }),
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: async (targetUserId: string) =>
+      apiRequest('DELETE', `/api/channels/${activeChannelId}/members/${targetUserId}`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/channels', activeChannelId, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/channels'] });
+    },
+    onError: () => toast({ title: 'Failed to remove member', variant: 'destructive' }),
   });
 
   const { data: messages = [], isLoading: isLoadingMessages } = useQuery<Message[]>({
@@ -659,7 +719,9 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
                   {isChannelsExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                   Channels
                 </div>
-                <Plus className="h-3 w-3" onClick={(e) => { e.stopPropagation(); setIsNewChannelDialogOpen(true); }} />
+                {canCreateChannel && (
+                  <Plus className="h-3 w-3" onClick={(e) => { e.stopPropagation(); setIsNewChannelDialogOpen(true); }} />
+                )}
               </button>
               {isChannelsExpanded && (
                 <div className="mt-1 space-y-1">
@@ -737,7 +799,7 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
                             )}
                           </Avatar>
                           <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${
-                            STATUS_COLORS[other?.availabilityStatus || 'available']
+                            STATUS_COLORS[(other?.id ? teamStatusMap.get(other.id)?.availabilityStatus : null) || other?.availabilityStatus || 'available']
                           }`} />
                         </div>
                         <div className="flex-1 min-w-0 text-left">
@@ -824,18 +886,24 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
                         <AvatarImage src={conversations.find(c => c.id === activeView.id)?.otherParticipant?.profileImageUrl} />
                         <AvatarFallback>{getInitials(conversations.find(c => c.id === activeView.id)?.otherParticipant?.firstName, conversations.find(c => c.id === activeView.id)?.otherParticipant?.lastName)}</AvatarFallback>
                       </Avatar>
-                      <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background ${
-                        STATUS_COLORS[conversations.find(c => c.id === activeView.id)?.otherParticipant?.availabilityStatus || 'available']
-                      }`} />
+                      {(() => {
+                        const dmOther = conversations.find(c => c.id === activeView.id)?.otherParticipant;
+                        const liveStatus = (dmOther?.id ? teamStatusMap.get(dmOther.id)?.availabilityStatus : null) || dmOther?.availabilityStatus || 'available';
+                        return <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background ${STATUS_COLORS[liveStatus]}`} />;
+                      })()}
                     </div>
                     <div>
-                      <h3 className="font-bold text-sm leading-tight">
-                        {conversations.find(c => c.id === activeView.id)?.otherParticipant?.firstName} {conversations.find(c => c.id === activeView.id)?.otherParticipant?.lastName}
-                      </h3>
-                      <p className="text-[11px] text-muted-foreground font-medium">
-                        {conversations.find(c => c.id === activeView.id)?.otherParticipant?.customStatusText || 
-                         (conversations.find(c => c.id === activeView.id)?.otherParticipant?.availabilityStatus || "Available").replace(/_/g, " ")}
-                      </p>
+                      {(() => {
+                        const dmOther = conversations.find(c => c.id === activeView.id)?.otherParticipant;
+                        const liveEntry = dmOther?.id ? teamStatusMap.get(dmOther.id) : null;
+                        const statusLabel = liveEntry?.customStatusText || dmOther?.customStatusText || (liveEntry?.availabilityStatus || dmOther?.availabilityStatus || 'Available').replace(/_/g, ' ');
+                        return (
+                          <>
+                            <h3 className="font-bold text-sm leading-tight">{dmOther?.firstName} {dmOther?.lastName}</h3>
+                            <p className="text-[11px] text-muted-foreground font-medium capitalize">{statusLabel}</p>
+                          </>
+                        );
+                      })()}
                     </div>
                   </>
                 ) : activeView.type === "channel" ? (
@@ -862,8 +930,22 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="text-muted-foreground"><Search className="h-5 w-5" /></Button>
-                <Button variant="ghost" size="icon" className="text-muted-foreground"><MoreVertical className="h-5 w-5" /></Button>
+                <Button type="button" variant="ghost" size="icon" className="text-muted-foreground"><Search className="h-5 w-5" /></Button>
+                {activeView?.type === 'channel' && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground"
+                    data-testid="button-manage-members"
+                    onClick={() => { setIsMemberPanelOpen(true); setMemberSearchQuery(""); }}
+                  >
+                    <Settings2 className="h-5 w-5" />
+                  </Button>
+                )}
+                {activeView?.type !== 'channel' && (
+                  <Button type="button" variant="ghost" size="icon" className="text-muted-foreground"><MoreVertical className="h-5 w-5" /></Button>
+                )}
               </div>
             </div>
 
@@ -1028,10 +1110,12 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
                  </Avatar>
                  Chat with Zan
                </Button>
-               <Button variant="outline" onClick={() => setIsNewChannelDialogOpen(true)} className="gap-2">
-                 <Hash className="h-4 w-4" />
-                 Browse Channels
-               </Button>
+               {canCreateChannel && (
+                 <Button type="button" variant="outline" onClick={() => setIsNewChannelDialogOpen(true)} className="gap-2">
+                   <Hash className="h-4 w-4" />
+                   New Channel
+                 </Button>
+               )}
             </div>
           </div>
         )}
@@ -1123,6 +1207,129 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Members Dialog */}
+      <Dialog open={isMemberPanelOpen} onOpenChange={setIsMemberPanelOpen}>
+        <DialogContent className="sm:max-w-[480px] max-h-[80vh] flex flex-col" data-testid="dialog-manage-members">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings2 className="h-4 w-4" />
+              Members — #{activeChannel?.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+            {/* Current Members */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                {channelMembersData.length} Member{channelMembersData.length !== 1 ? 's' : ''}
+              </p>
+              <div className="space-y-1">
+                {channelMembersData.map(member => {
+                  const isMe = member.userId === currentUserId;
+                  const adminCount = channelMembersData.filter(m => m.role === 'admin').length;
+                  const cantRemove = isMe || (member.role === 'admin' && adminCount <= 1);
+                  return (
+                    <div
+                      key={member.userId}
+                      className="flex items-center gap-3 py-2 px-2 rounded-lg hover-elevate"
+                      data-testid={`row-member-${member.userId}`}
+                    >
+                      <Avatar className="h-8 w-8 shrink-0">
+                        {member.profileImageUrl ? <AvatarImage src={member.profileImageUrl} /> : null}
+                        <AvatarFallback className="text-xs">{getInitials(member.firstName, member.lastName)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{member.firstName} {member.lastName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] shrink-0">
+                        {member.role}
+                      </Badge>
+                      {canManageMembers && !cantRemove && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground shrink-0"
+                          data-testid={`button-remove-member-${member.userId}`}
+                          onClick={() => removeMemberMutation.mutate(member.userId)}
+                          disabled={removeMemberMutation.isPending}
+                        >
+                          <UserMinus className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Add Member Section */}
+            {canManageMembers && (
+              <>
+                <Separator />
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Add Member</p>
+                  <div className="relative mb-2">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search team members…"
+                      value={memberSearchQuery}
+                      onChange={e => setMemberSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {allTeamMembers
+                      .filter(tm => {
+                        const alreadyIn = channelMembersData.some(m => m.userId === tm.id);
+                        if (alreadyIn) return false;
+                        if (!memberSearchQuery.trim()) return true;
+                        const q = memberSearchQuery.toLowerCase();
+                        return (
+                          tm.firstName?.toLowerCase().includes(q) ||
+                          tm.lastName?.toLowerCase().includes(q) ||
+                          tm.email?.toLowerCase().includes(q)
+                        );
+                      })
+                      .map(tm => (
+                        <div
+                          key={tm.id}
+                          className="flex items-center gap-3 py-2 px-2 rounded-lg hover-elevate"
+                        >
+                          <Avatar className="h-8 w-8 shrink-0">
+                            {tm.profileImageUrl ? <AvatarImage src={tm.profileImageUrl} /> : null}
+                            <AvatarFallback className="text-xs">{getInitials(tm.firstName, tm.lastName)}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{tm.firstName} {tm.lastName}</p>
+                            <p className="text-xs text-muted-foreground truncate">{tm.email}</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground shrink-0"
+                            data-testid={`button-add-member-${tm.id}`}
+                            onClick={() => addMemberMutation.mutate(tm.id)}
+                            disabled={addMemberMutation.isPending}
+                          >
+                            <UserPlus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    {allTeamMembers.filter(tm => !channelMembersData.some(m => m.userId === tm.id)).length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-3">All team members are already in this channel.</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

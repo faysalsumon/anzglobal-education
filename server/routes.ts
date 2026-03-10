@@ -12378,6 +12378,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       const userId = user.claims?.sub || user.id;
 
+      // Auto-join admin users to all public channels if not already a member
+      const adminAccessForAutoJoin = await checkAdminAccess(userId);
+      if (adminAccessForAutoJoin) {
+        const publicChannels = await db.select().from(channels).where(eq(channels.isPrivate, false));
+        for (const ch of publicChannels) {
+          const [existing] = await db.select().from(channelMembers)
+            .where(and(eq(channelMembers.channelId, ch.id), eq(channelMembers.userId, userId))).limit(1);
+          if (!existing) {
+            await db.insert(channelMembers).values({ channelId: ch.id, userId, role: 'member' }).onConflictDoNothing();
+          }
+        }
+      }
+
       // Find all channels where user is a member
       const userChannels = await db
         .select({
@@ -12455,7 +12468,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = req.user as any;
       const userId = user.claims?.sub || user.id;
-      
+
+      // Only CEO, CTO, Branch Manager can create channels
+      const creatorAccess = await checkAdminAccess(userId, ['cto', 'branch_manager']);
+      if (!creatorAccess) {
+        return res.status(403).json({ message: "Only CEO, CTO, or Branch Managers can create channels." });
+      }
+
       const validatedData = insertChannelSchema.parse(req.body);
       
       const [newChannel] = await db
@@ -12531,6 +12550,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error joining channel:", error);
       res.status(500).json({ message: "Failed to join channel" });
+    }
+  });
+
+  // GET /api/channels/:id/members — list members of a channel
+  app.get("/api/channels/:id/members", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      const channelId = req.params.id;
+
+      const [myMembership] = await db.select().from(channelMembers)
+        .where(and(eq(channelMembers.channelId, channelId), eq(channelMembers.userId, userId))).limit(1);
+      if (!myMembership) return res.status(403).json({ message: "You are not a member of this channel." });
+
+      const members = await db
+        .select({
+          id: channelMembers.id,
+          userId: channelMembers.userId,
+          role: channelMembers.role,
+          joinedAt: channelMembers.joinedAt,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          profileImageUrl: users.profileImageUrl,
+          availabilityStatus: users.availabilityStatus,
+        })
+        .from(channelMembers)
+        .innerJoin(users, eq(channelMembers.userId, users.id))
+        .where(eq(channelMembers.channelId, channelId))
+        .orderBy(channelMembers.joinedAt);
+
+      res.json(members);
+    } catch (err) {
+      console.error("Error fetching channel members:", err);
+      res.status(500).json({ message: "Failed to fetch channel members" });
+    }
+  });
+
+  // POST /api/channels/:id/members — add a member to a channel
+  app.post("/api/channels/:id/members", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const requesterId = user.claims?.sub || user.id;
+      const channelId = req.params.id;
+      const { userId: targetUserId } = req.body;
+
+      if (!targetUserId) return res.status(400).json({ message: "userId is required" });
+
+      // Permission: channel admin or CEO/CTO/branch_manager
+      const [myMembership] = await db.select().from(channelMembers)
+        .where(and(eq(channelMembers.channelId, channelId), eq(channelMembers.userId, requesterId))).limit(1);
+      const managerAccess = await checkAdminAccess(requesterId, ['cto', 'branch_manager']);
+      if (!myMembership && !managerAccess) return res.status(403).json({ message: "Access denied." });
+      if (myMembership && myMembership.role !== 'admin' && !managerAccess) {
+        return res.status(403).json({ message: "Only channel admins or managers can add members." });
+      }
+
+      await db.insert(channelMembers)
+        .values({ channelId, userId: targetUserId, role: 'member' })
+        .onConflictDoNothing();
+
+      const [newMember] = await db
+        .select({
+          id: channelMembers.id,
+          userId: channelMembers.userId,
+          role: channelMembers.role,
+          joinedAt: channelMembers.joinedAt,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          profileImageUrl: users.profileImageUrl,
+          availabilityStatus: users.availabilityStatus,
+        })
+        .from(channelMembers)
+        .innerJoin(users, eq(channelMembers.userId, users.id))
+        .where(and(eq(channelMembers.channelId, channelId), eq(channelMembers.userId, targetUserId)))
+        .limit(1);
+
+      res.json(newMember);
+    } catch (err) {
+      console.error("Error adding channel member:", err);
+      res.status(500).json({ message: "Failed to add member" });
+    }
+  });
+
+  // DELETE /api/channels/:id/members/:targetUserId — remove a member
+  app.delete("/api/channels/:id/members/:targetUserId", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const requesterId = user.claims?.sub || user.id;
+      const { id: channelId, targetUserId } = req.params;
+
+      // Permission: channel admin or CEO/CTO/branch_manager
+      const [myMembership] = await db.select().from(channelMembers)
+        .where(and(eq(channelMembers.channelId, channelId), eq(channelMembers.userId, requesterId))).limit(1);
+      const managerAccess = await checkAdminAccess(requesterId, ['cto', 'branch_manager']);
+      if (!myMembership && !managerAccess) return res.status(403).json({ message: "Access denied." });
+      if (myMembership && myMembership.role !== 'admin' && !managerAccess) {
+        return res.status(403).json({ message: "Only channel admins or managers can remove members." });
+      }
+
+      // Prevent removing the last admin
+      if (targetUserId !== requesterId) {
+        const [targetMembership] = await db.select().from(channelMembers)
+          .where(and(eq(channelMembers.channelId, channelId), eq(channelMembers.userId, targetUserId))).limit(1);
+        if (targetMembership?.role === 'admin') {
+          const adminCount = await db.select({ count: dsql<number>`count(*)` }).from(channelMembers)
+            .where(and(eq(channelMembers.channelId, channelId), eq(channelMembers.role, 'admin')));
+          if (Number(adminCount[0]?.count || 0) <= 1) {
+            return res.status(400).json({ message: "Cannot remove the last admin of a channel." });
+          }
+        }
+      }
+
+      await db.delete(channelMembers)
+        .where(and(eq(channelMembers.channelId, channelId), eq(channelMembers.userId, targetUserId)));
+
+      res.json({ message: "Member removed" });
+    } catch (err) {
+      console.error("Error removing channel member:", err);
+      res.status(500).json({ message: "Failed to remove member" });
     }
   });
 
@@ -16236,6 +16376,46 @@ Sitemap: ${baseUrl}/sitemap.xml
           }
         }
         
+        // Handle channel messages
+        if (message.type === 'send_channel_message') {
+          const { channelId, content } = message;
+          if (!channelId || !content?.trim()) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Missing channelId or content' }));
+            return;
+          }
+          // Verify membership
+          const [chMembership] = await db.select().from(channelMembers)
+            .where(and(eq(channelMembers.channelId, channelId), eq(channelMembers.userId, userId)))
+            .limit(1);
+          if (!chMembership) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Access denied. You are not a member of this channel.' }));
+            return;
+          }
+          // Save message
+          const [newChMsg] = await db.insert(channelMessages).values({
+            channelId,
+            senderId: userId,
+            content: content.trim(),
+          }).returning();
+          // Get sender details
+          const [chSender] = await db.select({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            profileImageUrl: users.profileImageUrl,
+            availabilityStatus: users.availabilityStatus,
+          }).from(users).where(eq(users.id, userId)).limit(1);
+          const chMessageWithSender = { ...newChMsg, sender: chSender };
+          // Broadcast to all channel members
+          const allChMembers = await db.select({ userId: channelMembers.userId })
+            .from(channelMembers).where(eq(channelMembers.channelId, channelId));
+          broadcastToUsers(allChMembers.map(m => m.userId), {
+            type: 'channel_message',
+            channelId,
+            message: chMessageWithSender,
+          });
+        }
+
         // Handle typing indicator
         if (message.type === 'typing') {
           const { conversationId, recipientId, isTyping } = message;
