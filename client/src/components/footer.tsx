@@ -4,6 +4,7 @@ import logoUrl from "@assets/ANZ_logo.webp";
 import { useRegion } from "@/context/RegionContext";
 import { getRegionConfig } from "@/lib/region-config";
 import { useTranslation } from "@/hooks/useTranslation";
+import { LanguageToggle } from "@/components/language-toggle";
 
 const socialLinks = [
   {
@@ -79,6 +80,9 @@ export function Footer() {
                   <social.icon className="h-4 w-4" />
                 </a>
               ))}
+            </div>
+            <div className="mt-4">
+              <LanguageToggle />
             </div>
           </div>
 

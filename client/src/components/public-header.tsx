@@ -23,7 +23,6 @@ import type { StudentProfile } from "@shared/schema";
 import { useRegion } from "@/context/RegionContext";
 import { getRegionConfig } from "@/lib/region-config";
 import { useTranslation } from "@/hooks/useTranslation";
-import { LanguageToggle } from "@/components/language-toggle";
 
 function AnimatedMenuIcon({ isOpen }: { isOpen: boolean }) {
   return (
@@ -271,7 +270,6 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
             ) : (
               /* Show Login and Sign up buttons when not authenticated */
               <div className="flex items-center gap-2">
-                <LanguageToggle />
                 <Button
                   size="sm"
                   className="bg-accent text-accent-foreground border-accent-border"

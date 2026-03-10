@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Home, BookOpen, Sparkles, Settings, X, LayoutDashboard, LogOut, Building2, Scale, MessageCircle, Search, Mail, Heart } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
-import { LanguageToggle } from "@/components/language-toggle";
 import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.webp";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -152,17 +151,14 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
             ) : (
               <p className="text-sm font-semibold text-foreground">{t("navigation.menu")}</p>
             )}
-            <div className="flex items-center gap-1">
-              <LanguageToggle />
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => setMenuOpen(false)}
-                data-testid="button-close-mobile-sheet"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setMenuOpen(false)}
+              data-testid="button-close-mobile-sheet"
+            >
+              <X className="h-5 w-5" />
+            </Button>
           </div>
 
           <div className="border-t border-border" />
