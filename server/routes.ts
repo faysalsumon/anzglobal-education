@@ -64,6 +64,12 @@ import {
   crmContacts,
   contactStatusHistory,
   contactNotes,
+  contactInquiries,
+  universityTeamMembers,
+  institutionContacts,
+  institutionBusinessTerms,
+  institutionDocuments,
+  apiKeys,
   // CMS imports
   insertTestimonialSchema,
   updateTestimonialSchema,
@@ -10378,8 +10384,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Delete user (this will cascade delete related data based on schema constraints)
-      await db.delete(users).where(eq(users.id, targetUserId));
+      await db.transaction(async (tx) => {
+        // Null out all FK references without onDelete cascade/set-null before deleting
+        await tx.update(universities).set({ assignedToUserId: null }).where(eq(universities.assignedToUserId, targetUserId));
+        await tx.update(universities).set({ approvedBy: null }).where(eq(universities.approvedBy, targetUserId));
+        await tx.update(universities).set({ publishedByUserId: null }).where(eq(universities.publishedByUserId, targetUserId));
+        await tx.update(universities).set({ createdByUserId: null }).where(eq(universities.createdByUserId, targetUserId));
+        await tx.update(universities).set({ updatedByUserId: null }).where(eq(universities.updatedByUserId, targetUserId));
+        await tx.update(courses).set({ assignedToUserId: null }).where(eq(courses.assignedToUserId, targetUserId));
+        await tx.update(courses).set({ approvedBy: null }).where(eq(courses.approvedBy, targetUserId));
+        await tx.update(courses).set({ publishedByUserId: null }).where(eq(courses.publishedByUserId, targetUserId));
+        await tx.update(courses).set({ createdByUserId: null }).where(eq(courses.createdByUserId, targetUserId));
+        await tx.update(courses).set({ updatedByUserId: null }).where(eq(courses.updatedByUserId, targetUserId));
+        await tx.update(crmContacts).set({ linkedUserId: null }).where(eq(crmContacts.linkedUserId, targetUserId));
+        await tx.update(crmContacts).set({ assignedTo: null }).where(eq(crmContacts.assignedTo, targetUserId));
+        await tx.update(contactInquiries).set({ assignedTo: null }).where(eq(contactInquiries.assignedTo, targetUserId));
+        await tx.update(institutionContacts).set({ createdByUserId: null }).where(eq(institutionContacts.createdByUserId, targetUserId));
+        await tx.update(institutionBusinessTerms).set({ createdByUserId: null }).where(eq(institutionBusinessTerms.createdByUserId, targetUserId));
+        await tx.update(institutionBusinessTerms).set({ updatedByUserId: null }).where(eq(institutionBusinessTerms.updatedByUserId, targetUserId));
+        await tx.update(institutionDocuments).set({ uploadedByUserId: null }).where(eq(institutionDocuments.uploadedByUserId, targetUserId));
+        await tx.update(apiKeys).set({ revokedByUserId: null }).where(eq(apiKeys.revokedByUserId, targetUserId));
+        await tx.update(universityTeamMembers).set({ invitedBy: null }).where(eq(universityTeamMembers.invitedBy, targetUserId));
+        await tx.update(adminTeamMembers).set({ invitedBy: null }).where(eq(adminTeamMembers.invitedBy, targetUserId));
+        await tx.delete(users).where(eq(users.id, targetUserId));
+      });
 
       res.json({ message: "User deleted successfully" });
     } catch (error) {
@@ -10409,10 +10437,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Cannot delete your own account" });
       }
 
-      // Delete users
-      const result = await db.delete(users).where(
-        or(...userIds.map(id => eq(users.id, id)))
-      );
+      await db.transaction(async (tx) => {
+        // Null out all FK references without onDelete cascade/set-null before deleting
+        await tx.update(universities).set({ assignedToUserId: null }).where(inArray(universities.assignedToUserId, userIds));
+        await tx.update(universities).set({ approvedBy: null }).where(inArray(universities.approvedBy, userIds));
+        await tx.update(universities).set({ publishedByUserId: null }).where(inArray(universities.publishedByUserId, userIds));
+        await tx.update(universities).set({ createdByUserId: null }).where(inArray(universities.createdByUserId, userIds));
+        await tx.update(universities).set({ updatedByUserId: null }).where(inArray(universities.updatedByUserId, userIds));
+        await tx.update(courses).set({ assignedToUserId: null }).where(inArray(courses.assignedToUserId, userIds));
+        await tx.update(courses).set({ approvedBy: null }).where(inArray(courses.approvedBy, userIds));
+        await tx.update(courses).set({ publishedByUserId: null }).where(inArray(courses.publishedByUserId, userIds));
+        await tx.update(courses).set({ createdByUserId: null }).where(inArray(courses.createdByUserId, userIds));
+        await tx.update(courses).set({ updatedByUserId: null }).where(inArray(courses.updatedByUserId, userIds));
+        await tx.update(crmContacts).set({ linkedUserId: null }).where(inArray(crmContacts.linkedUserId, userIds));
+        await tx.update(crmContacts).set({ assignedTo: null }).where(inArray(crmContacts.assignedTo, userIds));
+        await tx.update(contactInquiries).set({ assignedTo: null }).where(inArray(contactInquiries.assignedTo, userIds));
+        await tx.update(institutionContacts).set({ createdByUserId: null }).where(inArray(institutionContacts.createdByUserId, userIds));
+        await tx.update(institutionBusinessTerms).set({ createdByUserId: null }).where(inArray(institutionBusinessTerms.createdByUserId, userIds));
+        await tx.update(institutionBusinessTerms).set({ updatedByUserId: null }).where(inArray(institutionBusinessTerms.updatedByUserId, userIds));
+        await tx.update(institutionDocuments).set({ uploadedByUserId: null }).where(inArray(institutionDocuments.uploadedByUserId, userIds));
+        await tx.update(apiKeys).set({ revokedByUserId: null }).where(inArray(apiKeys.revokedByUserId, userIds));
+        await tx.update(universityTeamMembers).set({ invitedBy: null }).where(inArray(universityTeamMembers.invitedBy, userIds));
+        await tx.update(adminTeamMembers).set({ invitedBy: null }).where(inArray(adminTeamMembers.invitedBy, userIds));
+        await tx.delete(users).where(inArray(users.id, userIds));
+      });
 
       res.json({ 
         message: `Successfully deleted ${userIds.length} user(s)`,
