@@ -1,4 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/hooks/useTranslation";
 import { trackSearch } from "@/lib/meta-pixel";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -42,7 +47,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart, GitCompare, X, Mail, Building2, Filter, BookOpen, Layers, Globe, ChevronDown, ChevronRight, RotateCcw, ArrowUpDown } from "lucide-react";
+import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart, GitCompare, X, Mail, Building2, Filter, BookOpen, Layers, Globe, ChevronDown, ChevronRight, RotateCcw, ArrowUpDown, CheckCircle2, Loader2, PhoneCall } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { CourseWithDetails, University, Favorite, CourseComparison, SubDiscipline } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -194,6 +199,179 @@ const snapshotsEqual = (a: FilterSnapshot, b: FilterSnapshot): boolean => {
     a.feeCurrency === b.feeCurrency
   );
 };
+
+const courseSearchLeadSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Please enter a valid email"),
+  phone: z.string().optional(),
+  lookingFor: z.string().optional(),
+});
+type CourseSearchLeadForm = z.infer<typeof courseSearchLeadSchema>;
+
+function CourseSearchLeadCapture({
+  searchTerm,
+  discipline,
+  level,
+  country,
+}: {
+  searchTerm: string;
+  discipline: string;
+  level: string;
+  country: string;
+}) {
+  const { toast } = useToast();
+  const { regionCode } = useRegion();
+  const [submitted, setSubmitted] = useState(false);
+
+  const form = useForm<CourseSearchLeadForm>({
+    resolver: zodResolver(courseSearchLeadSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      lookingFor: searchTerm || "",
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: (values: CourseSearchLeadForm) =>
+      apiRequest("POST", "/api/public/course-search-leads", {
+        ...values,
+        discipline: discipline || undefined,
+        level: level || undefined,
+        country: country || undefined,
+        regionCode: regionCode || undefined,
+      }),
+    onSuccess: () => {
+      setSubmitted(true);
+    },
+    onError: () => {
+      toast({ title: "Something went wrong. Please try again.", variant: "destructive" });
+    },
+  });
+
+  if (submitted) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-primary opacity-80" />
+          <p className="text-lg font-semibold mb-2">Thank you!</p>
+          <p className="text-sm text-muted-foreground">
+            We've received your request and an education consultant will be in touch with you shortly.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-4">
+        <div className="flex items-center gap-2 mb-1">
+          <PhoneCall className="h-5 w-5 text-primary" />
+          <CardTitle className="text-base">Can't find what you're looking for?</CardTitle>
+        </div>
+        <CardDescription>
+          Tell us what you need and our education consultants will reach out to help.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit((v) => mutation.mutate(v))}
+            className="space-y-4"
+            data-testid="form-course-search-lead"
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Jane" {...field} data-testid="input-lead-first-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Smith" {...field} data-testid="input-lead-last-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="jane@example.com" {...field} data-testid="input-lead-email" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+                  <FormControl>
+                    <Input type="tel" placeholder="+880 1700 000000" {...field} data-testid="input-lead-phone" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="lookingFor"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>What are you looking for? <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="e.g. Masters in Computer Science in the UK"
+                      className="resize-none"
+                      rows={3}
+                      {...field}
+                      data-testid="textarea-lead-looking-for"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={mutation.isPending}
+              data-testid="button-lead-submit"
+            >
+              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Request Consultation
+            </Button>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function PublicCourses() {
   const { t } = useTranslation();
@@ -1672,19 +1850,27 @@ export default function PublicCourses() {
                   ))}
                 </div>
               ) : totalFilteredCourses === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
-                    <p className="text-lg font-medium mb-2">{t("courses.noResults")}</p>
-                    <p className="text-sm text-muted-foreground mb-4">{t("courses.noResultsDesc")}</p>
-                    {activeFilterCount > 0 && (
-                      <Button variant="outline" onClick={clearAllFilters} data-testid="button-clear-filters-empty">
-                        <RotateCcw className="mr-2 h-4 w-4" />
-                        Clear All Filters
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
+                <div className="space-y-4">
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
+                      <p className="text-lg font-medium mb-2">{t("courses.noResults")}</p>
+                      <p className="text-sm text-muted-foreground mb-4">{t("courses.noResultsDesc")}</p>
+                      {activeFilterCount > 0 && (
+                        <Button type="button" variant="outline" onClick={clearAllFilters} data-testid="button-clear-filters-empty">
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          Clear All Filters
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                  <CourseSearchLeadCapture
+                    searchTerm={searchTerm}
+                    discipline={discipline}
+                    level={level}
+                    country={country}
+                  />
+                </div>
               ) : (
                 <div className="space-y-6">
                 {/* Course Cards - Single Column Horizontal Design */}

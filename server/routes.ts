@@ -3080,6 +3080,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  app.post("/api/public/course-search-leads", async (req, res) => {
+    try {
+      const turnstile = await verifyTurnstileToken(req.body.turnstileToken, req.ip);
+      if (!turnstile.success) {
+        return res.status(400).json({ message: turnstile.error || "CAPTCHA verification failed." });
+      }
+
+      const courseSearchLeadSchema = z.object({
+        firstName: z.string().min(1).max(100),
+        lastName: z.string().min(1).max(100),
+        email: z.string().email(),
+        phone: z.string().optional(),
+        lookingFor: z.string().optional(),
+        discipline: z.string().optional(),
+        level: z.string().optional(),
+        country: z.string().optional(),
+        regionCode: z.string().optional(),
+      });
+
+      const data = courseSearchLeadSchema.parse({
+        ...req.body,
+        email: req.body.email?.trim().toLowerCase() || '',
+        firstName: req.body.firstName?.trim() || '',
+        lastName: req.body.lastName?.trim() || '',
+        phone: req.body.phone?.trim() || undefined,
+      });
+
+      let regionId: string | undefined;
+      if (data.regionCode) {
+        const allRegions = await db.select().from(regions);
+        const matchingRegion = allRegions.find(r =>
+          r.code?.toLowerCase() === data.regionCode?.toLowerCase()
+        );
+        if (matchingRegion) regionId = matchingRegion.id;
+      } else if (data.country) {
+        const allRegions = await db.select().from(regions);
+        const matchingRegion = allRegions.find(r =>
+          r.countries?.some((c: string) => c.toLowerCase() === data.country?.toLowerCase())
+        );
+        if (matchingRegion) regionId = matchingRegion.id;
+      }
+
+      const notes = [
+        'Course Search Lead - No Results Found',
+        data.lookingFor ? `Looking For: ${data.lookingFor}` : '',
+        data.discipline ? `Discipline: ${data.discipline}` : '',
+        data.level ? `Level: ${data.level}` : '',
+        data.country ? `Destination: ${data.country}` : '',
+      ].filter(Boolean).join('\n');
+
+      const [crmContact] = await db.insert(crmContacts).values({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        mobile: data.phone || undefined,
+        contactType: "clients" as const,
+        clientStatus: "lead" as const,
+        leadStage: "new" as const,
+        entrySource: "website" as const,
+        leadRating: "warm" as const,
+        programDiscipline: data.discipline || undefined,
+        programType: data.level || undefined,
+        whereToStudy: data.country || undefined,
+        interestedIn: data.lookingFor || undefined,
+        courseName: data.lookingFor || undefined,
+        nationality: data.regionCode === "BD" ? "Bangladesh" : undefined,
+        notes,
+        referrer: req.headers["referer"] as string || undefined,
+        firstPageVisited: "/courses",
+        firstVisit: new Date(),
+        regionId,
+        referenceSource: "Course Search - No Results",
+        utmSource: "website",
+        utmMedium: "course_search",
+      }).returning();
+
+      await db.insert(contactStatusHistory).values({
+        contactId: crmContact.id,
+        fromStatus: null,
+        toStatus: "lead" as const,
+        notes: `Lead from course search (no results)${data.lookingFor ? ` - "${data.lookingFor}"` : ''}`,
+      });
+
+      const adminUsers = await db.select().from(users).where(eq(users.userType, 'admin'));
+      const adminTeamMembersList = await storage.getAllAdminTeamMembers();
+
+      const notificationRecords = [];
+      for (const admin of adminUsers) {
+        notificationRecords.push({
+          userId: admin.id,
+          type: 'new_lead',
+          title: 'New Course Search Lead',
+          message: `${data.firstName} ${data.lastName} couldn't find a course and requested consultation${data.lookingFor ? ` - "${data.lookingFor}"` : ''}`,
+          link: '/admin#crm-contacts',
+          metadata: { contactId: crmContact.id },
+        });
+      }
+      for (const member of adminTeamMembersList) {
+        notificationRecords.push({
+          userId: member.userId,
+          type: 'new_lead',
+          title: 'New Course Search Lead',
+          message: `${data.firstName} ${data.lastName} couldn't find a course and requested consultation${data.lookingFor ? ` - "${data.lookingFor}"` : ''}`,
+          link: '/admin#crm-contacts',
+          metadata: { contactId: crmContact.id },
+        });
+      }
+      if (notificationRecords.length > 0) {
+        await db.insert(notifications).values(notificationRecords);
+      }
+
+      const searchRegionContext = getRegionContext(req);
+      const searchDetectedRegion = searchRegionContext.detectedFromDomain ? searchRegionContext.region?.code : null;
+      sendNewLeadAdminNotification({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        courseTitle: data.lookingFor || (data.discipline ? `${data.discipline} (${data.level || 'Any Level'})` : 'Course Search'),
+        universityName: 'Any Institution',
+        country: data.country,
+        regionCode: data.regionCode || searchDetectedRegion || undefined,
+        entrySource: 'website',
+        contactId: crmContact.id,
+      }).catch(err => console.error('[Email] Failed to send course search lead admin notification:', err));
+
+      res.status(201).json({ message: "Thank you! Our team will contact you shortly." });
+    } catch (error: any) {
+      console.error("Error creating course search lead:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Please check your information and try again" });
+      }
+      res.status(500).json({ message: "Unable to submit your request. Please try again later." });
+    }
+  });
+
   app.post("/api/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
