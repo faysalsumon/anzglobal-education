@@ -519,6 +519,25 @@ export default function PublicInstitutionDetail() {
                     </div>
                   </div>
                 )}
+
+                {/* Mobile CTA — hidden on desktop (desktop has the CTA card column) */}
+                <div className="md:hidden flex flex-col gap-2 pt-1">
+                  <Button className="w-full" asChild data-testid="button-browse-courses-hero-mobile">
+                    <Link href={`/courses?university=${institution.id}`}>
+                      <GraduationCap className="h-4 w-4 mr-2" />
+                      Browse All Courses
+                    </Link>
+                  </Button>
+                  {institution.website && (
+                    <Button variant="outline" className="w-full" asChild data-testid="button-visit-website-hero-mobile">
+                      <a href={institution.website} target="_blank" rel="noopener noreferrer">
+                        <Globe className="h-4 w-4 mr-2" />
+                        Visit Website
+                        <ExternalLink className="h-3 w-3 ml-2" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -557,7 +576,7 @@ export default function PublicInstitutionDetail() {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6 md:py-12">
+      <div className="container mx-auto px-4 py-6 md:py-12 pb-24 md:pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           {/* Main Content Column */}
           <div className="lg:col-span-2 space-y-6 md:space-y-8">
@@ -849,8 +868,8 @@ export default function PublicInstitutionDetail() {
             </ResponsiveSection>
           </div>
 
-          {/* Sticky Sidebar */}
-          <div className="space-y-6 lg:sticky lg:top-28 self-start">
+          {/* Sticky Sidebar — hidden on mobile (quick stats already shown in hero) */}
+          <div className="hidden lg:block space-y-6 lg:sticky lg:top-28 self-start">
             {/* Quick Facts Card */}
             <Card className="border-primary/20">
               <CardHeader className="pb-2">
