@@ -163,34 +163,52 @@ export function CourseSectionNav({ visibleSections, courseTitle, ctaContent }: C
         )}
         data-testid="course-section-nav-mobile"
       >
-        <nav className="flex items-center justify-around gap-2 py-2 px-2">
-          {availableSections.slice(0, 5).map((section) => (
-            <Button
-              key={section.id}
-              variant={activeSection === section.id ? "default" : "ghost"}
-              size="sm"
-              onClick={() => scrollToSection(section.id)}
-              className={cn(
-                activeSection !== section.id && "text-muted-foreground"
-              )}
-              data-testid={`nav-section-mobile-${section.id}`}
-            >
-              {section.icon}
-            </Button>
-          ))}
+        <nav className="flex items-center justify-around px-1 py-1">
+          {availableSections.slice(0, 5).map((section) => {
+            const isActive = activeSection === section.id;
+            return (
+              <button
+                type="button"
+                key={section.id}
+                onClick={() => scrollToSection(section.id)}
+                className={cn(
+                  "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-colors min-w-0 flex-1",
+                  isActive
+                    ? "text-primary"
+                    : "text-muted-foreground"
+                )}
+                data-testid={`nav-section-mobile-${section.id}`}
+              >
+                <span className={cn(
+                  "flex items-center justify-center w-6 h-6 rounded-md transition-colors",
+                  isActive ? "bg-primary/10" : ""
+                )}>
+                  {section.icon}
+                </span>
+                <span className={cn(
+                  "text-[9px] leading-tight font-medium truncate w-full text-center",
+                  isActive ? "font-semibold" : ""
+                )}>
+                  {section.label}
+                </span>
+              </button>
+            );
+          })}
           {availableSections.length > 5 && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              type="button"
               onClick={() => {
                 const moreSection = availableSections[5];
                 if (moreSection) scrollToSection(moreSection.id);
               }}
-              className="text-muted-foreground"
+              className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg text-muted-foreground flex-1"
               data-testid="nav-section-mobile-more"
             >
-              <Globe className="h-4 w-4" />
-            </Button>
+              <span className="flex items-center justify-center w-6 h-6 rounded-md">
+                <Globe className="h-4 w-4" />
+              </span>
+              <span className="text-[9px] leading-tight font-medium">More</span>
+            </button>
           )}
         </nav>
       </div>

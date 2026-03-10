@@ -581,9 +581,9 @@ export default function PublicCourseDetail() {
       {/* Modern AI-Style Hero Section */}
       <div id="course-hero" className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border-b">
         <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-        <div className="container mx-auto px-4 py-12 relative">
+        <div className="container mx-auto px-4 py-6 md:py-12 relative">
           {/* Breadcrumb with Favorite Button */}
-          <div className="flex items-center justify-between gap-4 mb-6">
+          <div className="flex items-center justify-between gap-4 mb-4 md:mb-6">
             <nav className="flex flex-wrap items-center gap-2 text-sm" data-testid="breadcrumb">
               <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="breadcrumb-home">
                 <Home className="h-4 w-4" />
@@ -592,8 +592,8 @@ export default function PublicCourseDetail() {
               <Link href="/courses" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="breadcrumb-courses">
                 Courses
               </Link>
-              <span className="text-muted-foreground">/</span>
-              <span className="text-foreground font-medium truncate max-w-md" data-testid="breadcrumb-current">{course.title}</span>
+              <span className="hidden sm:inline text-muted-foreground">/</span>
+              <span className="hidden sm:inline text-foreground font-medium truncate max-w-md" data-testid="breadcrumb-current">{course.title}</span>
             </nav>
             
             {/* Favorite Button - Red heart for students */}
@@ -615,53 +615,125 @@ export default function PublicCourseDetail() {
             )}
           </div>
 
-          {/* Mobile Quick Stats Strip - Horizontally scrollable on mobile only */}
-          <div className="md:hidden overflow-x-auto -mx-4 px-4 py-3" data-testid="container-mobile-quick-stats">
-            <div className="flex gap-3 min-w-max">
-              {course.duration && (
-                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0" data-testid="stat-duration">
-                  <Clock className="h-4 w-4 text-primary" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Duration</span>
-                    <span className="text-sm font-semibold">{course.duration}</span>
+          {/* Mobile Quick Facts Grid — shown only on mobile, replaces the old horizontal strip */}
+          <div className="md:hidden mb-4" data-testid="container-mobile-quick-facts">
+            <div className="bg-background/70 backdrop-blur-sm rounded-2xl border border-primary/10 p-4">
+              <div className="flex items-center gap-1.5 mb-3">
+                <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Quick Facts</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {course.fees && (
+                  <div className="flex items-center gap-2.5 bg-muted/40 rounded-xl p-3" data-testid="mobile-fact-tuition">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <DollarSign className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] uppercase tracking-wide text-muted-foreground leading-tight">Tuition</p>
+                      <p className="text-xs font-bold truncate">{course.currency} {Number(course.fees).toLocaleString()}</p>
+                    </div>
                   </div>
-                </div>
-              )}
-              {course.fees && (
-                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0" data-testid="stat-fees">
-                  <DollarSign className="h-4 w-4 text-primary" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Tuition/Year</span>
-                    <span className="text-sm font-semibold">{course.currency} {Number(course.fees).toLocaleString()}</span>
+                )}
+                {course.duration && (
+                  <div className="flex items-center gap-2.5 bg-muted/40 rounded-xl p-3" data-testid="mobile-fact-duration">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center">
+                      <Clock className="h-3.5 w-3.5 text-secondary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] uppercase tracking-wide text-muted-foreground leading-tight">Duration</p>
+                      <p className="text-xs font-bold truncate">{course.duration}</p>
+                    </div>
                   </div>
-                </div>
-              )}
-              {course.deliveryMode && (
-                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0" data-testid="stat-mode">
-                  <MonitorPlay className="h-4 w-4 text-accent" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Mode</span>
-                    <span className="text-sm font-semibold">
-                      {course.deliveryMode === "online" ? "Online" : course.deliveryMode === "on-campus" ? "On-Campus" : "Hybrid"}
-                    </span>
+                )}
+                {course.deliveryMode && (
+                  <div className="flex items-center gap-2.5 bg-muted/40 rounded-xl p-3" data-testid="mobile-fact-mode">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center">
+                      <MonitorPlay className="h-3.5 w-3.5 text-accent" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] uppercase tracking-wide text-muted-foreground leading-tight">Mode</p>
+                      <p className="text-xs font-bold truncate">
+                        {course.deliveryMode === "online" ? "Online" : course.deliveryMode === "on-campus" ? "On-Campus" : "Hybrid"}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
-              {nextIntake && (
-                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0" data-testid="stat-next-intake">
-                  <Calendar className="h-4 w-4 text-secondary" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Next Intake</span>
-                    <span className="text-sm font-semibold">{formatIntakeDate(nextIntake.startDate)}</span>
+                )}
+                {nextIntake && (
+                  <div className="flex items-center gap-2.5 bg-muted/40 rounded-xl p-3" data-testid="mobile-fact-intake">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center">
+                      <Calendar className="h-3.5 w-3.5 text-secondary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] uppercase tracking-wide text-muted-foreground leading-tight">Next Intake</p>
+                      <p className="text-xs font-bold truncate">{formatIntakeDate(nextIntake.startDate)}</p>
+                    </div>
                   </div>
-                </div>
-              )}
-              {(course.location || course.country) && (
-                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0" data-testid="stat-location">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Location</span>
-                    <span className="text-sm font-semibold">{course.location || course.country}</span>
+                )}
+                {(course.subject || course.discipline) && (
+                  <div className="flex items-center gap-2.5 bg-muted/40 rounded-xl p-3" data-testid="mobile-fact-discipline">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <BookOpen className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] uppercase tracking-wide text-muted-foreground leading-tight">Discipline</p>
+                      <p className="text-xs font-bold truncate">{course.subject || course.discipline}</p>
+                    </div>
+                  </div>
+                )}
+                {course.specialization && (
+                  <div className="flex items-center gap-2.5 bg-muted/40 rounded-xl p-3" data-testid="mobile-fact-specialization">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <BookOpen className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] uppercase tracking-wide text-muted-foreground leading-tight">Specialization</p>
+                      <p className="text-xs font-bold truncate">{course.specialization}</p>
+                    </div>
+                  </div>
+                )}
+                {(course.location || course.country) && (
+                  <div className="flex items-center gap-2.5 bg-muted/40 rounded-xl p-3" data-testid="mobile-fact-location">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
+                      <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] uppercase tracking-wide text-muted-foreground leading-tight">Location</p>
+                      <p className="text-xs font-bold truncate">{course.location || course.country}</p>
+                    </div>
+                  </div>
+                )}
+                {nextIntake && nextIntake.status === "open" && (
+                  <div className="flex items-center gap-2.5 bg-muted/40 rounded-xl p-3" data-testid="mobile-fact-deadline">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center">
+                      <Calendar className="h-3.5 w-3.5 text-accent" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] uppercase tracking-wide text-muted-foreground leading-tight">Deadline</p>
+                      <p className="text-xs font-bold truncate">{formatIntakeDate(nextIntake.applicationDeadline)}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {computedIntakes.length > 1 && (
+                <div className="mt-3 pt-3 border-t border-border/40">
+                  <p className="text-[9px] uppercase tracking-wide text-muted-foreground mb-2">Available Intakes</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {computedIntakes.map((intake, index) => {
+                      const statusColors = {
+                        open: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400",
+                        upcoming: "text-primary bg-primary/10",
+                        closed: "text-muted-foreground bg-muted/60",
+                      };
+                      return (
+                        <span
+                          key={intake.templateId}
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColors[intake.status]}`}
+                          data-testid={`mobile-badge-intake-${index}`}
+                        >
+                          {intake.displayLabel}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -693,7 +765,7 @@ export default function PublicCourseDetail() {
 
                 {/* Course Title with Gradient */}
                 <div>
-                  <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent mb-3" data-testid="text-course-title">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent mb-3" data-testid="text-course-title">
                     {course.title}
                   </h1>
                   {/* Course Code with Level */}
@@ -797,8 +869,8 @@ export default function PublicCourseDetail() {
               </div>
             </div>
 
-            {/* Hero CTA Card - Clean & Focused */}
-            <div className="lg:col-span-1 flex">
+            {/* Hero CTA Card - Desktop only (mobile uses sticky bottom CTA bar) */}
+            <div className="hidden lg:flex lg:col-span-1">
               <Card className="bg-background/60 backdrop-blur-sm border-primary/20 flex-1" data-testid="hero-cta-card">
                 <CardContent className="p-4 space-y-4">
                   <p className="text-sm font-semibold text-foreground">Interested in this course?</p>
@@ -1591,7 +1663,8 @@ export default function PublicCourseDetail() {
 
           {/* Enhanced Sidebar - Sticky Container */}
           <div className="lg:sticky lg:top-28 space-y-4 max-h-[calc(100vh-8rem)] overflow-y-auto scrollbar-hide">
-            {/* Quick Facts Card - Sidebar */}
+            {/* Quick Facts Card - Sidebar (desktop only; mobile shows the grid in hero) */}
+            <div className="hidden lg:block">
             <Card className="border-primary/20" data-testid="sidebar-quick-facts">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -1715,6 +1788,7 @@ export default function PublicCourseDetail() {
                 )}
               </CardContent>
             </Card>
+            </div>
 
             {/* Enhanced University Info Card */}
             {course.university && (
