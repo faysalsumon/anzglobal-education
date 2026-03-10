@@ -9,7 +9,7 @@ export function LanguageToggle() {
 
   return (
     <div
-      className="flex items-center rounded-md border border-border overflow-hidden text-xs font-medium"
+      className="inline-flex items-center rounded-md border border-border overflow-hidden text-xs font-medium"
       data-testid="language-toggle"
     >
       <button
