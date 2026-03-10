@@ -102,7 +102,7 @@ export function Footer() {
                       className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                       data-testid={`footer-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
                     >
-                      {link.label}
+                      {link.labelKey ? t(link.labelKey) : link.label}
                     </Link>
                   </li>
                 ))}

@@ -240,7 +240,7 @@ export default function Landing() {
   const heroTypingWords = isAU
     ? ["Dream Course in Australia", "Perfect Australian University", "Future Career in Australia"]
     : isBD
-      ? [t("hero.findYour") + " " + "Dream Course Abroad", t("hero.findYour") + " " + "Perfect University Worldwide", t("hero.findYour") + " " + "Future in Australia, UK, Canada or New Zealand"]
+      ? [t("hero.typingWord1"), t("hero.typingWord2"), t("hero.typingWord3")]
       : ["Dream Course", "Perfect University", "Future Career"];
 
   const heroSubtitle = isAU
@@ -422,7 +422,7 @@ export default function Landing() {
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1] mb-4 min-h-[100px] sm:min-h-[120px] lg:min-h-[140px]">
-                Find Your{" "}
+                {t("hero.findYour")}{" "}
                 <TypingText 
                   words={heroTypingWords}
                   className="text-primary"
@@ -442,7 +442,7 @@ export default function Landing() {
                   data-testid="button-hero-find-my-course"
                 >
                   <Sparkles className="mr-2 h-5 w-5" />
-                  Match My Course
+                  {t("hero.matchMyCourse")}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </div>
@@ -455,8 +455,8 @@ export default function Landing() {
                       <MessageCircle className="h-3.5 w-3.5 text-primary" />
                     </div>
                     <div>
-                      <span className="font-semibold text-foreground">Free Counseling</span>
-                      <p className="text-xs text-muted-foreground">Expert guidance at no cost</p>
+                      <span className="font-semibold text-foreground">{t("hero.freeCounseling")}</span>
+                      <p className="text-xs text-muted-foreground">{t("hero.freeCounselingDesc")}</p>
                     </div>
                   </div>
                   <div className="w-px h-8 bg-border hidden sm:block" />
@@ -465,8 +465,8 @@ export default function Landing() {
                       <CheckCircle className="h-3.5 w-3.5 text-accent" />
                     </div>
                     <div>
-                      <span className="font-semibold text-foreground">98% Visa Success</span>
-                      <p className="text-xs text-muted-foreground">Proven track record from BD</p>
+                      <span className="font-semibold text-foreground">{t("hero.visaSuccess")}</span>
+                      <p className="text-xs text-muted-foreground">{t("hero.visaSuccessDescBD")}</p>
                     </div>
                   </div>
                   <div className="w-px h-8 bg-border hidden sm:block" />
@@ -475,8 +475,8 @@ export default function Landing() {
                       <Award className="h-3.5 w-3.5 text-primary" />
                     </div>
                     <div>
-                      <span className="font-semibold text-foreground">Scholarship Support</span>
-                      <p className="text-xs text-muted-foreground">Find funding opportunities</p>
+                      <span className="font-semibold text-foreground">{t("hero.scholarship")}</span>
+                      <p className="text-xs text-muted-foreground">{t("hero.scholarshipDesc")}</p>
                     </div>
                   </div>
                 </div>

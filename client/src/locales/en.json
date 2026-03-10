@@ -62,6 +62,9 @@
     "subtitle": "Connect with top universities and colleges worldwide. Find the perfect course for your future.",
     "searchPlaceholder": "Search courses, universities, or subjects...",
     "findYour": "Find Your",
+    "typingWord1": "Dream Course Abroad",
+    "typingWord2": "Perfect University Worldwide",
+    "typingWord3": "Future in Australia, UK, Canada or New Zealand",
     "matchMyCourse": "Match My Course",
     "aiSearch": "AI-Powered Search",
     "aiSearchDesc": "Describe what you're looking for in plain English",
@@ -214,7 +217,18 @@
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service",
     "descriptionBD": "Helping Bangladeshi students achieve their dreams of studying abroad at world-class universities.",
-    "descriptionAU": "Connecting international students with world-class Australian education opportunities."
+    "descriptionAU": "Connecting international students with world-class Australian education opportunities.",
+    "links": {
+      "courses": "Courses",
+      "institutions": "Institutions",
+      "studyAbroad": "Study Abroad",
+      "blog": "Blog",
+      "ourStory": "Our Story",
+      "studentReviews": "Student Reviews",
+      "contactUs": "Contact Us",
+      "privacyPolicy": "Privacy Policy",
+      "termsOfUse": "Terms of Use"
+    }
   },
   "chat": {
     "askZan": "Ask Zan",
