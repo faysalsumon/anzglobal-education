@@ -284,9 +284,9 @@ export function ChatWidget() {
 
   // Chat window
   return (
-    <div className="fixed bottom-36 right-3 md:bottom-8 md:right-4 z-50 flex flex-col bg-card border border-border rounded-xl shadow-2xl w-[calc(100vw-1.5rem)] max-w-[340px] md:max-w-[380px]"
+    <div className="fixed bottom-14 right-3 md:bottom-8 md:right-4 z-50 flex flex-col bg-card border border-border rounded-xl shadow-2xl w-[calc(100vw-1.5rem)] max-w-[340px] md:max-w-[380px]"
       style={{ 
-        height: isMinimized ? "60px" : "min(500px, calc(100vh - 120px))",
+        height: isMinimized ? "60px" : "min(500px, calc(100vh - 64px))",
       }}
       data-testid="chat-widget"
     >
@@ -336,7 +336,7 @@ export function ChatWidget() {
                 <p className="text-muted-foreground text-sm">Loading messages...</p>
               </div>
             ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center px-4">
+              <div className="flex flex-col items-center justify-start pt-8 h-full text-center px-4">
                 <Avatar className="h-16 w-16 mb-3 border-2 border-primary/20">
                   <AvatarImage src={chatAvatarImage} alt="Zan" />
                   <AvatarFallback className="bg-primary text-primary-foreground text-lg">Z</AvatarFallback>
