@@ -94,6 +94,10 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
     return () => window.removeEventListener("open-mobile-menu", handler);
   }, []);
 
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("mobile-menu-state-change", { detail: { open: menuOpen } }));
+  }, [menuOpen]);
+
   return (
     <>
       {/* Bottom sheet overlay */}

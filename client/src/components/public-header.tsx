@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, Settings, Home, Globe, Menu } from "lucide-react";
+import { GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, Settings, Home, Globe } from "lucide-react";
 import logoUrl from "@assets/ANZ_logo.webp";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
@@ -22,12 +23,38 @@ import type { StudentProfile } from "@shared/schema";
 import { useRegion } from "@/context/RegionContext";
 import { getRegionConfig } from "@/lib/region-config";
 
+function AnimatedMenuIcon({ isOpen }: { isOpen: boolean }) {
+  return (
+    <span className="flex flex-col justify-center items-center w-5 h-5 gap-[5px]">
+      <span
+        className="block h-0.5 w-5 rounded-full bg-blue-600 transition-all duration-300 ease-in-out origin-center"
+        style={{ transform: isOpen ? "rotate(45deg) translateY(7px)" : "none" }}
+      />
+      <span
+        className="block h-0.5 w-5 rounded-full bg-blue-600 transition-all duration-300 ease-in-out"
+        style={{ opacity: isOpen ? 0 : 1, transform: isOpen ? "scaleX(0)" : "scaleX(1)" }}
+      />
+      <span
+        className="block h-0.5 w-5 rounded-full bg-blue-600 transition-all duration-300 ease-in-out origin-center"
+        style={{ transform: isOpen ? "rotate(-45deg) translateY(-7px)" : "none" }}
+      />
+    </span>
+  );
+}
+
 interface PublicHeaderProps {
   onStudentLoginClick?: () => void;
 }
 
 export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    const handler = (e: Event) => setIsMenuOpen((e as CustomEvent<{ open: boolean }>).detail.open);
+    window.addEventListener("mobile-menu-state-change", handler);
+    return () => window.removeEventListener("mobile-menu-state-change", handler);
+  }, []);
   const { user, isAuthenticated, isAdmin, isStudent } = useAuth();
   const { signOut } = useSupabaseAuth();
   const { scrollDirection, isAtTop } = useScrollDirection({ threshold: 10 });
@@ -273,7 +300,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                   data-testid="button-mobile-menu"
                   aria-label="Open menu"
                 >
-                  <Menu className="h-5 w-5" />
+                  <AnimatedMenuIcon isOpen={isMenuOpen} />
                 </Button>
               </>
             ) : (
@@ -293,7 +320,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                   data-testid="button-mobile-menu"
                   aria-label="Open menu"
                 >
-                  <Menu className="h-5 w-5" />
+                  <AnimatedMenuIcon isOpen={isMenuOpen} />
                 </Button>
               </>
             )}
