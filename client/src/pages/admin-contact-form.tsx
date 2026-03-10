@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
 import { ArrowLeft, Save, Loader2, Building, Plus, X, Briefcase, Camera, User, Link2 } from "lucide-react";
@@ -277,7 +278,27 @@ export default function AdminContactForm() {
       navigate("/admin/dashboard");
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to create contact", variant: "destructive" });
+      const msg: string = error.message || "";
+      try {
+        const jsonStart = msg.indexOf("{");
+        if (jsonStart !== -1 && msg.startsWith("409:")) {
+          const parsed = JSON.parse(msg.slice(jsonStart));
+          if (parsed.existingContactId) {
+            toast({
+              title: "Contact already exists",
+              description: parsed.message || "A contact with this email already exists.",
+              variant: "destructive",
+              action: (
+                <ToastAction altText="View Contact" onClick={() => navigate(`/admin/contacts/${parsed.existingContactId}/edit`)}>
+                  View Contact
+                </ToastAction>
+              ),
+            });
+            return;
+          }
+        }
+      } catch {}
+      toast({ title: "Error", description: msg || "Failed to create contact", variant: "destructive" });
     },
   });
 
