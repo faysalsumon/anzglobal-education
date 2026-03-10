@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useTranslation } from "@/hooks/useTranslation";
 import { trackSearch } from "@/lib/meta-pixel";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
@@ -195,6 +196,7 @@ const snapshotsEqual = (a: FilterSnapshot, b: FilterSnapshot): boolean => {
 };
 
 export default function PublicCourses() {
+  const { t } = useTranslation();
   const { params, setParams } = useQueryParams();
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -911,8 +913,8 @@ export default function PublicCourses() {
 
           {/* Page Header */}
           <div className="text-center">
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Browse All Courses</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Explore {courses.length} courses from top institutions worldwide</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">{t("courses.browseAll")}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">{t("courses.exploreCount", { count: String(courses.length) })}</p>
           </div>
 
           {/* Tabs for Courses/Institutions */}
@@ -1675,8 +1677,8 @@ export default function PublicCourses() {
                 <Card>
                   <CardContent className="py-12 text-center">
                     <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
-                    <p className="text-lg font-medium mb-2">No courses found</p>
-                    <p className="text-sm text-muted-foreground mb-4">Try adjusting your filters or search term</p>
+                    <p className="text-lg font-medium mb-2">{t("courses.noResults")}</p>
+                    <p className="text-sm text-muted-foreground mb-4">{t("courses.noResultsDesc")}</p>
                     {activeFilterCount > 0 && (
                       <Button variant="outline" onClick={clearAllFilters} data-testid="button-clear-filters-empty">
                         <RotateCcw className="mr-2 h-4 w-4" />

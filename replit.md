@@ -32,6 +32,7 @@ The platform adheres to ANZ Global Education's brand identity, using a specific 
 - **CRM System**: Unified contact management with client status lifecycle, lead rating, Kanban view, and public form integration.
 - **Multi-Course Applications**: Support for multiple courses per application with auto-generated IDs.
 - **Multi-Region Architecture**: Config-driven system for content filtering, UI rendering, admin data scoping, and feature gating based on region.
+- **Internationalization (i18n)**: Custom translation engine (`client/src/lib/translations.ts`) supporting English (`en`) and Bengali/Bangla (`bn`). Translation hook: `client/src/hooks/useTranslation.ts`. JSON files at `client/src/locales/en.json` and `bn.json`. Auto-switches to Bengali when BD region is active. EN/বাং toggle rendered by `client/src/components/language-toggle.tsx` (only visible for BD region). Translations applied to: nav, mobile nav, footer, landing page, courses page, and contact form.
 - **Filtering & Search**: Discipline-based, course level, natural language, and location-based filtering with map integration.
 - **Unified Tag Manager**: Consolidated tagging system across 13 categories.
 - **AI Qualification Equivalency System**: AI-powered academic qualification matching with admin approval.

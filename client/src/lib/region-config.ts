@@ -2,11 +2,13 @@ export interface RegionNavItem {
   title: string;
   href: string;
   icon?: string;
+  titleKey?: string;
 }
 
 export interface RegionFooterSection {
   title: string;
-  links: { label: string; href: string }[];
+  titleKey?: string;
+  links: { label: string; href: string; labelKey?: string }[];
 }
 
 export interface RegionPageVisibility {
@@ -46,16 +48,17 @@ const AU_CONFIG: RegionConfig = {
   code: "AU",
   name: "Australia",
   publicNavItems: [
-    { title: "Home", href: "/" },
-    { title: "Courses", href: "/courses" },
-    { title: "Institutions", href: "/institutions" },
-    { title: "Study in Australia", href: "/study-in-australia" },
-    { title: "Blog", href: "/blog" },
-    { title: "About", href: "/our-story" },
+    { title: "Home", href: "/", titleKey: "navigation.home" },
+    { title: "Courses", href: "/courses", titleKey: "navigation.courses" },
+    { title: "Institutions", href: "/institutions", titleKey: "navigation.institutions" },
+    { title: "Study in Australia", href: "/study-in-australia", titleKey: "navigation.studyInAustralia" },
+    { title: "Blog", href: "/blog", titleKey: "navigation.blog" },
+    { title: "About", href: "/our-story", titleKey: "navigation.about" },
   ],
   footerSections: [
     {
       title: "Explore",
+      titleKey: "footer.explore",
       links: [
         { label: "Courses", href: "/courses" },
         { label: "Institutions", href: "/institutions" },
@@ -66,6 +69,7 @@ const AU_CONFIG: RegionConfig = {
     },
     {
       title: "Company",
+      titleKey: "footer.company",
       links: [
         { label: "Our Story", href: "/our-story" },
         { label: "Student Reviews", href: "/student-reviews" },
@@ -76,6 +80,7 @@ const AU_CONFIG: RegionConfig = {
     },
     {
       title: "Legal",
+      titleKey: "footer.legal",
       links: [
         { label: "Privacy Policy", href: "/privacy" },
         { label: "Terms of Use", href: "/terms" },
@@ -110,16 +115,17 @@ const BD_CONFIG: RegionConfig = {
   code: "BD",
   name: "Bangladesh",
   publicNavItems: [
-    { title: "Home", href: "/" },
-    { title: "Courses", href: "/courses" },
-    { title: "Institutions", href: "/institutions" },
-    { title: "Study Abroad", href: "/study-abroad" },
-    { title: "Blog", href: "/blog" },
-    { title: "About", href: "/our-story" },
+    { title: "Home", href: "/", titleKey: "navigation.home" },
+    { title: "Courses", href: "/courses", titleKey: "navigation.courses" },
+    { title: "Institutions", href: "/institutions", titleKey: "navigation.institutions" },
+    { title: "Study Abroad", href: "/study-abroad", titleKey: "navigation.studyAbroad" },
+    { title: "Blog", href: "/blog", titleKey: "navigation.blog" },
+    { title: "About", href: "/our-story", titleKey: "navigation.about" },
   ],
   footerSections: [
     {
       title: "Explore",
+      titleKey: "footer.explore",
       links: [
         { label: "Courses", href: "/courses" },
         { label: "Institutions", href: "/institutions" },
@@ -129,6 +135,7 @@ const BD_CONFIG: RegionConfig = {
     },
     {
       title: "Company",
+      titleKey: "footer.company",
       links: [
         { label: "Our Story", href: "/our-story" },
         { label: "Student Reviews", href: "/student-reviews" },
@@ -137,6 +144,7 @@ const BD_CONFIG: RegionConfig = {
     },
     {
       title: "Legal",
+      titleKey: "footer.legal",
       links: [
         { label: "Privacy Policy", href: "/privacy" },
         { label: "Terms of Use", href: "/terms" },

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Home, BookOpen, Sparkles, Settings, X, LayoutDashboard, LogOut, Building2, Scale, MessageCircle, Search, Mail, Heart } from "lucide-react";
+import { useTranslation } from "@/hooks/useTranslation";
+import { LanguageToggle } from "@/components/language-toggle";
 import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.webp";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,6 +21,7 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
   const [location, setLocation] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, isAuthenticated, isAdmin, isStudent } = useAuth();
+  const { t } = useTranslation();
   const { signOut } = useSupabaseAuth();
 
   const { data: studentProfile } = useQuery<StudentProfile>({
@@ -147,16 +150,19 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
                 </div>
               </div>
             ) : (
-              <p className="text-sm font-semibold text-foreground">Menu</p>
+              <p className="text-sm font-semibold text-foreground">{t("navigation.menu")}</p>
             )}
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setMenuOpen(false)}
-              data-testid="button-close-mobile-sheet"
-            >
-              <X className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <LanguageToggle />
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setMenuOpen(false)}
+                data-testid="button-close-mobile-sheet"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
 
           <div className="border-t border-border" />
@@ -200,8 +206,8 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
                 <Search className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-foreground leading-tight">Courses</p>
-                <p className="text-xs text-muted-foreground leading-tight">Browse 192+ programs</p>
+                <p className="text-sm font-medium text-foreground leading-tight">{t("navigation.courses")}</p>
+                <p className="text-xs text-muted-foreground leading-tight">{t("navigation.coursesDesc")}</p>
               </div>
             </Link>
             <Link
@@ -214,8 +220,8 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
                 <Building2 className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium text-foreground leading-tight">Institutions</p>
-                <p className="text-xs text-muted-foreground leading-tight">Explore partner universities</p>
+                <p className="text-sm font-medium text-foreground leading-tight">{t("navigation.institutions")}</p>
+                <p className="text-xs text-muted-foreground leading-tight">{t("navigation.institutionsDesc")}</p>
               </div>
             </Link>
             <Link
@@ -228,8 +234,8 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
                 <BookOpen className="h-4 w-4 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-foreground leading-tight">Blog</p>
-                <p className="text-xs text-muted-foreground leading-tight">News, tips &amp; guides</p>
+                <p className="text-sm font-medium text-foreground leading-tight">{t("navigation.blog")}</p>
+                <p className="text-xs text-muted-foreground leading-tight">{t("navigation.blogDesc")}</p>
               </div>
             </Link>
             <Link
@@ -242,8 +248,8 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
                 <Heart className="h-4 w-4 text-rose-600 dark:text-rose-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-foreground leading-tight">About Us</p>
-                <p className="text-xs text-muted-foreground leading-tight">Our story &amp; mission</p>
+                <p className="text-sm font-medium text-foreground leading-tight">{t("navigation.about")}</p>
+                <p className="text-xs text-muted-foreground leading-tight">{t("navigation.aboutDesc")}</p>
               </div>
             </Link>
             <Link
@@ -256,8 +262,8 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
                 <Mail className="h-4 w-4 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-foreground leading-tight">Contact</p>
-                <p className="text-xs text-muted-foreground leading-tight">Get in touch with us</p>
+                <p className="text-sm font-medium text-foreground leading-tight">{t("navigation.contact")}</p>
+                <p className="text-xs text-muted-foreground leading-tight">{t("navigation.contactDesc")}</p>
               </div>
             </Link>
           </div>
@@ -277,7 +283,7 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
                 data-testid="button-mobile-sheet-logout"
               >
                 <LogOut className="mr-2 h-4 w-4" />
-                Logout
+                {t("navigation.logout")}
               </Button>
             ) : (
               <div className="flex gap-2">
@@ -286,7 +292,7 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
                   asChild
                 >
                   <a href="/auth?mode=login" onClick={() => setMenuOpen(false)} data-testid="button-mobile-sheet-login">
-                    Login
+                    {t("navigation.login")}
                   </a>
                 </Button>
                 <Button
@@ -295,7 +301,7 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
                   asChild
                 >
                   <a href="/auth?mode=signup" onClick={() => setMenuOpen(false)} data-testid="button-mobile-sheet-signup">
-                    Sign up
+                    {t("navigation.signup")}
                   </a>
                 </Button>
               </div>

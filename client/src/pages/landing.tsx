@@ -15,6 +15,7 @@ import { PublicLayout } from "@/components/public-layout";
 import { NaturalLanguageSearch } from "@/components/natural-language-search";
 import { DisciplineCards } from "@/components/discipline-cards";
 import { useRegion } from "@/context/RegionContext";
+import { useTranslation } from "@/hooks/useTranslation";
 
 
 interface PlatformStats {
@@ -71,6 +72,7 @@ export default function Landing() {
   const { region, regionCode } = useRegion();
   const effectiveRegionCode = region?.code || regionCode;
   const regionQuery = effectiveRegionCode ? { region: effectiveRegionCode } : {};
+  const { t } = useTranslation();
 
   const { data: stats } = useQuery<PlatformStats>({
     queryKey: ["/api/platform/stats", regionQuery],
@@ -238,13 +240,13 @@ export default function Landing() {
   const heroTypingWords = isAU
     ? ["Dream Course in Australia", "Perfect Australian University", "Future Career in Australia"]
     : isBD
-      ? ["Dream Course Abroad", "Perfect University Worldwide", "Future in Australia, UK, Canada or New Zealand"]
+      ? [t("hero.findYour") + " " + "Dream Course Abroad", t("hero.findYour") + " " + "Perfect University Worldwide", t("hero.findYour") + " " + "Future in Australia, UK, Canada or New Zealand"]
       : ["Dream Course", "Perfect University", "Future Career"];
 
   const heroSubtitle = isAU
     ? "Your gateway to world-class Australian education — search courses, compare universities, and apply with confidence."
     : isBD
-      ? "Bangladesh's most trusted study abroad platform — find courses in Australia, UK, Canada, New Zealand & more. Free expert counseling, visa guidance & scholarship support."
+      ? t("hero.subtitle")
       : "We take the guesswork out of studying abroad — search courses, compare options, and apply with confidence.";
 
   // SEO data
@@ -650,7 +652,7 @@ export default function Landing() {
                 <span className="text-sm font-semibold">Our Partners</span>
               </div>
               <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
-                {isBD ? "Our Partner Universities Abroad" : "Featured Education Partners"}
+                {isBD ? t("landing.partnersHeadingBD") : t("landing.partnersHeading")}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 {isBD 
@@ -723,7 +725,7 @@ export default function Landing() {
                 data-testid="button-view-all-institutions"
               >
                 <Link href="/institutions">
-                  View All Institutions
+                  {isBD ? t("landing.viewAllInstitutions") : "View All Institutions"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -758,7 +760,7 @@ export default function Landing() {
                 <span className="text-sm font-semibold">Popular Programs</span>
               </div>
               <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
-                {isBD ? "Popular Courses for Bangladeshi Students" : "Featured Courses"}
+                {isBD ? t("landing.popularCoursesBD") : t("landing.featuredCourses")}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 {isBD 
@@ -1613,11 +1615,11 @@ export default function Landing() {
             
             <div className="relative z-10 text-center">
               <h2 className="mb-4 text-2xl sm:text-3xl md:text-4xl font-bold text-white">
-                {isBD ? "Start Your Study Abroad Journey Today" : "Ready to Get Started?"}
+                {isBD ? t("landing.ctaHeading") : "Ready to Get Started?"}
               </h2>
               <p className="mb-8 text-base sm:text-lg text-white/85 max-w-2xl mx-auto">
                 {isBD 
-                  ? "Get free expert counseling, scholarship guidance, and visa support — everything you need to study abroad from Bangladesh"
+                  ? t("landing.ctaDesc")
                   : "Whether you're a student seeking your ideal course or an institution looking to connect with qualified candidates, we're here to help"}
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">

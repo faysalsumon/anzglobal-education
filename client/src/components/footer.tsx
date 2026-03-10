@@ -3,6 +3,7 @@ import { Facebook, Instagram, Linkedin, Youtube, Twitter } from "lucide-react";
 import logoUrl from "@assets/ANZ_logo.webp";
 import { useRegion } from "@/context/RegionContext";
 import { getRegionConfig } from "@/lib/region-config";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const socialLinks = [
   {
@@ -43,6 +44,7 @@ export function Footer() {
   const effectiveRegionCode = region?.code || regionCode;
   const regionConfig = getRegionConfig(effectiveRegionCode);
   const footerNav = regionConfig.footerSections;
+  const { t } = useTranslation();
 
   return (
     <footer className="border-t bg-card dark:bg-card" data-testid="footer">
@@ -60,8 +62,8 @@ export function Footer() {
             </Link>
             <p className="text-sm text-muted-foreground max-w-xs mb-6">
               {effectiveRegionCode === 'BD'
-                ? "Helping Bangladeshi students achieve their dreams of studying abroad at world-class universities."
-                : "Connecting international students with world-class Australian education opportunities."}
+                ? t("footer.descriptionBD")
+                : t("footer.descriptionAU")}
             </p>
             <div className="flex items-center gap-3 flex-wrap">
               {socialLinks.map((social) => (
@@ -86,7 +88,7 @@ export function Footer() {
                 className="text-sm font-semibold text-foreground mb-4"
                 data-testid={`footer-heading-${section.title.toLowerCase()}`}
               >
-                {section.title}
+                {section.titleKey ? t(section.titleKey) : section.title}
               </h3>
               <ul className="space-y-2.5">
                 {section.links.map((link) => (

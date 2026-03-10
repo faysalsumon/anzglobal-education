@@ -172,6 +172,13 @@ export function RegionProvider({ children }: { children: ReactNode }) {
     }
   }, [selectedLocale]);
 
+  useEffect(() => {
+    const hasExplicitLocale = localStorage.getItem(LOCALE_STORAGE_KEY);
+    if (selectedRegionCode === "BD" && !hasExplicitLocale) {
+      setSelectedLocale("bn");
+    }
+  }, [selectedRegionCode]);
+
   const region = useMemo(() => {
     if (!selectedRegionCode) return null;
     return availableRegions.find(r => r.code === selectedRegionCode) || null;

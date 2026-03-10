@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "@/hooks/useTranslation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -357,6 +358,7 @@ export default function Contact() {
   const handleTurnstileSuccess = useCallback((token: string) => setTurnstileToken(token), []);
   const handleTurnstileExpire = useCallback(() => setTurnstileToken(""), []);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   // Student form
   const studentForm = useForm<StudentContactData>({
@@ -442,7 +444,7 @@ export default function Contact() {
         <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary/80 to-accent mb-6">
-              Contact Us
+              {t("contact.title")}
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
               Whether you're a student looking for your dream education or an institution seeking partnerships, we're here to help you succeed.
@@ -601,10 +603,10 @@ export default function Contact() {
                             name="studentName"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Full Name *</FormLabel>
+                                <FormLabel>{t("contact.name")} *</FormLabel>
                                 <FormControl>
                                   <Input
-                                    placeholder="John Doe"
+                                    placeholder={t("contact.namePlaceholder")}
                                     {...field}
                                     data-testid="input-student-name"
                                   />
@@ -619,11 +621,11 @@ export default function Contact() {
                             name="email"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Email *</FormLabel>
+                                <FormLabel>{t("contact.email")} *</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="email"
-                                    placeholder="john@example.com"
+                                    placeholder={t("contact.emailPlaceholder")}
                                     {...field}
                                     data-testid="input-student-email"
                                   />
@@ -638,10 +640,10 @@ export default function Contact() {
                             name="phone"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Phone Number</FormLabel>
+                                <FormLabel>{t("contact.phone")}</FormLabel>
                                 <FormControl>
                                   <Input
-                                    placeholder="+1 234 567 8900"
+                                    placeholder={t("contact.phonePlaceholder")}
                                     {...field}
                                     data-testid="input-student-phone"
                                   />
@@ -761,10 +763,10 @@ export default function Contact() {
                           name="message"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Message *</FormLabel>
+                              <FormLabel>{t("contact.message")} *</FormLabel>
                               <FormControl>
                                 <Textarea
-                                  placeholder="Tell us about your educational goals, preferred universities, budget considerations, or any questions you have..."
+                                  placeholder={t("contact.messagePlaceholder")}
                                   className="min-h-[150px]"
                                   {...field}
                                   data-testid="textarea-student-message"

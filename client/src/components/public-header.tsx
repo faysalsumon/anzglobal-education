@@ -22,6 +22,8 @@ import { cn } from "@/lib/utils";
 import type { StudentProfile } from "@shared/schema";
 import { useRegion } from "@/context/RegionContext";
 import { getRegionConfig } from "@/lib/region-config";
+import { useTranslation } from "@/hooks/useTranslation";
+import { LanguageToggle } from "@/components/language-toggle";
 
 function AnimatedMenuIcon({ isOpen }: { isOpen: boolean }) {
   return (
@@ -49,6 +51,7 @@ interface PublicHeaderProps {
 export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const handler = (e: Event) => setIsMenuOpen((e as CustomEvent<{ open: boolean }>).detail.open);
@@ -194,7 +197,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                 className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-accent/50"
                 data-testid={`link-nav-${item.title.toLowerCase()}`}
               >
-                {item.title}
+                {item.titleKey ? t(item.titleKey) : item.title}
               </Link>
             ))}
           </nav>
@@ -268,13 +271,14 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
             ) : (
               /* Show Login and Sign up buttons when not authenticated */
               <div className="flex items-center gap-2">
+                <LanguageToggle />
                 <Button
                   size="sm"
                   className="bg-accent text-accent-foreground border-accent-border"
                   asChild
                   data-testid="button-login"
                 >
-                  <a href="/auth?mode=login">Login</a>
+                  <a href="/auth?mode=login">{t("navigation.login")}</a>
                 </Button>
                 <Button
                   variant="default"
@@ -282,7 +286,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                   asChild
                   data-testid="button-signup"
                 >
-                  <a href="/auth?mode=signup">Sign up</a>
+                  <a href="/auth?mode=signup">{t("navigation.signup")}</a>
                 </Button>
               </div>
             )}
