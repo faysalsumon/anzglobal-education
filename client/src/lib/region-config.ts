@@ -15,7 +15,6 @@ export interface RegionPageVisibility {
   compareCourses: boolean;
   partnerWithUs: boolean;
   affiliate: boolean;
-  developers: boolean;
 }
 
 export interface AdminFeatureVisibility {
@@ -73,7 +72,6 @@ const AU_CONFIG: RegionConfig = {
         { label: "Contact Us", href: "/contact" },
         { label: "Partner with Us", href: "/partner-with-us" },
         { label: "Affiliate Program", href: "/affiliate" },
-        { label: "Developers", href: "/developers" },
       ],
     },
     {
@@ -90,7 +88,6 @@ const AU_CONFIG: RegionConfig = {
     compareCourses: true,
     partnerWithUs: true,
     affiliate: true,
-    developers: true,
   },
   adminFeatureVisibility: {
     webScraping: true,
@@ -152,7 +149,6 @@ const BD_CONFIG: RegionConfig = {
     compareCourses: true,
     partnerWithUs: false,
     affiliate: false,
-    developers: false,
   },
   adminFeatureVisibility: {
     webScraping: false,
