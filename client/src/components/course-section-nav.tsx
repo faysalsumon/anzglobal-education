@@ -89,7 +89,10 @@ export function CourseSectionNav({ visibleSections, courseTitle, ctaContent }: C
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
-      const headerOffset = 140;
+      // On mobile the section nav is at the bottom, so only offset for the top navbar (~64px).
+      // On desktop the section nav is at the top, so offset for navbar + section nav bar (~140px).
+      const isMobile = window.innerWidth < 768;
+      const headerOffset = isMobile ? 72 : 140;
       const elementPosition = element.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
