@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Home, BookOpen, Sparkles, Settings, X, LayoutDashboard, Info, Users, LogOut, GraduationCap, Scale, MessageCircle } from "lucide-react";
+import { Home, BookOpen, Sparkles, Settings, X, LayoutDashboard, LogOut, Building2, Scale, MessageCircle, Search, Mail, Heart } from "lucide-react";
 import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.webp";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -191,31 +191,74 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
           {/* Navigation links */}
           <div className="px-3 py-2">
             <Link
+              href="/courses"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-3 rounded-xl hover-elevate"
+              data-testid="mobile-sheet-courses"
+            >
+              <div className="flex-shrink-0 p-2 rounded-lg bg-blue-500/10">
+                <Search className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground leading-tight">Courses</p>
+                <p className="text-xs text-muted-foreground leading-tight">Browse 192+ programs</p>
+              </div>
+            </Link>
+            <Link
               href="/institutions"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-foreground hover-elevate"
+              className="flex items-center gap-3 px-3 py-3 rounded-xl hover-elevate"
               data-testid="mobile-sheet-institutions"
             >
-              <GraduationCap className="h-5 w-5 text-muted-foreground" />
-              Institutions
+              <div className="flex-shrink-0 p-2 rounded-lg bg-primary/10">
+                <Building2 className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground leading-tight">Institutions</p>
+                <p className="text-xs text-muted-foreground leading-tight">Explore partner universities</p>
+              </div>
             </Link>
             <Link
               href="/blog"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-foreground hover-elevate"
+              className="flex items-center gap-3 px-3 py-3 rounded-xl hover-elevate"
               data-testid="mobile-sheet-blog"
             >
-              <Users className="h-5 w-5 text-muted-foreground" />
-              Blog
+              <div className="flex-shrink-0 p-2 rounded-lg bg-orange-500/10">
+                <BookOpen className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground leading-tight">Blog</p>
+                <p className="text-xs text-muted-foreground leading-tight">News, tips &amp; guides</p>
+              </div>
             </Link>
             <Link
               href="/our-story"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-foreground hover-elevate"
+              className="flex items-center gap-3 px-3 py-3 rounded-xl hover-elevate"
               data-testid="mobile-sheet-about"
             >
-              <Info className="h-5 w-5 text-muted-foreground" />
-              About Us
+              <div className="flex-shrink-0 p-2 rounded-lg bg-rose-500/10">
+                <Heart className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground leading-tight">About Us</p>
+                <p className="text-xs text-muted-foreground leading-tight">Our story &amp; mission</p>
+              </div>
+            </Link>
+            <Link
+              href="/contact"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-3 rounded-xl hover-elevate"
+              data-testid="mobile-sheet-contact"
+            >
+              <div className="flex-shrink-0 p-2 rounded-lg bg-green-500/10">
+                <Mail className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground leading-tight">Contact</p>
+                <p className="text-xs text-muted-foreground leading-tight">Get in touch with us</p>
+              </div>
             </Link>
           </div>
 
