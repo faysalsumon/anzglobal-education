@@ -164,7 +164,11 @@
     "latestInsightsDesc": "Stay updated with the latest news and guides in international education",
     "viewAll": "View All",
     "imAStudent": "I'm a Student",
-    "imAnInstitution": "I'm an Institution"
+    "imAnInstitution": "I'm an Institution",
+    "blogTab": "Blog",
+    "newsTab": "News",
+    "updatesTab": "Updates",
+    "noPostsYet": "No posts yet in this category"
   },
   "courses": {
     "title": "Courses",

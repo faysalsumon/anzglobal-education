@@ -164,7 +164,11 @@
     "latestInsightsDesc": "আন্তর্জাতিক শিক্ষার সর্বশেষ খবর ও গাইডের সাথে আপডেট থাকুন",
     "viewAll": "সব দেখুন",
     "imAStudent": "আমি একজন শিক্ষার্থী",
-    "imAnInstitution": "আমি একটি প্রতিষ্ঠান"
+    "imAnInstitution": "আমি একটি প্রতিষ্ঠান",
+    "blogTab": "ব্লগ",
+    "newsTab": "খবর",
+    "updatesTab": "আপডেট",
+    "noPostsYet": "এই বিভাগে এখনো কোনো পোস্ট নেই"
   },
   "courses": {
     "title": "কোর্সসমূহ",

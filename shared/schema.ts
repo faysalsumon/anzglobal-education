@@ -3826,6 +3826,7 @@ export const blogs = pgTable("blogs", {
   content: text("content").notNull(),
   featuredImageUrl: text("featured_image_url"),
   category: varchar("category", { length: 100 }),
+  postType: varchar("post_type", { length: 20 }).notNull().default("blog"),
   tags: text("tags").array(),
   status: blogStatusEnum("status").notNull().default("draft"),
   
@@ -3856,6 +3857,7 @@ export const insertBlogSchema = createInsertSchema(blogs).omit({
   excerpt: z.string().max(300).optional(),
   content: z.string().min(1),
   category: z.string().max(100).optional(),
+  postType: z.enum(["blog", "news", "update"]).default("blog"),
   tags: z.array(z.string()).optional(),
   metaTitle: z.string().max(60).optional(),
   metaDescription: z.string().max(160).optional(),

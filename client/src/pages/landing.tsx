@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight, DollarSign, Play } from "lucide-react";
+import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight, DollarSign, Play, Newspaper, FileText, Radio, Inbox } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "wouter";
 import { getFlagUrl } from "@/lib/country-flags";
 import type { Course, University, Blog, Testimonial } from "@shared/schema";
@@ -1410,9 +1411,12 @@ export default function Landing() {
       {blogs.length > 0 && (
         <section className="py-16 md:py-24" data-testid="section-recent-blogs">
           <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between mb-12">
+            {/* Section header */}
+            <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
               <div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-2" data-testid="heading-recent-blogs">{t("landing.latestInsights")}</h2>
+                <h2 className="text-3xl md:text-4xl font-bold mb-2" data-testid="heading-recent-blogs">
+                  {t("landing.latestInsights")}
+                </h2>
                 <p className="text-muted-foreground" data-testid="text-recent-blogs-description">
                   {t("landing.latestInsightsDesc")}
                 </p>
@@ -1425,51 +1429,112 @@ export default function Landing() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {blogs.slice(0, 3).map((blog) => (
-                <Link key={blog.id} href={`/blog/${blog.slug}`} data-testid={`link-blog-${blog.slug}`}>
-                  <Card className="h-full hover-elevate group" data-testid={`landing-blog-card-${blog.slug}`}>
-                    {blog.featuredImageUrl && (
-                      <div className="aspect-video w-full overflow-hidden rounded-t-lg">
-                        <img
-                          src={blog.featuredImageUrl}
-                          alt={blog.title}
-                          loading="lazy"
-                          width={400}
-                          height={225}
-                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                          data-testid={`img-blog-${blog.slug}`}
-                        />
+            {/* Tabbed content */}
+            <Tabs defaultValue="blog" data-testid="tabs-blog-section">
+              <TabsList className="mb-8" data-testid="tablist-blog">
+                <TabsTrigger value="blog" className="gap-2" data-testid="tab-blog">
+                  <FileText className="h-4 w-4" />
+                  {t("landing.blogTab")}
+                </TabsTrigger>
+                <TabsTrigger value="news" className="gap-2" data-testid="tab-news">
+                  <Newspaper className="h-4 w-4" />
+                  {t("landing.newsTab")}
+                </TabsTrigger>
+                <TabsTrigger value="update" className="gap-2" data-testid="tab-updates">
+                  <Radio className="h-4 w-4" />
+                  {t("landing.updatesTab")}
+                </TabsTrigger>
+              </TabsList>
+
+              {(["blog", "news", "update"] as const).map((tabType) => {
+                const tabPosts = blogs
+                  .filter((b) => (b.postType || "blog") === tabType)
+                  .slice(0, 4);
+                return (
+                  <TabsContent key={tabType} value={tabType} data-testid={`tabcontent-${tabType}`}>
+                    {tabPosts.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3" data-testid={`empty-state-${tabType}`}>
+                        <Inbox className="h-10 w-10 opacity-40" />
+                        <p className="text-sm">{t("landing.noPostsYet")}</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {tabPosts.map((blog) => (
+                          <Link key={blog.id} href={`/blog/${blog.slug}`} data-testid={`link-blog-${blog.slug}`}>
+                            <Card className="h-full hover-elevate group flex flex-col" data-testid={`landing-blog-card-${blog.slug}`}>
+                              <div className="relative">
+                                {blog.featuredImageUrl ? (
+                                  <div className="aspect-video w-full overflow-hidden rounded-t-md">
+                                    <img
+                                      src={blog.featuredImageUrl}
+                                      alt={blog.title}
+                                      loading="lazy"
+                                      width={400}
+                                      height={225}
+                                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                      data-testid={`img-blog-${blog.slug}`}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="aspect-video w-full rounded-t-md bg-muted flex items-center justify-center">
+                                    {tabType === "news" ? (
+                                      <Newspaper className="h-10 w-10 text-muted-foreground/30" />
+                                    ) : tabType === "update" ? (
+                                      <Radio className="h-10 w-10 text-muted-foreground/30" />
+                                    ) : (
+                                      <FileText className="h-10 w-10 text-muted-foreground/30" />
+                                    )}
+                                  </div>
+                                )}
+                                <div className="absolute top-3 left-3">
+                                  <Badge
+                                    variant={tabType === "blog" ? "default" : tabType === "news" ? "secondary" : "outline"}
+                                    className="text-xs capitalize shadow-sm"
+                                    data-testid={`badge-post-type-${blog.slug}`}
+                                  >
+                                    {tabType === "blog" ? t("landing.blogTab") : tabType === "news" ? t("landing.newsTab") : t("landing.updatesTab")}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <CardHeader className="pb-2 flex-1">
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1 flex-wrap">
+                                  <Calendar className="h-3 w-3 shrink-0" />
+                                  <span data-testid={`text-blog-date-${blog.slug}`}>
+                                    {blog.publishedAt
+                                      ? new Date(blog.publishedAt).toLocaleDateString("en-US", {
+                                          year: "numeric",
+                                          month: "short",
+                                          day: "numeric",
+                                        })
+                                      : ""}
+                                  </span>
+                                  {blog.category && (
+                                    <>
+                                      <span className="text-muted-foreground/40">·</span>
+                                      <span className="text-primary/70 font-medium">{blog.category}</span>
+                                    </>
+                                  )}
+                                </div>
+                                <CardTitle className="text-base line-clamp-2 group-hover:text-primary transition-colors leading-snug" data-testid={`text-blog-title-${blog.slug}`}>
+                                  {blog.title}
+                                </CardTitle>
+                              </CardHeader>
+                              {blog.excerpt && (
+                                <CardContent className="pt-0">
+                                  <p className="text-sm text-muted-foreground line-clamp-2" data-testid={`text-blog-excerpt-${blog.slug}`}>
+                                    {blog.excerpt}
+                                  </p>
+                                </CardContent>
+                              )}
+                            </Card>
+                          </Link>
+                        ))}
                       </div>
                     )}
-                    <CardHeader>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                        <Calendar className="h-3 w-3" />
-                        <span data-testid={`text-blog-date-${blog.slug}`}>
-                          {blog.publishedAt
-                            ? new Date(blog.publishedAt).toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                              })
-                            : ""}
-                        </span>
-                      </div>
-                      <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors" data-testid={`text-blog-title-${blog.slug}`}>
-                        {blog.title}
-                      </CardTitle>
-                    </CardHeader>
-                    {blog.excerpt && (
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground line-clamp-3" data-testid={`text-blog-excerpt-${blog.slug}`}>
-                          {blog.excerpt}
-                        </p>
-                      </CardContent>
-                    )}
-                  </Card>
-                </Link>
-              ))}
-            </div>
+                  </TabsContent>
+                );
+              })}
+            </Tabs>
           </div>
         </section>
       )}

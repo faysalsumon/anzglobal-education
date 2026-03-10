@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Eye, Edit, Trash2, FileText, Calendar, User, Sparkles } from "lucide-react";
+import { Plus, Edit, Trash2, Sparkles, Newspaper, FileText, Radio } from "lucide-react";
 import type { Blog } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,31 +47,53 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// Extend the schema for the form to handle editing
 const blogFormSchema = insertBlogSchema.extend({
   id: z.string().optional(),
 });
 
 type BlogFormValues = z.infer<typeof blogFormSchema>;
 
+const POST_TYPE_OPTIONS = [
+  { value: "blog", label: "Blog", icon: FileText },
+  { value: "news", label: "News", icon: Newspaper },
+  { value: "update", label: "Update", icon: Radio },
+] as const;
+
+type PostType = "blog" | "news" | "update";
+
+function PostTypeBadge({ type }: { type: string }) {
+  const opt = POST_TYPE_OPTIONS.find((o) => o.value === type) ?? POST_TYPE_OPTIONS[0];
+  const variantMap: Record<PostType, "default" | "secondary" | "outline"> = {
+    blog: "default",
+    news: "secondary",
+    update: "outline",
+  };
+  return (
+    <Badge variant={variantMap[type as PostType] ?? "outline"} className="capitalize">
+      {opt.label}
+    </Badge>
+  );
+}
+
 export function AdminBlogManagement() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  // Fetch all blogs
   const { data: blogsData, isLoading } = useQuery<{ blogs: Blog[]; total: number }>({
     queryKey: ["/api/admin/blogs", statusFilter],
     queryFn: async () => {
       const url = statusFilter !== "all" ? `/api/admin/blogs?status=${statusFilter}` : "/api/admin/blogs";
       const response = await fetch(url, { credentials: "include" });
-      if (!response.ok) throw new Error("Failed to fetch blogs");
+      if (!response.ok) throw new Error("Failed to fetch posts");
       return response.json();
     },
   });
 
-  const blogs = blogsData?.blogs || [];
+  const allBlogs = blogsData?.blogs || [];
+  const blogs = typeFilter === "all" ? allBlogs : allBlogs.filter((b) => (b.postType || "blog") === typeFilter);
 
   const form = useForm<BlogFormValues>({
     resolver: zodResolver(blogFormSchema),
@@ -81,6 +103,7 @@ export function AdminBlogManagement() {
       excerpt: "",
       content: "",
       category: "",
+      postType: "blog",
       tags: [],
       featuredImageUrl: "",
       metaTitle: "",
@@ -90,22 +113,20 @@ export function AdminBlogManagement() {
     },
   });
 
-  // Create or update blog mutation
   const saveBlogMutation = useMutation({
     mutationFn: async (data: BlogFormValues) => {
       if (selectedBlog) {
-        // Update existing blog
         return await apiRequest(`/api/admin/blogs/${selectedBlog.id}`, "PATCH", data);
       } else {
-        // Create new blog
         return await apiRequest("/api/admin/blogs", "POST", data);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/blogs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/blogs"] });
       toast({
-        title: selectedBlog ? "Blog updated" : "Blog created",
-        description: selectedBlog ? "Blog post has been updated successfully" : "New blog post has been created",
+        title: selectedBlog ? "Post updated" : "Post created",
+        description: selectedBlog ? "Post has been updated successfully" : "New post has been created",
       });
       handleCloseDialog();
     },
@@ -113,54 +134,54 @@ export function AdminBlogManagement() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to save blog",
+        description: error.message || "Failed to save post",
       });
     },
   });
 
-  // Publish/Unpublish mutation
   const togglePublishMutation = useMutation({
     mutationFn: async ({ id, action }: { id: string; action: "publish" | "unpublish" }) => {
       return await apiRequest(`/api/admin/blogs/${id}/${action}`, "POST", {});
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/blogs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/blogs"] });
       toast({
-        title: variables.action === "publish" ? "Blog published" : "Blog unpublished",
-        description: variables.action === "publish" ? "Blog post is now live" : "Blog post has been moved to drafts",
+        title: variables.action === "publish" ? "Post published" : "Post unpublished",
+        description: variables.action === "publish" ? "Post is now live" : "Post has been moved to drafts",
       });
     },
     onError: (error: any) => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to update blog status",
+        description: error.message || "Failed to update post status",
       });
     },
   });
 
-  // Delete mutation
   const deleteBlogMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await fetch(`/api/admin/blogs/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
-      if (!response.ok) throw new Error("Failed to delete blog");
+      if (!response.ok) throw new Error("Failed to delete post");
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/blogs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/blogs"] });
       toast({
-        title: "Blog deleted",
-        description: "Blog post has been deleted successfully",
+        title: "Post deleted",
+        description: "Post has been deleted successfully",
       });
     },
     onError: (error: any) => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to delete blog",
+        description: error.message || "Failed to delete post",
       });
     },
   });
@@ -174,6 +195,7 @@ export function AdminBlogManagement() {
         excerpt: blog.excerpt || "",
         content: blog.content,
         category: blog.category || "",
+        postType: (blog.postType as PostType) || "blog",
         tags: blog.tags || [],
         featuredImageUrl: blog.featuredImageUrl || "",
         metaTitle: blog.metaTitle || "",
@@ -189,6 +211,7 @@ export function AdminBlogManagement() {
         excerpt: "",
         content: "",
         category: "",
+        postType: "blog",
         tags: [],
         featuredImageUrl: "",
         metaTitle: "",
@@ -216,12 +239,11 @@ export function AdminBlogManagement() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this blog post?")) {
+    if (confirm("Are you sure you want to delete this post?")) {
       deleteBlogMutation.mutate(id);
     }
   };
 
-  // Seed sample blogs mutation
   const seedBlogsMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/admin/blogs/seed", {});
@@ -230,20 +252,19 @@ export function AdminBlogManagement() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/blogs"] });
       toast({
-        title: "Sample blogs seeded",
-        description: `Created ${data.created} blogs, skipped ${data.skipped} (already exist)`,
+        title: "Sample posts seeded",
+        description: `Created ${data.created} posts, skipped ${data.skipped} (already exist)`,
       });
     },
     onError: (error: any) => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to seed blogs",
+        description: error.message || "Failed to seed posts",
       });
     },
   });
 
-  // Generate slug from title
   const generateSlug = (title: string) => {
     return title
       .toLowerCase()
@@ -254,47 +275,61 @@ export function AdminBlogManagement() {
   return (
     <div className="space-y-6" data-testid="admin-blog-management">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Blog Management</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Post Management</h2>
           <p className="text-muted-foreground">
-            Create and manage blog posts for your platform
+            Create and manage posts — Blog articles, News, and Updates
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
+          <Button
             variant="outline"
-            onClick={() => seedBlogsMutation.mutate()} 
+            onClick={() => seedBlogsMutation.mutate()}
             disabled={seedBlogsMutation.isPending}
             data-testid="button-seed-blogs"
           >
             <Sparkles className="mr-2 h-4 w-4" />
-            {seedBlogsMutation.isPending ? "Seeding..." : "Seed Sample Blogs"}
+            {seedBlogsMutation.isPending ? "Seeding..." : "Seed Sample Posts"}
           </Button>
           <Button onClick={() => handleOpenDialog()} data-testid="button-create-blog">
             <Plus className="mr-2 h-4 w-4" />
-            New Blog Post
+            New Post
           </Button>
         </div>
       </div>
 
-      {/* Filter */}
+      {/* Filters */}
       <Card>
         <CardHeader>
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
-            <div className="w-48">
+          <div className="flex flex-wrap gap-4">
+            <div className="w-44">
               <Label>Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger data-testid="select-status-filter">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="published">Published</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-44">
+              <Label>Post Type</Label>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger data-testid="select-type-filter">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="blog">Blog</SelectItem>
+                  <SelectItem value="news">News</SelectItem>
+                  <SelectItem value="update">Update</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -302,26 +337,25 @@ export function AdminBlogManagement() {
         </CardContent>
       </Card>
 
-      {/* Blogs Table */}
+      {/* Posts Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Blog Posts ({blogs.length})</CardTitle>
-          <CardDescription>
-            All blog posts in the system
-          </CardDescription>
+          <CardTitle>Posts ({blogs.length})</CardTitle>
+          <CardDescription>All posts in the system</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading blogs...</div>
+            <div className="text-center py-8 text-muted-foreground">Loading posts...</div>
           ) : blogs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No blog posts found. Create your first blog post!
+              No posts found. Create your first post!
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Published Date</TableHead>
@@ -336,6 +370,9 @@ export function AdminBlogManagement() {
                         <div className="font-medium">{blog.title}</div>
                         <div className="text-sm text-muted-foreground">{blog.slug}</div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <PostTypeBadge type={blog.postType || "blog"} />
                     </TableCell>
                     <TableCell>
                       {blog.category && <Badge variant="secondary">{blog.category}</Badge>}
@@ -390,9 +427,9 @@ export function AdminBlogManagement() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedBlog ? "Edit Blog Post" : "Create New Blog Post"}</DialogTitle>
+            <DialogTitle>{selectedBlog ? "Edit Post" : "Create New Post"}</DialogTitle>
             <DialogDescription>
-              {selectedBlog ? "Update the blog post details" : "Fill in the details to create a new blog post"}
+              {selectedBlog ? "Update the post details" : "Fill in the details to create a new post"}
             </DialogDescription>
           </DialogHeader>
 
@@ -407,7 +444,7 @@ export function AdminBlogManagement() {
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="Enter blog title"
+                        placeholder="Enter post title"
                         data-testid="input-blog-title"
                         onBlur={(e) => {
                           field.onBlur();
@@ -429,15 +466,65 @@ export function AdminBlogManagement() {
                   <FormItem>
                     <FormLabel>Slug *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="blog-post-slug" data-testid="input-blog-slug" />
+                      <Input {...field} placeholder="post-url-slug" data-testid="input-blog-slug" />
                     </FormControl>
                     <FormDescription>
-                      URL-friendly version of the title (lowercase letters, numbers, and hyphens only)
+                      URL-friendly identifier (lowercase letters, numbers, and hyphens only)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="postType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Post Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || "blog"}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-post-type">
+                            <SelectValue placeholder="Select post type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="blog">Blog</SelectItem>
+                          <SelectItem value="news">News</SelectItem>
+                          <SelectItem value="update">Update</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Controls which tab this post appears under on the landing page
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-post-status">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="published">Published</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
@@ -448,7 +535,7 @@ export function AdminBlogManagement() {
                     <FormControl>
                       <Textarea
                         {...field}
-                        placeholder="Brief summary of the blog post (max 300 characters)"
+                        placeholder="Brief summary of the post (max 300 characters)"
                         rows={3}
                         data-testid="textarea-blog-excerpt"
                       />
@@ -467,7 +554,7 @@ export function AdminBlogManagement() {
                     <FormControl>
                       <Textarea
                         {...field}
-                        placeholder="Write your blog content in Markdown..."
+                        placeholder="Write your post content in Markdown..."
                         rows={12}
                         data-testid="textarea-blog-content"
                       />
@@ -486,9 +573,9 @@ export function AdminBlogManagement() {
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <FormLabel>Topic / Category</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="e.g., Education, News" data-testid="input-blog-category" />
+                        <Input {...field} placeholder="e.g., Visa, Scholarships" data-testid="input-blog-category" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -548,7 +635,7 @@ export function AdminBlogManagement() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={saveBlogMutation.isPending} data-testid="button-save-blog">
-                  {saveBlogMutation.isPending ? "Saving..." : selectedBlog ? "Update Blog" : "Create Blog"}
+                  {saveBlogMutation.isPending ? "Saving..." : selectedBlog ? "Update Post" : "Create Post"}
                 </Button>
               </DialogFooter>
             </form>
