@@ -3,12 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Helmet } from "react-helmet";
 import { PublicLayout } from "@/components/public-layout";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Calendar, Clock, ArrowRight } from "lucide-react";
-import type { Blog } from "@shared/schema";
+import type { BlogWithAuthor } from "@shared/schema";
 
 const POSTS_PER_PAGE = 9;
 
@@ -18,7 +19,7 @@ export default function PublicBlogArchive() {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch published blogs
-  const { data: blogsData, isLoading } = useQuery<{ blogs: Blog[]; total: number }>({
+  const { data: blogsData, isLoading } = useQuery<{ blogs: BlogWithAuthor[]; total: number }>({
     queryKey: ["/api/blogs"],
   });
 
@@ -177,7 +178,7 @@ export default function PublicBlogArchive() {
                   {paginatedBlogs.map((blog) => (
                     <Card key={blog.id} className="flex flex-col hover-elevate" data-testid={`blog-card-${blog.slug}`}>
                       {blog.featuredImageUrl && (
-                        <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+                        <div className="aspect-video w-full overflow-hidden rounded-t-md">
                           <img
                             src={blog.featuredImageUrl}
                             alt={blog.title}
@@ -186,10 +187,10 @@ export default function PublicBlogArchive() {
                           />
                         </div>
                       )}
-                      <CardHeader>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1 flex-wrap">
                           {blog.category && (
-                            <Badge variant="secondary" data-testid={`blog-category-${blog.slug}`}>
+                            <Badge variant="secondary" className="text-xs" data-testid={`blog-category-${blog.slug}`}>
                               {blog.category}
                             </Badge>
                           )}
@@ -202,20 +203,33 @@ export default function PublicBlogArchive() {
                             <span>{estimateReadingTime(blog.content)}</span>
                           </div>
                         </div>
-                        <CardTitle className="line-clamp-2" data-testid={`blog-title-${blog.slug}`}>
+                        <CardTitle className="line-clamp-2 text-base" data-testid={`blog-title-${blog.slug}`}>
                           {blog.title}
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="flex-1">
+                      <CardContent className="flex-1 pt-0">
                         {blog.excerpt && (
-                          <p className="text-muted-foreground line-clamp-3" data-testid={`blog-excerpt-${blog.slug}`}>
+                          <p className="text-muted-foreground line-clamp-3 text-sm" data-testid={`blog-excerpt-${blog.slug}`}>
                             {blog.excerpt}
                           </p>
+                        )}
+                        {blog.authorName && (
+                          <div className="flex items-center gap-1.5 mt-3" data-testid={`blog-author-${blog.slug}`}>
+                            <Avatar className="h-6 w-6 shrink-0">
+                              {blog.authorAvatar && (
+                                <AvatarImage src={blog.authorAvatar} alt={blog.authorName} />
+                              )}
+                              <AvatarFallback className="text-[10px]">
+                                {blog.authorName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs text-muted-foreground">By {blog.authorName}</span>
+                          </div>
                         )}
                       </CardContent>
                       <CardFooter>
                         <Link href={`/blog/${blog.slug}`}>
-                          <Button variant="ghost" className="w-full justify-between group" data-testid={`button-read-${blog.slug}`}>
+                          <Button type="button" variant="ghost" className="w-full justify-between group" data-testid={`button-read-${blog.slug}`}>
                             Read More
                             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                           </Button>

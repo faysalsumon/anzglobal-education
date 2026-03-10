@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -31,8 +32,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Sparkles, Newspaper, FileText, Radio } from "lucide-react";
-import type { Blog } from "@shared/schema";
+import { Plus, Edit, Trash2, Sparkles, Newspaper, FileText, Radio, User } from "lucide-react";
+import type { BlogWithAuthor } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertBlogSchema } from "@shared/schema";
@@ -47,8 +48,17 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+type StaffMember = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  profileImageUrl: string | null;
+  role: string | null;
+};
+
 const blogFormSchema = insertBlogSchema.extend({
   id: z.string().optional(),
+  authorId: z.string().optional(),
 });
 
 type BlogFormValues = z.infer<typeof blogFormSchema>;
@@ -75,14 +85,38 @@ function PostTypeBadge({ type }: { type: string }) {
   );
 }
 
+function getStaffInitials(member: StaffMember): string {
+  const first = member.firstName?.charAt(0) ?? "";
+  const last = member.lastName?.charAt(0) ?? "";
+  return (first + last).toUpperCase() || "?";
+}
+
+function getStaffDisplayName(member: StaffMember): string {
+  return [member.firstName, member.lastName].filter(Boolean).join(" ") || "Unknown";
+}
+
+function AuthorCell({ authorName, authorAvatar }: { authorName?: string | null; authorAvatar?: string | null }) {
+  if (!authorName) return <span className="text-muted-foreground text-sm">—</span>;
+  const initials = authorName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  return (
+    <div className="flex items-center gap-2">
+      <Avatar className="h-7 w-7 shrink-0">
+        {authorAvatar && <AvatarImage src={authorAvatar} alt={authorName} />}
+        <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+      </Avatar>
+      <span className="text-sm font-medium truncate max-w-[120px]">{authorName}</span>
+    </div>
+  );
+}
+
 export function AdminBlogManagement() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
+  const [selectedBlog, setSelectedBlog] = useState<BlogWithAuthor | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  const { data: blogsData, isLoading } = useQuery<{ blogs: Blog[]; total: number }>({
+  const { data: blogsData, isLoading } = useQuery<{ blogs: BlogWithAuthor[]; total: number }>({
     queryKey: ["/api/admin/blogs", statusFilter],
     queryFn: async () => {
       const url = statusFilter !== "all" ? `/api/admin/blogs?status=${statusFilter}` : "/api/admin/blogs";
@@ -92,8 +126,17 @@ export function AdminBlogManagement() {
     },
   });
 
+  const { data: staffList = [] } = useQuery<StaffMember[]>({
+    queryKey: ["/api/admin/staff"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/staff", { credentials: "include" });
+      if (!response.ok) return [];
+      return response.json();
+    },
+  });
+
   const allBlogs = blogsData?.blogs || [];
-  const blogs = typeFilter === "all" ? allBlogs : allBlogs.filter((b) => (b.postType || "blog") === typeFilter);
+  const filteredBlogs = typeFilter === "all" ? allBlogs : allBlogs.filter((b) => (b.postType || "blog") === typeFilter);
 
   const form = useForm<BlogFormValues>({
     resolver: zodResolver(blogFormSchema),
@@ -110,6 +153,7 @@ export function AdminBlogManagement() {
       metaDescription: "",
       ogImageUrl: "",
       status: "draft",
+      authorId: "",
     },
   });
 
@@ -186,7 +230,7 @@ export function AdminBlogManagement() {
     },
   });
 
-  const handleOpenDialog = (blog?: Blog) => {
+  const handleOpenDialog = (blog?: BlogWithAuthor) => {
     if (blog) {
       setSelectedBlog(blog);
       form.reset({
@@ -202,6 +246,7 @@ export function AdminBlogManagement() {
         metaDescription: blog.metaDescription || "",
         ogImageUrl: blog.ogImageUrl || "",
         status: blog.status,
+        authorId: blog.authorId || "",
       });
     } else {
       setSelectedBlog(null);
@@ -218,6 +263,7 @@ export function AdminBlogManagement() {
         metaDescription: "",
         ogImageUrl: "",
         status: "draft",
+        authorId: "",
       });
     }
     setIsDialogOpen(true);
@@ -233,7 +279,7 @@ export function AdminBlogManagement() {
     saveBlogMutation.mutate(data);
   };
 
-  const handleTogglePublish = (blog: Blog) => {
+  const handleTogglePublish = (blog: BlogWithAuthor) => {
     const action = blog.status === "published" ? "unpublish" : "publish";
     togglePublishMutation.mutate({ id: blog.id, action });
   };
@@ -284,6 +330,7 @@ export function AdminBlogManagement() {
         </div>
         <div className="flex gap-2">
           <Button
+            type="button"
             variant="outline"
             onClick={() => seedBlogsMutation.mutate()}
             disabled={seedBlogsMutation.isPending}
@@ -292,7 +339,7 @@ export function AdminBlogManagement() {
             <Sparkles className="mr-2 h-4 w-4" />
             {seedBlogsMutation.isPending ? "Seeding..." : "Seed Sample Posts"}
           </Button>
-          <Button onClick={() => handleOpenDialog()} data-testid="button-create-blog">
+          <Button type="button" onClick={() => handleOpenDialog()} data-testid="button-create-blog">
             <Plus className="mr-2 h-4 w-4" />
             New Post
           </Button>
@@ -340,13 +387,13 @@ export function AdminBlogManagement() {
       {/* Posts Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Posts ({blogs.length})</CardTitle>
+          <CardTitle>Posts ({filteredBlogs.length})</CardTitle>
           <CardDescription>All posts in the system</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground">Loading posts...</div>
-          ) : blogs.length === 0 ? (
+          ) : filteredBlogs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No posts found. Create your first post!
             </div>
@@ -356,6 +403,7 @@ export function AdminBlogManagement() {
                 <TableRow>
                   <TableHead>Title</TableHead>
                   <TableHead>Type</TableHead>
+                  <TableHead>Author</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Published Date</TableHead>
@@ -363,7 +411,7 @@ export function AdminBlogManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {blogs.map((blog) => (
+                {filteredBlogs.map((blog) => (
                   <TableRow key={blog.id} data-testid={`blog-row-${blog.id}`}>
                     <TableCell>
                       <div>
@@ -373,6 +421,9 @@ export function AdminBlogManagement() {
                     </TableCell>
                     <TableCell>
                       <PostTypeBadge type={blog.postType || "blog"} />
+                    </TableCell>
+                    <TableCell>
+                      <AuthorCell authorName={blog.authorName} authorAvatar={blog.authorAvatar} />
                     </TableCell>
                     <TableCell>
                       {blog.category && <Badge variant="secondary">{blog.category}</Badge>}
@@ -390,6 +441,7 @@ export function AdminBlogManagement() {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
+                          type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => handleTogglePublish(blog)}
@@ -398,6 +450,7 @@ export function AdminBlogManagement() {
                           {blog.status === "published" ? "Unpublish" : "Publish"}
                         </Button>
                         <Button
+                          type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => handleOpenDialog(blog)}
@@ -406,6 +459,7 @@ export function AdminBlogManagement() {
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
+                          type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(blog.id)}
@@ -525,6 +579,68 @@ export function AdminBlogManagement() {
                   )}
                 />
               </div>
+
+              {/* Author field */}
+              <FormField
+                control={form.control}
+                name="authorId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Author</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-post-author">
+                          <SelectValue placeholder={
+                            staffList.length === 0
+                              ? "No staff members found"
+                              : "Select author..."
+                          }>
+                            {field.value && (() => {
+                              const member = staffList.find((s) => s.id === field.value);
+                              if (!member) return null;
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-5 w-5 shrink-0">
+                                    {member.profileImageUrl && <AvatarImage src={member.profileImageUrl} alt={getStaffDisplayName(member)} />}
+                                    <AvatarFallback className="text-[10px]">{getStaffInitials(member)}</AvatarFallback>
+                                  </Avatar>
+                                  <span>{getStaffDisplayName(member)}</span>
+                                </div>
+                              );
+                            })()}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {staffList.map((member) => (
+                          <SelectItem key={member.id} value={member.id}>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6 shrink-0">
+                                {member.profileImageUrl && <AvatarImage src={member.profileImageUrl} alt={getStaffDisplayName(member)} />}
+                                <AvatarFallback className="text-[10px]">{getStaffInitials(member)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col">
+                                <span className="font-medium text-sm">{getStaffDisplayName(member)}</span>
+                                {member.role && <span className="text-xs text-muted-foreground capitalize">{member.role.replace(/_/g, " ")}</span>}
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                        {staffList.length === 0 && (
+                          <div className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground">
+                            <User className="h-4 w-4" />
+                            No staff found — current user will be set as author
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      The team member who authored this post. Defaults to you if not selected.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

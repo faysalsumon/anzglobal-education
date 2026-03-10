@@ -12644,6 +12644,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // BLOG ROUTES
   // ========================================
 
+  // Get admin staff list (for author picker)
+  app.get("/api/admin/staff", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Admin access required" });
+      const staff = await storage.getAllAdminStaff();
+      res.json(staff);
+    } catch (error) {
+      console.error("Error fetching staff:", error);
+      res.status(500).json({ message: "Failed to fetch staff" });
+    }
+  });
+
   // Get all blogs (admin only - includes drafts)
   app.get("/api/admin/blogs", isAuthenticated, async (req: any, res) => {
     try {
@@ -12710,7 +12724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newBlog = await storage.createBlog({
         ...blogData,
-        authorId: userId,
+        authorId: blogData.authorId || userId,
       } as any);
       
       res.status(201).json(newBlog);

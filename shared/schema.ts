@@ -3848,7 +3848,6 @@ export const blogs = pgTable("blogs", {
 
 export const insertBlogSchema = createInsertSchema(blogs).omit({
   id: true,
-  authorId: true,
   createdAt: true,
   updatedAt: true,
 }).extend({
@@ -3861,10 +3860,17 @@ export const insertBlogSchema = createInsertSchema(blogs).omit({
   tags: z.array(z.string()).optional(),
   metaTitle: z.string().max(60).optional(),
   metaDescription: z.string().max(160).optional(),
+  authorId: z.string().optional(),
 });
 
 export type Blog = typeof blogs.$inferSelect;
 export type InsertBlog = z.infer<typeof insertBlogSchema>;
+
+export type BlogWithAuthor = Blog & {
+  authorName?: string | null;
+  authorAvatar?: string | null;
+  authorRole?: string | null;
+};
 
 // ============================================
 // CMS CONTENT BLOCKS TABLES

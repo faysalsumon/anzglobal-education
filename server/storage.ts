@@ -62,6 +62,7 @@ import {
   type InsertDocumentRequest,
   blogs,
   type Blog,
+  type BlogWithAuthor,
   type InsertBlog,
   contactInquiries,
   type ContactInquiry,
@@ -141,7 +142,7 @@ import {
   type ApiKeyUsageLog,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like, or, desc, isNull, sql, lt, lte } from "drizzle-orm";
+import { eq, and, like, or, desc, isNull, sql, lt, lte, getTableColumns } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -299,15 +300,16 @@ export interface IStorage {
   deleteDocumentRequest(id: string): Promise<void>;
   
   // Blog operations
-  getAllBlogs(filters?: { status?: string; category?: string; tag?: string; authorId?: string }): Promise<Blog[]>;
-  getPublishedBlogs(filters?: { category?: string; tag?: string; limit?: number; offset?: number }): Promise<{ blogs: Blog[]; total: number }>;
-  getBlogById(id: string): Promise<Blog | undefined>;
-  getBlogBySlug(slug: string): Promise<Blog | undefined>;
+  getAllBlogs(filters?: { status?: string; category?: string; tag?: string; authorId?: string }): Promise<BlogWithAuthor[]>;
+  getPublishedBlogs(filters?: { category?: string; tag?: string; limit?: number; offset?: number }): Promise<{ blogs: BlogWithAuthor[]; total: number }>;
+  getBlogById(id: string): Promise<BlogWithAuthor | undefined>;
+  getBlogBySlug(slug: string): Promise<BlogWithAuthor | undefined>;
   createBlog(blog: InsertBlog): Promise<Blog>;
   updateBlog(id: string, data: Partial<InsertBlog>): Promise<Blog>;
   publishBlog(id: string): Promise<Blog>;
   unpublishBlog(id: string): Promise<Blog>;
   deleteBlog(id: string): Promise<void>;
+  getAllAdminStaff(): Promise<Array<{ id: string; firstName: string | null; lastName: string | null; profileImageUrl: string | null; role: string | null }>>;
   
   // Contact inquiry operations
   getAllContactInquiries(filters?: { status?: string; type?: string; assignedTo?: string }): Promise<ContactInquiry[]>;
@@ -1770,7 +1772,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Blog operations
-  async getAllBlogs(filters?: { status?: string; category?: string; tag?: string; authorId?: string }): Promise<Blog[]> {
+  private blogWithAuthorSelect() {
+    return {
+      ...getTableColumns(blogs),
+      authorName: sql<string | null>`NULLIF(TRIM(CONCAT(COALESCE(${users.firstName}, ''), ' ', COALESCE(${users.lastName}, ''))), '')`,
+      authorAvatar: users.profileImageUrl,
+      authorRole: users.role,
+    };
+  }
+
+  async getAllBlogs(filters?: { status?: string; category?: string; tag?: string; authorId?: string }): Promise<BlogWithAuthor[]> {
     const conditions = [];
     
     if (filters?.status) {
@@ -1783,16 +1794,19 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(blogs.authorId, filters.authorId));
     }
     
-    const query = db.select().from(blogs);
+    const baseQuery = db
+      .select(this.blogWithAuthorSelect())
+      .from(blogs)
+      .leftJoin(users, eq(blogs.authorId, users.id));
     
     if (conditions.length > 0) {
-      return await query.where(and(...conditions)).orderBy(desc(blogs.createdAt));
+      return await baseQuery.where(and(...conditions)).orderBy(desc(blogs.createdAt));
     }
     
-    return await query.orderBy(desc(blogs.createdAt));
+    return await baseQuery.orderBy(desc(blogs.createdAt));
   }
 
-  async getPublishedBlogs(filters?: { category?: string; tag?: string; limit?: number; offset?: number }): Promise<{ blogs: Blog[]; total: number }> {
+  async getPublishedBlogs(filters?: { category?: string; tag?: string; limit?: number; offset?: number }): Promise<{ blogs: BlogWithAuthor[]; total: number }> {
     const conditions = [eq(blogs.status, "published")];
     
     if (filters?.category) {
@@ -1802,24 +1816,53 @@ export class DatabaseStorage implements IStorage {
     const limit = filters?.limit || 10;
     const offset = filters?.offset || 0;
     
-    const query = db.select().from(blogs).where(and(...conditions)).orderBy(desc(blogs.publishedAt));
-    
     const [blogList, totalResult] = await Promise.all([
-      query.limit(limit).offset(offset),
-      db.select().from(blogs).where(and(...conditions))
+      db
+        .select(this.blogWithAuthorSelect())
+        .from(blogs)
+        .leftJoin(users, eq(blogs.authorId, users.id))
+        .where(and(...conditions))
+        .orderBy(desc(blogs.publishedAt))
+        .limit(limit)
+        .offset(offset),
+      db.select({ id: blogs.id }).from(blogs).where(and(...conditions))
     ]);
     
     return { blogs: blogList, total: totalResult.length };
   }
 
-  async getBlogById(id: string): Promise<Blog | undefined> {
-    const [blog] = await db.select().from(blogs).where(eq(blogs.id, id));
-    return blog;
+  async getBlogById(id: string): Promise<BlogWithAuthor | undefined> {
+    const [result] = await db
+      .select(this.blogWithAuthorSelect())
+      .from(blogs)
+      .leftJoin(users, eq(blogs.authorId, users.id))
+      .where(eq(blogs.id, id));
+    return result;
   }
 
-  async getBlogBySlug(slug: string): Promise<Blog | undefined> {
-    const [blog] = await db.select().from(blogs).where(eq(blogs.slug, slug));
-    return blog;
+  async getBlogBySlug(slug: string): Promise<BlogWithAuthor | undefined> {
+    const [result] = await db
+      .select(this.blogWithAuthorSelect())
+      .from(blogs)
+      .leftJoin(users, eq(blogs.authorId, users.id))
+      .where(eq(blogs.slug, slug));
+    return result;
+  }
+
+  async getAllAdminStaff(): Promise<Array<{ id: string; firstName: string | null; lastName: string | null; profileImageUrl: string | null; role: string | null }>> {
+    const staff = await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
+        role: users.role,
+      })
+      .from(users)
+      .innerJoin(adminTeamMembers, eq(adminTeamMembers.userId, users.id))
+      .where(eq(adminTeamMembers.isActive, true))
+      .orderBy(users.firstName);
+    return staff;
   }
 
   async createBlog(blog: InsertBlog): Promise<Blog> {
