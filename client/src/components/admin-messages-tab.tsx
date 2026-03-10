@@ -621,7 +621,7 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
     });
 
     return (
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-6">
         {Object.entries(groupedMessages).map(([dateKey, msgs]) => (
           <div key={dateKey} className="space-y-4">
             <div className="flex justify-center">
@@ -635,7 +635,7 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
               const isSameSenderAsPrev = prevMsg && prevMsg.senderId === msg.senderId;
               
               return (
-                <div key={msg.id} className={`flex gap-3 ${isMine ? "flex-row-reverse" : "flex-row"} ${isSameSenderAsPrev ? "mt-[-12px]" : ""}`}>
+                <div key={msg.id} className={`flex gap-3 min-w-0 ${isMine ? "flex-row-reverse" : "flex-row"} ${isSameSenderAsPrev ? "mt-[-12px]" : ""}`}>
                   {!isMine && !isSameSenderAsPrev && (
                     <Avatar className="h-8 w-8">
                       {msg.sender?.profileImageUrl ? (
@@ -708,7 +708,7 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
         )}
 
         <ScrollArea className="flex-1">
-          <div className="p-2 space-y-4">
+          <div className="p-2 pb-16 lg:pb-2 space-y-4">
             {/* Channels */}
             <div>
               <button 
@@ -870,7 +870,7 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
       </div>
 
       {/* Main Chat Area — full width on mobile when chat is open; hidden on mobile when showing sidebar */}
-      <div className={`${activeView ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-background`}>
+      <div className={`${activeView ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-background pb-16 lg:pb-0`}>
         {activeView ? (
           <>
             {/* Header */}
