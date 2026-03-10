@@ -44,6 +44,13 @@ export function CourseSectionNav({ visibleSections, courseTitle, ctaContent }: C
     visibleSections.includes(section.id)
   );
 
+  const getSectionElement = useCallback((sectionId: string): HTMLElement | null => {
+    const isMobile = window.innerWidth < 768;
+    // On mobile, ResponsiveSection renders with a "-mobile" suffix ID
+    const id = isMobile ? `${sectionId}-mobile` : sectionId;
+    return document.getElementById(id);
+  }, []);
+
   const handleScroll = useCallback(() => {
     const heroElement = document.getElementById("course-hero");
     const heroBottom = heroElement?.getBoundingClientRect().bottom || 0;
@@ -54,7 +61,7 @@ export function CourseSectionNav({ visibleSections, courseTitle, ctaContent }: C
     const offset = 150;
 
     for (const section of availableSections) {
-      const element = document.getElementById(section.id);
+      const element = getSectionElement(section.id);
       if (element) {
         const rect = element.getBoundingClientRect();
         if (rect.top <= offset && rect.bottom > offset) {
@@ -66,7 +73,7 @@ export function CourseSectionNav({ visibleSections, courseTitle, ctaContent }: C
 
     if (!currentSection) {
       for (let i = availableSections.length - 1; i >= 0; i--) {
-        const element = document.getElementById(availableSections[i].id);
+        const element = getSectionElement(availableSections[i].id);
         if (element) {
           const rect = element.getBoundingClientRect();
           if (rect.top < offset) {
@@ -78,7 +85,7 @@ export function CourseSectionNav({ visibleSections, courseTitle, ctaContent }: C
     }
 
     setActiveSection(currentSection);
-  }, [availableSections]);
+  }, [availableSections, getSectionElement]);
 
   useEffect(() => {
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -87,7 +94,7 @@ export function CourseSectionNav({ visibleSections, courseTitle, ctaContent }: C
   }, [handleScroll]);
 
   const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
+    const element = getSectionElement(sectionId);
     if (element) {
       // On mobile the section nav is at the bottom, so only offset for the top navbar (~64px).
       // On desktop the section nav is at the top, so offset for navbar + section nav bar (~140px).
