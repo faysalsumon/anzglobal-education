@@ -421,6 +421,9 @@ export function AdminMobileBottomNav({
                           <span className={cn("text-xs font-medium leading-tight", isActive && "font-semibold")}>
                             {item.label}
                           </span>
+                          {item.value === "email" && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-medium no-default-active-elevate shrink-0">Beta</Badge>
+                          )}
                           {isActive && <ChevronRight className="h-3 w-3 ml-auto flex-shrink-0 text-primary" />}
                         </button>
                       );

@@ -407,6 +407,9 @@ export function AdminMegaSidebar({
                     >
                       <Icon className="h-4 w-4 mr-2 shrink-0" />
                       <span className="truncate">{route.label}</span>
+                      {route.value === "email" && (
+                        <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0 h-4 font-medium no-default-active-elevate shrink-0">Beta</Badge>
+                      )}
                     </Button>
                   );
                 })}
