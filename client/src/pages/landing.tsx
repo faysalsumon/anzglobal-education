@@ -524,8 +524,8 @@ export default function Landing() {
                       <Sparkles className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <p className="font-semibold text-sm text-foreground">AI-Powered Search</p>
-                      <p className="text-xs text-muted-foreground">Describe what you're looking for in plain English</p>
+                      <p className="font-semibold text-sm text-foreground">{t("hero.aiSearch")}</p>
+                      <p className="text-xs text-muted-foreground">{t("hero.aiSearchDesc")}</p>
                     </div>
                   </div>
                   <NaturalLanguageSearch variant="light" />
@@ -542,13 +542,13 @@ export default function Landing() {
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent mb-6 border border-accent/20">
                 <TrendingUp className="h-4 w-4" />
-                <span className="text-sm font-semibold">Top Destinations</span>
+                <span className="text-sm font-semibold">{t("landing.topDestinations")}</span>
               </div>
               <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
-                Study in the World's Best Education Destinations
+                {t("landing.topDestinationsHeading")}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Thousands of Bangladeshi students choose these countries every year for world-class education and career opportunities
+                {t("landing.topDestinationsDesc")}
               </p>
             </div>
 
@@ -560,7 +560,7 @@ export default function Landing() {
                   name: "Australia",
                   country: "Australia",
                   description: "World-ranked universities, post-study work rights & pathway to PR",
-                  badge: { label: "Most Popular" },
+                  badge: { label: t("landing.mostPopular") },
                 },
                 {
                   code: "GB",
@@ -628,7 +628,7 @@ export default function Landing() {
                 data-testid="button-bd-find-course"
               >
                 <Sparkles className="mr-2 h-5 w-5" />
-                Find My Perfect Course
+                {t("landing.findMyPerfectCourse")}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
@@ -649,14 +649,14 @@ export default function Landing() {
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6 border border-primary/20 backdrop-blur-sm">
                 <Award className="h-4 w-4" />
-                <span className="text-sm font-semibold">Our Partners</span>
+                <span className="text-sm font-semibold">{t("landing.ourPartners")}</span>
               </div>
               <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
                 {isBD ? t("landing.partnersHeadingBD") : t("landing.partnersHeading")}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 {isBD 
-                  ? "Top-ranked universities in Australia, UK, Canada and more — ready to welcome Bangladeshi students"
+                  ? t("landing.partnersDescBD")
                   : "Trusted institutions offering world-class education to international students"}
               </p>
             </div>
@@ -739,10 +739,10 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
-              Browse Courses by Discipline
+              {t("landing.browseByDiscipline")}
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Explore our wide range of programs across different disciplines
+              {t("landing.browseByDisciplineDesc")}
             </p>
           </div>
           
@@ -757,14 +757,14 @@ export default function Landing() {
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/10 text-secondary mb-6 border border-secondary/20">
                 <GraduationCap className="h-4 w-4" />
-                <span className="text-sm font-semibold">Popular Programs</span>
+                <span className="text-sm font-semibold">{t("landing.popularPrograms")}</span>
               </div>
               <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
                 {isBD ? t("landing.popularCoursesBD") : t("landing.featuredCourses")}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 {isBD 
-                  ? "Courses most chosen by students from Bangladesh — with scholarship and visa-friendly options"
+                  ? t("landing.popularCoursesBDDesc")
                   : "Discover our most popular courses chosen by students worldwide"}
               </p>
             </div>
@@ -826,7 +826,7 @@ export default function Landing() {
                           className="bg-accent text-accent-foreground px-2 py-1 rounded-md text-xs font-medium"
                           data-testid={`badge-featured-course-${course.id}`}
                         >
-                          Featured
+                          {t("landing.featured")}
                         </div>
                       </div>
                     </div>
@@ -884,7 +884,7 @@ export default function Landing() {
                             data-testid={`badge-featured-course-scholarship-${course.id}`}
                           >
                             <Award className="h-3.5 w-3.5" />
-                            <span>Scholarship</span>
+                            <span>{t("landing.scholarshipAvailable")}</span>
                           </div>
                         )}
                       </div>
@@ -902,7 +902,7 @@ export default function Landing() {
                 data-testid="button-view-all-courses"
               >
                 <Link href="/courses">
-                  View All Courses
+                  {t("landing.viewAllCourses")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -916,11 +916,11 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
-              {isBD ? "Your Study Abroad Journey Made Simple" : "For Students: Your Path to Success"}
+              {isBD ? t("landing.journeyHeadingBD") : "For Students: Your Path to Success"}
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               {isBD
-                ? "From choosing your course to getting your visa — we handle everything so you can focus on your future"
+                ? t("landing.journeyDescBD")
                 : "Three simple steps to find your perfect course and start your international education journey"}
             </p>
           </div>
@@ -938,11 +938,11 @@ export default function Landing() {
                     <Search className="h-6 w-6 text-primary" />
                   </div>
                 </div>
-                <CardTitle className="text-2xl">Discover & Filter</CardTitle>
+                <CardTitle className="text-2xl">{t("landing.step1Title")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Tell our AI what you're looking for in plain language. Get instant, personalized course recommendations that match your goals, budget, and career aspirations.
+                  {t("landing.step1Desc")}
                 </p>
               </CardContent>
             </Card>
@@ -959,11 +959,11 @@ export default function Landing() {
                     <GraduationCap className="h-6 w-6 text-secondary" />
                   </div>
                 </div>
-                <CardTitle className="text-2xl">Compare & Choose</CardTitle>
+                <CardTitle className="text-2xl">{t("landing.step2Title")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Review detailed course information, compare scholarships, explore career pathways, and read real student reviews. Make confident decisions about your education.
+                  {t("landing.step2Desc")}
                 </p>
               </CardContent>
             </Card>
@@ -980,11 +980,11 @@ export default function Landing() {
                     <ArrowRight className="h-6 w-6 text-accent" />
                   </div>
                 </div>
-                <CardTitle className="text-2xl">Apply with Ease</CardTitle>
+                <CardTitle className="text-2xl">{t("landing.step3Title")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Apply directly through our platform with expert guidance. Track your application status in real-time and get personalized support from our experienced counselors.
+                  {t("landing.step3Desc")}
                 </p>
               </CardContent>
             </Card>
@@ -1001,7 +1001,7 @@ export default function Landing() {
               >
                 <Link href="/auth">
                   <GraduationCap className="mr-2 h-5 w-5" />
-                  Start as a Student
+                  {t("landing.startAsStudent")}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
@@ -1014,13 +1014,13 @@ export default function Landing() {
               >
                 <Link href="/auth">
                   <Building2 className="mr-2 h-5 w-5" />
-                  Join as an Institution
+                  {t("landing.joinAsInstitution")}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
             </div>
             <p className="text-sm text-muted-foreground mt-4">
-              Join students and institutions building their futures together
+              {t("landing.joinTogether")}
             </p>
           </div>
         </div>
@@ -1037,17 +1037,17 @@ export default function Landing() {
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6 border border-primary/20">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-              <span className="text-sm font-semibold">Watch Our Story</span>
+              <span className="text-sm font-semibold">{t("landing.watchOurStory")}</span>
             </div>
             <h2 className="mb-6 text-4xl font-bold text-foreground md:text-5xl lg:text-6xl">
               Your Journey to{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary/80 to-accent">
-                {isBD ? "Success Starts Here" : "Australia Starts Here"}
+                {isBD ? t("landing.videoHeadingBD") : "Australia Starts Here"}
               </span>
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
               {isBD 
-                ? "Hear from Bangladeshi students who transformed their careers through international education"
+                ? t("landing.videoDescBD")
                 : "See how we've helped thousands of students transform their dreams into reality"}
             </p>
           </div>
@@ -1062,7 +1062,7 @@ export default function Landing() {
                       <Users className="h-6 w-6 text-primary" />
                     </div>
                     <div className="text-3xl font-bold text-foreground mb-1">5,000+</div>
-                    <p className="text-sm text-muted-foreground">Students Guided</p>
+                    <p className="text-sm text-muted-foreground">{t("landing.studentsGuided")}</p>
                   </CardContent>
                 </Card>
                 
@@ -1072,7 +1072,7 @@ export default function Landing() {
                       <GraduationCap className="h-6 w-6 text-accent" />
                     </div>
                     <div className="text-3xl font-bold text-foreground mb-1">40+</div>
-                    <p className="text-sm text-muted-foreground">Partner Institutions</p>
+                    <p className="text-sm text-muted-foreground">{t("landing.partnerInstitutions")}</p>
                   </CardContent>
                 </Card>
                 
@@ -1082,7 +1082,7 @@ export default function Landing() {
                       <Award className="h-6 w-6 text-primary" />
                     </div>
                     <div className="text-3xl font-bold text-foreground mb-1">98%</div>
-                    <p className="text-sm text-muted-foreground">Success Rate</p>
+                    <p className="text-sm text-muted-foreground">{t("landing.successRate")}</p>
                   </CardContent>
                 </Card>
               </div>
@@ -1138,8 +1138,8 @@ export default function Landing() {
                       <CheckCircle className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-foreground mb-1">Expert Guidance</h4>
-                      <p className="text-sm text-muted-foreground">Personalized support every step</p>
+                      <h4 className="font-semibold text-foreground mb-1">{t("landing.expertGuidance")}</h4>
+                      <p className="text-sm text-muted-foreground">{t("landing.expertGuidanceDesc")}</p>
                     </div>
                   </div>
                   
@@ -1148,8 +1148,8 @@ export default function Landing() {
                       <CheckCircle className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-foreground mb-1">Visa Assistance</h4>
-                      <p className="text-sm text-muted-foreground">Streamlined application process</p>
+                      <h4 className="font-semibold text-foreground mb-1">{t("landing.visaAssistance")}</h4>
+                      <p className="text-sm text-muted-foreground">{t("landing.visaAssistanceDesc")}</p>
                     </div>
                   </div>
                 </div>
@@ -1160,20 +1160,20 @@ export default function Landing() {
             <div className="mt-12 text-center">
               <p className="text-muted-foreground mb-6 text-lg max-w-2xl mx-auto">
                 {isBD 
-                  ? "Ready to start your international education journey from Bangladesh?"
+                  ? t("landing.videoCTADescBD")
                   : "Ready to begin your Australian education adventure?"}
               </p>
               <div className="flex flex-wrap items-center justify-center gap-4">
                 <Link href="/courses" data-testid="link-explore-courses-video">
                   <Button size="lg" className="gap-2 shadow-lg bg-accent text-accent-foreground border-accent-border" data-testid="button-explore-courses-video">
                     <Search className="h-5 w-5" />
-                    Explore Courses
+                    {t("landing.exploreCourses")}
                   </Button>
                 </Link>
                 <Link href="/contact" data-testid="link-contact-video">
                   <Button size="lg" variant="outline" className="gap-2" data-testid="button-contact-video">
                     <MessageCircle className="h-5 w-5" />
-                    Talk to an Advisor
+                    {t("landing.talkToAdvisor")}
                   </Button>
                 </Link>
               </div>
@@ -1187,11 +1187,11 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
-              {isBD ? "For Universities: Recruit from Bangladesh" : "For Institutions: Expand Your Global Reach"}
+              {isBD ? t("landing.institutionsHeadingBD") : "For Institutions: Expand Your Global Reach"}
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               {isBD
-                ? "Connect with high-quality Bangladeshi students actively seeking international education"
+                ? t("landing.institutionsDescBD")
                 : "Connect with motivated students worldwide and streamline your admissions process"}
             </p>
           </div>
@@ -1209,11 +1209,11 @@ export default function Landing() {
                     <Users className="h-6 w-6 text-primary" />
                   </div>
                 </div>
-                <CardTitle className="text-2xl">Reach Quality Students</CardTitle>
+                <CardTitle className="text-2xl">{t("landing.reachStudentsTitle")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Showcase your programs to motivated international students actively searching for their ideal institution. Our AI matches your courses with qualified candidates worldwide.
+                  {t("landing.reachStudentsDesc")}
                 </p>
               </CardContent>
             </Card>
@@ -1230,11 +1230,11 @@ export default function Landing() {
                     <FileCheck className="h-6 w-6 text-secondary" />
                   </div>
                 </div>
-                <CardTitle className="text-2xl">Streamline Operations</CardTitle>
+                <CardTitle className="text-2xl">{t("landing.streamlineOpsTitle")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Manage all applications from a centralized dashboard. Use AI-powered tools to generate course content, review applications faster, and reduce administrative workload.
+                  {t("landing.streamlineOpsDesc")}
                 </p>
               </CardContent>
             </Card>
@@ -1251,11 +1251,11 @@ export default function Landing() {
                     <TrendingUp className="h-6 w-6 text-accent" />
                   </div>
                 </div>
-                <CardTitle className="text-2xl">Grow Your Enrollment</CardTitle>
+                <CardTitle className="text-2xl">{t("landing.growEnrollmentTitle")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Increase international student enrollment with better visibility and targeted marketing. Track application trends and optimize your recruitment strategy with data insights.
+                  {t("landing.growEnrollmentDesc")}
                 </p>
               </CardContent>
             </Card>
@@ -1271,12 +1271,12 @@ export default function Landing() {
             >
               <Link href="/auth">
                 <Building2 className="mr-2 h-5 w-5" />
-                Partner with Us
+                {t("landing.partnerWithUs")}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
             <p className="text-sm text-muted-foreground mt-4">
-              Join leading institutions already growing their international presence
+              {t("landing.institutionsCTADesc")}
             </p>
           </div>
         </div>
@@ -1296,7 +1296,7 @@ export default function Landing() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-lg font-medium text-foreground">Number of Institutions</p>
+                <p className="text-lg font-medium text-foreground">{t("landing.numberOfInstitutions")}</p>
               </CardContent>
             </Card>
 
@@ -1310,7 +1310,7 @@ export default function Landing() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-lg font-medium text-foreground">Number of Courses</p>
+                <p className="text-lg font-medium text-foreground">{t("landing.numberOfCourses")}</p>
               </CardContent>
             </Card>
           </div>
@@ -1322,11 +1322,11 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
-              {isBD ? "Why Bangladeshi Students Choose ANZ Global Education" : "Why Choose ANZ Global Education?"}
+              {isBD ? t("landing.whyChooseHeadingBD") : "Why Choose ANZ Global Education?"}
             </h2>
             <p className="text-lg text-muted-foreground">
               {isBD 
-                ? "Trusted by thousands of Bangladeshi students since 2017 — your reliable partner for studying abroad"
+                ? t("landing.whyChooseDescBD")
                 : "Connecting ambitious students with world-class institutions since 2017"}
             </p>
           </div>
@@ -1336,8 +1336,8 @@ export default function Landing() {
                 <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                   <Building2 className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle>For Institutions</CardTitle>
-                <CardDescription>Reach qualified students globally and simplify admissions</CardDescription>
+                <CardTitle>{t("landing.forInstitutionsCard")}</CardTitle>
+                <CardDescription>{t("landing.forInstitutionsCardDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-start gap-2">
@@ -1360,8 +1360,8 @@ export default function Landing() {
                 <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-secondary/10">
                   <Users className="h-6 w-6 text-secondary" />
                 </div>
-                <CardTitle>For Students</CardTitle>
-                <CardDescription>Discover courses that match your goals and budget</CardDescription>
+                <CardTitle>{t("landing.forStudentsCard")}</CardTitle>
+                <CardDescription>{t("landing.forStudentsCardDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-start gap-2">
@@ -1384,8 +1384,8 @@ export default function Landing() {
                 <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
                   <Sparkles className="h-6 w-6 text-accent" />
                 </div>
-                <CardTitle>AI-Powered Platform</CardTitle>
-                <CardDescription>Smart technology that saves time and improves outcomes</CardDescription>
+                <CardTitle>{t("landing.aiPlatformCard")}</CardTitle>
+                <CardDescription>{t("landing.aiPlatformCardDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-start gap-2">
@@ -1412,14 +1412,14 @@ export default function Landing() {
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-12">
               <div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-2" data-testid="heading-recent-blogs">Latest Insights</h2>
+                <h2 className="text-3xl md:text-4xl font-bold mb-2" data-testid="heading-recent-blogs">{t("landing.latestInsights")}</h2>
                 <p className="text-muted-foreground" data-testid="text-recent-blogs-description">
-                  Stay updated with the latest news and guides in international education
+                  {t("landing.latestInsightsDesc")}
                 </p>
               </div>
               <Link href="/blog">
                 <Button variant="outline" data-testid="button-view-all-blogs">
-                  View All
+                  {t("landing.viewAll")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
@@ -1484,8 +1484,8 @@ export default function Landing() {
                   <Quote className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-xl md:text-2xl font-bold">Student Reviews</h2>
-                  <p className="text-sm text-muted-foreground">Real stories from our students</p>
+                  <h2 className="text-xl md:text-2xl font-bold">{t("landing.testimonials")}</h2>
+                  <p className="text-sm text-muted-foreground">{t("landing.testimonialsDesc")}</p>
                 </div>
               </div>
               <Link href="/student-reviews">
@@ -1631,7 +1631,7 @@ export default function Landing() {
                 >
                   <Link href="/auth">
                     <GraduationCap className="h-5 w-5 mr-2" />
-                    I'm a Student
+                    {t("landing.imAStudent")}
                   </Link>
                 </Button>
                 <Button 
@@ -1642,7 +1642,7 @@ export default function Landing() {
                 >
                   <Link href="/auth">
                     <Building2 className="h-5 w-5 mr-2" />
-                    I'm an Institution
+                    {t("landing.imAnInstitution")}
                   </Link>
                 </Button>
               </div>
