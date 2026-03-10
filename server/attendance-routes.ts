@@ -103,7 +103,10 @@ export function registerAttendanceRoutes(app: Express) {
         .orderBy(desc(attendanceRecords.clockInAt))
         .limit(1);
 
-      res.json({ record: record ?? null, clockedIn: !!record });
+      const today = formatWorkDate(new Date());
+      const isStale = !!record && record.workDate !== today;
+
+      res.json({ record: record ?? null, clockedIn: !!record, isStale });
     } catch (err) {
       console.error("[Attendance] GET /status error:", err);
       res.status(500).json({ message: "Failed to get attendance status" });
@@ -380,6 +383,60 @@ export function registerAttendanceRoutes(app: Express) {
     } catch (err) {
       console.error("[Attendance] GET /admin/attendance/stats error:", err);
       res.status(500).json({ message: "Failed to fetch attendance stats" });
+    }
+  });
+
+  // POST /api/attendance/force-close — close an open shift without a photo
+  app.post("/api/attendance/force-close", isAuthenticated, async (req: any, res) => {
+    try {
+      const requestingUserId = req.user.claims.sub;
+      const adminAccess = await checkAdminAccess(requestingUserId);
+      if (!adminAccess) return res.status(403).json({ message: "Admin access required" });
+
+      const { recordId, notes, clockOutTime } = req.body;
+      if (!recordId) return res.status(400).json({ message: "recordId is required" });
+
+      // Find the record
+      const [record] = await db
+        .select()
+        .from(attendanceRecords)
+        .where(eq(attendanceRecords.id, recordId))
+        .limit(1);
+
+      if (!record) return res.status(404).json({ message: "Attendance record not found" });
+      if (record.clockOutAt) return res.status(400).json({ message: "This shift is already closed" });
+
+      // Permission check: owner, branch manager for same branch, or CTO
+      const isSelf = record.userId === requestingUserId;
+      const isCTO = adminAccess.role === "cto" || adminAccess.userType === "platform_admin";
+      const [requestingUser] = await db.select().from(users).where(eq(users.id, requestingUserId)).limit(1);
+      const isSameBranch = record.branchId && requestingUser?.branchId && record.branchId === requestingUser.branchId;
+      const isBranchManager = adminAccess.role === "branch_manager";
+
+      if (!isSelf && !isCTO && !(isBranchManager && isSameBranch)) {
+        return res.status(403).json({ message: "You don't have permission to close this shift" });
+      }
+
+      const closedAt = clockOutTime ? new Date(clockOutTime) : new Date();
+      const totalMinutes = Math.round((closedAt.getTime() - record.clockInAt.getTime()) / 60000);
+      const finalNotes = notes?.trim() || "Auto-closed: session ended without clocking out";
+
+      // Close any open break for this record first
+      await db
+        .update(attendanceBreaks)
+        .set({ breakEndAt: closedAt, totalBreakMinutes: 0 })
+        .where(and(eq(attendanceBreaks.attendanceRecordId, recordId), isNull(attendanceBreaks.breakEndAt)));
+
+      const [updated] = await db
+        .update(attendanceRecords)
+        .set({ clockOutAt: closedAt, totalMinutes, notes: finalNotes })
+        .where(eq(attendanceRecords.id, recordId))
+        .returning();
+
+      res.json({ record: updated });
+    } catch (err) {
+      console.error("[Attendance] POST /force-close error:", err);
+      res.status(500).json({ message: "Failed to force close shift" });
     }
   });
 

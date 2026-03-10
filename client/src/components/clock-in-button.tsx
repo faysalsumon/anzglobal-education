@@ -5,16 +5,27 @@ import { useToast } from "@/hooks/use-toast";
 import { WebcamCaptureModal } from "@/components/webcam-capture-modal";
 import { StatusPicker, STATUS_DOT_COLORS } from "@/components/status-picker";
 import { Button } from "@/components/ui/button";
-import { Loader2, Coffee } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Loader2, Coffee, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AttendanceStatus {
   record: {
     id: string;
     clockInAt: string;
+    workDate: string;
     totalMinutes?: number;
   } | null;
   clockedIn: boolean;
+  isStale?: boolean;
 }
 
 interface BreakStatus {
@@ -44,13 +55,25 @@ function formatWorked(totalMinutes: number): string {
   return `${m}m`;
 }
 
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+}
+
+function getTodayString(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function ClockInButton() {
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
+  const [staleDialogOpen, setStaleDialogOpen] = useState(false);
+  const [staleNote, setStaleNote] = useState("");
   const [elapsed, setElapsed] = useState("");
   const [breakElapsed, setBreakElapsed] = useState("");
   const workIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const breakIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const reminderFiredRef = useRef(false);
 
   const { data: statusData, isLoading } = useQuery<AttendanceStatus>({
     queryKey: ["/api/attendance/status"],
@@ -59,11 +82,12 @@ export function ClockInButton() {
 
   const clockedIn = statusData?.clockedIn ?? false;
   const openRecord = statusData?.record ?? null;
+  const isStale = statusData?.isStale ?? false;
 
   const { data: breakStatusData } = useQuery<BreakStatus>({
     queryKey: ["/api/attendance/break-status"],
     refetchInterval: 30000,
-    enabled: clockedIn,
+    enabled: clockedIn && !isStale,
   });
 
   const { data: myStatus } = useQuery<StatusData>({
@@ -75,26 +99,42 @@ export function ClockInButton() {
   const activeBreak = breakStatusData?.activeBreak ?? null;
   const currentAvailabilityStatus = myStatus?.availabilityStatus || "available";
 
+  // "Forgot to clock in" reminder — once per browser session
+  useEffect(() => {
+    if (isLoading || reminderFiredRef.current || clockedIn) return;
+    const hour = new Date().getHours();
+    if (hour < 7 || hour >= 20) return;
+    const today = getTodayString();
+    const dismissedKey = "clockin-reminder-dismissed";
+    if (sessionStorage.getItem(dismissedKey) === today) return;
+    reminderFiredRef.current = true;
+    sessionStorage.setItem(dismissedKey, today);
+    toast({
+      title: "Don't forget to clock in",
+      description: "You haven't logged your work session yet today.",
+    });
+  }, [isLoading, clockedIn, toast]);
+
   // Work elapsed timer
   useEffect(() => {
-    if (clockedIn && openRecord?.clockInAt) {
+    if (clockedIn && !isStale && openRecord?.clockInAt) {
       setElapsed(formatElapsed(openRecord.clockInAt));
       workIntervalRef.current = setInterval(() => {
-        setElapsed(formatElapsed(openRecord.clockInAt));
+        setElapsed(formatElapsed(openRecord.clockInAt!));
       }, 60000);
     } else {
       if (workIntervalRef.current) clearInterval(workIntervalRef.current);
       setElapsed("");
     }
     return () => { if (workIntervalRef.current) clearInterval(workIntervalRef.current); };
-  }, [clockedIn, openRecord?.clockInAt]);
+  }, [clockedIn, isStale, openRecord?.clockInAt]);
 
   // Break elapsed timer
   useEffect(() => {
     if (onBreak && activeBreak?.breakStartAt) {
       setBreakElapsed(formatElapsed(activeBreak.breakStartAt));
       breakIntervalRef.current = setInterval(() => {
-        setBreakElapsed(formatElapsed(activeBreak.breakStartAt));
+        setBreakElapsed(formatElapsed(activeBreak.breakStartAt!));
       }, 30000);
     } else {
       if (breakIntervalRef.current) clearInterval(breakIntervalRef.current);
@@ -121,6 +161,29 @@ export function ClockInButton() {
       } else {
         toast({ title: "Clocked in", description: "Have a great day!" });
       }
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  // Force-close stale shift mutation
+  const forceCloseMutation = useMutation({
+    mutationFn: async ({ recordId, notes }: { recordId: string; notes?: string }) => {
+      const res = await apiRequest("POST", "/api/attendance/force-close", {
+        recordId,
+        notes,
+        clockOutTime: new Date().toISOString(),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      setStaleDialogOpen(false);
+      setStaleNote("");
+      queryClient.invalidateQueries({ queryKey: ["/api/attendance/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/attendance/break-status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/attendance"] });
+      toast({ title: "Previous shift closed", description: "You can now start a new work session." });
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -168,6 +231,69 @@ export function ClockInButton() {
         <Loader2 className="h-3 w-3 animate-spin" />
         <span className="hidden sm:inline text-xs">Work</span>
       </Button>
+    );
+  }
+
+  // Stale shift — must close before starting a new session
+  if (clockedIn && isStale && openRecord) {
+    return (
+      <>
+        <div className="flex items-center gap-1" data-testid="status-stale-shift">
+          <span className="hidden md:flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+            <TriangleAlert className="h-3 w-3 flex-shrink-0" />
+            <span>Open shift: {formatDate(openRecord.workDate)}</span>
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setStaleDialogOpen(true)}
+            className="gap-1.5 h-8 px-2 text-xs font-medium border-amber-500/50 text-amber-600 dark:text-amber-400"
+            data-testid="button-close-stale-shift"
+          >
+            <TriangleAlert className="h-3 w-3 flex-shrink-0 md:hidden" />
+            Close Shift
+          </Button>
+        </div>
+
+        <Dialog open={staleDialogOpen} onOpenChange={setStaleDialogOpen}>
+          <DialogContent data-testid="dialog-close-stale-shift">
+            <DialogHeader>
+              <DialogTitle>Close previous shift</DialogTitle>
+              <DialogDescription>
+                You left a shift open from{" "}
+                <span className="font-medium text-foreground">{formatDate(openRecord.workDate)}</span>
+                . Close it now to start a new one.
+              </DialogDescription>
+            </DialogHeader>
+            <Textarea
+              value={staleNote}
+              onChange={e => setStaleNote(e.target.value)}
+              placeholder="e.g., forgot to clock out before leaving (optional)"
+              className="resize-none"
+              rows={2}
+              data-testid="input-stale-shift-note"
+            />
+            <DialogFooter className="gap-2 flex-wrap">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStaleDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={forceCloseMutation.isPending}
+                onClick={() => forceCloseMutation.mutate({ recordId: openRecord.id, notes: staleNote })}
+              >
+                {forceCloseMutation.isPending && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+                Close Shift Now
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 

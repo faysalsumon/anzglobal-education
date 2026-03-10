@@ -7,8 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Clock,
@@ -22,6 +30,7 @@ import {
   Loader2,
   ImageOff,
   MapPin,
+  ShieldX,
 } from "lucide-react";
 
 interface AttendanceRecord {
@@ -131,6 +140,24 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
   const [filterBranchId, setFilterBranchId] = useState<string>("");
   const [page, setPage] = useState(1);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [forceCloseRecord, setForceCloseRecord] = useState<AttendanceRecord | null>(null);
+  const [forceCloseNote, setForceCloseNote] = useState("");
+
+  const forceCloseMutation = useMutation({
+    mutationFn: async ({ recordId, notes }: { recordId: string; notes?: string }) => {
+      const res = await apiRequest("POST", "/api/attendance/force-close", { recordId, notes });
+      return res.json();
+    },
+    onSuccess: () => {
+      setForceCloseRecord(null);
+      setForceCloseNote("");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/attendance"] });
+      toast({ title: "Shift closed", description: "The open shift has been force-closed." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
 
   const filters = {
     dateFrom,
@@ -412,9 +439,24 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
                       {record.clockOutAt ? (
                         formatTime(record.clockOutAt)
                       ) : (
-                        <Badge variant="secondary" className="text-green-600 bg-green-500/10">
-                          Active
-                        </Badge>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge variant="secondary" className="text-green-600 bg-green-500/10">
+                            Active
+                          </Badge>
+                          {hasFullAdminAccess && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-1.5 text-xs text-muted-foreground gap-1"
+                              onClick={() => { setForceCloseRecord(record); setForceCloseNote(""); }}
+                              data-testid={`button-force-close-${record.id}`}
+                            >
+                              <ShieldX className="h-3 w-3" />
+                              Force Close
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="p-3 hidden md:table-cell" data-testid={`text-hours-${record.id}`}>
@@ -539,6 +581,53 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
               data-testid="img-lightbox-photo"
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Force-close dialog (manager only) */}
+      <Dialog
+        open={!!forceCloseRecord}
+        onOpenChange={(open) => { if (!open) { setForceCloseRecord(null); setForceCloseNote(""); } }}
+      >
+        <DialogContent data-testid="dialog-force-close-shift">
+          <DialogHeader>
+            <DialogTitle>Force close shift</DialogTitle>
+            <DialogDescription>
+              This will close{" "}
+              <span className="font-medium text-foreground">
+                {forceCloseRecord?.firstName
+                  ? `${forceCloseRecord.firstName}${forceCloseRecord.lastName ? ` ${forceCloseRecord.lastName}` : ""}`
+                  : forceCloseRecord?.email ?? "this team member"}
+                's
+              </span>{" "}
+              open shift right now. A note will be recorded.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={forceCloseNote}
+            onChange={e => setForceCloseNote(e.target.value)}
+            placeholder="Optional note (e.g., left without clocking out)"
+            className="resize-none"
+            rows={2}
+            data-testid="input-force-close-note"
+          />
+          <DialogFooter className="gap-2 flex-wrap">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setForceCloseRecord(null); setForceCloseNote(""); }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={forceCloseMutation.isPending}
+              onClick={() => forceCloseRecord && forceCloseMutation.mutate({ recordId: forceCloseRecord.id, notes: forceCloseNote })}
+            >
+              {forceCloseMutation.isPending && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+              Confirm
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
