@@ -19,7 +19,6 @@ import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Landing = lazy(() => import("@/pages/landing"));
-const Home = lazy(() => import("@/pages/home"));
 const CourseForm = lazy(() => import("@/pages/course-form"));
 const StudentCourses = lazy(() => import("@/pages/student-courses"));
 const CourseDetail = lazy(() => import("@/pages/course-detail"));
