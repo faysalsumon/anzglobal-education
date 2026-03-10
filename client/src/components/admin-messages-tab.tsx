@@ -686,7 +686,7 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
   };
 
   return (
-    <div className={inSheet ? "flex h-full bg-background overflow-hidden" : "flex h-[calc(100dvh-200px)] md:h-[calc(100vh-140px)] bg-background border rounded-xl overflow-hidden shadow-sm"}>
+    <div className="flex h-full bg-background overflow-hidden">
       {/* Sidebar — full width on mobile when no active chat; hidden on mobile when chat is open */}
       <div className={`${activeView ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r flex-col bg-muted/30`}>
         <div className="p-4 flex items-center justify-between border-b">

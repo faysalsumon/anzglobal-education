@@ -16155,6 +16155,8 @@ Sitemap: ${baseUrl}/sitemap.xml
     };
     
     const trySessionAuth = async () => {
+      // If already authenticated via token, don't tear down the connection
+      if (isAuthenticated) return;
       try {
         // Fallback: Try session cookie-based authentication
         // Parse cookies from upgrade request
@@ -16180,8 +16182,8 @@ Sitemap: ${baseUrl}/sitemap.xml
       console.log('[WS] Session ID after unsigning:', sessionId ? 'Valid' : 'Invalid');
       
       if (!sessionId || sessionId === 'false') {
-        console.log('[WS] Rejecting: Invalid session signature');
-        ws.close(1008, 'Unauthorized: Invalid session');
+        // Session cookie invalid — wait for token-based auth message instead
+        console.log('[WS] Session cookie invalid — awaiting token auth');
         return;
       }
       
@@ -16195,8 +16197,8 @@ Sitemap: ${baseUrl}/sitemap.xml
       console.log('[WS] Session query result:', sessionResult.length > 0 ? 'Found' : 'Not found');
       
       if (sessionResult.length === 0 || !sessionResult[0].sess) {
-        console.log('[WS] Rejecting: Session not found in database');
-        ws.close(1008, 'Unauthorized: Session not found');
+        // No session in DB — wait for token-based auth message
+        console.log('[WS] Session not in DB — awaiting token auth');
         return;
       }
       
@@ -16224,8 +16226,8 @@ Sitemap: ${baseUrl}/sitemap.xml
       }
       
       if (!sessionUser) {
-        console.log('[WS] Rejecting: Invalid or expired session - no user data');
-        ws.close(1008, 'Unauthorized: Invalid or expired session');
+        // Session exists but no user data — must be a token-auth session, wait for auth message
+        console.log('[WS] No user in session — awaiting token auth');
         return;
       }
       
@@ -16235,8 +16237,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       console.log('[WS] Extracted user ID:', userId || 'None');
       
       if (!userId) {
-        console.log('[WS] Rejecting: No user ID in session');
-        ws.close(1008, 'Unauthorized: No user in session');
+        console.log('[WS] No user ID in session data — awaiting token auth');
         return;
       }
       

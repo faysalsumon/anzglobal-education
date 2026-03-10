@@ -1991,10 +1991,14 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-          {/* Main Content - Full-height for Applications, scrollable for all others */}
+          {/* Main Content - Full-height for Applications and Messages, scrollable for all others */}
           {activeTab === "applications" ? (
             <div className="flex flex-col flex-1 min-h-0 overflow-hidden px-4 md:px-6 py-4 pb-20 lg:pb-4">
               <AdminApplicationsKanban />
+            </div>
+          ) : activeTab === "messages" ? (
+            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <AdminMessagesTab />
             </div>
           ) : (
           <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">
@@ -3380,11 +3384,6 @@ export default function AdminDashboard() {
         {/* AI Settings Tab - CTO Only */}
         {activeTab === "ai-settings" && isCTO && (
           <AdminAiSettingsPanel />
-        )}
-
-        {/* Messages Tab */}
-        {activeTab === "messages" && (
-          <AdminMessagesTab />
         )}
 
         {/* Team Management Tab */}
