@@ -28,7 +28,7 @@ interface PublicHeaderProps {
 
 export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
   const [, setLocation] = useLocation();
-  const { user, isAuthenticated, isAdmin, isStudent, isUniversity } = useAuth();
+  const { user, isAuthenticated, isAdmin, isStudent } = useAuth();
   const { signOut } = useSupabaseAuth();
   const { scrollDirection, isAtTop } = useScrollDirection({ threshold: 10 });
 
@@ -120,21 +120,17 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
     if (user.userType === "admin" || user.userType === "platform_admin") {
       return "Platform Admin";
     }
-    if (user.userType === "university" || user.userType === "institution_admin") return "Institution Admin";
     if (user.userType === "student") return "Student";
     return user.userType.replace('_', ' ');
   };
 
   const getDashboardUrl = () => {
     if (isAdmin) return "/admin/dashboard";
-    if (isUniversity) return "/dashboard";
-    if (isStudent) return "/dashboard";
     return "/dashboard";
   };
 
   const getProfileUrl = () => {
     if (isAdmin) return "/admin/profile";
-    if (isUniversity) return "/university/profile";
     if (isStudent) return "/student/profile";
     return "/dashboard";
   };

@@ -17,7 +17,7 @@ interface PublicMobileNavProps {
 export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
   const [location, setLocation] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user, isAuthenticated, isAdmin, isStudent, isUniversity } = useAuth();
+  const { user, isAuthenticated, isAdmin, isStudent } = useAuth();
   const { signOut } = useSupabaseAuth();
 
   const { data: studentProfile } = useQuery<StudentProfile>({
@@ -49,7 +49,6 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
 
   const getProfileUrl = () => {
     if (isAdmin) return "/admin/profile";
-    if (isUniversity) return "/university/profile";
     if (isStudent) return "/student/profile";
     return "/dashboard";
   };

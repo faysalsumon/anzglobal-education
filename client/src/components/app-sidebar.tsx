@@ -34,7 +34,7 @@ import { useSupabaseAuth } from "@/lib/supabase-auth";
 
 export function AppSidebar() {
   const [location] = useLocation();
-  const { user, isUniversity, isStudent, isAdmin, isCTO, hasFullAdminAccess, adminRole } = useAuth();
+  const { user, isStudent, isAdmin, isCTO, hasFullAdminAccess, adminRole } = useAuth();
   const { signOut } = useSupabaseAuth();
   const [profilePictureDialogOpen, setProfilePictureDialogOpen] = useState(false);
 
@@ -47,7 +47,6 @@ export function AppSidebar() {
       if (adminRole === "operations_staff") return "Operations Staff Portal";
       return "Admin Portal";
     }
-    if (isUniversity) return "Institution Portal";
     return "Student Portal";
   };
 
@@ -66,16 +65,6 @@ export function AppSidebar() {
   });
 
   const unreadCount = unreadData?.count || 0;
-
-  const universityItems = [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "My Institutions", url: "/university/institutions", icon: Building2 },
-    { title: "Courses", url: "/university/courses", icon: BookOpen },
-    { title: "Applications", url: "/university/applications", icon: FileText },
-    { title: "Team Management", url: "/university/team", icon: Users },
-    { title: "Messages", url: "/chat", icon: MessageSquare },
-    { title: "AI Assistant", url: "/university/ai-assistant", icon: Sparkles },
-  ];
 
   const studentItems = [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -101,7 +90,7 @@ export function AppSidebar() {
       ]
     : baseAdminItems;
 
-  const items = isAdmin ? adminItems : (isUniversity ? universityItems : studentItems);
+  const items = isAdmin ? adminItems : studentItems;
 
   return (
     <Sidebar>

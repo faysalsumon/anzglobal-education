@@ -20,13 +20,7 @@ import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Landing = lazy(() => import("@/pages/landing"));
 const Home = lazy(() => import("@/pages/home"));
-const UniversityProfile = lazy(() => import("@/pages/university-profile"));
-const UniversityInstitutions = lazy(() => import("@/pages/university-institutions"));
-const UniversityCourses = lazy(() => import("@/pages/university-courses"));
 const CourseForm = lazy(() => import("@/pages/course-form"));
-const UniversityApplications = lazy(() => import("@/pages/university-applications"));
-const UniversityTeam = lazy(() => import("@/pages/university-team"));
-const UniversityAIAssistant = lazy(() => import("@/pages/university-ai-assistant"));
 const StudentCourses = lazy(() => import("@/pages/student-courses"));
 const CourseDetail = lazy(() => import("@/pages/course-detail"));
 const StudentProfilePage = lazy(() => import("@/pages/student-profile"));
@@ -54,7 +48,6 @@ const StudentReviews = lazy(() => import("@/pages/student-reviews"));
 const UserTypeSelection = lazy(() => import("@/pages/user-type-selection"));
 const AdminLogin = lazy(() => import("@/pages/admin-login"));
 const AdminForgotPassword = lazy(() => import("@/pages/admin-forgot-password"));
-const InstitutionLogin = lazy(() => import("@/pages/institution-login"));
 const AuthPage = lazy(() => import("@/pages/auth"));
 const AdminDashboard = lazy(() => import("@/pages/admin-dashboard"));
 const AdminProfile = lazy(() => import("@/pages/admin-profile"));
@@ -100,7 +93,6 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
         <Route path="/auth" component={AuthPage} />
         <Route path="/admin/login" component={AdminLogin} />
         <Route path="/admin/forgot-password" component={AdminForgotPassword} />
-        <Route path="/institution/login" component={InstitutionLogin} />
         <Route path="/compare-courses" component={CompareCourses} />
         <Route path="/contact" component={Contact} />
         <Route path="/partner-with-us" component={PartnerWithUs} />
@@ -135,15 +127,6 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
         <Route path="/admin/applications/:id" component={AdminApplicationDetail} />
         <Route path="/admin/contacts/new" component={AdminContactForm} />
         <Route path="/admin/contacts/:id/edit" component={AdminContactForm} />
-        <Route path="/university/profile" component={UniversityProfile} />
-        <Route path="/university/dashboard" component={Home} />
-        <Route path="/university/institutions" component={UniversityInstitutions} />
-        <Route path="/university/courses" component={UniversityCourses} />
-        <Route path="/university/courses/new" component={CourseForm} />
-        <Route path="/university/courses/:id/edit" component={CourseForm} />
-        <Route path="/university/applications" component={UniversityApplications} />
-        <Route path="/university/team" component={UniversityTeam} />
-        <Route path="/university/ai-assistant" component={UniversityAIAssistant} />
         <Route path="/student/dashboard" component={StudentDashboardPage} />
         <Route path="/student/courses" component={StudentCourses} />
         <Route path="/student/courses/:id" component={CourseDetail} />
@@ -169,7 +152,7 @@ function AppContent() {
   useGoogleAnalytics();
   
   // Public routes that should not have padding even for authenticated users
-  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/study-abroad', '/our-story', '/student-reviews', '/auth', '/auth/callback', '/admin/login', '/admin/forgot-password', '/institution/login'];
+  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/study-abroad', '/our-story', '/student-reviews', '/auth', '/auth/callback', '/admin/login', '/admin/forgot-password'];
   
   // Standalone pages that have their own complete layout (no header/footer wrapping)
   const standalonePages = ['/reset-password', '/force-password-reset', '/accept-invitation', '/auth/accept-invite'];
@@ -187,12 +170,10 @@ function AppContent() {
 
   // Student and University portal pages now have their own 3-column layouts
   const isStudentPortal = location.startsWith('/student/') || location === '/dashboard' || location === '/affiliate';
-  const isUniversityPortal = location.startsWith('/university/');
 
   // Internal dashboard/portal pages that should NOT show footer (only for authenticated users)
   const internalDashboardRoutes = [
     '/dashboard',
-    '/university/',
     '/student/',
     '/chat',
     '/affiliate'
@@ -260,8 +241,8 @@ function AppContent() {
     return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
   }
 
-  // Student and University portals now have their own 3-column layouts with sidebars
-  if ((isStudentPortal || isUniversityPortal) && isAuthenticated) {
+  // Student portal has its own 3-column layout with sidebar
+  if (isStudentPortal && isAuthenticated) {
     return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
   }
 

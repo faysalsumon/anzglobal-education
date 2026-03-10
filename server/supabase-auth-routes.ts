@@ -31,7 +31,7 @@ interface SignUpBody {
   password: string;
   firstName?: string;
   lastName?: string;
-  userType: 'student' | 'institution_admin' | 'platform_admin';
+  userType: 'student' | 'platform_admin';
 }
 
 interface SignInBody {
@@ -51,8 +51,8 @@ router.post('/signup', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    if (!userType || !['student', 'institution_admin'].includes(userType)) {
-      return res.status(400).json({ error: 'Valid userType is required (student or institution_admin). Platform admin accounts require manual approval.' });
+    if (!userType || !['student'].includes(userType)) {
+      return res.status(400).json({ error: 'Valid userType is required (student). Platform admin accounts require manual approval.' });
     }
 
     const { data, error } = await supabase.auth.signUp({
@@ -88,8 +88,8 @@ router.post('/signup', async (req: Request, res: Response) => {
           role: userType === 'platform_admin' ? null : 'user',
         });
         
-        // Auto-sync to CRM contacts for students and institution_admins
-        if (newUser && ['student', 'institution_admin'].includes(userType)) {
+        // Auto-sync to CRM contacts for students
+        if (newUser && userType === 'student') {
           await createCrmContactForUser({
             id: newUser.id,
             email: newUser.email!,
@@ -139,11 +139,7 @@ router.post('/signin', async (req: Request, res: Response) => {
     
     if (!platformUser && data.user) {
       const metadata = data.user.user_metadata;
-      // Normalize legacy 'institution_user' or 'university' to 'institution_admin'
-      let userType = metadata?.user_type || 'student';
-      if (userType === 'institution_user' || userType === 'university') {
-        userType = 'institution_admin';
-      }
+      const userType = metadata?.user_type === 'student' ? 'student' : 'student';
       platformUser = await storage.createUser({
         email,
         firstName: metadata?.first_name || null,
@@ -153,8 +149,8 @@ router.post('/signin', async (req: Request, res: Response) => {
         isActive: true,
       });
       
-      // Auto-sync to CRM contacts for students and institution_admins
-      if (platformUser && ['student', 'institution_admin'].includes(userType)) {
+      // Auto-sync to CRM contacts for students
+      if (platformUser && userType === 'student') {
         await createCrmContactForUser({
           id: platformUser.id,
           email: platformUser.email!,
@@ -168,6 +164,11 @@ router.post('/signin', async (req: Request, res: Response) => {
     }
 
     if (platformUser) {
+      // Block institution_admin users - portal has been removed
+      if (platformUser.userType === 'institution_admin' || platformUser.userType === 'university') {
+        await supabase.auth.signOut();
+        return res.status(403).json({ error: 'Institution portal access has been removed. Please contact ANZ Global Education.' });
+      }
       // Check if temp password has expired (24 hours)
       if (platformUser.requiresPasswordReset && platformUser.tempPasswordIssuedAt) {
         const tempPasswordAge = Date.now() - new Date(platformUser.tempPasswordIssuedAt).getTime();
@@ -182,16 +183,7 @@ router.post('/signin', async (req: Request, res: Response) => {
         }
       }
 
-      // Also normalize existing user's userType if it's legacy
-      const updates: any = { lastLogin: new Date() };
-      if (platformUser.userType === 'institution_user' || platformUser.userType === 'university') {
-        updates.userType = 'institution_admin';
-      }
-      await storage.updateUser(platformUser.id, updates);
-      // Update local reference
-      if (updates.userType) {
-        platformUser.userType = updates.userType;
-      }
+      await storage.updateUser(platformUser.id, { lastLogin: new Date() });
     }
 
     res.json({
@@ -730,16 +722,10 @@ router.post('/sync-user', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    // SECURITY: Only allow safe user types via OAuth sync
+    // SECURITY: Only allow students via OAuth sync
     // platform_admin can only be created through the proper signup flow with approval
     // This prevents privilege escalation via localStorage manipulation
-    // Normalize legacy 'institution_user' to 'institution_admin'
-    let normalizedUserType = userType;
-    if (userType === 'institution_user') {
-      normalizedUserType = 'institution_admin';
-    }
-    const allowedUserTypes = ['student', 'institution_admin'];
-    const safeUserType = allowedUserTypes.includes(normalizedUserType) ? normalizedUserType : 'student';
+    const safeUserType = userType === 'student' ? 'student' : 'student';
 
     // Check if user already exists in local database
     let existingUser = await storage.getUserByEmail(email);
@@ -824,7 +810,7 @@ router.post('/sync-user', async (req: Request, res: Response) => {
     }
 
     // Create new user in local database
-    // SECURITY: Only allow student or institution_admin via OAuth
+    // SECURITY: Only allow student via OAuth
     const newUser = await storage.createUser({
       email,
       firstName: firstName || null,
@@ -839,8 +825,8 @@ router.post('/sync-user', async (req: Request, res: Response) => {
 
     console.log(`[Supabase Auth] Synced user ${email} to local database`);
     
-    // Auto-sync to CRM contacts for students and institution_admins
-    if (newUser && ['student', 'institution_admin'].includes(safeUserType)) {
+    // Auto-sync to CRM contacts for students
+    if (newUser && safeUserType === 'student') {
       await createCrmContactForUser({
         id: newUser.id,
         email: newUser.email!,
@@ -853,12 +839,11 @@ router.post('/sync-user', async (req: Request, res: Response) => {
       });
     }
 
-    // Send welcome email to new user (students and institutions)
-    const welcomeUserType = safeUserType === 'institution_admin' ? 'institution' : 'student';
+    // Send welcome email to new students
     sendWelcomeEmail({
       email,
       firstName: firstName || 'there',
-      userType: welcomeUserType,
+      userType: 'student',
     }).catch(err => console.error('[Email] Failed to send welcome email:', err));
 
     // Send admin notification about new sign-up
@@ -1169,8 +1154,7 @@ router.post('/invitation/accept', async (req: Request, res: Response) => {
     // Send welcome email
     try {
       // Map userType to email template type
-      const emailUserType = invitation.userType === 'platform_admin' ? 'admin' : 
-        (invitation.userType === 'institution_admin' ? 'institution' : invitation.userType) as 'student' | 'institution' | 'admin';
+      const emailUserType = (invitation.userType === 'platform_admin' ? 'admin' : 'student') as 'student' | 'admin';
       await sendWelcomeEmail({
         email: invitation.email,
         firstName: firstName || 'Team Member',
@@ -1292,8 +1276,8 @@ router.post('/admin/create-user', async (req: any, res: Response) => {
       tempPasswordIssuedAt: new Date(),
     });
     
-    // Auto-sync to CRM contacts for students and institution_admins
-    if (newUser && ['student', 'institution_admin'].includes(userType)) {
+    // Auto-sync to CRM contacts for students
+    if (newUser && userType === 'student') {
       await createCrmContactForUser({
         id: newUser.id,
         email: newUser.email!,

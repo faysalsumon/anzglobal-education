@@ -96,7 +96,6 @@ export function useAuth() {
     isLoading,
     isAuthResolved,
     isAuthenticated,
-    isUniversity: user?.userType === "university" || user?.userType === "institution_admin",
     isStudent: user?.userType === "student",
     isAdmin: user?.userType === "admin" || user?.userType === "platform_admin",
     adminRole,

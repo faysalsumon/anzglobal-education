@@ -21,7 +21,7 @@ interface UnreadCountResponse {
 }
 
 export function MobileBottomNav() {
-  const { user, isUniversity, isStudent } = useAuth();
+  const { user, isStudent } = useAuth();
   const [location] = useLocation();
   const isAdmin = user?.userType === "admin";
 
@@ -35,15 +35,6 @@ export function MobileBottomNav() {
     user?.adminRole === "cto" ||
     user?.adminRole === "branch_manager"
   );
-
-  const universityNavItems = [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Institutions", url: "/university/institutions", icon: Building2 },
-    { title: "Courses", url: "/university/courses", icon: BookOpen },
-    { title: "Applications", url: "/university/applications", icon: FileText },
-    { title: "Team", url: "/university/team", icon: Users },
-    { title: "Messages", url: "/chat", icon: MessageSquare, badge: unreadCount },
-  ];
 
   const studentNavItems = [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -63,7 +54,7 @@ export function MobileBottomNav() {
     ...(hasFullAdminAccess ? [{ title: "Manage", url: "/admin/dashboard#institutions", icon: PlusCircle }] : []),
   ];
 
-  const navItems = isAdmin ? adminNavItems : isUniversity ? universityNavItems : studentNavItems;
+  const navItems = isAdmin ? adminNavItems : studentNavItems;
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[9999] bg-background border-t shadow-lg safe-area-bottom">

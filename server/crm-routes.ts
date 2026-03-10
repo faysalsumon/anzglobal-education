@@ -134,14 +134,12 @@ export function mapUserTypeToContactType(userType: string): string | null {
   switch (userType) {
     case 'student':
       return 'clients';
-    case 'institution_admin':
-      return 'providers_rep';
     default:
       return null; // admin and platform_admin are not synced
   }
 }
 
-// Auto-create CRM contact for new platform users (students and institution_admins)
+// Auto-create CRM contact for new platform users (students only)
 export async function createCrmContactForUser(user: {
   id: string;
   email: string;
@@ -371,7 +369,7 @@ export async function syncUserProfileToCrmContact(userId: string): Promise<{ suc
   }
 }
 
-// Sync platform users to CRM contacts (students → clients, institution_admin → providers_rep)
+// Sync platform users to CRM contacts (students → clients)
 router.post("/contacts/sync-users", requireAdmin, async (req: any, res) => {
   try {
     const userId = getUserId(req);
@@ -379,16 +377,11 @@ router.post("/contacts/sync-users", requireAdmin, async (req: any, res) => {
       return res.status(401).json({ message: "User ID not found" });
     }
 
-    // Get all users that should be synced (students and institution_admins only)
+    // Get all users that should be synced (students only)
     const usersToSync = await db
       .select()
       .from(users)
-      .where(
-        or(
-          eq(users.userType, 'student'),
-          eq(users.userType, 'institution_admin')
-        )
-      );
+      .where(eq(users.userType, 'student'));
     
     console.log(`[CRM Sync] Found ${usersToSync.length} users to sync`);
 

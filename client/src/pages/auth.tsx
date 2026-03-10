@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { trackCompleteRegistration } from "@/lib/meta-pixel";
-import { ChevronLeft, Mail, Building2, GraduationCap, X, ExternalLink, Loader2, AlertCircle, RefreshCw, KeyRound, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { ChevronLeft, Mail, X, ExternalLink, Loader2, AlertCircle, RefreshCw, KeyRound, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
 import authImage from "@assets/stock_images/happy_diverse_intern_25e20ae6.jpg";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
@@ -20,8 +20,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/useAuth";
 
-type AuthView = "main" | "more-options" | "email" | "user-type" | "forgot-password" | "email-exists";
-type UserType = "student" | "institution" | null;
+type AuthView = "main" | "more-options" | "email" | "forgot-password" | "email-exists";
+type UserType = "student" | null;
 
 // Full-screen redirect overlay for platform admins
 function AdminRedirectOverlay() {
@@ -132,21 +132,11 @@ export default function AuthPage() {
         handleAdminRedirect();
       } else if (user.userType === "student") {
         window.location.href = "/student/dashboard";
-      } else if (user.userType === "institution_admin" || user.userType === "university") {
-        window.location.href = "/university/dashboard";
       }
     }
   }, [isAuthResolved, isAuthenticated, user, redirectingToAdmin]);
 
-  // Legacy Replit auth functions - deprecated, keeping for reference
-  // const handleStudentLogin = () => {
-  //   window.location.href = "/api/student/login";
-  // };
-  // const handleInstitutionLogin = () => {
-  //   window.location.href = "/api/login?type=university";
-  // };
-
-  const handleGoogleLogin = async (intendedUserType?: "student" | "institution_admin") => {
+  const handleGoogleLogin = async () => {
     if (!isConfigured) {
       toast({
         title: "Not Available",
@@ -156,13 +146,7 @@ export default function AuthPage() {
       return;
     }
     
-    // Store intended user type in localStorage before redirecting to Google
-    // This will be read by auth-callback to properly set the user type
-    const userTypeToStore = intendedUserType || (userType === "institution" ? "institution_admin" : "student");
-    localStorage.setItem('oauth_intended_user_type', userTypeToStore);
-    
-    // Preserve referral code for OAuth flow - it's already in localStorage if present
-    
+    localStorage.setItem('oauth_intended_user_type', 'student');
     setIsLoading(true);
     try {
       const { error } = await signInWithOAuth("google");
@@ -188,7 +172,7 @@ export default function AuthPage() {
     }
   };
 
-  const handleFacebookLogin = async (intendedUserType?: "student" | "institution_admin") => {
+  const handleFacebookLogin = async () => {
     if (!isConfigured) {
       toast({
         title: "Not Available",
@@ -198,9 +182,7 @@ export default function AuthPage() {
       return;
     }
     
-    // Store intended user type in localStorage before redirecting to Facebook
-    const userTypeToStore = intendedUserType || (userType === "institution" ? "institution_admin" : "student");
-    localStorage.setItem('oauth_intended_user_type', userTypeToStore);
+    localStorage.setItem('oauth_intended_user_type', 'student');
     
     setIsLoading(true);
     try {
@@ -403,11 +385,7 @@ export default function AuthPage() {
             });
             
             // Redirect based on user type
-            if (detectedUserType === "institution_admin" || detectedUserType === "university") {
-              window.location.href = "/university/dashboard";
-            } else {
-              window.location.href = "/student/dashboard";
-            }
+            window.location.href = "/student/dashboard";
           } catch (fetchError) {
             // If we can't verify user role, sign them out for security
             console.error("Error fetching user data:", fetchError);
@@ -487,12 +465,6 @@ export default function AuthPage() {
     }
   };
 
-  const handleUserTypeSelect = (type: "student" | "institution") => {
-    setUserType(type);
-    // Use Supabase auth flow - show email/password form instead of legacy Replit redirect
-    setView("email");
-  };
-
   const handleClose = () => {
     setLocation("/");
   };
@@ -501,8 +473,6 @@ export default function AuthPage() {
     if (view === "email") {
       setView("main");
     } else if (view === "more-options") {
-      setView("main");
-    } else if (view === "user-type") {
       setView("main");
     } else if (view === "forgot-password") {
       setView("email");
@@ -594,20 +564,11 @@ export default function AuthPage() {
                 </div>
 
                 <div className="mt-8 pt-6 border-t border-border/50">
-                  <p className="text-xs text-muted-foreground text-center mb-4">
+                  <p className="text-xs text-muted-foreground text-center">
                     By continuing, you agree to ANZ Global Education's{" "}
                     <button onClick={() => setShowTerms(true)} className="text-primary hover:underline" data-testid="link-terms-main">Terms of Use</button>. Read our{" "}
                     <button onClick={() => setShowPrivacy(true)} className="text-primary hover:underline" data-testid="link-privacy-main">Privacy Policy</button>.
                   </p>
-
-                  <button
-                    onClick={() => setView("user-type")}
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mx-auto"
-                    data-testid="button-signup-institution"
-                  >
-                    <Building2 className="h-4 w-4" />
-                    <span>Signing up as an institution?</span>
-                  </button>
                 </div>
               </>
             )}
@@ -886,65 +847,6 @@ export default function AuthPage() {
                   >
                     Back to sign in
                   </button>
-                </div>
-              </>
-            )}
-
-            {view === "user-type" && (
-              <>
-                <div className="space-y-2 mb-8">
-                  <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-                    How would you like to join?
-                  </h1>
-                  <p className="text-muted-foreground">
-                    Select your account type to get started
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <button
-                    onClick={() => handleUserTypeSelect("student")}
-                    className="w-full p-6 rounded-xl border border-border/50 hover:border-primary hover:bg-primary/5 transition-all text-left group"
-                    data-testid="button-select-student"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                        <GraduationCap className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg text-foreground">I'm a Student</h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Discover courses, apply to universities, and track your applications
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => handleUserTypeSelect("institution")}
-                    className="w-full p-6 rounded-xl border border-border/50 hover:border-secondary hover:bg-secondary/5 transition-all text-left group"
-                    data-testid="button-select-institution"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="p-3 rounded-lg bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
-                        <Building2 className="h-6 w-6 text-secondary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg text-foreground">I'm an Institution</h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          List your courses, manage applications, and connect with students
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-
-                <div className="mt-8 pt-6 border-t border-border/50">
-                  <p className="text-xs text-muted-foreground text-center">
-                    By continuing, you agree to ANZ Global Education's{" "}
-                    <button onClick={() => setShowTerms(true)} className="text-primary hover:underline" data-testid="link-terms-usertype">Terms of Use</button>. Read our{" "}
-                    <button onClick={() => setShowPrivacy(true)} className="text-primary hover:underline" data-testid="link-privacy-usertype">Privacy Policy</button>.
-                  </p>
                 </div>
               </>
             )}

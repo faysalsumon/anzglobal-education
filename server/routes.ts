@@ -7,7 +7,7 @@ import { unsign as unsignCookie } from "cookie-signature";
 import { storage } from "./storage";
 import { wsClients, broadcastDocumentEvent, broadcastToUsers } from "./websocket-clients";
 import { db } from "./db";
-import { isAuthenticated, getAuthenticatedUserId, checkInstitutionAccess } from "./supabase-middleware";
+import { isAuthenticated, getAuthenticatedUserId } from "./supabase-middleware";
 import { getRegionContext } from "./middleware/region-detection";
 import {
   insertUniversitySchema,
@@ -632,8 +632,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       '/api/auth/logout',
       '/api/student/login',
       '/api/student/register',
-      '/api/university/login',
-      '/api/university/register',
       '/api/supabase-auth/',
       '/api/partner/', // Partner API uses X-API-Key authentication, not CSRF
     ];
@@ -1076,13 +1074,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       let { userType } = req.body;
 
-      if (!["institution_admin", "university", "student", "admin", "platform_admin"].includes(userType)) {
+      if (!["student", "admin", "platform_admin"].includes(userType)) {
         return res.status(400).json({ message: "Invalid user type" });
-      }
-
-      // Normalize legacy 'university' to 'institution_admin'
-      if (userType === "university") {
-        userType = "institution_admin";
       }
 
       const user = await storage.upsertUser({
@@ -1215,555 +1208,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // University routes
-  app.get("/api/university/profile", isAuthenticated, async (req: any, res) => {
+  // ============================================
+  // ADMIN GALLERY IMAGE MANAGEMENT
+  // ============================================
+
+  app.post("/api/admin/gallery/upload", isAuthenticated, upload.single('image'), async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId);
-      
-      if (!access) {
-        return res.status(404).json({ message: "University profile not found" });
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const user = await storage.getUser(userId);
+      if (!user || !['platform_admin', 'admin', 'super_admin'].includes(user.userType)) {
+        return res.status(403).json({ message: "Admin access required" });
       }
-      
-      res.json(access.university);
-    } catch (error) {
-      console.error("Error fetching university:", error);
-      res.status(500).json({ message: "Failed to fetch university" });
-    }
-  });
-
-  app.post("/api/university/profile", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      
-      // Check if user is creating or updating
-      const ownerUniversity = await storage.getUniversityByUserId(userId);
-      const teamAccess = await checkUniversityAccess(userId, ['cto', 'admin']);
-      
-      let university;
-      let isNewInstitution = false;
-      
-      // Remove approval-related fields that only admins can modify
-      const { approvalStatus, rejectionReason, submittedForApprovalAt, approvedAt, approvedBy, ...safeData } = req.body;
-
-      // Auto-geocode campus addresses if provided
-      if (safeData.campusAddresses && Array.isArray(safeData.campusAddresses) && safeData.campusAddresses.length > 0) {
-        try {
-          safeData.campusAddresses = await geocodingService.geocodeCampuses(safeData.campusAddresses);
-        } catch (geocodeError) {
-          console.warn("Error geocoding campus addresses:", geocodeError);
-        }
-      }
-      
-      if (ownerUniversity) {
-        // User owns a university - they can update it (but not approval fields)
-        const data = insertUniversitySchema.parse({ ...safeData, userId: ownerUniversity.userId });
-        university = await storage.updateUniversity(ownerUniversity.id, data);
-      } else if (teamAccess) {
-        // User is a team member with admin/institution super_admin role - they can update (but not approval fields)
-        const data = insertUniversitySchema.parse({ ...safeData, userId: teamAccess.university.userId });
-        university = await storage.updateUniversity(teamAccess.university.id, data);
-      } else {
-        // User doesn't own a university and isn't a team member - allow creation with pending status
-        const data = insertUniversitySchema.parse({ 
-          ...safeData, 
-          userId,
-          approvalStatus: 'pending',
-          submittedForApprovalAt: new Date()
-        });
-        await storage.upsertUser({ id: userId, userType: "university" });
-        university = await storage.createUniversity(data);
-        isNewInstitution = true;
-        
-        // Create notifications for all active platform admins
-        const admins = await db
-          .select()
-          .from(users)
-          .where(and(
-            eq(users.userType, 'admin'),
-            eq(users.isActive, true)
-          ));
-        
-        for (const admin of admins) {
-          await createNotification({
-            userId: admin.id,
-            type: 'institution_approval_request',
-            title: 'New Institution Pending Approval',
-            message: `${university.name} has been submitted for approval`,
-            link: `/admin/dashboard#institutions`,
-            metadata: {
-              institutionId: university.id,
-              institutionName: university.name,
-              submittedBy: userId
-            }
-          });
-        }
-      }
-
-      res.json(university);
-    } catch (error: any) {
-      console.error("Error saving university:", error);
-      res.status(400).json({ message: error.message || "Failed to save university" });
-    }
-  });
-
-  // Institution management endpoints for institution admins
-  app.get("/api/university/my-institutions", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      
-      // Get all institutions created by this user OR assigned to this user (via transfer)
-      const userInstitutions = await db
-        .select()
-        .from(universities)
-        .where(or(
-          eq(universities.userId, userId),
-          eq(universities.assignedToUserId, userId)
-        ))
-        .orderBy(desc(universities.createdAt));
-      
-      res.json(userInstitutions);
-    } catch (error) {
-      console.error("Error fetching user institutions:", error);
-      res.status(500).json({ message: "Failed to fetch institutions" });
-    }
-  });
-
-  app.post("/api/university/institutions", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      
-      // Remove approval-related fields that only admins can modify
-      const { approvalStatus, rejectionReason, submittedForApprovalAt, approvedAt, approvedBy, ...safeData } = req.body;
-      
-      // Auto-geocode campus addresses if provided
-      if (safeData.campusAddresses && Array.isArray(safeData.campusAddresses) && safeData.campusAddresses.length > 0) {
-        try {
-          safeData.campusAddresses = await geocodingService.geocodeCampuses(safeData.campusAddresses);
-        } catch (geocodeError) {
-          console.warn("Error geocoding campus addresses:", geocodeError);
-        }
-      }
-
-      // Create institution with pending status
-      const data = insertUniversitySchema.parse({ 
-        ...safeData, 
-        userId,
-        approvalStatus: 'pending',
-        submittedForApprovalAt: new Date()
-      });
-      
-      const institution = await storage.createUniversity(data);
-      
-      // Create notifications for all active platform admins
-      const admins = await db
-        .select()
-        .from(users)
-        .where(and(
-          eq(users.userType, 'admin'),
-          eq(users.isActive, true)
-        ));
-      
-      for (const admin of admins) {
-        await createNotification({
-          userId: admin.id,
-          type: 'institution_approval_request',
-          title: 'New Institution Pending Approval',
-          message: `${institution.name} has been submitted for approval`,
-          link: `/admin/dashboard#institutions`,
-          metadata: {
-            institutionId: institution.id,
-            institutionName: institution.name,
-            submittedBy: userId
-          }
-        });
-      }
-
-      res.json(institution);
-    } catch (error: any) {
-      console.error("Error creating institution:", error);
-      res.status(400).json({ message: error.message || "Failed to create institution" });
-    }
-  });
-
-  app.patch("/api/university/institutions/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const institutionId = req.params.id;
-      
-      // Check ownership
-      const institution = await storage.getUniversityById(institutionId);
-      if (!institution || institution.userId !== userId) {
-        return res.status(403).json({ message: "Not authorized to edit this institution" });
-      }
-      
-      // Remove approval-related fields that only admins can modify
-      const { approvalStatus, rejectionReason, submittedForApprovalAt, approvedAt, approvedBy, ...safeData } = req.body;
-      
-      const data = insertUniversitySchema.parse(safeData);
-      const updated = await storage.updateUniversity(institutionId, data);
-      
-      // Log activity for institution update
-      await logUpdate({
-        req,
-        entityType: 'institution',
-        entityId: institutionId,
-        entityName: institution.name,
-        oldData: institution,
-        newData: updated,
-        fieldsToTrack: ['name', 'description', 'smallDescription', 'country', 'city', 'state', 'logo', 'coverImage', 'website', 'email', 'phone', 'establishedYear', 'providerType', 'campusAddresses', 'publishStatus'],
-      });
-      
-      res.json(updated);
-    } catch (error: any) {
-      console.error("Error updating institution:", error);
-      res.status(400).json({ message: error.message || "Failed to update institution" });
-    }
-  });
-
-  app.delete("/api/university/institutions/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const institutionId = req.params.id;
-      
-      // Check ownership
-      const institution = await storage.getUniversityById(institutionId);
-      if (!institution || institution.userId !== userId) {
-        return res.status(403).json({ message: "Not authorized to delete this institution" });
-      }
-      
-      // Delete institution (cascades to courses)
-      await db.delete(universities).where(eq(universities.id, institutionId));
-      
-      res.json({ message: "Institution deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting institution:", error);
-      res.status(500).json({ message: "Failed to delete institution" });
-    }
-  });
-
-  // AI Generation Routes
-  app.post("/api/university/generate-small-description", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      
-      // Allow authenticated users to generate content (they may not have a university record yet)
-      const ownerUniversity = await storage.getUniversityByUserId(userId);
-      const teamAccess = await checkUniversityAccess(userId, ['cto', 'admin']);
-      
-      if (!ownerUniversity && !teamAccess) {
-        // User is authenticated but doesn't own a university yet - this is okay for initial profile creation
-        // We'll allow it as long as they're authenticated
-      }
-
-      const { name, location, providerType } = req.body;
-      if (!name || !location) {
-        return res.status(400).json({ message: "Name and location are required" });
-      }
-
-      const description = await generateInstitutionSmallDescription(name, location, providerType);
-      res.json({ description });
-    } catch (error: any) {
-      console.error("Error generating small description:", error);
-      
-      // Handle AI configuration and OpenAI-specific errors
-      if (error?.code === 'ai_not_configured' || error?.status === 503) {
-        return res.status(503).json({ 
-          message: "AI features are not yet configured. OpenAI integration will be set up in a later stage of platform development." 
-        });
-      }
-      
-      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
-        return res.status(429).json({ 
-          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
-        });
-      }
-      
-      if (error?.error?.code === 'invalid_api_key') {
-        return res.status(401).json({ 
-          message: "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable." 
-        });
-      }
-      
-      res.status(500).json({ message: "Failed to generate description. Please try again." });
-    }
-  });
-
-  app.post("/api/university/generate-full-description", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      
-      // Allow authenticated users to generate content (they may not have a university record yet)
-      const ownerUniversity = await storage.getUniversityByUserId(userId);
-      const teamAccess = await checkUniversityAccess(userId, ['cto', 'admin']);
-      
-      if (!ownerUniversity && !teamAccess) {
-        // User is authenticated but doesn't own a university yet - this is okay for initial profile creation
-        // We'll allow it as long as they're authenticated
-      }
-
-      const { name, location, providerType, topDisciplines } = req.body;
-      if (!name || !location) {
-        return res.status(400).json({ message: "Name and location are required" });
-      }
-
-      const description = await generateInstitutionFullDescription(
-        name, 
-        location, 
-        providerType, 
-        topDisciplines
-      );
-      res.json({ description });
-    } catch (error: any) {
-      console.error("Error generating full description:", error);
-      
-      // Handle AI configuration and OpenAI-specific errors
-      if (error?.code === 'ai_not_configured' || error?.status === 503) {
-        return res.status(503).json({ 
-          message: "AI features are not yet configured. OpenAI integration will be set up in a later stage of platform development." 
-        });
-      }
-      
-      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
-        return res.status(429).json({ 
-          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
-        });
-      }
-      
-      if (error?.error?.code === 'invalid_api_key') {
-        return res.status(401).json({ 
-          message: "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable." 
-        });
-      }
-      
-      res.status(500).json({ message: "Failed to generate description. Please try again." });
-    }
-  });
-
-  app.post("/api/ai/generate-institution-description-from-url", isAuthenticated, async (req: any, res) => {
-    try {
-      const { url } = req.body;
-      if (!url) {
-        return res.status(400).json({ message: "Website URL is required" });
-      }
-
-      const description = await generateInstitutionDescriptionFromWebsite(url);
-      res.json({ description });
-    } catch (error: any) {
-      console.error("Error generating institution description from URL:", error);
-      
-      if (error?.code === 'ai_not_configured' || error?.status === 503) {
-        return res.status(503).json({ 
-          message: "AI features are not yet configured. OpenAI integration will be set up in a later stage of platform development." 
-        });
-      }
-      
-      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
-        return res.status(429).json({ 
-          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account." 
-        });
-      }
-
-      if (error?.error?.code === 'invalid_api_key') {
-        return res.status(401).json({ 
-          message: "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable." 
-        });
-      }
-      
-      res.status(500).json({ message: error.message || "Failed to generate description from website. Please try again." });
-    }
-  });
-
-  app.post("/api/university/generate-gallery", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      
-      // Allow authenticated users to generate content (they may not have a university record yet)
-      const ownerUniversity = await storage.getUniversityByUserId(userId);
-      const teamAccess = await checkUniversityAccess(userId, ['cto', 'admin']);
-      
-      if (!ownerUniversity && !teamAccess) {
-        // User is authenticated but doesn't own a university yet - this is okay for initial profile creation
-        // We'll allow it as long as they're authenticated
-      }
-
-      const { name, location, providerType } = req.body;
-      if (!name || !location) {
-        return res.status(400).json({ message: "Name and location are required" });
-      }
-
-      const imageUrls = await generateInstitutionGalleryImages(name, location, providerType);
-      
-      // Download and resize images, then upload to object storage
-      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-      if (!bucketId) {
-        throw new Error("Object storage not configured");
-      }
-
-      const publicDir = process.env.PUBLIC_OBJECT_SEARCH_PATHS || "public";
-      const galleryPaths: string[] = [];
-
-      for (let i = 0; i < imageUrls.length; i++) {
-        try {
-          // Fetch the image
-          const response = await fetch(imageUrls[i]);
-          const arrayBuffer = await response.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-
-          // Resize to 600x400
-          const resizedBuffer = await sharp(buffer)
-            .resize(600, 400, { fit: 'cover' })
-            .jpeg({ quality: 85 })
-            .toBuffer();
-
-          // Upload to object storage
-          const institutionId = ownerUniversity?.id || teamAccess?.university.id || userId;
-          const filename = `gallery-${institutionId}-${Date.now()}-${i}.jpg`;
-          const filepath = `${publicDir}/institutions/${filename}`;
-          
-          // Write to object storage (you'll need to implement this based on Replit's object storage API)
-          // For now, we'll save locally in public directory
-          const localPath = path.join(process.cwd(), 'public', 'institutions');
-          await fs.mkdir(localPath, { recursive: true });
-          await fs.writeFile(path.join(localPath, filename), resizedBuffer);
-          
-          galleryPaths.push(`/institutions/${filename}`);
-        } catch (error) {
-          console.error(`Error processing gallery image ${i}:`, error);
-        }
-      }
-
-      res.json({ institutionGallery: galleryPaths });
-    } catch (error: any) {
-      console.error("Error generating gallery:", error);
-      
-      // Handle OpenAI-specific errors with user-friendly messages
-      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
-        return res.status(429).json({ 
-          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
-        });
-      }
-      
-      if (error?.error?.code === 'invalid_api_key') {
-        return res.status(401).json({ 
-          message: "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable." 
-        });
-      }
-      
-      res.status(500).json({ message: "Failed to generate gallery. Please try again." });
-    }
-  });
-
-  // Logo Upload Route - allows both university users and platform admins
-  app.post("/api/university/upload-logo", isAuthenticated, upload.single('logo'), async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      
-      // Check if user has university access OR admin access
-      // support_staff includes marketing_executive role which needs to upload logos
-      const universityAccess = await checkUniversityAccess(userId, ['cto', 'admin']);
-      const adminAccess = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
-      
-      if (!universityAccess && !adminAccess) {
-        return res.status(403).json({ message: "Unauthorized" });
-      }
-
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-
-      // Resize to 160x160 automatically (regardless of uploaded size)
-      const resizedBuffer = await sharp(req.file.buffer)
-        .resize(160, 160, { fit: 'cover' })
-        .png()
-        .toBuffer();
-
-      const universityId = universityAccess?.university.id || 'admin-upload';
-      const filename = `college-logo-${universityId}-${Date.now()}.png`;
-
-      // Primary: write to local static directory — served directly by Vite/Express.
-      // Production uses public/institutions/ (project root, persistent across restarts).
-      // Dev uses client/public/institutions/ (served by Vite's dev server).
-      const staticDir = process.env.NODE_ENV === 'production'
-        ? path.join(process.cwd(), 'public', 'institutions')
-        : path.join(process.cwd(), 'client', 'public', 'institutions');
-      await fs.mkdir(staticDir, { recursive: true });
-      await fs.writeFile(path.join(staticDir, filename), resizedBuffer);
-
-      // Secondary: upload to Replit Object Storage as a persistent backup
-      // (best-effort — do not fail the whole request if object storage is unavailable)
-      if (process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
-        try {
-          const { Client: LogoStorageClient } = await import("@replit/object-storage");
-          const logoStorageClient = new LogoStorageClient();
-          const objectPath = `public/institution-logos/${filename}`;
-          const uploadResult = await logoStorageClient.uploadFromBytes(objectPath, resizedBuffer);
-          if (!uploadResult.ok) {
-            console.warn(`[Logo Upload] Object storage backup failed: ${uploadResult.error}`);
-          }
-        } catch (storageErr) {
-          console.warn('[Logo Upload] Object storage backup error (non-fatal):', storageErr);
-        }
-      }
-
-      // Use static path — same format as all existing institution logos
-      const logoPath = `/institutions/${filename}`;
-
-      // If university user, update their university profile immediately
-      if (universityAccess) {
-        await storage.updateUniversity(universityAccess.university.id, {
-          ...universityAccess.university,
-          logo: logoPath,
-        });
-      }
-
-      // If admin user uploaded with an explicit institutionId, save the logo immediately to DB
-      // This prevents logo being lost if the admin navigates away before clicking Save
-      if (adminAccess && req.body?.institutionId) {
-        const targetInstitution = await storage.getUniversityById(req.body.institutionId);
-        if (targetInstitution) {
-          await storage.updateUniversity(req.body.institutionId, {
-            ...targetInstitution,
-            logo: logoPath,
-          });
-        }
-      }
-
-      res.json({ logoPath });
-    } catch (error) {
-      console.error("Error uploading logo:", error);
-      res.status(500).json({ message: "Failed to upload logo" });
-    }
-  });
-
-  // Gallery Image Upload Route - allows uploading multiple gallery images
-  app.post("/api/university/upload-gallery-image", isAuthenticated, upload.single('image'), async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      
-      // Check if user has university access OR admin access
-      // Include 'marketing' role since Marketing Executives need to upload gallery images
-      const universityAccess = await checkUniversityAccess(userId, ['cto', 'admin', 'marketing']);
-      const adminAccess = await checkAdminAccess(userId, ['cto', 'branch_manager']);
-      
-      if (!universityAccess && !adminAccess) {
-        return res.status(403).json({ message: "Unauthorized" });
-      }
-
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-
-      // Resize to 600x400 for gallery consistency
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const resizedBuffer = await sharp(req.file.buffer)
         .resize(600, 400, { fit: 'cover' })
         .jpeg({ quality: 85 })
         .toBuffer();
-
-      // Upload to Replit Object Storage (persists across restarts and deployments)
-      const universityId = universityAccess?.university.id || adminAccess ? 'admin-upload' : userId;
-      const filename = `gallery-${universityId}-${Date.now()}.jpg`;
-
+      const filename = `gallery-admin-${Date.now()}.jpg`;
       if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
         return res.status(503).json({ message: "Object storage not configured" });
       }
@@ -1771,12 +1233,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const galleryStorageClient = new GalleryStorageClient();
       const galleryObjectPath = `public/institution-gallery/${filename}`;
       const galleryUploadResult = await galleryStorageClient.uploadFromBytes(galleryObjectPath, resizedBuffer);
-      if (!galleryUploadResult.ok) {
-        throw new Error(`Object storage upload failed: ${galleryUploadResult.error}`);
-      }
-
+      if (!galleryUploadResult.ok) throw new Error(`Object storage upload failed: ${galleryUploadResult.error}`);
       const imagePath = `/api/public-storage/public/institution-gallery/${filename}`;
-
       res.json({ imagePath });
     } catch (error) {
       console.error("Error uploading gallery image:", error);
@@ -1784,77 +1242,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // AI-powered Single Gallery Image Generation
-  app.post("/api/university/generate-gallery-image", isAuthenticated, async (req: any, res) => {
+  app.post("/api/admin/gallery/generate", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      
-      // Check if user has university access OR admin access
-      // Include 'marketing' role since Marketing Executives need to generate gallery images
-      const universityAccess = await checkUniversityAccess(userId, ['cto', 'admin', 'marketing']);
-      const adminAccess = await checkAdminAccess(userId, ['cto', 'branch_manager']);
-      
-      if (!universityAccess && !adminAccess) {
-        return res.status(403).json({ message: "Unauthorized" });
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const user = await storage.getUser(userId);
+      if (!user || !['platform_admin', 'admin', 'super_admin'].includes(user.userType)) {
+        return res.status(403).json({ message: "Admin access required" });
       }
-
       const { prompt } = req.body;
-      if (!prompt || typeof prompt !== 'string') {
-        return res.status(400).json({ message: "Image prompt is required" });
-      }
-
-      // Generate single image with DALL-E
-      const response = await generateInstitutionGalleryImages(
-        prompt,
-        "custom prompt",
-        ""
-      );
-
-      if (!response || response.length === 0) {
-        throw new Error("No image generated");
-      }
-
-      // Download and resize the generated image
+      if (!prompt || typeof prompt !== 'string') return res.status(400).json({ message: "Image prompt is required" });
+      const response = await generateInstitutionGalleryImages(prompt, "custom prompt", "");
+      if (!response || response.length === 0) throw new Error("No image generated");
       const imageUrl = response[0];
       const fetchResponse = await fetch(imageUrl);
       const arrayBuffer = await fetchResponse.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-
-      // Resize to 600x400
-      const resizedBuffer = await sharp(buffer)
-        .resize(600, 400, { fit: 'cover' })
-        .jpeg({ quality: 85 })
-        .toBuffer();
-
-      // Save to public directory
-      const universityId = universityAccess?.university.id || 'admin-upload';
-      const filename = `gallery-ai-${universityId}-${Date.now()}.jpg`;
+      const resizedBuffer = await sharp(buffer).resize(600, 400, { fit: 'cover' }).jpeg({ quality: 85 }).toBuffer();
+      const filename = `gallery-ai-admin-${Date.now()}.jpg`;
       const localPath = path.join(process.cwd(), 'public', 'institutions');
       await fs.mkdir(localPath, { recursive: true });
       await fs.writeFile(path.join(localPath, filename), resizedBuffer);
-      
       const imagePath = `/institutions/${filename}`;
-
       res.json({ imagePath });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error generating gallery image:", error);
-      
-      // Handle OpenAI-specific errors
-      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
-        return res.status(429).json({ 
-          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account." 
-        });
-      }
-      
-      if (error?.error?.code === 'invalid_api_key') {
-        return res.status(401).json({ 
-          message: "Invalid OpenAI API key configured." 
-        });
-      }
-      
       res.status(500).json({ message: "Failed to generate image. Please try again." });
     }
   });
+
+
 
   // Australian state name normalization to abbreviations
   const normalizeAustralianState = (state: string): string => {
@@ -3652,22 +3069,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/university/courses", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId);
-
-      if (!access) {
-        return res.json([]);
-      }
-
-      const courses = await storage.getCoursesByUniversityId(access.university.id);
-      res.json(courses);
-    } catch (error) {
-      console.error("Error fetching university courses:", error);
-      res.status(500).json({ message: "Failed to fetch courses" });
-    }
-  });
 
   app.post("/api/courses", isAuthenticated, async (req: any, res) => {
     try {
@@ -4963,7 +4364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const user = await storage.getUser(userId);
-      if (!user || !['platform_admin', 'admin', 'institution_admin', 'super_admin'].includes(user.userType)) {
+      if (!user || !['platform_admin', 'admin', 'super_admin'].includes(user.userType)) {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
       
@@ -5139,7 +4540,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const user = await storage.getUser(userId);
-      if (!user || !['platform_admin', 'admin', 'institution_admin', 'super_admin'].includes(user.userType)) {
+      if (!user || !['platform_admin', 'admin', 'super_admin'].includes(user.userType)) {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
       
@@ -5184,13 +4585,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/courses/:courseId/english-requirements", isAuthenticated, async (req: any, res) => {
     try {
-      // Verify user has admin or institution_admin access
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       const user = await storage.getUser(userId);
-      if (!user || !['platform_admin', 'admin', 'institution_admin'].includes(user.userType)) {
+      if (!user || !['platform_admin', 'admin'].includes(user.userType)) {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
 
@@ -5209,13 +4609,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/courses/:courseId/english-requirements/:id", isAuthenticated, async (req: any, res) => {
     try {
-      // Verify user has admin or institution_admin access
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       const user = await storage.getUser(userId);
-      if (!user || !['platform_admin', 'admin', 'institution_admin'].includes(user.userType)) {
+      if (!user || !['platform_admin', 'admin'].includes(user.userType)) {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
 
@@ -5236,13 +4635,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/courses/:courseId/english-requirements/:id", isAuthenticated, async (req: any, res) => {
     try {
-      // Verify user has admin or institution_admin access
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       const user = await storage.getUser(userId);
-      if (!user || !['platform_admin', 'admin', 'institution_admin'].includes(user.userType)) {
+      if (!user || !['platform_admin', 'admin'].includes(user.userType)) {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
 
@@ -5262,13 +4660,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Batch create English requirements (for generating all test types at once)
   app.post("/api/courses/:courseId/english-requirements/batch", isAuthenticated, async (req: any, res) => {
     try {
-      // Verify user has admin or institution_admin access
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       const user = await storage.getUser(userId);
-      if (!user || !['platform_admin', 'admin', 'institution_admin'].includes(user.userType)) {
+      if (!user || !['platform_admin', 'admin'].includes(user.userType)) {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
 
@@ -5365,7 +4762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
       const user = await storage.getUser(userId);
-      if (!user || !['platform_admin', 'admin', 'institution_admin'].includes(user.userType)) {
+      if (!user || !['platform_admin', 'admin'].includes(user.userType)) {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
 
@@ -5444,7 +4841,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
       const user = await storage.getUser(userId);
-      if (!user || !['platform_admin', 'admin', 'institution_admin'].includes(user.userType)) {
+      if (!user || !['platform_admin', 'admin'].includes(user.userType)) {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
 
@@ -7453,171 +6850,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/university/applications", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId);
 
-      if (!access) {
-        return res.json([]);
-      }
-
-      const applications = await storage.getApplicationsByUniversityId(access.university.id);
-      
-      // Enrich applications with student user details for messaging
-      const enrichedApplications = await Promise.all(
-        applications.map(async (app) => {
-          const studentProfile = await db
-            .select()
-            .from(studentProfiles)
-            .where(eq(studentProfiles.id, app.studentId))
-            .then(r => r[0]);
-          
-          const studentUser = studentProfile?.userId 
-            ? await storage.getUser(studentProfile.userId) 
-            : null;
-          
-          return {
-            ...app,
-            student: {
-              userId: studentUser?.id,
-              profileId: studentProfile?.id,
-              name: `${studentProfile?.firstName || ''} ${studentProfile?.lastName || ''}`.trim() || 'Unknown',
-              email: studentUser?.email,
-            },
-          };
-        })
-      );
-      
-      res.json(enrichedApplications);
-    } catch (error) {
-      console.error("Error fetching applications:", error);
-      res.status(500).json({ message: "Failed to fetch applications" });
-    }
-  });
-
-  // Team Management Routes
-  app.get("/api/university/team", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId);
-
-      if (!access) {
-        return res.status(404).json({ message: "University not found" });
-      }
-
-      const teamMembers = await storage.getTeamMembersByUniversityId(access.university.id);
-      res.json(teamMembers);
-    } catch (error) {
-      console.error("Error fetching team members:", error);
-      res.status(500).json({ message: "Failed to fetch team members" });
-    }
-  });
-
-  app.post("/api/university/team", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId, ['cto', 'admin']);
-
-      if (!access) {
-        return res.status(403).json({ message: "Only super admins and admins can add team members" });
-      }
-
-      const { email, role } = req.body;
-
-      if (!email || !role) {
-        return res.status(400).json({ message: "Email and role are required" });
-      }
-
-      if (!['super_admin', 'admin', 'course_manager', 'application_manager'].includes(role)) {
-        return res.status(400).json({ message: "Invalid role" });
-      }
-
-      // Check if user exists by email
-      const existingUsers = await db.select().from(users).where(eq(users.email, email));
-      let teamMemberUser = existingUsers[0];
-
-      // If user doesn't exist, create a placeholder
-      if (!teamMemberUser) {
-        const [newUser] = await db.insert(users).values({
-          email,
-          userType: 'university',
-        }).returning();
-        teamMemberUser = newUser;
-      }
-
-      // Check if already a team member
-      const existing = await storage.getTeamMemberByUserAndUniversity(teamMemberUser.id, access.university.id);
-      if (existing) {
-        return res.status(400).json({ message: "User is already a team member" });
-      }
-
-      const teamMember = await storage.createTeamMember({
-        universityId: access.university.id,
-        userId: teamMemberUser.id,
-        role,
-        invitedBy: userId,
-        isActive: true,
-      });
-
-      // Send notification to new team member
-      try {
-        await notifyTeamMemberAdded({
-          userId: teamMemberUser.id,
-          universityName: access.university.name,
-          role,
-        });
-      } catch (notificationError) {
-        console.error("Error sending notification:", notificationError);
-        // Don't fail the team member creation if notification fails
-      }
-
-      res.json(teamMember);
-    } catch (error: any) {
-      console.error("Error adding team member:", error);
-      res.status(500).json({ message: error.message || "Failed to add team member" });
-    }
-  });
-
-  app.patch("/api/university/team/:id/role", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId, ['cto', 'admin']);
-
-      if (!access) {
-        return res.status(403).json({ message: "Only super admins and admins can update roles" });
-      }
-
-      const { role } = req.body;
-
-      if (!role || !['super_admin', 'admin', 'course_manager', 'application_manager'].includes(role)) {
-        return res.status(400).json({ message: "Invalid role" });
-      }
-
-      const teamMember = await storage.updateTeamMemberRole(req.params.id, role);
-      res.json(teamMember);
-    } catch (error) {
-      console.error("Error updating team member role:", error);
-      res.status(500).json({ message: "Failed to update team member role" });
-    }
-  });
-
-  app.delete("/api/university/team/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId, ['cto', 'admin']);
-
-      if (!access) {
-        return res.status(403).json({ message: "Only super admins and admins can remove team members" });
-      }
-
-      await storage.deleteTeamMember(req.params.id);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error removing team member:", error);
-      res.status(500).json({ message: "Failed to remove team member" });
-    }
-  });
 
   app.post("/api/applications", isAuthenticated, async (req: any, res) => {
     try {
@@ -9933,14 +9166,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let { userType, role } = req.body;
       const targetUserId = req.params.id;
 
-      if (!["student", "institution_admin", "university", "admin", "platform_admin"].includes(userType)) {
+      if (!["student", "admin", "platform_admin"].includes(userType)) {
         return res.status(400).json({ message: "Invalid user type" });
       }
 
-      // Normalize legacy 'university' to 'institution_admin'
-      if (userType === "university") {
-        userType = "institution_admin";
-      }
+
 
       // Update user
       const [updatedUser] = await db
@@ -12544,7 +11774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               } else {
                 displayRole = userData.userType === 'platform_admin' ? 'Platform Admin' : 
                               userData.userType === 'admin' ? 'Admin' : 
-                              userData.userType === 'institution_admin' ? 'Institution Admin' : 'Student';
+                              'Student';
               }
             }
             otherUser = {

@@ -568,8 +568,7 @@ interface NewSignupAdminNotificationData {
 
 function getNewSignupAdminEmailHtml(data: NewSignupAdminNotificationData): string {
   const baseUrl = getEmailBaseUrl();
-  const userTypeLabel = data.userType === 'institution_admin' ? 'Institution Admin' : 
-    data.userType === 'platform_admin' ? 'Platform Admin' : 'Student';
+  const userTypeLabel = data.userType === 'platform_admin' ? 'Platform Admin' : 'Student';
 
   const bodyContent = `
     <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">New ${userTypeLabel} Registration</h2>
@@ -623,8 +622,7 @@ export async function sendNewSignupAdminNotification(data: NewSignupAdminNotific
     }
 
     const adminEmail = getRegionAdminEmail(data.regionCode);
-    const userTypeLabel = data.userType === 'institution_admin' ? 'Institution' : 
-      data.userType === 'platform_admin' ? 'Admin' : 'Student';
+    const userTypeLabel = data.userType === 'platform_admin' ? 'Admin' : 'Student';
 
     const customTemplate = await getCustomEmailTemplate('new_signup', {
       userName: `${data.firstName} ${data.lastName}`,

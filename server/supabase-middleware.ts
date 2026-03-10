@@ -208,19 +208,6 @@ export async function checkInstitutionAccess(req: any): Promise<{ userId: string
   }
 
   // Get user from request (already populated by supabaseAuthMiddleware)
-  const user = req.supabaseUser;
-  if (!user || (user.userType !== 'university' && user.userType !== 'institution_admin')) {
-    return null;
-  }
-
-  // Import storage dynamically to avoid circular imports
-  const { storage } = await import('./storage');
-  
-  // Get university associated with this user
-  const university = await storage.getUniversityByUserId(userId);
-  if (!university) {
-    return null;
-  }
-
-  return { userId, universityId: university.id };
+  // Institution portal has been removed - always deny access
+  return null;
 }

@@ -47,7 +47,7 @@ export function GalleryImageManager({
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('image', file);
-      const response = await apiRequest("POST", "/api/university/upload-gallery-image", formData);
+      const response = await apiRequest("POST", "/api/admin/gallery/upload", formData);
       return await response.json();
     },
   });
@@ -55,7 +55,7 @@ export function GalleryImageManager({
   // AI generation mutation
   const aiGenerateMutation = useMutation({
     mutationFn: async (prompt: string) => {
-      const response = await apiRequest("POST", "/api/university/generate-gallery-image", { prompt });
+      const response = await apiRequest("POST", "/api/admin/gallery/generate", { prompt });
       return await response.json();
     },
     onSuccess: (data: any) => {

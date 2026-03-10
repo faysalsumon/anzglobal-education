@@ -44,7 +44,7 @@ interface NavItem {
 }
 
 export function TopNavBar() {
-  const { user, isUniversity, isStudent } = useAuth();
+  const { user, isStudent } = useAuth();
   const { signOut } = useSupabaseAuth();
   const [location] = useLocation();
   const isAdmin = user?.userType === "admin";
@@ -59,15 +59,6 @@ export function TopNavBar() {
     user?.adminRole === "cto" ||
     user?.adminRole === "branch_manager"
   );
-
-  const universityNavItems: NavItem[] = [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Institutions", url: "/university/institutions", icon: Building2 },
-    { title: "Courses", url: "/university/courses", icon: BookOpen },
-    { title: "Applications", url: "/university/applications", icon: FileText },
-    { title: "Team", url: "/university/team", icon: Users },
-    { title: "Messages", url: "/chat", icon: MessageSquare, badge: unreadCount },
-  ];
 
   const studentNavItems: NavItem[] = [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -87,7 +78,7 @@ export function TopNavBar() {
     ...(hasFullAdminAccess ? [{ title: "Manage", url: "/admin/dashboard#institutions", icon: PlusCircle }] : []),
   ];
 
-  const navItems = isAdmin ? adminNavItems : isUniversity ? universityNavItems : studentNavItems;
+  const navItems = isAdmin ? adminNavItems : studentNavItems;
 
   const getUserInitials = () => {
     if (!user?.email) return "U";
@@ -186,17 +177,9 @@ export function TopNavBar() {
                   </Link>
                 </DropdownMenuItem>
               )}
-              {isUniversity && (
+              {isStudent && (
                 <DropdownMenuItem asChild>
-                  <Link href="/university/profile" data-testid="menu-profile">
-                    <User className="mr-2 h-4 w-4" />
-                    University Profile
-                  </Link>
-                </DropdownMenuItem>
-              )}
-              {(isStudent || isUniversity) && (
-                <DropdownMenuItem asChild>
-                  <Link href={isStudent ? "/student/ai-assistant" : "/university/ai-assistant"} data-testid="menu-ai-assistant">
+                  <Link href="/student/ai-assistant" data-testid="menu-ai-assistant">
                     <Sparkles className="mr-2 h-4 w-4" />
                     AI Assistant
                   </Link>
