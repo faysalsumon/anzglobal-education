@@ -190,7 +190,7 @@ export function AdminMobileBottomNav({
       icon: UsersRound,
       colorClass: "text-teal-600 bg-teal-50 dark:bg-teal-950/60 dark:text-teal-400",
       items: [
-        { icon: UserCheck, label: "Attendance", value: "attendance", show: true },
+        { icon: UserCheck, label: "Attendance", value: "attendance", show: hasFullAdminAccess },
         // Future: Leave, KPI Tracking, Performance Reviews
       ],
     },

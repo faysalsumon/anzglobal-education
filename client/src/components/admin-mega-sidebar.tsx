@@ -143,7 +143,7 @@ export function AdminMegaSidebar({
       icon: UsersRound,
       color: "text-teal-600 bg-teal-50 dark:bg-teal-950 dark:text-teal-400",
       routes: [
-        { icon: UserCheck, label: "Attendance", value: "attendance", show: true },
+        { icon: UserCheck, label: "Attendance", value: "attendance", show: hasFullAdminAccess },
         // Future: Leave, KPI Tracking, Performance Reviews
       ],
     },
