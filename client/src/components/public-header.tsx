@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, Settings, Home, Globe, ChevronDown, Menu } from "lucide-react";
+import { GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, Settings, Home, Globe, Menu } from "lucide-react";
 import logoUrl from "@assets/ANZ_logo.webp";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
@@ -268,13 +268,12 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                 <NotificationBell />
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1 font-medium"
+                  size="icon"
                   onClick={() => window.dispatchEvent(new CustomEvent("open-mobile-menu"))}
                   data-testid="button-mobile-menu"
+                  aria-label="Open menu"
                 >
-                  Menu
-                  <ChevronDown className="h-3 w-3" />
+                  <Menu className="h-5 w-5" />
                 </Button>
               </>
             ) : (
@@ -289,13 +288,12 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                 </Button>
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1 font-medium"
+                  size="icon"
                   onClick={() => window.dispatchEvent(new CustomEvent("open-mobile-menu"))}
                   data-testid="button-mobile-menu"
+                  aria-label="Open menu"
                 >
-                  Menu
-                  <ChevronDown className="h-3 w-3" />
+                  <Menu className="h-5 w-5" />
                 </Button>
               </>
             )}
