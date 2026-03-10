@@ -2194,11 +2194,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
 
-      const publishedInstitutionIds = new Set(
-        allUniversities
-          .filter((u) => u.publishStatus === "published" && u.approvalStatus === "approved" && u.isActive)
-          .map((u) => u.id)
+      const publishedInstitutions = allUniversities.filter(
+        (u) => u.publishStatus === "published" && u.approvalStatus === "approved" && u.isActive
       );
+      const publishedInstitutionIds = new Set(publishedInstitutions.map((u) => u.id));
 
       const visibleCourses = allCourses.filter(
         (c) =>
@@ -2212,6 +2211,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const disciplines = new Set<string>();
       const levels = new Set<string>();
       const countries = new Set<string>();
+
+      // Include countries from all published institutions so regions without courses yet are still selectable
+      publishedInstitutions.forEach((uni) => {
+        if (uni.country) countries.add(uni.country);
+        const campusAddresses = (uni as any).campusAddresses;
+        if (Array.isArray(campusAddresses)) {
+          campusAddresses.forEach((campus: any) => {
+            if (campus.country) countries.add(campus.country);
+          });
+        }
+      });
 
       visibleCourses.forEach((course) => {
         if (course.discipline) disciplines.add(course.discipline);

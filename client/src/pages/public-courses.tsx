@@ -256,6 +256,10 @@ export default function PublicCourses() {
     queryKey: ["/api/courses", regionQuery],
   });
 
+  const { data: filterOptions } = useQuery<{ countries: string[]; disciplines: string[]; levels: string[] }>({
+    queryKey: ["/api/courses/filter-options"],
+  });
+
   const { data: subDisciplines = [] } = useQuery<SubDiscipline[]>({
     queryKey: ["/api/sub-disciplines", discipline],
     enabled: !!discipline,
@@ -437,7 +441,6 @@ export default function PublicCourses() {
     const disciplines = new Set<string>();
     const frameworks = new Set<string>();
     const levels = new Set<string>();
-    const countries = new Set<string>();
     const universities = new Map<string, string>();
     const statesByCountry: Record<string, Set<string>> = {};
     const citiesByState: Record<string, Set<string>> = {};
@@ -451,11 +454,6 @@ export default function PublicCourses() {
       if (course.discipline) disciplines.add(course.discipline);
       if ((course as any).qualificationFramework) frameworks.add((course as any).qualificationFramework);
       if (course.level) levels.add(course.level);
-      if (course.country) countries.add(course.country);
-      if (course.university) {
-        const uniCountry = (course.university as any).country;
-        if (uniCountry) countries.add(uniCountry);
-      }
       if (course.currency) currencies.add(course.currency);
       if (course.fees) {
         const fee = Number(course.fees);
@@ -518,7 +516,7 @@ export default function PublicCourses() {
       disciplines: Array.from(disciplines).sort(),
       frameworks: Array.from(frameworks).sort(),
       levels: Array.from(levels).sort(),
-      countries: Array.from(countries).sort(),
+      countries: filterOptions?.countries ?? [],
       currencies: Array.from(currencies).sort(),
       universities: Array.from(universities.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
       states: statesForCountry,
@@ -526,7 +524,7 @@ export default function PublicCourses() {
       minTuition: roundedMinTuition,
       maxTuition: roundedMaxTuition,
     };
-  }, [courses, country, campusState]);
+  }, [courses, country, campusState, filterOptions]);
 
   // Count active filters
   const activeFilterCount = useMemo(() => {
