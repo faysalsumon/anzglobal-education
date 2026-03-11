@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, useDroppable } from "@dnd-kit/core";
@@ -2043,6 +2043,12 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
     enabled: contact.contactType === 'clients',
   });
 
+  // Set of course IDs the student has already applied to — used to block re-selection in the dialog
+  const alreadyAppliedCourseIds = useMemo(
+    () => new Set((applicationsData?.applications ?? []).map((a) => a.courseId)),
+    [applicationsData]
+  );
+
   const addLinkMutation = useMutation({
     mutationFn: async (data: any) => {
       return apiRequest("POST", `/api/crm/contacts/${contact.id}/institutions`, data);
@@ -2086,14 +2092,13 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
   });
 
   const handleCreateApplication = async () => {
-    if (!selectedCourseIds.length) return;
+    const coursesToCreate = selectedCourseIds.filter((id) => !alreadyAppliedCourseIds.has(id));
+    if (!coursesToCreate.length) return;
     try {
-      await Promise.all(
-        selectedCourseIds.map((courseId) =>
-          createApplicationMutation.mutateAsync({ courseId, notes: applicationNotes || undefined })
-        )
-      );
-      const n = selectedCourseIds.length;
+      for (const courseId of coursesToCreate) {
+        await createApplicationMutation.mutateAsync({ courseId, notes: applicationNotes || undefined });
+      }
+      const n = coursesToCreate.length;
       toast({ title: `${n} application${n !== 1 ? "s" : ""} created successfully` });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts", contact.id, "applications"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
@@ -2974,18 +2979,24 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                   <div className="p-1.5 space-y-1">
                     {searchCourses.map((course: any) => {
                       const uni = course.university;
+                      const isAlreadyApplied = alreadyAppliedCourseIds.has(course.id);
                       const isSelected = selectedCourseIds.includes(course.id);
                       return (
                         <div
                           key={course.id}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer hover-elevate ${
-                            isSelected ? "bg-primary/10 border border-primary/30" : "border border-transparent"
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-md ${
+                            isAlreadyApplied
+                              ? "opacity-50 cursor-not-allowed border border-transparent"
+                              : isSelected
+                                ? "bg-primary/10 border border-primary/30 cursor-pointer hover-elevate"
+                                : "border border-transparent cursor-pointer hover-elevate"
                           }`}
-                          onClick={() =>
+                          onClick={() => {
+                            if (isAlreadyApplied) return;
                             setSelectedCourseIds((prev) =>
                               isSelected ? prev.filter((id) => id !== course.id) : [...prev, course.id]
-                            )
-                          }
+                            );
+                          }}
                           data-testid={`course-option-${course.id}`}
                         >
                           <Avatar className="h-9 w-9 shrink-0">
@@ -3008,10 +3019,13 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                               )}
                             </div>
                           </div>
-                          {isSelected
-                            ? <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                            : <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
-                          }
+                          {isAlreadyApplied ? (
+                            <Badge variant="secondary" className="text-[10px] shrink-0 no-default-active-elevate">Applied</Badge>
+                          ) : isSelected ? (
+                            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                          ) : (
+                            <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+                          )}
                         </div>
                       );
                     })}
