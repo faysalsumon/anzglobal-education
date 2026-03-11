@@ -1980,16 +1980,6 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
     setSectionData({});
   };
 
-  const { data: teamMembers = [] } = useQuery<{ id: string; firstName: string; lastName: string; profileImageUrl?: string | null }[]>({
-    queryKey: ["/api/admin/team-members"],
-    queryFn: async () => {
-      const headers = await getAuthHeaders();
-      const res = await fetch("/api/admin/team-members", { credentials: "include", headers });
-      if (!res.ok) return [];
-      return res.json();
-    },
-  });
-
   const saveSectionMutation = useMutation({
     mutationFn: async (data: Partial<CrmContact>) => {
       return apiRequest("PATCH", `/api/crm/contacts/${contact.id}`, data);
@@ -2498,22 +2488,12 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
           </CardContent>
         </Card>
 
-        {/* ── Contact Details (ownership) ──────────────────────── */}
+        {/* ── Contact Details (read-only system fields) ────────── */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg flex items-center justify-between gap-2">
-              Contact Details
-              {editingSection !== 'ownership' && (
-                <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
-                  data-testid="button-edit-ownership"
-                  onClick={() => startEdit('ownership', { contactOwner: contact.contactOwner, assignedTo: contact.assignedTo })}>
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-              )}
-            </CardTitle>
+            <CardTitle className="text-lg">Contact Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {/* Read-only audit fields always visible */}
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Created By</span>
               {contact.createdByUser ? (
@@ -2552,75 +2532,37 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 </div>
               </div>
             )}
-
-            {/* Editable: Contact Owner + Assigned To */}
-            {editingSection === 'ownership' ? (
-              <div className="space-y-3 pt-1 border-t">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Contact Owner</Label>
-                  <Select value={sectionData.contactOwner || ""} onValueChange={v => setSectionData(p => ({ ...p, contactOwner: v || null }))}>
-                    <SelectTrigger data-testid="select-edit-owner"><SelectValue placeholder="Select owner" /></SelectTrigger>
-                    <SelectContent>
-                      {teamMembers.map(m => (
-                        <SelectItem key={m.id} value={m.id}>{m.firstName} {m.lastName}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Contact Owner</span>
+              {contact.ownerUser ? (
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={contact.ownerUser.profileImageUrl || undefined} />
+                    <AvatarFallback>{contact.ownerUser.firstName?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <span>{contact.ownerUser.firstName} {contact.ownerUser.lastName}</span>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Assigned To</Label>
-                  <Select value={sectionData.assignedTo || "none"} onValueChange={v => setSectionData(p => ({ ...p, assignedTo: v === "none" ? null : v }))}>
-                    <SelectTrigger data-testid="select-edit-assigned"><SelectValue placeholder="Not assigned" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Not assigned</SelectItem>
-                      {teamMembers.map(m => (
-                        <SelectItem key={m.id} value={m.id}>{m.firstName} {m.lastName}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex gap-2 pt-1">
-                  <Button type="button" size="sm" onClick={() => saveSectionMutation.mutate(sectionData)} disabled={saveSectionMutation.isPending} data-testid="button-save-ownership">
-                    {saveSectionMutation.isPending ? "Saving..." : "Save"}
-                  </Button>
-                  <Button type="button" size="sm" variant="ghost" onClick={cancelEdit} data-testid="button-cancel-ownership">Cancel</Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Contact Owner</span>
-                  {contact.ownerUser ? (
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={contact.ownerUser.profileImageUrl || undefined} />
-                        <AvatarFallback>{contact.ownerUser.firstName?.[0]}</AvatarFallback>
-                      </Avatar>
-                      <span>{contact.ownerUser.firstName} {contact.ownerUser.lastName}</span>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-muted-foreground italic">Not set</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Assigned To</span>
+              ) : (
+                <span className="text-sm text-muted-foreground italic">Not set</span>
+              )}
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Assigned To</span>
+              <div className="flex items-center gap-2">
+                {contact.assignedUser ? (
                   <div className="flex items-center gap-2">
-                    {contact.assignedUser ? (
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={contact.assignedUser.profileImageUrl || undefined} />
-                          <AvatarFallback className="text-[10px]">{contact.assignedUser.firstName?.[0]}{contact.assignedUser.lastName?.[0]}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">{contact.assignedUser.firstName} {contact.assignedUser.lastName}</span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-muted-foreground italic">Not assigned</span>
-                    )}
-                    <AssignPopover contactId={contact.id} assignedTo={contact.assignedTo} admins={admins} onAssign={onAssign} />
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={contact.assignedUser.profileImageUrl || undefined} />
+                      <AvatarFallback className="text-[10px]">{contact.assignedUser.firstName?.[0]}{contact.assignedUser.lastName?.[0]}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">{contact.assignedUser.firstName} {contact.assignedUser.lastName}</span>
                   </div>
-                </div>
-              </>
-            )}
+                ) : (
+                  <span className="text-sm text-muted-foreground italic">Not assigned</span>
+                )}
+                <AssignPopover contactId={contact.id} assignedTo={contact.assignedTo} admins={admins} onAssign={onAssign} />
+              </div>
+            </div>
             {contact.sourceLead && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Source Lead</span>
