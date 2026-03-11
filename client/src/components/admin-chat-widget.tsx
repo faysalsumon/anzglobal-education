@@ -376,6 +376,9 @@ export function AdminChatWidget() {
         title: `${preview.type === "institution" ? "Institution" : "Course"} saved`,
         description: `"${result.name || result.title}" created as draft.`,
       });
+      if (conversationId) {
+        apiRequest("POST", `/api/admin-chat/conversations/${conversationId}/cancel-draft`, {}).catch(() => {});
+      }
     },
     onError: (err: any) => {
       toast({ title: "Failed to save", description: err.message, variant: "destructive" });
