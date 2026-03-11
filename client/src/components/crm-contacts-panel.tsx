@@ -1963,7 +1963,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
   // Create Application dialog state
   const [isCreateApplicationOpen, setIsCreateApplicationOpen] = useState(false);
   const [courseSearch, setCourseSearch] = useState("");
-  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [applicationNotes, setApplicationNotes] = useState("");
   const [courseInstitutionFilter, setCourseInstitutionFilter] = useState("");
 
@@ -2022,7 +2022,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
 
   // Fetch courses for Create Application dialog
   const { data: coursesData, isLoading: isLoadingCourses } = useQuery<{ courses: any[]; total: number }>({
-    queryKey: ["/api/courses", { search: courseSearch, limit: 20, publishStatus: 'published', universityId: courseInstitutionFilter || undefined }],
+    queryKey: ["/api/courses", { search: courseSearch, limit: courseInstitutionFilter ? 100 : 20, publishStatus: 'published', universityId: courseInstitutionFilter || undefined }],
     enabled: isCreateApplicationOpen && (courseSearch.length > 1 || !!courseInstitutionFilter),
   });
   const searchCourses = coursesData?.courses || [];
@@ -2080,26 +2080,31 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
     mutationFn: async (data: { courseId: string; notes?: string }) => {
       return apiRequest("POST", `/api/crm/contacts/${contact.id}/applications`, data);
     },
-    onSuccess: () => {
-      toast({ title: "Application created successfully" });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts", contact.id, "applications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
-      setIsCreateApplicationOpen(false);
-      setSelectedCourseId(null);
-      setCourseSearch("");
-      setApplicationNotes("");
-    },
     onError: (error: any) => {
       toast({ title: "Failed to create application", description: error.message, variant: "destructive" });
     },
   });
 
-  const handleCreateApplication = () => {
-    if (!selectedCourseId) return;
-    createApplicationMutation.mutate({
-      courseId: selectedCourseId,
-      notes: applicationNotes || undefined,
-    });
+  const handleCreateApplication = async () => {
+    if (!selectedCourseIds.length) return;
+    try {
+      await Promise.all(
+        selectedCourseIds.map((courseId) =>
+          createApplicationMutation.mutateAsync({ courseId, notes: applicationNotes || undefined })
+        )
+      );
+      const n = selectedCourseIds.length;
+      toast({ title: `${n} application${n !== 1 ? "s" : ""} created successfully` });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts", contact.id, "applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
+      setIsCreateApplicationOpen(false);
+      setSelectedCourseIds([]);
+      setCourseSearch("");
+      setApplicationNotes("");
+      setCourseInstitutionFilter("");
+    } catch {
+      // error toast already shown by mutation onError
+    }
   };
 
   const handleAddInstitution = () => {
@@ -2889,7 +2894,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
         setIsCreateApplicationOpen(open);
         if (!open) {
           setCourseSearch("");
-          setSelectedCourseId(null);
+          setSelectedCourseIds([]);
           setApplicationNotes("");
           setCourseInstitutionFilter("");
         }
@@ -2910,7 +2915,8 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 value={courseInstitutionFilter}
                 onValueChange={(v) => {
                   setCourseInstitutionFilter(v === "_all" ? "" : v);
-                  setSelectedCourseId(null);
+                  setSelectedCourseIds([]);
+                  setCourseSearch("");
                 }}
               >
                 <SelectTrigger data-testid="select-institution-filter">
@@ -2945,33 +2951,41 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
               </Select>
             </div>
 
-            {/* Course search */}
+            {/* Course search / browse */}
             <div className="space-y-1.5">
-              <Label>Search Course *</Label>
+              <Label>{courseInstitutionFilter ? "Select Course(s)" : "Search Course"} *</Label>
               <Input
-                placeholder={courseInstitutionFilter ? "Filter by name within institution..." : "Type to search courses..."}
+                placeholder={courseInstitutionFilter ? "Optionally filter by name..." : "Type to search courses..."}
                 value={courseSearch}
-                onChange={(e) => { setCourseSearch(e.target.value); setSelectedCourseId(null); }}
+                onChange={(e) => setCourseSearch(e.target.value)}
                 data-testid="input-course-search"
               />
 
               {/* Results list */}
               {isLoadingCourses && (
-                <p className="text-xs text-muted-foreground py-2">Searching courses...</p>
+                <p className="text-xs text-muted-foreground py-2">
+                  {courseInstitutionFilter
+                    ? `Loading courses from ${courseInstitutionOptions.find(i => i.id === courseInstitutionFilter)?.name ?? "institution"}...`
+                    : "Searching courses..."}
+                </p>
               )}
               {!isLoadingCourses && searchCourses.length > 0 && (
                 <ScrollArea className="h-52 border rounded-md">
                   <div className="p-1.5 space-y-1">
                     {searchCourses.map((course: any) => {
                       const uni = course.university;
-                      const isSelected = selectedCourseId === course.id;
+                      const isSelected = selectedCourseIds.includes(course.id);
                       return (
                         <div
                           key={course.id}
                           className={`flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer hover-elevate ${
                             isSelected ? "bg-primary/10 border border-primary/30" : "border border-transparent"
                           }`}
-                          onClick={() => setSelectedCourseId(isSelected ? null : course.id)}
+                          onClick={() =>
+                            setSelectedCourseIds((prev) =>
+                              isSelected ? prev.filter((id) => id !== course.id) : [...prev, course.id]
+                            )
+                          }
                           data-testid={`course-option-${course.id}`}
                         >
                           <Avatar className="h-9 w-9 shrink-0">
@@ -2983,7 +2997,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium leading-tight">{course.title}</p>
                             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                              {uni?.name && (
+                              {uni?.name && !courseInstitutionFilter && (
                                 <span className="text-xs text-muted-foreground truncate max-w-[160px]">{uni.name}</span>
                               )}
                               {course.level && (
@@ -2994,7 +3008,10 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                               )}
                             </div>
                           </div>
-                          {isSelected && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
+                          {isSelected
+                            ? <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                            : <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+                          }
                         </div>
                       );
                     })}
@@ -3002,29 +3019,58 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 </ScrollArea>
               )}
               {!isLoadingCourses && (courseSearch.length > 1 || !!courseInstitutionFilter) && searchCourses.length === 0 && (
-                <p className="text-xs text-muted-foreground py-1">No courses found. Try adjusting your search or institution filter.</p>
+                <p className="text-xs text-muted-foreground py-1">
+                  {courseInstitutionFilter
+                    ? "No published courses found for this institution."
+                    : "No courses found. Try a different search term."}
+                </p>
               )}
             </div>
 
-            {/* Selected course preview */}
-            {selectedCourseId && (() => {
-              const sel = searchCourses.find((c: any) => c.id === selectedCourseId);
-              if (!sel) return null;
-              return (
-                <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-md px-3 py-2.5" data-testid="selected-course-preview">
-                  <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarImage src={sel.university?.logo || undefined} />
-                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary">{sel.university?.name?.slice(0,2).toUpperCase() ?? "IN"}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-muted-foreground">Selected course</p>
-                    <p className="text-sm font-medium leading-tight truncate">{sel.title}</p>
-                    {sel.university?.name && <p className="text-xs text-muted-foreground truncate">{sel.university.name}</p>}
-                  </div>
-                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+            {/* Selected courses summary */}
+            {selectedCourseIds.length > 0 && (
+              <div className="space-y-1.5" data-testid="selected-courses-summary">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Selected ({selectedCourseIds.length})
+                  </span>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground underline hover:text-foreground"
+                    onClick={() => setSelectedCourseIds([])}
+                  >
+                    Clear all
+                  </button>
                 </div>
-              );
-            })()}
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedCourseIds.map((id) => {
+                    const c = searchCourses.find((x: any) => x.id === id);
+                    const label = c?.title ?? id;
+                    return (
+                      <Badge
+                        key={id}
+                        variant="secondary"
+                        className="text-xs max-w-[200px] truncate pr-1 gap-1 no-default-active-elevate"
+                        data-testid={`selected-course-badge-${id}`}
+                      >
+                        <span className="truncate">{label}</span>
+                        <button
+                          type="button"
+                          className="ml-0.5 shrink-0 opacity-60 hover:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedCourseIds((prev) => prev.filter((x) => x !== id));
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Notes (Optional)</Label>
               <Textarea
@@ -3040,19 +3086,24 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => {
               setIsCreateApplicationOpen(false);
-              setSelectedCourseId(null);
+              setSelectedCourseIds([]);
               setCourseSearch("");
               setApplicationNotes("");
               setCourseInstitutionFilter("");
             }}>
               Cancel
             </Button>
-            <Button 
+            <Button
+              type="button"
               onClick={handleCreateApplication}
-              disabled={!selectedCourseId || createApplicationMutation.isPending}
+              disabled={!selectedCourseIds.length || createApplicationMutation.isPending}
               data-testid="button-confirm-create-application"
             >
-              {createApplicationMutation.isPending ? "Creating..." : "Create Application"}
+              {createApplicationMutation.isPending
+                ? "Creating..."
+                : selectedCourseIds.length > 1
+                  ? `Create ${selectedCourseIds.length} Applications`
+                  : "Create Application"}
             </Button>
           </DialogFooter>
         </DialogContent>
