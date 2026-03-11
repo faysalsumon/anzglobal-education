@@ -69,8 +69,10 @@ import {
   Save,
   CheckCircle2,
   UserPlus,
-  UserMinus
+  UserMinus,
+  Pencil
 } from "lucide-react";
+import { COUNTRIES, getCountryByName } from "@/lib/countries";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { SavedFilter } from "@shared/schema";
@@ -1946,6 +1948,8 @@ const CONTACT_ROLES = [
 const roleNeedsInstitution = (contactType: ContactType) => 
   ['providers_rep', 'partner', 'external'].includes(contactType);
 
+type EditSection = 'contact_info' | 'address' | 'inquiry' | 'ownership' | 'emergency' | null;
+
 function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign }: ContactDetailViewProps) {
   const { toast } = useToast();
   const [isAddInstitutionOpen, setIsAddInstitutionOpen] = useState(false);
@@ -1962,6 +1966,43 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [applicationNotes, setApplicationNotes] = useState("");
   const [courseInstitutionFilter, setCourseInstitutionFilter] = useState("");
+
+  // Inline section editing
+  const [editingSection, setEditingSection] = useState<EditSection>(null);
+  const [sectionData, setSectionData] = useState<Partial<CrmContact>>({});
+
+  const startEdit = (section: EditSection, fields: Partial<CrmContact>) => {
+    setEditingSection(section);
+    setSectionData(fields);
+  };
+  const cancelEdit = () => {
+    setEditingSection(null);
+    setSectionData({});
+  };
+
+  const { data: teamMembers = [] } = useQuery<{ id: string; firstName: string; lastName: string; profileImageUrl?: string | null }[]>({
+    queryKey: ["/api/admin/team-members"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const res = await fetch("/api/admin/team-members", { credentials: "include", headers });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const saveSectionMutation = useMutation({
+    mutationFn: async (data: Partial<CrmContact>) => {
+      return apiRequest("PATCH", `/api/crm/contacts/${contact.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
+      cancelEdit();
+      toast({ title: "Saved", description: "Contact updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to save changes", variant: "destructive" });
+    },
+  });
 
   const [, navigate] = useLocation();
 
@@ -2166,155 +2207,313 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {/* ── Contact Information ─────────────────────────────── */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              Contact Information
+            <CardTitle className="text-sm font-semibold flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                Contact Information
+              </span>
+              {editingSection !== 'contact_info' && (
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
+                  data-testid="button-edit-contact_info"
+                  onClick={() => startEdit('contact_info', { email: contact.email, mobile: contact.mobile, whatsapp: contact.whatsapp, phone: contact.phone })}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2.5">
-            {contact.email && (
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                <a href={`mailto:${contact.email}`} className="text-sm hover:text-primary truncate" data-testid="link-email-detail">{contact.email}</a>
+            {editingSection === 'contact_info' ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <Input value={sectionData.email || ""} onChange={e => setSectionData(p => ({ ...p, email: e.target.value }))} data-testid="input-edit-email" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Mobile</Label>
+                  <Input value={sectionData.mobile || ""} onChange={e => setSectionData(p => ({ ...p, mobile: e.target.value }))} placeholder="+61 4xx xxx xxx" data-testid="input-edit-mobile" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">WhatsApp</Label>
+                  <Input value={sectionData.whatsapp || ""} onChange={e => setSectionData(p => ({ ...p, whatsapp: e.target.value }))} placeholder="+61 4xx xxx xxx" data-testid="input-edit-whatsapp" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Phone</Label>
+                  <Input value={sectionData.phone || ""} onChange={e => setSectionData(p => ({ ...p, phone: e.target.value }))} placeholder="+61 x xxxx xxxx" data-testid="input-edit-phone" />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button type="button" size="sm" onClick={() => saveSectionMutation.mutate(sectionData)} disabled={saveSectionMutation.isPending} data-testid="button-save-contact_info">
+                    {saveSectionMutation.isPending ? "Saving..." : "Save"}
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={cancelEdit} data-testid="button-cancel-contact_info">Cancel</Button>
+                </div>
               </div>
-            )}
-            {contact.mobile && (
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-                <a href={`tel:${contact.mobile}`} className="text-sm hover:text-primary" data-testid="link-mobile-detail">{contact.mobile}</a>
-                <span className="text-xs text-muted-foreground">Mobile</span>
-              </div>
-            )}
-            {contact.whatsapp && (
-              <div className="flex items-center gap-2">
-                <MessageCircle className="h-4 w-4 text-muted-foreground shrink-0" />
-                <a href={`https://wa.me/${contact.whatsapp.replace(/\D/g,'')}`} className="text-sm hover:text-primary" target="_blank" rel="noopener noreferrer" data-testid="link-whatsapp-detail">{contact.whatsapp}</a>
-                <span className="text-xs text-muted-foreground">WhatsApp</span>
-              </div>
-            )}
-            {contact.phone && (
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-                <a href={`tel:${contact.phone}`} className="text-sm hover:text-primary" data-testid="link-phone-detail">{contact.phone}</a>
-              </div>
+            ) : (
+              <>
+                {contact.email && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <a href={`mailto:${contact.email}`} className="text-sm hover:text-primary truncate" data-testid="link-email-detail">{contact.email}</a>
+                  </div>
+                )}
+                {contact.mobile && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <a href={`tel:${contact.mobile}`} className="text-sm hover:text-primary" data-testid="link-mobile-detail">{contact.mobile}</a>
+                    <span className="text-xs text-muted-foreground">Mobile</span>
+                  </div>
+                )}
+                {contact.whatsapp && (
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <a href={`https://wa.me/${contact.whatsapp.replace(/\D/g,'')}`} className="text-sm hover:text-primary" target="_blank" rel="noopener noreferrer" data-testid="link-whatsapp-detail">{contact.whatsapp}</a>
+                    <span className="text-xs text-muted-foreground">WhatsApp</span>
+                  </div>
+                )}
+                {contact.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <a href={`tel:${contact.phone}`} className="text-sm hover:text-primary" data-testid="link-phone-detail">{contact.phone}</a>
+                  </div>
+                )}
+                {!contact.email && !contact.mobile && !contact.whatsapp && !contact.phone && (
+                  <p className="text-sm text-muted-foreground">No contact info on file</p>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
 
+        {/* ── Address ─────────────────────────────────────────── */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              Address
+            <CardTitle className="text-sm font-semibold flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                Address
+              </span>
+              {editingSection !== 'address' && (
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
+                  data-testid="button-edit-address"
+                  onClick={() => startEdit('address', { unitNo: contact.unitNo, street: contact.street, suburb: contact.suburb, city: contact.city, state: contact.state, postcode: contact.postcode, country: contact.country })}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
-            {contact.street || contact.city ? (
-              <>
-                {(contact.unitNo || contact.street) && (
-                  <p>{[contact.unitNo, contact.street].filter(Boolean).join(" ")}</p>
-                )}
-                {contact.suburb && <p>{contact.suburb}</p>}
-                {(contact.city || contact.state || contact.postcode) && (
-                  <p>{[contact.city, contact.state, contact.postcode].filter(Boolean).join(", ")}</p>
-                )}
-                {contact.country && <p>{contact.country}</p>}
-              </>
+            {editingSection === 'address' ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Unit No</Label>
+                    <Input value={sectionData.unitNo || ""} onChange={e => setSectionData(p => ({ ...p, unitNo: e.target.value }))} placeholder="Unit" data-testid="input-edit-unitno" />
+                  </div>
+                  <div className="col-span-2 space-y-1">
+                    <Label className="text-xs text-muted-foreground">Street</Label>
+                    <Input value={sectionData.street || ""} onChange={e => setSectionData(p => ({ ...p, street: e.target.value }))} placeholder="Street address" data-testid="input-edit-street" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Suburb</Label>
+                  <Input value={sectionData.suburb || ""} onChange={e => setSectionData(p => ({ ...p, suburb: e.target.value }))} data-testid="input-edit-suburb" />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">City</Label>
+                    <Input value={sectionData.city || ""} onChange={e => setSectionData(p => ({ ...p, city: e.target.value }))} data-testid="input-edit-city" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">State</Label>
+                    <Input value={sectionData.state || ""} onChange={e => setSectionData(p => ({ ...p, state: e.target.value }))} data-testid="input-edit-state" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Postcode</Label>
+                    <Input value={sectionData.postcode || ""} onChange={e => setSectionData(p => ({ ...p, postcode: e.target.value }))} data-testid="input-edit-postcode" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Country</Label>
+                  <Select value={sectionData.country || ""} onValueChange={v => setSectionData(p => ({ ...p, country: v }))}>
+                    <SelectTrigger data-testid="select-edit-country"><SelectValue placeholder="Select country" /></SelectTrigger>
+                    <SelectContent>
+                      {COUNTRIES.map(c => <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button type="button" size="sm" onClick={() => saveSectionMutation.mutate(sectionData)} disabled={saveSectionMutation.isPending} data-testid="button-save-address">
+                    {saveSectionMutation.isPending ? "Saving..." : "Save"}
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={cancelEdit} data-testid="button-cancel-address">Cancel</Button>
+                </div>
+              </div>
             ) : (
-              <p className="text-muted-foreground">No address on file</p>
+              contact.street || contact.city ? (
+                <>
+                  {(contact.unitNo || contact.street) && (
+                    <p>{[contact.unitNo, contact.street].filter(Boolean).join(" ")}</p>
+                  )}
+                  {contact.suburb && <p>{contact.suburb}</p>}
+                  {(contact.city || contact.state || contact.postcode) && (
+                    <p>{[contact.city, contact.state, contact.postcode].filter(Boolean).join(", ")}</p>
+                  )}
+                  {contact.country && <p>{contact.country}</p>}
+                </>
+              ) : (
+                <p className="text-muted-foreground">No address on file</p>
+              )
             )}
           </CardContent>
         </Card>
 
-        {(contact.courseName || contact.entrySource || contact.leadRating || contact.visaStatus || contact.country) && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+        {/* ── Inquiry Details ──────────────────────────────────── */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-muted-foreground" />
                 Inquiry Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {contact.courseName && (
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Course Interested In</span>
-                  {contact.courseId ? (
-                    <a 
-                      href={`/courses/${contact.courseId}`}
-                      className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      data-testid="link-inquiry-course"
-                    >
-                      {contact.courseName}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  ) : (
-                    <span className="text-sm font-medium">{contact.courseName}</span>
-                  )}
-                </div>
+              </span>
+              {editingSection !== 'inquiry' && (
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
+                  data-testid="button-edit-inquiry"
+                  onClick={() => startEdit('inquiry', { entrySource: contact.entrySource, leadRating: contact.leadRating, courseName: contact.courseName, country: contact.country, visaStatus: contact.visaStatus })}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
               )}
-              {contact.country && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Country</span>
-                  <span data-testid="text-inquiry-country">{contact.country}</span>
-                </div>
-              )}
-              {contact.visaStatus && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Visa Status</span>
-                  <span data-testid="text-inquiry-visa">{contact.visaStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
-                </div>
-              )}
-              {contact.entrySource && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Entry Source</span>
-                  <Badge variant="secondary" data-testid="badge-entry-source">
-                    {contact.entrySource.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </Badge>
-                </div>
-              )}
-              {contact.leadRating && (
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Lead Rating</span>
-                  <Badge 
-                    variant={contact.leadRating === 'hot' ? 'destructive' : contact.leadRating === 'warm' ? 'default' : 'secondary'}
-                    data-testid="badge-lead-rating"
-                  >
-                    <Star className="h-3 w-3 mr-1" />
-                    {contact.leadRating.charAt(0).toUpperCase() + contact.leadRating.slice(1)}
-                  </Badge>
-                </div>
-              )}
-              {contact.referrer && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Referrer</span>
-                  <span className="text-sm text-muted-foreground truncate max-w-[200px]" data-testid="text-referrer">{contact.referrer}</span>
-                </div>
-              )}
-              {contact.firstPageVisited && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Page Visited</span>
-                  <span className="text-sm text-muted-foreground truncate max-w-[200px]" data-testid="text-first-page">{contact.firstPageVisited}</span>
-                </div>
-              )}
-              {contact.firstVisit && !isNaN(new Date(contact.firstVisit).getTime()) && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">First Visit</span>
-                  <span className="text-sm">{format(new Date(contact.firstVisit), "MMM d, yyyy 'at' h:mm a")}</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Contact Details</CardTitle>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {editingSection === 'inquiry' ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Course Interested In</Label>
+                  <Input value={sectionData.courseName || ""} onChange={e => setSectionData(p => ({ ...p, courseName: e.target.value }))} placeholder="e.g. Bachelor of Computer Science" data-testid="input-edit-coursename" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Entry Source</Label>
+                  <Select value={sectionData.entrySource || ""} onValueChange={v => setSectionData(p => ({ ...p, entrySource: v as any }))}>
+                    <SelectTrigger data-testid="select-edit-entrysource"><SelectValue placeholder="Select source" /></SelectTrigger>
+                    <SelectContent>
+                      {[{v:'website',l:'Website'},{v:'consultant',l:'Consultant'},{v:'sub_agent',l:'Sub Agent'},{v:'affiliate',l:'Affiliate'},{v:'import',l:'Import'},{v:'referral',l:'Referral'},{v:'facebook_ads',l:'Facebook Ads'},{v:'walk_in',l:'Walk In'},{v:'other',l:'Other'}].map(o => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Lead Rating</Label>
+                  <Select value={sectionData.leadRating || ""} onValueChange={v => setSectionData(p => ({ ...p, leadRating: v as any }))}>
+                    <SelectTrigger data-testid="select-edit-leadrating"><SelectValue placeholder="Select rating" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cold">Cold</SelectItem>
+                      <SelectItem value="warm">Warm</SelectItem>
+                      <SelectItem value="hot">Hot</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Visa Status</Label>
+                  <Select value={sectionData.visaStatus || ""} onValueChange={v => setSectionData(p => ({ ...p, visaStatus: v as any }))}>
+                    <SelectTrigger data-testid="select-edit-visastatus"><SelectValue placeholder="Select status" /></SelectTrigger>
+                    <SelectContent>
+                      {[{v:'not_applied',l:'Not Applied'},{v:'applied',l:'Applied'},{v:'granted',l:'Granted'},{v:'refused',l:'Refused'},{v:'na',l:'N/A'}].map(o => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button type="button" size="sm" onClick={() => saveSectionMutation.mutate(sectionData)} disabled={saveSectionMutation.isPending} data-testid="button-save-inquiry">
+                    {saveSectionMutation.isPending ? "Saving..." : "Save"}
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={cancelEdit} data-testid="button-cancel-inquiry">Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {contact.courseName && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Course Interested In</span>
+                    {contact.courseId ? (
+                      <a href={`/courses/${contact.courseId}`} className="text-sm font-medium text-primary hover:underline flex items-center gap-1" target="_blank" rel="noopener noreferrer" data-testid="link-inquiry-course">
+                        {contact.courseName}<ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span className="text-sm font-medium">{contact.courseName}</span>
+                    )}
+                  </div>
+                )}
+                {contact.country && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Country</span>
+                    <span data-testid="text-inquiry-country">{contact.country}</span>
+                  </div>
+                )}
+                {contact.visaStatus && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Visa Status</span>
+                    <span data-testid="text-inquiry-visa">{contact.visaStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                  </div>
+                )}
+                {contact.entrySource && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Entry Source</span>
+                    <Badge variant="secondary" data-testid="badge-entry-source">
+                      {contact.entrySource.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </Badge>
+                  </div>
+                )}
+                {contact.leadRating && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Lead Rating</span>
+                    <Badge variant={contact.leadRating === 'hot' ? 'destructive' : contact.leadRating === 'warm' ? 'default' : 'secondary'} data-testid="badge-lead-rating">
+                      <Star className="h-3 w-3 mr-1" />
+                      {contact.leadRating.charAt(0).toUpperCase() + contact.leadRating.slice(1)}
+                    </Badge>
+                  </div>
+                )}
+                {contact.referrer && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Referrer</span>
+                    <span className="text-sm text-muted-foreground truncate max-w-[200px]" data-testid="text-referrer">{contact.referrer}</span>
+                  </div>
+                )}
+                {contact.firstPageVisited && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Page Visited</span>
+                    <span className="text-sm text-muted-foreground truncate max-w-[200px]" data-testid="text-first-page">{contact.firstPageVisited}</span>
+                  </div>
+                )}
+                {contact.firstVisit && !isNaN(new Date(contact.firstVisit).getTime()) && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">First Visit</span>
+                    <span className="text-sm">{format(new Date(contact.firstVisit), "MMM d, yyyy 'at' h:mm a")}</span>
+                  </div>
+                )}
+                {!contact.courseName && !contact.entrySource && !contact.leadRating && !contact.visaStatus && !contact.country && (
+                  <p className="text-sm text-muted-foreground">No inquiry details on file</p>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Contact Details (ownership) ──────────────────────── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center justify-between gap-2">
+              Contact Details
+              {editingSection !== 'ownership' && (
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
+                  data-testid="button-edit-ownership"
+                  onClick={() => startEdit('ownership', { contactOwner: contact.contactOwner, assignedTo: contact.assignedTo })}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* Read-only audit fields always visible */}
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Created By</span>
               {contact.createdByUser ? (
@@ -2339,7 +2538,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Last Updated</span>
                 <div className="flex items-center gap-2">
-                  {contact.updatedByUser ? (
+                  {contact.updatedByUser && (
                     <>
                       <Avatar className="h-6 w-6">
                         <AvatarImage src={contact.updatedByUser.profileImageUrl || undefined} />
@@ -2348,45 +2547,80 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                       <span>{contact.updatedByUser.firstName} {contact.updatedByUser.lastName}</span>
                       <span className="text-muted-foreground">·</span>
                     </>
-                  ) : null}
+                  )}
                   <span className="text-muted-foreground">{format(new Date(contact.updatedAt), "MMM d, yyyy")}</span>
                 </div>
               </div>
             )}
-            {contact.ownerUser && (
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Contact Owner</span>
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={contact.ownerUser.profileImageUrl || undefined} />
-                    <AvatarFallback>{contact.ownerUser.firstName?.[0]}</AvatarFallback>
-                  </Avatar>
-                  <span>{contact.ownerUser.firstName} {contact.ownerUser.lastName}</span>
+
+            {/* Editable: Contact Owner + Assigned To */}
+            {editingSection === 'ownership' ? (
+              <div className="space-y-3 pt-1 border-t">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Contact Owner</Label>
+                  <Select value={sectionData.contactOwner || ""} onValueChange={v => setSectionData(p => ({ ...p, contactOwner: v || null }))}>
+                    <SelectTrigger data-testid="select-edit-owner"><SelectValue placeholder="Select owner" /></SelectTrigger>
+                    <SelectContent>
+                      {teamMembers.map(m => (
+                        <SelectItem key={m.id} value={m.id}>{m.firstName} {m.lastName}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Assigned To</Label>
+                  <Select value={sectionData.assignedTo || "none"} onValueChange={v => setSectionData(p => ({ ...p, assignedTo: v === "none" ? null : v }))}>
+                    <SelectTrigger data-testid="select-edit-assigned"><SelectValue placeholder="Not assigned" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Not assigned</SelectItem>
+                      {teamMembers.map(m => (
+                        <SelectItem key={m.id} value={m.id}>{m.firstName} {m.lastName}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button type="button" size="sm" onClick={() => saveSectionMutation.mutate(sectionData)} disabled={saveSectionMutation.isPending} data-testid="button-save-ownership">
+                    {saveSectionMutation.isPending ? "Saving..." : "Save"}
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={cancelEdit} data-testid="button-cancel-ownership">Cancel</Button>
                 </div>
               </div>
-            )}
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Assigned To</span>
-              <div className="flex items-center gap-2">
-                {contact.assignedUser ? (
+            ) : (
+              <>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Contact Owner</span>
+                  {contact.ownerUser ? (
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={contact.ownerUser.profileImageUrl || undefined} />
+                        <AvatarFallback>{contact.ownerUser.firstName?.[0]}</AvatarFallback>
+                      </Avatar>
+                      <span>{contact.ownerUser.firstName} {contact.ownerUser.lastName}</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground italic">Not set</span>
+                  )}
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Assigned To</span>
                   <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={contact.assignedUser.profileImageUrl || undefined} />
-                      <AvatarFallback className="text-[10px]">{contact.assignedUser.firstName?.[0]}{contact.assignedUser.lastName?.[0]}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm">{contact.assignedUser.firstName} {contact.assignedUser.lastName}</span>
+                    {contact.assignedUser ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={contact.assignedUser.profileImageUrl || undefined} />
+                          <AvatarFallback className="text-[10px]">{contact.assignedUser.firstName?.[0]}{contact.assignedUser.lastName?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">{contact.assignedUser.firstName} {contact.assignedUser.lastName}</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground italic">Not assigned</span>
+                    )}
+                    <AssignPopover contactId={contact.id} assignedTo={contact.assignedTo} admins={admins} onAssign={onAssign} />
                   </div>
-                ) : (
-                  <span className="text-sm text-muted-foreground italic">Not assigned</span>
-                )}
-                <AssignPopover
-                  contactId={contact.id}
-                  assignedTo={contact.assignedTo}
-                  admins={admins}
-                  onAssign={onAssign}
-                />
-              </div>
-            </div>
+                </div>
+              </>
+            )}
             {contact.sourceLead && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Source Lead</span>
@@ -2396,38 +2630,75 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
           </CardContent>
         </Card>
 
+        {/* ── Emergency Contact ────────────────────────────────── */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Emergency Contact</CardTitle>
+            <CardTitle className="text-lg flex items-center justify-between gap-2">
+              Emergency Contact
+              {editingSection !== 'emergency' && (
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
+                  data-testid="button-edit-emergency"
+                  onClick={() => startEdit('emergency', { emergencyContactName: contact.emergencyContactName, emergencyContactMobile: contact.emergencyContactMobile, emergencyContactRelationship: contact.emergencyContactRelationship, emergencyContactAddress: contact.emergencyContactAddress })}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {contact.emergencyContactName ? (
-              <>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Name</span>
-                  <span>{contact.emergencyContactName}</span>
+            {editingSection === 'emergency' ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Name</Label>
+                  <Input value={sectionData.emergencyContactName || ""} onChange={e => setSectionData(p => ({ ...p, emergencyContactName: e.target.value }))} data-testid="input-edit-emergency-name" />
                 </div>
-                {contact.emergencyContactMobile && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Mobile</span>
-                    <span>{contact.emergencyContactMobile}</span>
-                  </div>
-                )}
-                {contact.emergencyContactRelationship && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Relationship</span>
-                    <span>{contact.emergencyContactRelationship}</span>
-                  </div>
-                )}
-                {contact.emergencyContactAddress && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Address</span>
-                    <span>{contact.emergencyContactAddress}</span>
-                  </div>
-                )}
-              </>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Mobile</Label>
+                  <Input value={sectionData.emergencyContactMobile || ""} onChange={e => setSectionData(p => ({ ...p, emergencyContactMobile: e.target.value }))} placeholder="+61 4xx xxx xxx" data-testid="input-edit-emergency-mobile" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Relationship</Label>
+                  <Input value={sectionData.emergencyContactRelationship || ""} onChange={e => setSectionData(p => ({ ...p, emergencyContactRelationship: e.target.value }))} placeholder="e.g. Parent, Sibling" data-testid="input-edit-emergency-relationship" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Address</Label>
+                  <Input value={sectionData.emergencyContactAddress || ""} onChange={e => setSectionData(p => ({ ...p, emergencyContactAddress: e.target.value }))} data-testid="input-edit-emergency-address" />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button type="button" size="sm" onClick={() => saveSectionMutation.mutate(sectionData)} disabled={saveSectionMutation.isPending} data-testid="button-save-emergency">
+                    {saveSectionMutation.isPending ? "Saving..." : "Save"}
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={cancelEdit} data-testid="button-cancel-emergency">Cancel</Button>
+                </div>
+              </div>
             ) : (
-              <p className="text-muted-foreground">No emergency contact on file</p>
+              contact.emergencyContactName ? (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Name</span>
+                    <span>{contact.emergencyContactName}</span>
+                  </div>
+                  {contact.emergencyContactMobile && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Mobile</span>
+                      <span>{contact.emergencyContactMobile}</span>
+                    </div>
+                  )}
+                  {contact.emergencyContactRelationship && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Relationship</span>
+                      <span>{contact.emergencyContactRelationship}</span>
+                    </div>
+                  )}
+                  {contact.emergencyContactAddress && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Address</span>
+                      <span>{contact.emergencyContactAddress}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-muted-foreground">No emergency contact on file</p>
+              )
             )}
           </CardContent>
         </Card>

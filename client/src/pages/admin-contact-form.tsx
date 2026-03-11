@@ -205,6 +205,16 @@ export default function AdminContactForm() {
     },
   });
 
+  const { data: teamMembers = [] } = useQuery<{ id: string; firstName: string; lastName: string; userType: string }[]>({
+    queryKey: ["/api/admin/team-members"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch("/api/admin/team-members", { credentials: 'include', headers });
+      if (!response.ok) return [];
+      return response.json();
+    },
+  });
+
   const addInstitutionLinkMutation = useMutation({
     mutationFn: async (data: { institutionId: number; roleTitle: string | null; department: string | null }) => {
       return apiRequest("POST", `/api/crm/contacts/${params.id}/institutions`, data);
@@ -842,6 +852,27 @@ export default function AdminContactForm() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contactOwner">Contact Owner</Label>
+                  <Select
+                    value={formData.contactOwner || ""}
+                    onValueChange={(value: string) => setFormData({ ...formData, contactOwner: value || null })}
+                  >
+                    <SelectTrigger id="contactOwner" data-testid="select-contact-owner">
+                      <SelectValue placeholder="Select owner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teamMembers.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.firstName} {member.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="referenceSource">Reference Source</Label>
                   <Input
