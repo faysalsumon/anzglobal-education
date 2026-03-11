@@ -9,7 +9,7 @@ packages = ["xorg.libxcb", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage
 [deployment]
 deploymentTarget = "autoscale"
 build = ["bash", "-c", "bun install && bun run build"]
-run = ["npm", "run", "start"]
+run = ["bun", "run", "start"]
 
 [[ports]]
 localPort = 5000

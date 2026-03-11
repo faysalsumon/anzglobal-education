@@ -164,7 +164,6 @@
   },
   "overrides": {
     "glob": "^11.1.0",
-    "esbuild": "^0.25.0",
     "fast-xml-parser": "^5.3.6",
     "qs": "^6.14.1"
   }
