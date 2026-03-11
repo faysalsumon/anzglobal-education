@@ -15718,6 +15718,7 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /student/
 Disallow: /dashboard
+Disallow: /auth
 Disallow: /auth/callback
 Disallow: /force-password-reset
 Disallow: /user-type

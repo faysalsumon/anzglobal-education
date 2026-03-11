@@ -98,6 +98,7 @@ export default function StudentReviews() {
   const organizationWithReviewsSchema = {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
+    "@id": `${siteUrl}/#organization`,
     "name": "ANZ Global Education",
     "url": siteUrl,
     "logo": `${siteUrl}/logo.png`,

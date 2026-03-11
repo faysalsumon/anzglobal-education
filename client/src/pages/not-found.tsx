@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
+import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
 import { Home, Search, BookOpen, GraduationCap, MapPin, Coffee } from "lucide-react";
 
@@ -31,6 +32,10 @@ export default function NotFound() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/10 p-4">
+      <Helmet>
+        <title>Page Not Found | ANZ Global Education</title>
+        <meta name="robots" content="noindex, follow" />
+      </Helmet>
       <div className="text-center max-w-2xl mx-auto">
         <div 
           className={`text-[150px] md:text-[200px] leading-none font-bold select-none transition-transform duration-500 ${bounce ? 'scale-110' : 'scale-100'}`}

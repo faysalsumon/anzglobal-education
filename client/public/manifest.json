@@ -1,0 +1,22 @@
+{
+  "name": "ANZ Global Education",
+  "short_name": "ANZ Global",
+  "description": "Connect international students with top universities in Australia, UK, Canada and more",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3465A5",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "160x160",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

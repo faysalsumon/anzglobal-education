@@ -294,14 +294,15 @@ export default function Landing() {
           {JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Organization",
-            "name": "ANZ Global Education - Study Abroad",
-            "alternateName": "ANZ Global Education",
+            "@id": `${siteUrl}/#organization`,
+            "name": "ANZ Global Education",
+            "alternateName": "ANZ Global Education Study Abroad",
             "url": siteUrl,
             "logo": {
               "@type": "ImageObject",
               "url": `${siteUrl}/logo.png`,
-              "width": 300,
-              "height": 80
+              "width": 1600,
+              "height": 776
             },
             "description": pageDescription,
             "foundingDate": "2020",
