@@ -34,7 +34,8 @@ import {
   MessageCircle,
   Smartphone
 } from "lucide-react";
-import { SiFacebook, SiX, SiLinkedin, SiWhatsapp } from "react-icons/si";
+import { SiFacebook, SiX, SiWhatsapp } from "react-icons/si";
+import { FaLinkedin } from "react-icons/fa";
 import type { User, StudentProfile, Referral, ReferralInvitation } from "@shared/schema";
 
 interface ReferralWithStudent extends Referral {
@@ -549,7 +550,7 @@ function AffiliateDashboard() {
                       }}
                       data-testid="button-share-linkedin"
                     >
-                      <SiLinkedin className="h-5 w-5 text-[#0A66C2]" />
+                      <FaLinkedin className="h-5 w-5 text-[#0A66C2]" />
                     </Button>
 
                     {/* SMS */}
