@@ -12,6 +12,7 @@ import {
   universities,
   courses,
 } from "@shared/schema";
+import type { InsertCourse } from "@shared/schema";
 import { eq, and, lt, gte, lte, ne, sql, count, inArray, ilike } from "drizzle-orm";
 import OpenAI from "openai";
 import { checkAdminAccess } from "./routes";
@@ -234,7 +235,7 @@ export async function getAdminContext(userId: string): Promise<AdminContext> {
   };
 }
 
-function buildSystemPrompt(ctx: AdminContext, pendingDraft: DataEntryDraft | null): string {
+function buildSystemPrompt(ctx: AdminContext, pendingDraft: DataEntryDraft | null, canDoDataEntry: boolean): string {
   const stageList = Object.entries(ctx.contacts.byStage)
     .map(([s, n]) => `${n} ${s}`)
     .join(", ");
@@ -260,8 +261,6 @@ function buildSystemPrompt(ctx: AdminContext, pendingDraft: DataEntryDraft | nul
     platform_admin: "You have full platform access — policy and platform decisions.",
     cto: "You have full platform access — policy, platform decisions, and technical oversight.",
   };
-
-  const canDoDataEntry = DATA_ENTRY_ROLES.includes(ctx.role);
 
   let draftContext = '';
   if (pendingDraft) {
@@ -622,7 +621,7 @@ export function registerAdminChatRoutes(app: Express) {
 
         const conversationId = req.params.id;
         const ctx = await getAdminContext(userId);
-        const canDoDataEntry = DATA_ENTRY_ROLES.includes(ctx.role);
+        const canDoDataEntry = await checkAdminAccess(userId, DATA_ENTRY_ROLES);
         const pendingDraft = conversationDrafts.get(conversationId) ?? null;
 
         await db.insert(chatMessages).values({
@@ -660,26 +659,26 @@ export function registerAdminChatRoutes(app: Express) {
               console.log(`[AdminChat] Institution created via confirm: "${draft.fields.name}" (id: ${savedResult.id}) by user ${userId}`);
             } else {
               const slug = generateSlug(`${draft.fields.title}-${draft.institutionName}`);
-              savedResult = await storage.createCourse({
+              const coursePayload: InsertCourse = {
                 title: draft.fields.title,
                 universityId: draft.institutionId!,
                 subject: draft.fields.subject,
                 level: draft.fields.level,
                 slug,
-                discipline: draft.fields.discipline || null,
-                duration: draft.fields.duration || null,
-                fees: draft.fields.fees ? String(draft.fields.fees) : null,
+                discipline: draft.fields.discipline || undefined,
+                duration: draft.fields.duration || undefined,
+                fees: draft.fields.fees ? String(draft.fields.fees) : undefined,
                 currency: draft.fields.currency || "AUD",
-                country: draft.fields.country || null,
-                location: draft.fields.location || null,
-                startDate: draft.fields.startDate || null,
-                deliveryMode: draft.fields.deliveryMode || null,
-                description: draft.fields.description || null,
-                approvalStatus: "pending",
+                country: draft.fields.country || undefined,
+                location: draft.fields.location || undefined,
+                startDate: draft.fields.startDate || undefined,
+                deliveryMode: draft.fields.deliveryMode || undefined,
+                description: draft.fields.description || undefined,
                 publishStatus: "draft",
                 createdByUserId: userId,
                 assignedToUserId: userId,
-              } as any);
+              };
+              savedResult = await storage.createCourse(coursePayload);
               console.log(`[AdminChat] Course created via confirm: "${draft.fields.title}" (id: ${savedResult.id}) by user ${userId}`);
             }
 
@@ -707,7 +706,7 @@ export function registerAdminChatRoutes(app: Express) {
           }
         }
 
-        const systemPrompt = buildSystemPrompt(ctx, pendingDraft);
+        const systemPrompt = buildSystemPrompt(ctx, pendingDraft, canDoDataEntry);
 
         const history = await db
           .select()
@@ -822,7 +821,7 @@ export function registerAdminChatRoutes(app: Express) {
       res.status(201).json({
         id: newInstitution.id,
         name: newInstitution.name,
-        slug: (newInstitution as any).slug,
+        slug: newInstitution.slug,
       });
     } catch (err: any) {
       console.error("[AdminChat] data-entry institution error:", err);
@@ -854,28 +853,27 @@ export function registerAdminChatRoutes(app: Express) {
 
       const slug = generateSlug(`${title}-${institution.name}`);
 
-      const courseData: any = {
+      const coursePayload: InsertCourse = {
         title,
         universityId: institutionId,
         subject,
         level,
         slug,
-        discipline: discipline || null,
-        duration: duration || null,
-        fees: fees ? String(fees) : null,
+        discipline: discipline || undefined,
+        duration: duration || undefined,
+        fees: fees ? String(fees) : undefined,
         currency: currency || "AUD",
-        country: country || institution.country || null,
-        location: location || null,
-        startDate: startDate || null,
-        deliveryMode: deliveryMode || null,
-        description: description || null,
-        approvalStatus: "pending",
+        country: country || institution.country || undefined,
+        location: location || undefined,
+        startDate: startDate || undefined,
+        deliveryMode: deliveryMode || undefined,
+        description: description || undefined,
         publishStatus: "draft",
         createdByUserId: userId,
         assignedToUserId: userId,
       };
 
-      const newCourse = await storage.createCourse(courseData);
+      const newCourse = await storage.createCourse(coursePayload);
 
       console.log(`[AdminChat] Course created via Zan: "${title}" (id: ${newCourse.id}) at "${institution.name}" by user ${userId}`);
 
@@ -883,7 +881,7 @@ export function registerAdminChatRoutes(app: Express) {
         id: newCourse.id,
         title: newCourse.title,
         institutionName: institution.name,
-        slug: (newCourse as any).slug,
+        slug: newCourse.slug,
       });
     } catch (err: any) {
       console.error("[AdminChat] data-entry course error:", err);
@@ -894,11 +892,23 @@ export function registerAdminChatRoutes(app: Express) {
     }
   });
 
+  app.post(
+    "/api/admin-chat/conversations/:id/cancel-draft",
+    requireAdmin,
+    verifyConversationOwnership,
+    async (req: Request, res: Response) => {
+      const conversationId = req.params.id;
+      conversationDrafts.delete(conversationId);
+      res.json({ cleared: true });
+    }
+  );
+
   app.post("/api/admin-chat/context", requireAdmin, async (req: any, res: Response) => {
     try {
       const userId = getUserId(req)!;
       const ctx = await getAdminContext(userId);
-      res.json(ctx);
+      const dataEntryAccess = await checkAdminAccess(userId, DATA_ENTRY_ROLES);
+      res.json({ ...ctx, canDoDataEntry: !!dataEntryAccess });
     } catch (err) {
       console.error("[AdminChat] context error:", err);
       res.status(500).json({ message: "Failed to fetch context" });

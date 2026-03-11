@@ -29,6 +29,7 @@ interface AdminContext {
   };
   teammates: Array<{ name: string; role: string; contactCount: number }>;
   pendingApplications: number;
+  canDoDataEntry?: boolean;
 }
 
 interface DataEntryPreview {
@@ -93,8 +94,7 @@ function buildGreeting(ctx: AdminContext): string {
     lines.push(`**Branch team:** ${teamLine}`);
   }
 
-  const canDoDataEntry = ['cto', 'marketing_executive'].includes(ctx.role);
-  if (canDoDataEntry) {
+  if (ctx.canDoDataEntry) {
     lines.push("", 'You can also add institutions or courses by telling me about them — just say something like "Add RMIT University" or "Add Bachelor of Business to RMIT".');
   }
 
@@ -396,6 +396,9 @@ export function AdminChatWidget() {
           : m
       )
     );
+    if (conversationId) {
+      apiRequest("POST", `/api/admin-chat/conversations/${conversationId}/cancel-draft`, {}).catch(() => {});
+    }
   };
 
   const openWidget = () => {
