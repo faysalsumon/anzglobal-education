@@ -46,7 +46,7 @@ import {
   ChevronDown,
   Check,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { useEditor, EditorContent, ReactRenderer } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Mention from "@tiptap/extension-mention";
@@ -664,6 +664,16 @@ function VisibilityBadge({ visibility, visibleTo }: { visibility?: NoteVisibilit
   );
 }
 
+function formatRelativeTime(date: Date | string | null): string {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  try {
+    return formatDistanceToNow(d, { addSuffix: true });
+  } catch {
+    return format(d, "MMM d, yyyy");
+  }
+}
+
 function NoteItem({
   note,
   currentUserId,
@@ -675,6 +685,7 @@ function NoteItem({
   onCancelEdit,
   isEditSubmitting,
   canEditLead,
+  isLast,
 }: {
   note: UnifiedNote;
   currentUserId: string | null;
@@ -686,6 +697,7 @@ function NoteItem({
   onCancelEdit: () => void;
   isEditSubmitting?: boolean;
   canEditLead: boolean;
+  isLast?: boolean;
 }) {
   const isEditing = editingNoteId === note.id;
   const isReadOnly = note.source === "lead" && !canEditLead;
@@ -694,16 +706,20 @@ function NoteItem({
 
   const authorName = getAuthorName(note.author);
   const authorInitials = getAuthorInitials(note.author);
-  const isLeadBadge = note.source === "lead";
 
   return (
-    <div className="flex gap-3 py-3" data-testid={`note-item-${note.id}`}>
-      <Avatar className="h-9 w-9 flex-shrink-0 mt-0.5">
-        <AvatarImage src={note.author?.profileImageUrl || undefined} />
-        <AvatarFallback className="text-xs">{authorInitials}</AvatarFallback>
-      </Avatar>
+    <div className="relative flex gap-3" data-testid={`note-item-${note.id}`}>
+      {/* Timeline column */}
+      <div className="flex flex-col items-center w-8 shrink-0">
+        <Avatar className="h-7 w-7 z-10 ring-2 ring-background">
+          <AvatarImage src={note.author?.profileImageUrl || undefined} />
+          <AvatarFallback className="text-[10px] font-medium">{authorInitials}</AvatarFallback>
+        </Avatar>
+        {!isLast && <div className="w-px flex-1 bg-border mt-1 mb-0 min-h-[16px]" />}
+      </div>
 
-      <div className="flex-1 min-w-0">
+      {/* Content column */}
+      <div className={`flex-1 min-w-0 ${isLast ? "pb-2" : "pb-5"}`}>
         {isEditing ? (
           <NoteComposer
             teamMembers={teamMembers}
@@ -717,11 +733,22 @@ function NoteItem({
           />
         ) : (
           <div className="group">
-            <div className="flex items-start justify-between gap-1">
-              <div
-                className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-snug [&_.note-attachment-image]:max-w-full [&_.note-attachment-image]:rounded-md [&_.note-attachment-image]:mt-2 [&_.note-attachment-image]:block [&_.note-attachment-pdf]:flex [&_.note-attachment-pdf]:items-center [&_.note-attachment-pdf]:gap-1.5 [&_.note-attachment-pdf]:mt-2 [&_.note-attachment-pdf]:text-sm [&_.note-attachment-pdf]:underline"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content, DOMPURIFY_CONFIG) }}
-              />
+            {/* Header row: author · time · menu */}
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                <span className="text-sm font-semibold leading-none">{authorName}</span>
+                <span className="text-muted-foreground text-xs">·</span>
+                <span
+                  className="text-xs text-muted-foreground leading-none"
+                  title={formatNoteDate(note.createdAt)}
+                >
+                  {formatRelativeTime(note.createdAt)}
+                </span>
+                {note.source === "lead" && (
+                  <Badge variant="secondary" className="text-[10px] px-1 py-0 leading-tight no-default-active-elevate">Lead</Badge>
+                )}
+                <VisibilityBadge visibility={note.visibility} visibleTo={note.visibleTo} />
+              </div>
               {canEdit && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -729,44 +756,32 @@ function NoteItem({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                       data-testid={`button-note-menu-${note.id}`}
                     >
-                      <MoreVertical className="h-4 w-4" />
+                      <MoreVertical className="h-3.5 w-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => onEdit(note.id)}
-                      data-testid={`button-edit-note-${note.id}`}
-                    >
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Edit
+                    <DropdownMenuItem onClick={() => onEdit(note.id)} data-testid={`button-edit-note-${note.id}`}>
+                      <Pencil className="h-4 w-4 mr-2" />Edit
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => onDelete(note.id)}
                       className="text-destructive focus:text-destructive"
                       data-testid={`button-delete-note-${note.id}`}
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
+                      <Trash2 className="h-4 w-4 mr-2" />Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
             </div>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="text-xs text-muted-foreground">
-                {formatNoteDate(note.createdAt)} by{" "}
-                <span className="font-medium text-foreground">{authorName}</span>
-              </span>
-              {isLeadBadge && (
-                <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                  Lead
-                </Badge>
-              )}
-              <VisibilityBadge visibility={note.visibility} visibleTo={note.visibleTo} />
-            </div>
+            {/* Note content */}
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed [&_.note-attachment-image]:max-w-full [&_.note-attachment-image]:rounded-md [&_.note-attachment-image]:mt-2 [&_.note-attachment-image]:block [&_.note-attachment-pdf]:flex [&_.note-attachment-pdf]:items-center [&_.note-attachment-pdf]:gap-1.5 [&_.note-attachment-pdf]:mt-2 [&_.note-attachment-pdf]:text-sm [&_.note-attachment-pdf]:underline"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content, DOMPURIFY_CONFIG) }}
+            />
           </div>
         )}
       </div>
@@ -784,19 +799,22 @@ export function NotesThread({
   teamMembers = [],
   isSubmitting,
   readOnly = false,
-  title = "Notes",
+  title = "Notes & Activity",
 }: NotesThreadProps) {
-  const [isComposing, setIsComposing] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   const canEditLead = !!onEditNote;
 
-  const handleAddNote = (content: string, mentionedUserIds: string[], opts?: NoteVisibilityOpts) => {
-    Promise.resolve(onAddNote(content, mentionedUserIds, opts)).then(() => {
-      setIsComposing(false);
-    });
+  const sortedNotes = [...notes].sort((a, b) => {
+    const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return db - da;
+  });
+
+  const handleAddNote = async (content: string, mentionedUserIds: string[], opts?: NoteVisibilityOpts) => {
+    await Promise.resolve(onAddNote(content, mentionedUserIds, opts));
   };
 
   const handleSaveEdit = async (noteId: string, content: string, opts: NoteVisibilityOpts) => {
@@ -811,104 +829,73 @@ export function NotesThread({
   };
 
   const handleConfirmDelete = () => {
-    if (deleteNoteId && onDeleteNote) {
-      onDeleteNote(deleteNoteId);
-    }
+    if (deleteNoteId && onDeleteNote) onDeleteNote(deleteNoteId);
     setDeleteNoteId(null);
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-6 w-24" />
-          <Skeleton className="h-8 w-8 rounded-md" />
-        </div>
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex gap-3">
-            <Skeleton className="h-9 w-9 rounded-full flex-shrink-0" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-3 w-48" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
-    <div data-testid="notes-thread">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-semibold text-foreground">{title}</span>
-          {notes.length > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {notes.length}
-            </Badge>
-          )}
-        </div>
-        {!readOnly && !isComposing && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => { setIsComposing(true); setEditingNoteId(null); }}
-            data-testid="button-add-note"
-            title="Add note"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+    <div className="flex flex-col h-full min-h-0" data-testid="notes-thread">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-3 shrink-0">
+        <MessageSquare className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-semibold text-foreground">{title}</span>
+        {notes.length > 0 && (
+          <Badge variant="secondary" className="text-xs no-default-active-elevate">{notes.length}</Badge>
         )}
       </div>
 
-      {isComposing && !readOnly && (
-        <div className="mb-4">
+      {/* Timeline feed — scrollable */}
+      <div className="flex-1 overflow-y-auto min-h-0 pr-1">
+        {isLoading ? (
+          <div className="space-y-5 pt-1">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex gap-3">
+                <Skeleton className="h-7 w-7 rounded-full shrink-0" />
+                <div className="flex-1 space-y-2 pt-0.5">
+                  <Skeleton className="h-3 w-32" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : sortedNotes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+            <MessageSquare className="h-8 w-8 mb-2 opacity-25" />
+            <p className="text-sm">No notes yet</p>
+            <p className="text-xs mt-0.5">Add the first note below</p>
+          </div>
+        ) : (
+          <div className="pt-1">
+            {sortedNotes.map((note, i) => (
+              <NoteItem
+                key={note.id}
+                note={note}
+                currentUserId={currentUserId}
+                onEdit={(id) => setEditingNoteId(id)}
+                onDelete={(id) => setDeleteNoteId(id)}
+                teamMembers={teamMembers}
+                editingNoteId={editingNoteId}
+                onSaveEdit={handleSaveEdit}
+                onCancelEdit={() => setEditingNoteId(null)}
+                isEditSubmitting={isEditSubmitting}
+                canEditLead={canEditLead}
+                isLast={i === sortedNotes.length - 1}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Compose — always visible at bottom */}
+      {!readOnly && (
+        <div className="shrink-0 pt-3 border-t mt-2">
           <NoteComposer
             teamMembers={teamMembers}
             onSubmit={handleAddNote}
-            onCancel={() => setIsComposing(false)}
             isSubmitting={isSubmitting}
+            placeholder="Add a note… Type @ to mention someone"
           />
-        </div>
-      )}
-
-      {notes.length === 0 && !isComposing ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">No notes yet</p>
-          {!readOnly && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-3"
-              onClick={() => setIsComposing(true)}
-              data-testid="button-add-first-note"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add first note
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="divide-y">
-          {notes.map((note) => (
-            <NoteItem
-              key={note.id}
-              note={note}
-              currentUserId={currentUserId}
-              onEdit={(id) => { setEditingNoteId(id); setIsComposing(false); }}
-              onDelete={(id) => setDeleteNoteId(id)}
-              teamMembers={teamMembers}
-              editingNoteId={editingNoteId}
-              onSaveEdit={handleSaveEdit}
-              onCancelEdit={() => setEditingNoteId(null)}
-              isEditSubmitting={isEditSubmitting}
-              canEditLead={canEditLead}
-            />
-          ))}
         </div>
       )}
 

@@ -2196,7 +2196,11 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* ── Two-column layout: info left, notes right ─────────── */}
+      <div className="flex flex-col lg:flex-row gap-5 items-start">
+
+        {/* LEFT — info cards */}
+        <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-5">
         {/* ── Contact Information ─────────────────────────────── */}
         <Card>
           <CardHeader className="pb-3">
@@ -2359,131 +2363,76 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
           </CardContent>
         </Card>
 
-        {/* ── Inquiry Details ──────────────────────────────────── */}
+        {/* ── Inquiry Details (read-only) ───────────────────────── */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                Inquiry Details
-              </span>
-              {editingSection !== 'inquiry' && (
-                <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
-                  data-testid="button-edit-inquiry"
-                  onClick={() => startEdit('inquiry', { entrySource: contact.entrySource, leadRating: contact.leadRating, courseName: contact.courseName, country: contact.country, visaStatus: contact.visaStatus })}>
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-              )}
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              Inquiry Details
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {editingSection === 'inquiry' ? (
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Course Interested In</Label>
-                  <Input value={sectionData.courseName || ""} onChange={e => setSectionData(p => ({ ...p, courseName: e.target.value }))} placeholder="e.g. Bachelor of Computer Science" data-testid="input-edit-coursename" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Entry Source</Label>
-                  <Select value={sectionData.entrySource || ""} onValueChange={v => setSectionData(p => ({ ...p, entrySource: v as any }))}>
-                    <SelectTrigger data-testid="select-edit-entrysource"><SelectValue placeholder="Select source" /></SelectTrigger>
-                    <SelectContent>
-                      {[{v:'website',l:'Website'},{v:'consultant',l:'Consultant'},{v:'sub_agent',l:'Sub Agent'},{v:'affiliate',l:'Affiliate'},{v:'import',l:'Import'},{v:'referral',l:'Referral'},{v:'facebook_ads',l:'Facebook Ads'},{v:'walk_in',l:'Walk In'},{v:'other',l:'Other'}].map(o => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Lead Rating</Label>
-                  <Select value={sectionData.leadRating || ""} onValueChange={v => setSectionData(p => ({ ...p, leadRating: v as any }))}>
-                    <SelectTrigger data-testid="select-edit-leadrating"><SelectValue placeholder="Select rating" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cold">Cold</SelectItem>
-                      <SelectItem value="warm">Warm</SelectItem>
-                      <SelectItem value="hot">Hot</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Visa Status</Label>
-                  <Select value={sectionData.visaStatus || ""} onValueChange={v => setSectionData(p => ({ ...p, visaStatus: v as any }))}>
-                    <SelectTrigger data-testid="select-edit-visastatus"><SelectValue placeholder="Select status" /></SelectTrigger>
-                    <SelectContent>
-                      {[{v:'not_applied',l:'Not Applied'},{v:'applied',l:'Applied'},{v:'granted',l:'Granted'},{v:'refused',l:'Refused'},{v:'na',l:'N/A'}].map(o => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex gap-2 pt-1">
-                  <Button type="button" size="sm" onClick={() => saveSectionMutation.mutate(sectionData)} disabled={saveSectionMutation.isPending} data-testid="button-save-inquiry">
-                    {saveSectionMutation.isPending ? "Saving..." : "Save"}
-                  </Button>
-                  <Button type="button" size="sm" variant="ghost" onClick={cancelEdit} data-testid="button-cancel-inquiry">Cancel</Button>
-                </div>
+            {contact.courseName && (
+              <div className="flex justify-between items-center gap-3">
+                <span className="text-muted-foreground shrink-0">Course Interested In</span>
+                {contact.courseId ? (
+                  <a href={`/courses/${contact.courseId}`} className="text-sm font-medium text-primary hover:underline flex items-center gap-1 text-right" target="_blank" rel="noopener noreferrer" data-testid="link-inquiry-course">
+                    {contact.courseName}<ExternalLink className="h-3 w-3 shrink-0" />
+                  </a>
+                ) : (
+                  <span className="text-sm font-medium text-right">{contact.courseName}</span>
+                )}
               </div>
-            ) : (
-              <>
-                {contact.courseName && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Course Interested In</span>
-                    {contact.courseId ? (
-                      <a href={`/courses/${contact.courseId}`} className="text-sm font-medium text-primary hover:underline flex items-center gap-1" target="_blank" rel="noopener noreferrer" data-testid="link-inquiry-course">
-                        {contact.courseName}<ExternalLink className="h-3 w-3" />
-                      </a>
-                    ) : (
-                      <span className="text-sm font-medium">{contact.courseName}</span>
-                    )}
-                  </div>
-                )}
-                {contact.country && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Country</span>
-                    <span data-testid="text-inquiry-country">{contact.country}</span>
-                  </div>
-                )}
-                {contact.visaStatus && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Visa Status</span>
-                    <span data-testid="text-inquiry-visa">{contact.visaStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
-                  </div>
-                )}
-                {contact.entrySource && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Entry Source</span>
-                    <Badge variant="secondary" data-testid="badge-entry-source">
-                      {contact.entrySource.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </Badge>
-                  </div>
-                )}
-                {contact.leadRating && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Lead Rating</span>
-                    <Badge variant={contact.leadRating === 'hot' ? 'destructive' : contact.leadRating === 'warm' ? 'default' : 'secondary'} data-testid="badge-lead-rating">
-                      <Star className="h-3 w-3 mr-1" />
-                      {contact.leadRating.charAt(0).toUpperCase() + contact.leadRating.slice(1)}
-                    </Badge>
-                  </div>
-                )}
-                {contact.referrer && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Referrer</span>
-                    <span className="text-sm text-muted-foreground truncate max-w-[200px]" data-testid="text-referrer">{contact.referrer}</span>
-                  </div>
-                )}
-                {contact.firstPageVisited && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Page Visited</span>
-                    <span className="text-sm text-muted-foreground truncate max-w-[200px]" data-testid="text-first-page">{contact.firstPageVisited}</span>
-                  </div>
-                )}
-                {contact.firstVisit && !isNaN(new Date(contact.firstVisit).getTime()) && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">First Visit</span>
-                    <span className="text-sm">{format(new Date(contact.firstVisit), "MMM d, yyyy 'at' h:mm a")}</span>
-                  </div>
-                )}
-                {!contact.courseName && !contact.entrySource && !contact.leadRating && !contact.visaStatus && !contact.country && (
-                  <p className="text-sm text-muted-foreground">No inquiry details on file</p>
-                )}
-              </>
+            )}
+            {contact.country && (
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground shrink-0">Country</span>
+                <span data-testid="text-inquiry-country">{contact.country}</span>
+              </div>
+            )}
+            {contact.visaStatus && (
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground shrink-0">Visa Status</span>
+                <span data-testid="text-inquiry-visa">{contact.visaStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+              </div>
+            )}
+            {contact.entrySource && (
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground shrink-0">Entry Source</span>
+                <Badge variant="secondary" data-testid="badge-entry-source">
+                  {contact.entrySource.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </Badge>
+              </div>
+            )}
+            {contact.leadRating && (
+              <div className="flex justify-between items-center gap-3">
+                <span className="text-muted-foreground shrink-0">Lead Rating</span>
+                <Badge variant={contact.leadRating === 'hot' ? 'destructive' : contact.leadRating === 'warm' ? 'default' : 'secondary'} data-testid="badge-lead-rating">
+                  <Star className="h-3 w-3 mr-1" />
+                  {contact.leadRating.charAt(0).toUpperCase() + contact.leadRating.slice(1)}
+                </Badge>
+              </div>
+            )}
+            {contact.referrer && (
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-3">
+                <span className="text-muted-foreground shrink-0">Referrer</span>
+                <span className="text-sm text-muted-foreground break-all sm:text-right" data-testid="text-referrer">{contact.referrer}</span>
+              </div>
+            )}
+            {contact.firstPageVisited && (
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-3">
+                <span className="text-muted-foreground shrink-0">Page Visited</span>
+                <span className="text-sm text-muted-foreground break-all sm:text-right" data-testid="text-first-page">{contact.firstPageVisited}</span>
+              </div>
+            )}
+            {contact.firstVisit && !isNaN(new Date(contact.firstVisit).getTime()) && (
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground shrink-0">First Visit</span>
+                <span className="text-sm">{format(new Date(contact.firstVisit), "MMM d, yyyy 'at' h:mm a")}</span>
+              </div>
+            )}
+            {!contact.courseName && !contact.entrySource && !contact.leadRating && !contact.visaStatus && !contact.country && (
+              <p className="text-sm text-muted-foreground">No inquiry details on file</p>
             )}
           </CardContent>
         </Card>
@@ -2645,18 +2594,25 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
-          <CardContent className="pt-4">
-            <LeadNotes
-              leadId={contact.id}
-              leadName={`${contact.firstName} ${contact.lastName}`}
-              branchId={contact.branchId}
-            />
-          </CardContent>
-        </Card>
+        </div>{/* end left info grid */}
 
-        {roleNeedsInstitution(contact.contactType) && (
-          <Card className="md:col-span-2">
+        {/* RIGHT — sticky notes panel */}
+        <div className="w-full lg:w-[360px] shrink-0 lg:sticky lg:top-4 flex flex-col" style={{ maxHeight: "calc(100vh - 90px)" }}>
+          <Card className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <CardContent className="flex-1 flex flex-col min-h-0 pt-4 px-4 pb-4 overflow-hidden">
+              <LeadNotes
+                leadId={contact.id}
+                leadName={`${contact.firstName} ${contact.lastName}`}
+                branchId={contact.branchId}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+      </div>{/* end two-column flex */}
+
+      {roleNeedsInstitution(contact.contactType) && (
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-4">
               <CardTitle className="text-lg">Role Details</CardTitle>
               <Button 
@@ -2726,7 +2682,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
 
         {/* Applications Section - Only for clients (students) */}
         {contact.contactType === 'clients' && (
-          <Card className="md:col-span-2">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <GraduationCap className="h-5 w-5 text-primary" />
