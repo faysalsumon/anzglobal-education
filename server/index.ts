@@ -60,6 +60,17 @@ declare module 'http' {
 }
 app.use(cookieParser());
 
+// Strip brotli from Accept-Encoding — bun 1.x does not implement zlib.createBrotliCompress
+app.use((req, _res, next) => {
+  if (req.headers["accept-encoding"]) {
+    req.headers["accept-encoding"] = String(req.headers["accept-encoding"])
+      .split(",")
+      .map((e) => e.trim())
+      .filter((e) => !e.startsWith("br"))
+      .join(", ");
+  }
+  next();
+});
 // Gzip compression for all responses (reduces payload size significantly)
 app.use(compression());
 
