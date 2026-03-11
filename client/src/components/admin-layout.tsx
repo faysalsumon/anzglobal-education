@@ -22,6 +22,7 @@ import { AdminMegaSidebar } from "@/components/admin-mega-sidebar";
 import { FloatingChatBar } from "@/components/floating-chat-bar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
+import { AdminChatWidget } from "@/components/admin-chat-widget";
 import { useAuth } from "@/hooks/useAuth";
 import { useInactivityLogout } from "@/hooks/useInactivityLogout";
 
@@ -132,6 +133,7 @@ export function AdminLayout({
       </div>
 
       <FloatingChatBar />
+      <AdminChatWidget />
 
       <Sheet open={isChatOpen} onOpenChange={setIsChatOpen}>
         <SheetContent side="right" className="w-full sm:max-w-[520px] p-0 flex flex-col [&>button]:z-50">

@@ -16545,6 +16545,10 @@ Sitemap: ${baseUrl}/sitemap.xml
   registerChatRoutes(app);
   console.log('Chat routes registered with RAG-powered AI assistant');
 
+  // Register admin chat routes (role-aware, team-aware Zan for admin team)
+  const { registerAdminChatRoutes } = await import('./admin-chat-routes');
+  registerAdminChatRoutes(app);
+
   // Register scraping routes (protected with authentication)
   const scrapingRouter = await import('./scraping-routes');
   app.use('/api/admin/scraping', isAuthenticated, scrapingRouter.default);
