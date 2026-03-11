@@ -88,7 +88,6 @@ const ROLE_LABELS: Record<string, string> = {
   accounts_officer: "Accounts Officer",
   hr_officer: "HR Officer",
   it_support: "IT Support",
-  branch_manager: "Branch Manager",
   all_admins: "All Admins",
 };
 

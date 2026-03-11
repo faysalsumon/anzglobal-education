@@ -155,7 +155,6 @@ import {
 } from "./ai";
 import { buildKnowledgeBase } from "./knowledge-base";
 import multer from "multer";
-import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
 import { calculateProfileCompletion } from "./profileCompletion";
@@ -1221,6 +1220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const sharp = (await import('sharp')).default;
       const resizedBuffer = await sharp(req.file.buffer)
         .resize(600, 400, { fit: 'cover' })
         .jpeg({ quality: 85 })
@@ -1258,6 +1258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fetchResponse = await fetch(imageUrl);
       const arrayBuffer = await fetchResponse.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
+      const sharp = (await import('sharp')).default;
       const resizedBuffer = await sharp(buffer).resize(600, 400, { fit: 'cover' }).jpeg({ quality: 85 }).toBuffer();
       const filename = `gallery-ai-admin-${Date.now()}.jpg`;
       const localPath = path.join(process.cwd(), 'public', 'institutions');
@@ -3525,6 +3526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Resize to 200x200 with cover
+      const sharp = (await import('sharp')).default;
       const resizedBuffer = await sharp(req.file.buffer)
         .resize(200, 200, { fit: 'cover' })
         .jpeg({ quality: 85 })
@@ -3773,6 +3775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let resizedBuffer: Buffer;
       try {
+        const sharp = (await import('sharp')).default;
         // Validate that the buffer is actually a valid image by trying to get metadata
         await sharp(req.file.buffer).metadata();
         

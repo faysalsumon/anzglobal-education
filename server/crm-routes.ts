@@ -18,7 +18,6 @@ import {
 import { eq, desc, and, or, ilike, count, isNull, aliasedTable, ne, sql, type SQL } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
 import multer from "multer";
-import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
 import { buildRegionScopedFilter } from "./access-policy-service";
@@ -1139,6 +1138,7 @@ router.post("/contacts/:id/upload-photo", requireAdmin, crmUpload.single('photo'
 
     let resizedBuffer: Buffer;
     try {
+      const sharp = (await import('sharp')).default;
       // Validate that the buffer is actually a valid image
       await sharp(req.file.buffer).metadata();
       
