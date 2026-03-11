@@ -307,12 +307,16 @@ export function AdminChatWidget() {
         role: "assistant",
         content: data.content,
       };
-      if (data.dataEntryPreview) {
+      if (data.dataEntrySaved) {
+        newMsg.dataEntrySaved = data.dataEntrySaved;
+      } else if (data.dataEntryPreview) {
         newMsg.dataEntryPreview = data.dataEntryPreview;
       } else if (data.sources) {
         try {
           const parsed = JSON.parse(data.sources);
-          if (parsed.dataEntryPreview) {
+          if (parsed.dataEntrySaved) {
+            newMsg.dataEntrySaved = parsed.dataEntrySaved;
+          } else if (parsed.dataEntryPreview) {
             newMsg.dataEntryPreview = parsed.dataEntryPreview;
           }
         } catch {}

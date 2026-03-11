@@ -234,7 +234,7 @@ export async function getAdminContext(userId: string): Promise<AdminContext> {
   };
 }
 
-function buildSystemPrompt(ctx: AdminContext): string {
+function buildSystemPrompt(ctx: AdminContext, pendingDraft: DataEntryDraft | null): string {
   const stageList = Object.entries(ctx.contacts.byStage)
     .map(([s, n]) => `${n} ${s}`)
     .join(", ");
@@ -261,7 +261,23 @@ function buildSystemPrompt(ctx: AdminContext): string {
     cto: "You have full platform access — policy, platform decisions, and technical oversight.",
   };
 
-  const canDoDataEntry = ['cto', 'marketing_executive'].includes(ctx.role);
+  const canDoDataEntry = DATA_ENTRY_ROLES.includes(ctx.role);
+
+  let draftContext = '';
+  if (pendingDraft) {
+    const collected = Object.entries(pendingDraft.fields)
+      .filter(([, v]) => v != null && v !== "")
+      .map(([k, v]) => `  ${k}: ${v}`)
+      .join("\n");
+    const missing = pendingDraft.missingRequired.join(", ");
+    draftContext = `
+PENDING DRAFT (${pendingDraft.type}):
+The user is currently building a ${pendingDraft.type}. Fields collected so far:
+${collected || "  (none yet)"}
+Still missing required fields: ${missing || "none — ready for confirmation"}
+When the user provides more info, call the tool again with ALL fields (merged with what you already have).
+If all required fields are filled, present the preview for confirmation.`;
+  }
 
   return `You are Zan, an AI operations assistant for the ANZ Global Education admin team. You are concise, direct, and action-oriented.
 
@@ -293,9 +309,14 @@ ${canDoDataEntry ? `
 DATA ENTRY:
 - ${ctx.firstName} can create new institutions and courses by telling you about them in natural language.
 - When they want to add an institution or course, use the appropriate tool to extract the structured data.
-- For institutions: required fields are name and country. Description (min 50 chars) is strongly recommended.
-- For courses: required fields are title, subject, level, and institution (by name lookup). Duration and fees are recommended.
-- Always confirm extracted details before saving.` : ''}
+- For institutions: required fields are name, country, and description (minimum 50 characters). Ask for any missing required fields one at a time.
+- For courses: required fields are title, subject, level, and institution (by name). Duration and fees are recommended.
+- Always present extracted details for user confirmation before saving.
+- If the user says "confirm", "save", "looks good", "yes", or similar affirmation after seeing a preview, that means they approve saving.` : `
+DATA ENTRY:
+- This user's role (${ctx.role}) does not have permission to create institutions or courses.
+- If they ask to add/create an institution or course, politely inform them that only CTO and Marketing Executive roles can use the data entry feature.`}
+${draftContext}
 
 BEHAVIOUR:
 - Keep responses short and actionable (2-3 paragraphs max, use bullet points for lists).
@@ -311,13 +332,13 @@ const dataEntryTools: OpenAI.Chat.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "create_institution",
-      description: "Extract structured institution data from the user's message to create a new institution record. Call this when the user wants to add/create a new institution, university, TAFE, or school.",
+      description: "Extract structured institution data from the user's message to create a new institution record. Call this when the user wants to add/create a new institution, university, TAFE, or school. Also call this when the user provides additional fields for an institution draft in progress. Always include ALL fields collected so far (from the PENDING DRAFT context) merged with new info from the latest message.",
       parameters: {
         type: "object",
         properties: {
           name: { type: "string", description: "Institution name" },
           country: { type: "string", description: "Country where the institution is located" },
-          description: { type: "string", description: "Description of the institution (minimum 50 characters recommended)" },
+          description: { type: "string", description: "Description of the institution (minimum 50 characters required)" },
           website: { type: "string", description: "Institution website URL" },
           contactEmail: { type: "string", description: "Contact email address" },
           contactPhone: { type: "string", description: "Contact phone number" },
@@ -333,7 +354,7 @@ const dataEntryTools: OpenAI.Chat.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "create_course",
-      description: "Extract structured course data from the user's message to create a new course record. Call this when the user wants to add/create a new course for an institution.",
+      description: "Extract structured course data from the user's message to create a new course record. Call this when the user wants to add/create a new course for an institution. Also call this when the user provides additional fields for a course draft in progress. Always include ALL fields collected so far (from the PENDING DRAFT context) merged with new info from the latest message.",
       parameters: {
         type: "object",
         properties: {
@@ -365,6 +386,16 @@ interface DataEntryPreview {
   institutionName?: string;
 }
 
+interface DataEntryDraft {
+  type: "institution" | "course";
+  fields: Record<string, any>;
+  missingRequired: string[];
+  institutionId?: string;
+  institutionName?: string;
+}
+
+const conversationDrafts = new Map<string, DataEntryDraft>();
+
 async function findInstitutionByName(name: string): Promise<{ id: string; name: string } | null> {
   try {
     const results = await db
@@ -389,19 +420,27 @@ function generateSlug(name: string): string {
     .slice(0, 200);
 }
 
+function mergeFields(existing: Record<string, any>, incoming: Record<string, any>): Record<string, any> {
+  const merged = { ...existing };
+  for (const [k, v] of Object.entries(incoming)) {
+    if (v != null && v !== "") {
+      merged[k] = v;
+    }
+  }
+  return merged;
+}
+
 async function handleDataEntryToolCall(
   toolCall: OpenAI.Chat.ChatCompletionMessageToolCall,
-  userId: string
-): Promise<{ preview: DataEntryPreview | null; message: string }> {
+  conversationId: string,
+): Promise<{ preview: DataEntryPreview | null; draft: DataEntryDraft | null; message: string }> {
   const args = JSON.parse(toolCall.function.arguments);
   const fnName = toolCall.function.name;
+  const existingDraft = conversationDrafts.get(conversationId);
 
   if (fnName === "create_institution") {
-    const missingRequired: string[] = [];
-    if (!args.name) missingRequired.push("name");
-    if (!args.country) missingRequired.push("country");
-
-    const fields: Record<string, any> = {
+    const priorFields = (existingDraft?.type === "institution" ? existingDraft.fields : {});
+    const fields = mergeFields(priorFields, {
       name: args.name || null,
       country: args.country || null,
       description: args.description || null,
@@ -411,73 +450,130 @@ async function handleDataEntryToolCall(
       providerType: args.providerType || null,
       establishedYear: args.establishedYear || null,
       numberOfCampuses: args.numberOfCampuses || null,
-    };
+    });
+
+    const missingRequired: string[] = [];
+    if (!fields.name) missingRequired.push("name");
+    if (!fields.country) missingRequired.push("country");
+    if (!fields.description || String(fields.description).length < 50) missingRequired.push("description (minimum 50 characters)");
 
     if (missingRequired.length > 0) {
-      const missingList = missingRequired.join(", ");
+      const nextMissing = missingRequired[0];
+      const draft: DataEntryDraft = { type: "institution", fields, missingRequired };
+      conversationDrafts.set(conversationId, draft);
       return {
         preview: null,
-        message: `I need a few more details to create this institution. Could you provide the **${missingList}**?`,
+        draft,
+        message: `I'm building the institution record. Could you provide the **${nextMissing}**?`,
       };
     }
 
+    const preview: DataEntryPreview = { type: "institution", fields, missingRequired: [] };
+    const draft: DataEntryDraft = { type: "institution", fields, missingRequired: [] };
+    conversationDrafts.set(conversationId, draft);
     return {
-      preview: { type: "institution", fields, missingRequired },
+      preview,
+      draft,
       message: `I've prepared the institution details for **${fields.name}**. Please review the information below and click "Save as Draft" to create it, or "Cancel" to discard.`,
     };
   }
 
   if (fnName === "create_course") {
-    const missingRequired: string[] = [];
-    if (!args.title) missingRequired.push("title");
-    if (!args.subject) missingRequired.push("subject");
-    if (!args.level) missingRequired.push("level");
-    if (!args.institutionName) missingRequired.push("institution name");
-
-    if (missingRequired.length > 0) {
-      const missingList = missingRequired.join(", ");
-      return {
-        preview: null,
-        message: `I need a few more details to create this course. Could you provide the **${missingList}**?`,
-      };
-    }
-
-    const institution = await findInstitutionByName(args.institutionName);
-    if (!institution) {
-      return {
-        preview: null,
-        message: `I couldn't find an institution matching "${args.institutionName}" in the system. Could you double-check the name, or would you like to create the institution first?`,
-      };
-    }
-
-    const fields: Record<string, any> = {
-      title: args.title,
-      subject: args.subject,
-      level: args.level,
+    const priorFields = (existingDraft?.type === "course" ? existingDraft.fields : {});
+    const incoming: Record<string, any> = {
+      title: args.title || null,
+      subject: args.subject || null,
+      level: args.level || null,
       discipline: args.discipline || null,
       duration: args.duration || null,
       fees: args.fees || null,
-      currency: args.currency || "AUD",
+      currency: args.currency || null,
       country: args.country || null,
       location: args.location || null,
       startDate: args.startDate || null,
       deliveryMode: args.deliveryMode || null,
       description: args.description || null,
     };
+    if (args.institutionName) incoming.institutionName = args.institutionName;
 
-    return {
-      preview: {
+    const fields = mergeFields(priorFields, incoming);
+    const institutionName = fields.institutionName || (existingDraft?.type === "course" ? existingDraft.institutionName : null);
+
+    const missingRequired: string[] = [];
+    if (!fields.title) missingRequired.push("title");
+    if (!fields.subject) missingRequired.push("subject");
+    if (!fields.level) missingRequired.push("level");
+    if (!institutionName) missingRequired.push("institution name");
+
+    if (missingRequired.length > 0) {
+      const nextMissing = missingRequired[0];
+      const draft: DataEntryDraft = {
         type: "course",
         fields,
-        missingRequired: [],
-        institutionId: institution.id,
-        institutionName: institution.name,
-      },
+        missingRequired,
+        institutionId: existingDraft?.institutionId,
+        institutionName: institutionName || undefined,
+      };
+      conversationDrafts.set(conversationId, draft);
+      return {
+        preview: null,
+        draft,
+        message: `I'm building the course record. Could you provide the **${nextMissing}**?`,
+      };
+    }
+
+    const institution = await findInstitutionByName(institutionName);
+    if (!institution) {
+      const draft: DataEntryDraft = {
+        type: "course",
+        fields,
+        missingRequired: ["institution name"],
+        institutionName: institutionName || undefined,
+      };
+      conversationDrafts.set(conversationId, draft);
+      return {
+        preview: null,
+        draft,
+        message: `I couldn't find an institution matching "${institutionName}" in the system. Could you double-check the name, or would you like to create the institution first?`,
+      };
+    }
+
+    delete fields.institutionName;
+    if (!fields.currency) fields.currency = "AUD";
+
+    const preview: DataEntryPreview = {
+      type: "course",
+      fields,
+      missingRequired: [],
+      institutionId: institution.id,
+      institutionName: institution.name,
+    };
+    const draft: DataEntryDraft = {
+      type: "course",
+      fields,
+      missingRequired: [],
+      institutionId: institution.id,
+      institutionName: institution.name,
+    };
+    conversationDrafts.set(conversationId, draft);
+    return {
+      preview,
+      draft,
       message: `I've prepared the course details for **${fields.title}** at **${institution.name}**. Please review the information below and click "Save as Draft" to create it, or "Cancel" to discard.`,
     };
   }
 
-  return { preview: null, message: "I couldn't process that request." };
+  return { preview: null, draft: null, message: "I couldn't process that request." };
+}
+
+function isConfirmationMessage(content: string): boolean {
+  const normalized = content.trim().toLowerCase();
+  const confirmPatterns = [
+    'confirm', 'save', 'yes', 'looks good', 'go ahead', 'do it',
+    'approved', 'approve', 'ok', 'okay', 'yep', 'yeah', 'sure',
+    'save it', 'create it', 'submit', 'lgtm',
+  ];
+  return confirmPatterns.some((p) => normalized === p || normalized.startsWith(p + ' ') || normalized.startsWith(p + '.') || normalized.startsWith(p + '!'));
 }
 
 export function registerAdminChatRoutes(app: Express) {
@@ -524,14 +620,99 @@ export function registerAdminChatRoutes(app: Express) {
         const { content } = req.body;
         if (!content?.trim()) return res.status(400).json({ message: "Message content required" });
 
+        const conversationId = req.params.id;
         const ctx = await getAdminContext(userId);
-        const systemPrompt = buildSystemPrompt(ctx);
         const canDoDataEntry = DATA_ENTRY_ROLES.includes(ctx.role);
+        const pendingDraft = conversationDrafts.get(conversationId) ?? null;
+
+        await db.insert(chatMessages).values({
+          conversationId,
+          role: "user",
+          content,
+          sources: null,
+        });
+
+        if (canDoDataEntry && pendingDraft && pendingDraft.missingRequired.length === 0 && isConfirmationMessage(content)) {
+          const draft = pendingDraft;
+          conversationDrafts.delete(conversationId);
+
+          let savedResult: any;
+          try {
+            if (draft.type === "institution") {
+              const slug = generateSlug(draft.fields.name);
+              savedResult = await storage.createUniversity({
+                name: draft.fields.name,
+                country: draft.fields.country,
+                description: draft.fields.description || null,
+                website: draft.fields.website || null,
+                contactEmail: draft.fields.contactEmail || null,
+                contactPhone: draft.fields.contactPhone || null,
+                providerType: draft.fields.providerType || null,
+                establishedYear: draft.fields.establishedYear ? Number(draft.fields.establishedYear) : null,
+                numberOfCampuses: draft.fields.numberOfCampuses ? Number(draft.fields.numberOfCampuses) : null,
+                slug,
+                approvalStatus: "pending",
+                publishStatus: "draft",
+                createdByUserId: userId,
+                updatedByUserId: userId,
+                assignedToUserId: userId,
+              });
+              console.log(`[AdminChat] Institution created via confirm: "${draft.fields.name}" (id: ${savedResult.id}) by user ${userId}`);
+            } else {
+              const slug = generateSlug(`${draft.fields.title}-${draft.institutionName}`);
+              savedResult = await storage.createCourse({
+                title: draft.fields.title,
+                universityId: draft.institutionId!,
+                subject: draft.fields.subject,
+                level: draft.fields.level,
+                slug,
+                discipline: draft.fields.discipline || null,
+                duration: draft.fields.duration || null,
+                fees: draft.fields.fees ? String(draft.fields.fees) : null,
+                currency: draft.fields.currency || "AUD",
+                country: draft.fields.country || null,
+                location: draft.fields.location || null,
+                startDate: draft.fields.startDate || null,
+                deliveryMode: draft.fields.deliveryMode || null,
+                description: draft.fields.description || null,
+                approvalStatus: "pending",
+                publishStatus: "draft",
+                createdByUserId: userId,
+                assignedToUserId: userId,
+              } as any);
+              console.log(`[AdminChat] Course created via confirm: "${draft.fields.title}" (id: ${savedResult.id}) by user ${userId}`);
+            }
+
+            const savedName = savedResult.name || savedResult.title;
+            const assistantContent = `Done! **${savedName}** has been saved as a draft ${draft.type}. It will need approval before it goes live.`;
+            const savedInfo = { type: draft.type, name: savedName, id: savedResult.id };
+            const sourcesPayload = JSON.stringify({ dataEntrySaved: savedInfo });
+
+            const [saved] = await db
+              .insert(chatMessages)
+              .values({ conversationId, role: "assistant", content: assistantContent, sources: sourcesPayload })
+              .returning();
+
+            return res.json({ ...saved, dataEntrySaved: savedInfo });
+          } catch (err: any) {
+            console.error("[AdminChat] confirm-save error:", err);
+            const errorMsg = err.code === "23505"
+              ? `A ${draft.type} with this name already exists. Please use a different name.`
+              : `I encountered an error saving the ${draft.type}. Please try again.`;
+            const [saved] = await db
+              .insert(chatMessages)
+              .values({ conversationId, role: "assistant", content: errorMsg, sources: null })
+              .returning();
+            return res.json(saved);
+          }
+        }
+
+        const systemPrompt = buildSystemPrompt(ctx, pendingDraft);
 
         const history = await db
           .select()
           .from(chatMessages)
-          .where(eq(chatMessages.conversationId, req.params.id))
+          .where(eq(chatMessages.conversationId, conversationId))
           .orderBy(chatMessages.createdAt)
           .limit(20);
 
@@ -543,13 +724,6 @@ export function registerAdminChatRoutes(app: Express) {
           })),
           { role: "user", content },
         ];
-
-        await db.insert(chatMessages).values({
-          conversationId: req.params.id,
-          role: "user",
-          content,
-          sources: null,
-        });
 
         const completionParams: OpenAI.Chat.ChatCompletionCreateParams = {
           model: "gpt-4o-mini",
@@ -571,7 +745,7 @@ export function registerAdminChatRoutes(app: Express) {
 
         if (choice?.message?.tool_calls?.length) {
           const toolCall = choice.message.tool_calls[0];
-          const result = await handleDataEntryToolCall(toolCall, userId);
+          const result = await handleDataEntryToolCall(toolCall, conversationId);
           assistantContent = result.message;
           dataEntryPreview = result.preview;
         } else {
@@ -585,7 +759,7 @@ export function registerAdminChatRoutes(app: Express) {
         const [saved] = await db
           .insert(chatMessages)
           .values({
-            conversationId: req.params.id,
+            conversationId,
             role: "assistant",
             content: assistantContent,
             sources: sourcesPayload,
@@ -619,12 +793,16 @@ export function registerAdminChatRoutes(app: Express) {
         return res.status(400).json({ message: "Name and country are required" });
       }
 
+      if (!description || String(description).length < 50) {
+        return res.status(400).json({ message: "Description is required and must be at least 50 characters" });
+      }
+
       const slug = generateSlug(name);
 
       const newInstitution = await storage.createUniversity({
         name,
         country,
-        description: description || null,
+        description,
         website: website || null,
         contactEmail: contactEmail || null,
         contactPhone: contactPhone || null,
