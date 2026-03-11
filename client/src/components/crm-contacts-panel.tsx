@@ -2028,11 +2028,11 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
   const searchCourses = coursesData?.courses || [];
 
   // Fetch institutions for the course institution filter
-  const { data: courseInstitutionsData } = useQuery<{ universities: any[] }>({
+  const { data: courseInstitutionsData } = useQuery<any[]>({
     queryKey: ["/api/institutions", { limit: 100, includePrivate: 'true' }],
     enabled: isCreateApplicationOpen,
   });
-  const courseInstitutionOptions = courseInstitutionsData?.universities ?? [];
+  const courseInstitutionOptions = Array.isArray(courseInstitutionsData) ? courseInstitutionsData : [];
 
   // Fetch applications for this contact (only for 'clients' type)
   const { data: applicationsData, isLoading: isLoadingApplications, isError: isApplicationsError } = useQuery<{
