@@ -39,7 +39,8 @@ interface LocalMessage {
 function buildGreeting(ctx: AdminContext): string {
   const roleLabels: Record<string, string> = {
     branch_manager: "Branch Manager",
-    support_staff: "Support Staff",
+    marketing_executive: "Marketing Executive",
+    education_consultant: "Education Consultant",
     operations_staff: "Operations Staff",
     super_admin: "Super Admin",
     platform_admin: "Platform Admin",
@@ -86,7 +87,8 @@ function buildGreeting(ctx: AdminContext): string {
 
 const ROLE_BADGE_LABELS: Record<string, string> = {
   branch_manager: "Branch Manager",
-  support_staff: "Support",
+  marketing_executive: "Marketing",
+  education_consultant: "Consultant",
   operations_staff: "Operations",
   super_admin: "Super Admin",
   platform_admin: "Platform Admin",

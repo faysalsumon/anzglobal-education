@@ -249,10 +249,12 @@ function buildSystemPrompt(ctx: AdminContext): string {
 
   const roleGuide: Record<string, string> = {
     branch_manager: "You manage the branch, can reassign contacts, override decisions, and view all branch activity.",
-    support_staff: "You handle student inquiries, follow-ups, and document collection.",
+    marketing_executive: "You manage institution and course content, SEO, testimonials, and marketing material.",
+    education_consultant: "You handle student inquiries, CRM contacts, follow-ups, and document collection.",
     operations_staff: "You manage applications, visa processing, and institution liaisons.",
     super_admin: "You have full platform access — policy and platform decisions.",
     platform_admin: "You have full platform access — policy and platform decisions.",
+    cto: "You have full platform access — policy, platform decisions, and technical oversight.",
   };
 
   return `You are Zan, an AI operations assistant for the ANZ Global Education admin team. You are concise, direct, and action-oriented.

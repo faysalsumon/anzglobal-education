@@ -51,7 +51,8 @@ const ROLE_LABELS: Record<string, string> = {
   cto: "Chief Technology Officer",
   ceo: "Chief Executive Officer",
   branch_manager: "Education Consultant",
-  support_staff: "Education Advisor",
+  marketing_executive: "Marketing Executive",
+  education_consultant: "Education Advisor",
   operations_staff: "Operations Specialist",
   admin: "Education Specialist",
 };

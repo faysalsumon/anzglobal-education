@@ -93,7 +93,8 @@ export function TopNavBar() {
       const adminRole = user.adminRole || user.role;
       if (adminRole === "cto") return "CTO";
       if (adminRole === "branch_manager") return "Branch Manager";
-      if (adminRole === "support_staff") return "Consultant";
+      if (adminRole === "marketing_executive") return "Marketing Executive";
+      if (adminRole === "education_consultant") return "Education Consultant";
       return "Admin";
     }
     
