@@ -2787,7 +2787,6 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
             </CardContent>
           </Card>
         )}
-      </div>
 
       <Dialog open={isAddInstitutionOpen} onOpenChange={setIsAddInstitutionOpen}>
         <DialogContent className="max-w-md">
