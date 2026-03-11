@@ -683,8 +683,11 @@ export function registerAdminChatRoutes(app: Express) {
             }
 
             const savedName = savedResult.name || savedResult.title;
-            const assistantContent = `Done! **${savedName}** has been saved as a draft ${draft.type}. It will need approval before it goes live.`;
-            const savedInfo = { type: draft.type, name: savedName, id: savedResult.id };
+            const dashboardUrl = draft.type === "institution"
+              ? `/admin/institutions/${savedResult.id}`
+              : `/admin/courses/${savedResult.id}`;
+            const assistantContent = `Done! **${savedName}** has been saved as a draft ${draft.type}. It will need approval before it goes live. You can view it in the admin dashboard.`;
+            const savedInfo = { type: draft.type, name: savedName, id: savedResult.id, url: dashboardUrl };
             const sourcesPayload = JSON.stringify({ dataEntrySaved: savedInfo });
 
             const [saved] = await db
@@ -822,6 +825,7 @@ export function registerAdminChatRoutes(app: Express) {
         id: newInstitution.id,
         name: newInstitution.name,
         slug: newInstitution.slug,
+        url: `/admin/institutions/${newInstitution.id}`,
       });
     } catch (err: any) {
       console.error("[AdminChat] data-entry institution error:", err);
@@ -882,6 +886,7 @@ export function registerAdminChatRoutes(app: Express) {
         title: newCourse.title,
         institutionName: institution.name,
         slug: newCourse.slug,
+        url: `/admin/courses/${newCourse.id}`,
       });
     } catch (err: any) {
       console.error("[AdminChat] data-entry course error:", err);

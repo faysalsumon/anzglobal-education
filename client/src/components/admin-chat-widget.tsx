@@ -45,7 +45,7 @@ interface LocalMessage {
   role: "user" | "assistant";
   content: string;
   dataEntryPreview?: DataEntryPreview | null;
-  dataEntrySaved?: { type: string; name: string; id: string } | null;
+  dataEntrySaved?: { type: string; name: string; id: string; url?: string } | null;
   dataEntryCancelled?: boolean;
 }
 
@@ -210,14 +210,23 @@ function DataEntryCard({
   );
 }
 
-function DataEntrySavedCard({ saved }: { saved: { type: string; name: string; id: string } }) {
+function DataEntrySavedCard({ saved }: { saved: { type: string; name: string; id: string; url?: string } }) {
   return (
     <Card className="mt-2 overflow-visible">
-      <div className="p-3 flex items-center gap-2">
-        <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+      <div className="p-3 flex items-center gap-2 flex-wrap">
+        <Check className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
         <span className="text-xs text-foreground">
           <span className="font-semibold">{saved.name}</span> saved as draft {saved.type}.
         </span>
+        {saved.url && (
+          <a
+            href={saved.url}
+            className="text-xs text-primary hover:underline font-medium"
+            data-testid="link-view-saved-draft"
+          >
+            View in dashboard
+          </a>
+        )}
       </div>
     </Card>
   );
@@ -357,6 +366,7 @@ export function AdminChatWidget() {
                   type: preview.type,
                   name: result.name || result.title,
                   id: result.id,
+                  url: result.url,
                 },
               }
             : m
