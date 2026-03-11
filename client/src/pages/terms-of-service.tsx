@@ -8,6 +8,7 @@ export default function TermsOfService() {
       <Helmet>
         <title>Terms of Service | ANZ Global Education</title>
         <meta name="description" content="Read our Terms of Service to understand the rules and guidelines for using ANZ Global Education platform." />
+        <link rel="canonical" href={`${window.location.origin}/terms`} />
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">

@@ -91,6 +91,7 @@ export default function StudyAbroad() {
       <Helmet>
         <title>Study Abroad from Bangladesh | ANZ Global Education</title>
         <meta name="description" content="Explore study abroad opportunities from Bangladesh. Find courses in Australia, UK, Canada, Malaysia and more. Free counseling and scholarship support." />
+        <link rel="canonical" href={`${window.location.origin}/study-abroad`} />
       </Helmet>
 
       <section className="relative bg-gradient-to-br from-primary/10 via-background to-accent/5 py-16 md:py-24" data-testid="study-abroad-hero">

@@ -121,6 +121,7 @@ export default function PartnerWithUs() {
         />
         <meta property="og:type" content="website" />
         <meta name="keywords" content="international student recruitment, education partnership, Australian universities, global student platform, institution partnership" />
+        <link rel="canonical" href={`${window.location.origin}/partner-with-us`} />
       </Helmet>
 
       {/* Hero Section - Enhanced with modern gradient and platform positioning */}

@@ -8,6 +8,7 @@ export default function PrivacyPolicy() {
       <Helmet>
         <title>Privacy Policy | ANZ Global Education</title>
         <meta name="description" content="Learn how ANZ Global Education collects, uses, and protects your personal information. Read our comprehensive Privacy Policy." />
+        <link rel="canonical" href={`${window.location.origin}/privacy`} />
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">

@@ -15588,9 +15588,39 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>${baseUrl}/about</loc>
+    <loc>${baseUrl}/our-story</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/partner-with-us</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/study-in-australia</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/study-abroad</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/compare-courses</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/student-reviews</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
@@ -15683,9 +15713,16 @@ Allow: /
 User-agent: *
 Allow: /
 
-# Disallow admin and API endpoints
+# Disallow admin, API, and private/utility routes
 Disallow: /admin/
 Disallow: /api/
+Disallow: /student/
+Disallow: /dashboard
+Disallow: /auth/callback
+Disallow: /force-password-reset
+Disallow: /user-type
+Disallow: /accept-invitation
+Disallow: /reset-password
 
 # Sitemap locations
 Sitemap: ${baseUrl}/sitemap_index.xml

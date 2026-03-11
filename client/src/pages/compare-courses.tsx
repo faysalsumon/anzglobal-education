@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { Helmet } from "react-helmet";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -367,6 +368,11 @@ export default function CompareCourses() {
 
   return (
     <PublicLayout>
+      <Helmet>
+        <title>Compare Courses | ANZ Global Education</title>
+        <meta name="description" content="Compare courses side by side across top institutions. Analyse fees, duration, entry requirements and more to find the right course for you." />
+        <link rel="canonical" href={`${window.location.origin}/compare-courses`} />
+      </Helmet>
       <div className="container mx-auto px-4 py-8">
         <div className="space-y-6">
           {/* Header */}

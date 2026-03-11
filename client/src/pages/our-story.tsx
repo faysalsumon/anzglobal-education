@@ -29,6 +29,7 @@ export default function OurStory() {
     <>
       <Helmet>
         <title>About Us - ANZ Global Education | AI-Powered Education Technology</title>
+        <link rel="canonical" href={`${window.location.origin}/our-story`} />
         <meta 
           name="description" 
           content="ANZ Global Education is an AI-powered edutech platform connecting international students with global universities. Smart course matching, streamlined applications, and intelligent tools for students and institutions." 

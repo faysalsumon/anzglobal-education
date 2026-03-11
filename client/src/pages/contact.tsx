@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Helmet } from "react-helmet";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -437,7 +438,12 @@ export default function Contact() {
 
   return (
     <div className="min-h-screen bg-background">
-      
+      <Helmet>
+        <title>Contact Us | ANZ Global Education</title>
+        <meta name="description" content="Get in touch with ANZ Global Education. Contact our team for course guidance, institution partnerships, or any enquiries about studying abroad." />
+        <link rel="canonical" href={`${window.location.origin}/contact`} />
+      </Helmet>
+
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10 py-16 sm:py-24">
         <div className="absolute inset-0 bg-grid-white/5 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.5))]" />

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
+import { Helmet } from "react-helmet";
 
 export default function DashboardRedirect() {
   const [, setLocation] = useLocation();
@@ -39,6 +40,9 @@ export default function DashboardRedirect() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
+      <Helmet>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <Loader2 className="h-8 w-8 animate-spin text-primary" />
     </div>
   );

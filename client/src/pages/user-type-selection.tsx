@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2, GraduationCap } from "lucide-react";
@@ -30,6 +31,9 @@ export default function UserTypeSelection() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
+      <Helmet>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="w-full max-w-4xl space-y-8">
         <div className="text-center space-y-4">
           <img src={logoUrl} alt="ANZ Global Education" className="h-12 w-auto mx-auto mb-6" />

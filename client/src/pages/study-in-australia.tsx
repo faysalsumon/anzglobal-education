@@ -167,6 +167,7 @@ export default function StudyInAustralia() {
         <meta name="twitter:image" content={`${siteUrl}${heroImage}`} />
         
         <meta name="keywords" content="study in Australia, international students Australia, Australian universities, study abroad Australia, courses in Australia, education Australia, student visa Australia, international education" />
+        <link rel="canonical" href={pageUrl} />
         
         {/* JSON-LD Structured Data */}
         <script type="application/ld+json">
