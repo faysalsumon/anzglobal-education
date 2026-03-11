@@ -87,8 +87,8 @@ function buildGreeting(ctx: AdminContext): string {
 
 const ROLE_BADGE_LABELS: Record<string, string> = {
   branch_manager: "Branch Manager",
-  marketing_executive: "Marketing",
-  education_consultant: "Consultant",
+  marketing_executive: "Marketing Executive",
+  education_consultant: "Education Consultant",
   operations_staff: "Operations",
   super_admin: "Super Admin",
   platform_admin: "Platform Admin",
