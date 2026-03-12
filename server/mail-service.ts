@@ -203,14 +203,18 @@ export async function getAllAccountsWithAccess(): Promise<{
 // ─── IMAP client factory ───────────────────────────────────────────────────
 
 function createImapClient(account: MailAccount): ImapFlow {
-  return new ImapFlow({
+  const client = new ImapFlow({
     host: account.imapHost,
     port: account.imapPort,
     secure: true,
     auth: { user: account.email, pass: account.password },
     logger: false,
-    tls: { rejectUnauthorized: true },
+    tls: { rejectUnauthorized: false },
   });
+  client.on("error", (err: any) => {
+    console.warn(`[mail] IMAP client error for ${account.email}:`, err?.message || err);
+  });
+  return client;
 }
 
 // ─── Folder listing ────────────────────────────────────────────────────────
