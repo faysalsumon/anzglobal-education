@@ -11,7 +11,6 @@ import { regionDetectionMiddleware, geoRedirectMiddleware } from "./middleware/r
 import { csrfErrorHandler } from "./middleware/csrf";
 import { supabaseAuthMiddleware } from "./supabase-middleware";
 import { botProtectionMiddleware, securityHeadersMiddleware, protectedPathsMiddleware } from "./middleware/bot-protection";
-import { autoMigrate } from "./auto-migrate";
 
 // Intercept process.exit(1) before Vite's error logger can use it to crash the dev server.
 // Vite's custom logger in server/vite.ts calls process.exit(1) on ANY Vite error, which
@@ -165,8 +164,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  await autoMigrate();
-
   const server = await registerRoutes(app);
 
   // Initialize Pinecone index in background (non-blocking)

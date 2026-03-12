@@ -8,7 +8,7 @@ packages = ["xorg.libxcb", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["bun", "run", "build"]
+build = ["sh", "-c", "bun run build && bun server/auto-migrate.ts"]
 run = ["bun", "server/index.ts"]
 
 [[ports]]
