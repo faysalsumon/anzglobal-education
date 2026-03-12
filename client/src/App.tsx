@@ -6,8 +6,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { TopNavBar } from "@/components/top-nav-bar";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
-import { Button } from "@/components/ui/button";
-import { MessageCircle } from "lucide-react";
 const ChatWidget = lazy(() => import("@/components/chat-widget").then(m => ({ default: m.ChatWidget })));
 import { Footer } from "@/components/footer";
 import { PublicHeader } from "@/components/public-header";
@@ -201,21 +199,10 @@ function AppContent() {
           <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />
         </main>
         <Footer />
-        {isAuthenticated && !isLoading && (
-          (user?.userType === 'admin' || user?.userType === 'platform_admin') ? (
-            <Button
-              data-testid="button-admin-chat-fab"
-              className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg gap-2 px-5"
-              onClick={() => setLocation('/admin/dashboard?tab=messages')}
-            >
-              <MessageCircle className="h-4 w-4" />
-              Chat
-            </Button>
-          ) : (
-            <Suspense fallback={null}>
-              <ChatWidget />
-            </Suspense>
-          )
+        {isAuthenticated && !isLoading && user?.userType !== 'admin' && user?.userType !== 'platform_admin' && (
+          <Suspense fallback={null}>
+            <ChatWidget />
+          </Suspense>
         )}
       </div>
     );
