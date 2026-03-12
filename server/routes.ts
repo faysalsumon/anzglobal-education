@@ -559,7 +559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     secret: process.env.SESSION_SECRET!,
     store: new pgStore({
       conString: process.env.DATABASE_URL,
-      createTableIfMissing: false,
+      createTableIfMissing: true,
       ttl: sessionTtl,
       tableName: "sessions",
     }),

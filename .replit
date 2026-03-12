@@ -8,8 +8,8 @@ packages = ["xorg.libxcb", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["bash", "-c", "bun install && bun run build"]
-run = ["bun", "run", "start"]
+build = ["bun", "run", "build"]
+run = ["bun", "server/index.ts"]
 
 [[ports]]
 localPort = 5000
