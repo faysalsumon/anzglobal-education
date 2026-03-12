@@ -13,6 +13,12 @@
       "type": "image/png"
     },
     {
+      "src": "/apple-touch-icon.png",
+      "sizes": "160x160",
+      "type": "image/png",
+      "purpose": "apple touch icon"
+    },
+    {
       "src": "/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",

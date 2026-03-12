@@ -1,17 +1,20 @@
-<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background -->
-  <rect width="64" height="64" rx="12" fill="#3465A5"/>
-  
-  <!-- Top ribbon/book with notch -->
-  <path d="M 12 14 L 52 14 L 52 22 L 34 22 L 32 26 L 30 22 L 12 22 Z" fill="white" opacity="0.95"/>
-  
-  <!-- Middle diagonal pencil -->
-  <g transform="rotate(-45 32 32)">
-    <rect x="24" y="30" width="16" height="4" rx="1" fill="white" opacity="0.9"/>
-    <!-- Pencil tip -->
-    <path d="M 24 32 L 21 30 L 21 34 Z" fill="#FFD700" opacity="0.9"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <!-- White rounded background -->
+  <rect width="160" height="160" rx="28" fill="#ffffff"/>
+
+  <!-- Top book (horizontal bar with bookmark notch) -->
+  <rect x="28" y="28" width="104" height="22" rx="4" fill="#3465A5"/>
+  <polygon points="104,28 120,28 120,50 112,44 104,50" fill="#ffffff"/>
+
+  <!-- Diagonal scroll/diploma -->
+  <g transform="rotate(-40, 80, 80)">
+    <rect x="36" y="72" width="88" height="18" rx="4" fill="#3465A5"/>
+    <!-- Left ribbon end -->
+    <polygon points="36,72 36,90 26,81" fill="#2a529e"/>
+    <!-- Right ribbon end -->
+    <polygon points="124,72 124,90 134,81" fill="#2a529e"/>
   </g>
-  
-  <!-- Bottom ribbon/book -->
-  <rect x="12" y="42" width="40" height="8" rx="2" fill="white" opacity="0.95"/>
+
+  <!-- Bottom book (horizontal bar) -->
+  <rect x="28" y="110" width="104" height="22" rx="4" fill="#3465A5"/>
 </svg>
