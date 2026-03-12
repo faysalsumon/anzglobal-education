@@ -1,5 +1,4 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { sql } from "drizzle-orm";
 import pkg from "pg";
 import * as schema from "@shared/schema";
 import { pushSchema } from "drizzle-kit/api";
@@ -20,25 +19,7 @@ async function migrate() {
 
   const db = drizzle({ client: pool, schema });
 
-  console.log("[AutoMigrate] Checking database schema...");
-
-  const result = await db.execute(sql`
-    SELECT count(*)::int as cnt FROM pg_catalog.pg_tables
-    WHERE schemaname = 'public'
-  `);
-  const tableCount = (result.rows[0] as { cnt: number }).cnt;
-
-  if (tableCount >= 100) {
-    console.log(
-      `[AutoMigrate] ${tableCount} tables exist — schema looks complete.`,
-    );
-    await pool.end();
-    return;
-  }
-
-  console.log(
-    `[AutoMigrate] Only ${tableCount} tables found, running schema push...`,
-  );
+  console.log("[AutoMigrate] Running schema push...");
 
   const pushResult = await pushSchema(
     schema,
@@ -58,13 +39,7 @@ async function migrate() {
     `[AutoMigrate] Applying ${pushResult.statementsToExecute.length} statements...`,
   );
   await pushResult.apply();
-
-  const verify = await db.execute(sql`
-    SELECT count(*)::int as cnt FROM pg_catalog.pg_tables
-    WHERE schemaname = 'public'
-  `);
-  const finalCount = (verify.rows[0] as { cnt: number }).cnt;
-  console.log(`[AutoMigrate] Done — ${finalCount} tables now exist.`);
+  console.log("[AutoMigrate] Schema push complete.");
 
   await pool.end();
 }
