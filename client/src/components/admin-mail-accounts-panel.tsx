@@ -131,23 +131,17 @@ function AccountFormDialog({
   const mutation = useMutation({
     mutationFn: async () => {
       if (isEdit) {
-        return apiRequest(`/api/mail/accounts/${editAccount!.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({
-            ...form,
-            appPassword: form.appPassword || undefined,
-            imapPort: Number(form.imapPort),
-            smtpPort: Number(form.smtpPort),
-          }),
+        return apiRequest("PATCH", `/api/mail/accounts/${editAccount!.id}`, {
+          ...form,
+          appPassword: form.appPassword || undefined,
+          imapPort: Number(form.imapPort),
+          smtpPort: Number(form.smtpPort),
         });
       } else {
-        return apiRequest("/api/mail/accounts", {
-          method: "POST",
-          body: JSON.stringify({
-            ...form,
-            imapPort: Number(form.imapPort),
-            smtpPort: Number(form.smtpPort),
-          }),
+        return apiRequest("POST", "/api/mail/accounts", {
+          ...form,
+          imapPort: Number(form.imapPort),
+          smtpPort: Number(form.smtpPort),
         });
       }
     },
@@ -349,10 +343,7 @@ function AccessDialog({
 
   const grantMutation = useMutation({
     mutationFn: async ({ userId, canSend }: { userId: string; canSend: boolean }) => {
-      return apiRequest(`/api/mail/accounts/${account.id}/access`, {
-        method: "POST",
-        body: JSON.stringify({ adminUserId: userId, canSend }),
-      });
+      return apiRequest("POST", `/api/mail/accounts/${account.id}/access`, { adminUserId: userId, canSend });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/mail/accounts", account.id, "access"] });
@@ -364,7 +355,7 @@ function AccessDialog({
 
   const revokeMutation = useMutation({
     mutationFn: async (userId: string) => {
-      return apiRequest(`/api/mail/accounts/${account.id}/access/${userId}`, { method: "DELETE" });
+      return apiRequest("DELETE", `/api/mail/accounts/${account.id}/access/${userId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/mail/accounts", account.id, "access"] });
@@ -376,10 +367,7 @@ function AccessDialog({
 
   const toggleSendMutation = useMutation({
     mutationFn: async ({ userId, canSend }: { userId: string; canSend: boolean }) => {
-      return apiRequest(`/api/mail/accounts/${account.id}/access`, {
-        method: "POST",
-        body: JSON.stringify({ adminUserId: userId, canSend }),
-      });
+      return apiRequest("POST", `/api/mail/accounts/${account.id}/access`, { adminUserId: userId, canSend });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/mail/accounts", account.id, "access"] });
@@ -537,7 +525,7 @@ export function AdminMailAccountsPanel({ onClose }: { onClose: () => void }) {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/mail/accounts/${id}`, { method: "DELETE" });
+      return apiRequest("DELETE", `/api/mail/accounts/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/mail/accounts"] });
@@ -551,10 +539,7 @@ export function AdminMailAccountsPanel({ onClose }: { onClose: () => void }) {
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      return apiRequest(`/api/mail/accounts/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ isActive }),
-      });
+      return apiRequest("PATCH", `/api/mail/accounts/${id}`, { isActive });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/mail/accounts"] });

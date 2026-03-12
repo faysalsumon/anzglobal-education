@@ -238,16 +238,13 @@ function ComposeDialog({
 
   const sendMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(`${endpoint}?accountId=${accountId}`, {
-        method: "POST",
-        body: JSON.stringify({
-          to: data.to,
-          cc: data.cc || undefined,
-          subject: data.subject,
-          html: `<div style="font-family:sans-serif;font-size:14px;line-height:1.6">${data.body.replace(/\n/g, "<br>")}</div>`,
-          inReplyTo: data.inReplyTo,
-          references: data.references,
-        }),
+      return apiRequest("POST", `${endpoint}?accountId=${accountId}`, {
+        to: data.to,
+        cc: data.cc || undefined,
+        subject: data.subject,
+        html: `<div style="font-family:sans-serif;font-size:14px;line-height:1.6">${data.body.replace(/\n/g, "<br>")}</div>`,
+        inReplyTo: data.inReplyTo,
+        references: data.references,
       });
     },
     onSuccess: () => {
@@ -655,10 +652,7 @@ function EmailReaderPanel({
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(
-        `/api/mail/messages/${uid}?folder=${encodeURIComponent(folder)}&accountId=${accountId}`,
-        { method: "DELETE" }
-      );
+      return apiRequest("DELETE", `/api/mail/messages/${uid}?folder=${encodeURIComponent(folder)}&accountId=${accountId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/mail/messages"] });
@@ -952,10 +946,7 @@ export function AdminMailTab() {
   const syncMutation = useMutation({
     mutationFn: async () => {
       const params = currentAccountId ? `?accountId=${currentAccountId}` : "";
-      return apiRequest(`/api/mail/sync${params}`, {
-        method: "POST",
-        body: JSON.stringify({ folder: selectedFolder }),
-      });
+      return apiRequest("POST", `/api/mail/sync${params}`, { folder: selectedFolder });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/mail/messages", currentAccountId] });
