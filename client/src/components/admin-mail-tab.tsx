@@ -640,11 +640,7 @@ function EmailReaderPanel({
   const { data: email, isLoading, error } = useQuery<FullEmail>({
     queryKey: ["/api/mail/messages", accountId, uid, folder],
     queryFn: async () => {
-      const res = await fetch(
-        `/api/mail/messages/${uid}?folder=${encodeURIComponent(folder)}&accountId=${accountId}`,
-        { credentials: "include" }
-      );
-      if (!res.ok) throw new Error("Failed to load email");
+      const res = await apiRequest("GET", `/api/mail/messages/${uid}?folder=${encodeURIComponent(folder)}&accountId=${accountId}`);
       return res.json();
     },
     staleTime: 5 * 60 * 1000,
@@ -911,8 +907,7 @@ export function AdminMailTab() {
       const url = currentAccountId
         ? `/api/mail/folders?accountId=${currentAccountId}`
         : "/api/mail/folders";
-      const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load folders");
+      const res = await apiRequest("GET", url);
       return res.json();
     },
     staleTime: 30000,
@@ -934,8 +929,7 @@ export function AdminMailTab() {
         limit: "50",
         ...(currentAccountId ? { accountId: currentAccountId } : {}),
       });
-      const res = await fetch(`/api/mail/messages?${params}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load messages");
+      const res = await apiRequest("GET", `/api/mail/messages?${params}`);
       return res.json();
     },
     staleTime: 60000,

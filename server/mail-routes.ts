@@ -51,6 +51,17 @@ async function resolveAccount(req: any, res: Response): Promise<{ account: MailA
   const accountId = req.query.accountId as string | undefined;
 
   if (accountId) {
+    // Handle env-var synthetic accounts (env-au, env-bd)
+    if (accountId.startsWith("env-")) {
+      const regionCode = accountId.replace("env-", "").toUpperCase();
+      const envAccount = getAccountForRegion(regionCode);
+      if (!envAccount) {
+        res.status(503).json({ error: "No mail account configured for this region" });
+        return null;
+      }
+      return { account: envAccount, userId };
+    }
+
     const account = await getAccountById(accountId, userId);
     if (!account) {
       res.status(403).json({ error: "Account not found or access denied" });
