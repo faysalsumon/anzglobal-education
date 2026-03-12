@@ -2546,7 +2546,7 @@ export const universityTeamMembers = pgTable("university_team_members", {
 export const adminTeamMembers = pgTable("admin_team_members", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
-  role: varchar("role", { length: 30 }).notNull().default("education_consultant"), // 'cto', 'branch_manager', 'marketing_executive', 'education_consultant', 'operations_staff'
+  role: varchar("role", { length: 30 }).notNull().default("support_staff"), // 'super_admin', 'branch_manager', 'support_staff', 'operations_staff'
   isActive: boolean("is_active").default(true),
   invitedBy: varchar("invited_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),

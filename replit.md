@@ -28,7 +28,7 @@ The platform adheres to ANZ Global Education's brand identity, using a specific 
 - **Server Stability**: Robust error handling to prevent server crashes in the Replit environment.
 - **Cloudflare Cache Prevention**: API routes configured to prevent Cloudflare caching for immediate data consistency.
 - **Soft-Delete for Bulk Actions**: Institutions and courses are soft-deleted (`isActive: false`, `publishStatus: 'draft'`) for data recoverability.
-- **Authorization**: Scalable Role-Based Access Control (RBAC) with hierarchical permissions. Admin roles: `cto`, `platform_admin`, `branch_manager`, `marketing_executive` (content/institutions/SEO/testimonials), `education_consultant` (CRM/students/applications), `operations_staff`. Legacy role `support_staff` has been replaced; legacy roleName mapping (marketing_executive→marketing_executive, senior/junior_consultant→education_consultant, cfo→operations_staff, ceo→cto) is handled in `checkAdminAccess`.
+- **Authorization**: Scalable Role-Based Access Control (RBAC) with hierarchical permissions.
 - **CRM System**: Unified contact management with client status lifecycle, lead rating, Kanban view, and public form integration.
 - **Multi-Course Applications**: Support for multiple courses per application with auto-generated IDs.
 - **Multi-Region Architecture**: Config-driven system for content filtering, UI rendering, admin data scoping, and feature gating based on region.

@@ -50,9 +50,8 @@ function parseToc(content: string): Array<{ level: 2 | 3; text: string; id: stri
 const ROLE_LABELS: Record<string, string> = {
   cto: "Chief Technology Officer",
   ceo: "Chief Executive Officer",
-  branch_manager: "Branch Manager",
-  marketing_executive: "Marketing Executive",
-  education_consultant: "Education Consultant",
+  branch_manager: "Education Consultant",
+  support_staff: "Education Advisor",
   operations_staff: "Operations Specialist",
   admin: "Education Specialist",
 };

@@ -1393,8 +1393,7 @@ function formatRole(role: string): string {
     cto: 'CTO',
     platform_admin: 'Platform Admin',
     branch_manager: 'Branch Manager',
-    marketing_executive: 'Marketing Executive',
-    education_consultant: 'Education Consultant',
+    support_staff: 'Support Staff',
     operations_staff: 'Operations Staff',
   };
   return roleLabels[role] || role;

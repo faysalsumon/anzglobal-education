@@ -69,7 +69,7 @@ export function AdminLayout({
   const [isChatOpen, setIsChatOpen] = useState(false);
   
   const derivedTab = activeTab || getTabFromPath(location);
-  const isMarketingExecutive = adminRole === "marketing_executive";
+  const isMarketingExecutive = adminRole === "marketing_executive" || adminRole === "support_staff";
 
   const { showWarning, secondsRemaining, stayLoggedIn } = useInactivityLogout({
     enabled: hasFullAdminAccess,

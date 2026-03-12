@@ -310,15 +310,15 @@ async function triggerKnowledgeBaseRebuild(operation: string): Promise<void> {
 }
 
 type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
-type AdminRole = 'cto' | 'platform_admin' | 'branch_manager' | 'marketing_executive' | 'education_consultant' | 'operations_staff';
+type AdminRole = 'cto' | 'platform_admin' | 'branch_manager' | 'support_staff' | 'operations_staff';
 
 const addAdminTeamMemberSchema = z.object({
   email: z.string().email(),
-  role: z.enum(['cto', 'branch_manager', 'marketing_executive', 'education_consultant', 'operations_staff']),
+  role: z.enum(['cto', 'branch_manager', 'support_staff', 'operations_staff']),
 });
 
 const updateAdminTeamMemberRoleSchema = z.object({
-  role: z.enum(['cto', 'branch_manager', 'marketing_executive', 'education_consultant', 'operations_staff']),
+  role: z.enum(['cto', 'branch_manager', 'support_staff', 'operations_staff']),
 });
 
 async function checkUniversityAccess(
@@ -387,15 +387,15 @@ export async function checkAdminAccess(
           'ceo': 'cto',
           'cfo': 'operations_staff',
           'branch_manager': 'branch_manager',
-          'marketing_executive': 'marketing_executive',
-          'senior_consultant': 'education_consultant',
-          'junior_consultant': 'education_consultant',
+          'marketing_executive': 'support_staff',
+          'senior_consultant': 'support_staff',
+          'junior_consultant': 'support_staff',
         };
         determinedRole = roleToLegacy[roleName] || null;
       }
     }
     // LEGACY: Check users.role column
-    else if (user.role && ['cto', 'platform_admin', 'branch_manager', 'marketing_executive', 'education_consultant', 'operations_staff'].includes(user.role)) {
+    else if (user.role && ['cto', 'platform_admin', 'branch_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
       determinedRole = user.role as AdminRole;
     }
     // LEGACY: Check admin_team_members table
@@ -421,7 +421,7 @@ export async function checkAdminAccess(
     if (userRole) {
       const roleName = userRole.name;
       
-      // COMPLETE mapping of all roles from the roles table to AdminRole types
+      // COMPLETE mapping of all roles from the roles table to legacy AdminRole types
       // This mapping is based on the roles table in the database:
       // cto, ceo, cfo, branch_manager, marketing_executive, senior_consultant, junior_consultant, student, university_rep
       const roleToLegacy: Record<string, AdminRole> = {
@@ -435,17 +435,15 @@ export async function checkAdminAccess(
         // Manager level - team management, application assignment
         'branch_manager': 'branch_manager',
         
-        // Marketing level - institution/course content, SEO, testimonials
-        'marketing_executive': 'marketing_executive',
-        
-        // Consultant level - CRM, student inquiries, applications
-        'senior_consultant': 'education_consultant',
-        'junior_consultant': 'education_consultant',
+        // Staff level - general access
+        'marketing_executive': 'support_staff',
+        'senior_consultant': 'support_staff',
+        'junior_consultant': 'support_staff',
         
         // Non-admin roles (for completeness - these users won't pass userType check anyway)
-        'student': 'education_consultant',
-        'university_rep': 'education_consultant',
-        'institution_rep': 'education_consultant',
+        'student': 'support_staff',
+        'university_rep': 'support_staff',
+        'institution_rep': 'support_staff',
       };
       
       const legacyRole = roleToLegacy[roleName];
@@ -467,11 +465,11 @@ export async function checkAdminAccess(
       }
       
       // FALLBACK for unmapped roles: For admin-type users with roleId but no mapping,
-      // grant access if requiredRoles includes 'education_consultant' (most permissive admin level)
+      // grant access if requiredRoles includes 'support_staff' (most permissive admin level)
       // This ensures new roles added to the database don't break access until properly mapped
-      console.log(`[RBAC] User ${userId} has unmapped role '${roleName}', using education_consultant fallback`);
-      if (requiredRoles.includes('education_consultant')) {
-        return { role: 'education_consultant', roleName, userType };
+      console.log(`[RBAC] User ${userId} has unmapped role '${roleName}', using support_staff fallback`);
+      if (requiredRoles.includes('support_staff')) {
+        return { role: 'support_staff', roleName, userType };
       }
       // If more restrictive role is required, deny access (safe default)
       return null;
@@ -479,7 +477,7 @@ export async function checkAdminAccess(
   }
   
   // TIER 2: LEGACY - Check users.role column
-  if (user.role && ['cto', 'platform_admin', 'branch_manager', 'marketing_executive', 'education_consultant', 'operations_staff'].includes(user.role)) {
+  if (user.role && ['cto', 'platform_admin', 'branch_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
     const userRole = user.role as AdminRole;
     if (requiredRoles.includes(userRole)) {
       return { role: userRole, userType };
@@ -559,7 +557,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     secret: process.env.SESSION_SECRET!,
     store: new pgStore({
       conString: process.env.DATABASE_URL,
-      createTableIfMissing: true,
+      createTableIfMissing: false,
       ttl: sessionTtl,
       tableName: "sessions",
     }),
@@ -10081,7 +10079,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/institutions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      // Allow CTO, branch_manager, and support_staff (marketing executives are mapped to support_staff)
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -10182,7 +10181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/institutions/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -10209,7 +10208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       
       // Allow any authenticated admin user to fetch their assigned/created institutions
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -10534,8 +10533,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/institutions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      // Allow CTO, branch_manager, and support_staff (marketing executives are mapped to support_staff)
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -10634,8 +10633,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/institutions/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      // Allow CTO, branch_manager, and support_staff (marketing executives are mapped to support_staff)
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -10714,7 +10713,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/admin-users", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive', 'education_consultant']);
+      // Allow CTO, branch_manager, and support_staff (marketing executives are mapped to support_staff)
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -10776,8 +10776,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/institutions/:id/transfer", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      // Allow CTO, branch_manager, and support_staff (marketing executives are mapped to support_staff)
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -11072,7 +11072,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -11125,11 +11125,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create new course
+  // Create new course (support_staff includes marketing_executive role)
   app.post("/api/super-admin/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -11180,8 +11180,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/courses/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      // support_staff includes marketing_executive role which needs to update courses
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -11332,7 +11332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/courses/:id/transfer", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -11476,7 +11476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/my-courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -11549,7 +11549,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/student-leads", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'education_consultant']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -11667,7 +11667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/contact", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'education_consultant']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -11786,7 +11786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/applications", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'education_consultant']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -14583,8 +14583,8 @@ ANZ Global Education provides pre-departure orientations and ongoing support for
   app.get("/api/admin/seo", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -14617,8 +14617,8 @@ ANZ Global Education provides pre-departure orientations and ongoing support for
   app.get("/api/admin/seo/:entityType/:entityId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -14652,8 +14652,8 @@ ANZ Global Education provides pre-departure orientations and ongoing support for
   app.post("/api/admin/seo", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -14744,8 +14744,8 @@ ANZ Global Education provides pre-departure orientations and ongoing support for
   app.post("/api/admin/seo/:id/approve", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -14777,8 +14777,8 @@ ANZ Global Education provides pre-departure orientations and ongoing support for
   app.post("/api/admin/seo/:id/reject", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -14808,8 +14808,8 @@ ANZ Global Education provides pre-departure orientations and ongoing support for
   app.delete("/api/admin/seo/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -14827,8 +14827,8 @@ ANZ Global Education provides pre-departure orientations and ongoing support for
   app.post("/api/admin/seo/generate", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -14968,8 +14968,8 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
   app.post("/api/admin/seo/bulk-generate", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -15861,7 +15861,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.get("/api/admin/csv-import", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive', 'education_consultant']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
 
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -16088,7 +16088,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.get("/api/admin/csv-import/templates/:type", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive', 'education_consultant']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
 
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -17902,8 +17902,8 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.post("/api/admin/cms/testimonials", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'marketing_executive']);
+      // support_staff includes marketing_executive role which needs to create testimonials
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -17936,8 +17936,8 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.patch("/api/admin/cms/testimonials/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'marketing_executive']);
+      // support_staff includes marketing_executive role which needs to update testimonials
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -18008,8 +18008,8 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.post("/api/admin/cms/testimonials/upload-photo", isAuthenticated, upload.single('photo'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'marketing_executive']);
+      // support_staff includes marketing_executive role which needs to upload testimonial photos
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Access denied" });
@@ -19452,7 +19452,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.get("/api/admin/institution-tags/grouped", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'consultant']);
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
       }
@@ -19514,7 +19514,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.get("/api/admin/institutions/:institutionId/tags", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'consultant']);
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
       }
@@ -19545,7 +19545,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.put("/api/admin/institutions/:institutionId/tags", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'marketing_executive']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'consultant']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -21862,10 +21862,11 @@ Sitemap: ${baseUrl}/sitemap.xml
   // POST /api/admin/send-profile-reminders - Trigger profile completion reminder emails
   app.post("/api/admin/send-profile-reminders", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'branch_manager', 'education_consultant']);
-      if (!access) {
-        return res.status(403).json({ message: "Admin access required" });
+      // Check admin/consultant access
+      const user = req.user;
+      const allowedTypes = ['platform_admin', 'consultant'];
+      if (!user || !allowedTypes.includes(user.userType)) {
+        return res.status(403).json({ message: "Admin or consultant access required" });
       }
 
       // Get students needing reminders
@@ -21964,10 +21965,11 @@ Sitemap: ${baseUrl}/sitemap.xml
   // GET /api/admin/profile-reminder-stats - Get stats about students needing reminders
   app.get("/api/admin/profile-reminder-stats", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'branch_manager', 'education_consultant']);
-      if (!access) {
-        return res.status(403).json({ message: "Admin access required" });
+      // Check admin/consultant access
+      const user = req.user;
+      const allowedTypes = ['platform_admin', 'consultant'];
+      if (!user || !allowedTypes.includes(user.userType)) {
+        return res.status(403).json({ message: "Admin or consultant access required" });
       }
 
       const studentsNeedingReminders = await storage.getStudentsNeedingReminders();

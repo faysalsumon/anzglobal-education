@@ -3740,8 +3740,7 @@ export default function AdminDashboard() {
                   <SelectItem value="cto">CTO</SelectItem>
                   <SelectItem value="platform_admin">Platform Admin</SelectItem>
                   <SelectItem value="branch_manager">Branch Manager</SelectItem>
-                  <SelectItem value="marketing_executive">Marketing Executive</SelectItem>
-                  <SelectItem value="education_consultant">Education Consultant</SelectItem>
+                  <SelectItem value="support_staff">Support Staff</SelectItem>
                   <SelectItem value="operations_staff">Operations Staff</SelectItem>
                 </SelectContent>
               </Select>
