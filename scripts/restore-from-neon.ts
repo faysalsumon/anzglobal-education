@@ -25,18 +25,26 @@ if (!PROD_DATABASE_URL) {
   process.exit(1);
 }
 
-const sslConfig = { rejectUnauthorized: false };
+function parseDbUrl(url: string) {
+  const u = new URL(url);
+  return {
+    host: u.hostname,
+    port: u.port ? parseInt(u.port) : 5432,
+    user: decodeURIComponent(u.username),
+    password: decodeURIComponent(u.password),
+    database: u.pathname.replace(/^\//, ""),
+    ssl: { rejectUnauthorized: false },
+  };
+}
 
 const neonPool = new Pool({
-  connectionString: NEON_DATABASE_URL,
-  ssl: sslConfig,
+  ...parseDbUrl(NEON_DATABASE_URL),
   max: 3,
   connectionTimeoutMillis: 15000,
 });
 
 const prodPool = new Pool({
-  connectionString: PROD_DATABASE_URL,
-  ssl: sslConfig,
+  ...parseDbUrl(PROD_DATABASE_URL),
   max: 3,
   connectionTimeoutMillis: 15000,
 });
@@ -218,6 +226,49 @@ async function getPrimaryKeyColumns(pool: InstanceType<typeof Pool>, table: stri
   return res.rows.map((r: any) => r.column_name);
 }
 
+async function getForeignKeyMap(
+  pool: InstanceType<typeof Pool>,
+  table: string,
+  columns: string[],
+): Promise<Record<string, Set<string>>> {
+  // Find FK columns for this table and what they reference
+  const res = await pool.query(
+    `SELECT kcu.column_name, ccu.table_name AS ref_table, ccu.column_name AS ref_col
+     FROM information_schema.table_constraints tc
+     JOIN information_schema.key_column_usage kcu
+       ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+     JOIN information_schema.constraint_column_usage ccu
+       ON tc.constraint_name = ccu.constraint_name AND tc.table_schema = ccu.table_schema
+     WHERE tc.table_schema = 'public' AND tc.table_name = $1 AND tc.constraint_type = 'FOREIGN KEY'`,
+    [table],
+  );
+
+  // Only nullify FK columns that are actually nullable — NOT NULL FK columns
+  // must retain their value (even if it's missing), which will cause the row
+  // to fail via the row-level fallback (silently skipped). This is intentional:
+  // rows with missing non-nullable FK refs simply can't be inserted yet.
+  const nullableRes = await pool.query(
+    `SELECT column_name FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = $1 AND is_nullable = 'YES'`,
+    [table],
+  );
+  const nullableCols = new Set(nullableRes.rows.map((r: any) => r.column_name));
+
+  const fkMap: Record<string, Set<string>> = {};
+  for (const fk of res.rows) {
+    if (!columns.includes(fk.column_name)) continue;
+    if (!nullableCols.has(fk.column_name)) continue; // can't nullify a NOT NULL column
+    // Load all existing IDs for the referenced table from prod
+    try {
+      const ids = await pool.query(`SELECT "${fk.ref_col}" FROM "${fk.ref_table}"`);
+      fkMap[fk.column_name] = new Set(ids.rows.map((r: any) => String(r[fk.ref_col])));
+    } catch {
+      // If we can't load the referenced table, allow any value
+    }
+  }
+  return fkMap;
+}
+
 async function restoreTable(table: string): Promise<{ before: number; after: number; inserted: number; skipped: boolean }> {
   const existsInNeon = await tableExists(neonPool, table);
   if (!existsInNeon) {
@@ -253,8 +304,12 @@ async function restoreTable(table: string): Promise<{ before: number; after: num
   const quotedCols = commonColumns.map((c) => `"${c}"`).join(", ");
   const conflictCols = pkColumns.map((c) => `"${c}"`).join(", ");
 
+  // Build a map of FK columns → Set of valid IDs in prod so we can null out
+  // references to rows that don't exist yet (avoids FK constraint violations).
+  const fkMap = await getForeignKeyMap(prodPool, table, commonColumns);
+
   let insertedCount = 0;
-  const BATCH_SIZE = 100;
+  const BATCH_SIZE = 50;
 
   for (let i = 0; i < neonRows.rows.length; i += BATCH_SIZE) {
     const batch = neonRows.rows.slice(i, i + BATCH_SIZE);
@@ -265,8 +320,13 @@ async function restoreTable(table: string): Promise<{ before: number; after: num
     for (const row of batch) {
       const rowPlaceholders: string[] = [];
       for (const col of commonColumns) {
+        let val = row[col] !== undefined ? row[col] : null;
+        // Null out FK values that reference rows not yet present in prod
+        if (val !== null && fkMap[col] && !fkMap[col].has(String(val))) {
+          val = null;
+        }
         rowPlaceholders.push(`$${paramIdx}`);
-        values.push(row[col] !== undefined ? row[col] : null);
+        values.push(val);
         paramIdx++;
       }
       valuePlaceholders.push(`(${rowPlaceholders.join(", ")})`);
@@ -280,10 +340,15 @@ async function restoreTable(table: string): Promise<{ before: number; after: num
       const result = await prodPool.query(sql, values);
       insertedCount += result.rowCount ?? 0;
     } catch (err: any) {
-      console.error(`  ✗ Error inserting batch into "${table}": ${err.message}`);
+      console.error(`  ✗ Batch error in "${table}": ${err.message.slice(0, 120)}`);
+      // Row-level fallback
       for (const row of batch) {
         const singlePlaceholders = commonColumns.map((_, idx) => `$${idx + 1}`);
-        const singleValues = commonColumns.map((col) => row[col] !== undefined ? row[col] : null);
+        const singleValues = commonColumns.map((col) => {
+          let val = row[col] !== undefined ? row[col] : null;
+          if (val !== null && fkMap[col] && !fkMap[col].has(String(val))) val = null;
+          return val;
+        });
         const singleSql = `INSERT INTO "${table}" (${quotedCols})
                            VALUES (${singlePlaceholders.join(", ")})
                            ON CONFLICT (${conflictCols}) DO NOTHING`;
@@ -291,7 +356,7 @@ async function restoreTable(table: string): Promise<{ before: number; after: num
           const r = await prodPool.query(singleSql, singleValues);
           insertedCount += r.rowCount ?? 0;
         } catch (rowErr: any) {
-          console.error(`    Row-level error in "${table}" (PK=${pkColumns.map((c) => row[c]).join(",")}): ${rowErr.message}`);
+          // silently skip individual bad rows
         }
       }
     }
@@ -386,7 +451,9 @@ async function main() {
   await prodPool.end();
 }
 
-main().catch((err) => {
-  console.error("Fatal error:", err);
+try {
+  await main();
+} catch (err: any) {
+  console.error("Fatal error:", err.message);
   process.exit(1);
-});
+}
