@@ -44,69 +44,104 @@ async function migrate() {
 
   const statements = pushResult.statementsToExecute ?? [];
 
-  if (statements.length === 0) {
+  if (statements.length === 0 && !pushResult.hasDataLoss) {
     console.log("[AutoMigrate] No schema changes needed.");
     await pool.end();
     return;
   }
 
-  const safeStatements = statements.filter((s) => !isDestructive(s));
-  const destructiveStatements = statements.filter((s) => isDestructive(s));
-
-  if (pushResult.hasDataLoss || destructiveStatements.length > 0) {
-    console.error(
-      "[AutoMigrate] DATA-LOSS DETECTED — blocking destructive statements.",
-    );
-    console.error(
-      `[AutoMigrate] ${destructiveStatements.length} destructive statement(s) blocked:`,
-    );
-    for (const stmt of destructiveStatements) {
-      console.error(`  BLOCKED: ${stmt}`);
-    }
+  if (pushResult.hasDataLoss) {
+    console.error("[AutoMigrate] DATA-LOSS DETECTED by drizzle-kit.");
     if (pushResult.warnings.length > 0) {
-      console.error("[AutoMigrate] Warnings from drizzle-kit:");
+      console.error("[AutoMigrate] Warnings:");
       for (const w of pushResult.warnings) {
         console.error(`  WARNING: ${w}`);
       }
     }
     console.error(
-      "[AutoMigrate] To apply destructive changes intentionally, run: bun x drizzle-kit push",
+      "[AutoMigrate] To apply these changes intentionally, run: bun x drizzle-kit push",
     );
-  }
 
-  if (safeStatements.length > 0) {
-    console.log(
-      `[AutoMigrate] Applying ${safeStatements.length} safe statement(s)...`,
-    );
-    let applied = 0;
-    let skipped = 0;
-    for (const stmt of safeStatements) {
-      try {
-        await db.execute(sql.raw(stmt));
-        applied++;
-      } catch (err: unknown) {
-        const cause = (err as { cause?: { code?: string } })?.cause;
-        const pgCode = cause?.code ?? (err as { code?: string })?.code;
-        if (pgCode === "42P07" || pgCode === "42710") {
-          skipped++;
-        } else {
-          const msg =
-            (err as { message?: string })?.message ?? String(err);
-          console.error(`[AutoMigrate] Statement failed: ${stmt}`);
-          console.error(`  Error [${pgCode ?? "unknown"}]: ${msg}`);
-          skipped++;
-        }
+    const safeStatements = statements.filter((s) => !isDestructive(s));
+    const destructiveStatements = statements.filter((s) => isDestructive(s));
+
+    if (destructiveStatements.length > 0) {
+      console.error(
+        `[AutoMigrate] ${destructiveStatements.length} destructive statement(s) blocked:`,
+      );
+      for (const stmt of destructiveStatements) {
+        console.error(`  BLOCKED: ${stmt}`);
       }
     }
-    console.log(
-      `[AutoMigrate] Safe statements: ${applied} applied, ${skipped} skipped (already exist).`,
-    );
-  }
 
-  if (destructiveStatements.length > 0) {
+    if (safeStatements.length > 0) {
+      console.log(
+        `[AutoMigrate] Applying ${safeStatements.length} safe (additive-only) statement(s) despite data-loss flag...`,
+      );
+      let applied = 0;
+      let skipped = 0;
+      let failed = 0;
+      for (const stmt of safeStatements) {
+        try {
+          await db.execute(sql.raw(stmt));
+          applied++;
+        } catch (err: unknown) {
+          const cause = (err as { cause?: { code?: string } })?.cause;
+          const pgCode = cause?.code ?? (err as { code?: string })?.code;
+          if (pgCode === "42P07" || pgCode === "42710") {
+            skipped++;
+          } else {
+            failed++;
+            const msg =
+              (err as { message?: string })?.message ?? String(err);
+            console.error(`[AutoMigrate] Failed: ${stmt}`);
+            console.error(`  Error [${pgCode ?? "unknown"}]: ${msg}`);
+          }
+        }
+      }
+      console.log(
+        `[AutoMigrate] Safe statements: ${applied} applied, ${skipped} skipped (already exist), ${failed} failed.`,
+      );
+    }
+
     await pool.end();
     console.error(
-      "[AutoMigrate] Build failed: destructive schema changes require manual review.",
+      "[AutoMigrate] Build FAILED: data-loss detected. Destructive schema changes require manual review.",
+    );
+    process.exit(1);
+  }
+
+  console.log(
+    `[AutoMigrate] Applying ${statements.length} statement(s) (no data loss)...`,
+  );
+  let applied = 0;
+  let skipped = 0;
+  let failed = 0;
+  for (const stmt of statements) {
+    try {
+      await db.execute(sql.raw(stmt));
+      applied++;
+    } catch (err: unknown) {
+      const cause = (err as { cause?: { code?: string } })?.cause;
+      const pgCode = cause?.code ?? (err as { code?: string })?.code;
+      if (pgCode === "42P07" || pgCode === "42710") {
+        skipped++;
+      } else {
+        failed++;
+        const msg = (err as { message?: string })?.message ?? String(err);
+        console.error(`[AutoMigrate] Failed: ${stmt}`);
+        console.error(`  Error [${pgCode ?? "unknown"}]: ${msg}`);
+      }
+    }
+  }
+  console.log(
+    `[AutoMigrate] Statements: ${applied} applied, ${skipped} skipped (already exist), ${failed} failed.`,
+  );
+
+  if (failed > 0) {
+    await pool.end();
+    console.error(
+      `[AutoMigrate] Build FAILED: ${failed} statement(s) failed to apply.`,
     );
     process.exit(1);
   }
