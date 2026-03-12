@@ -548,8 +548,9 @@ export async function sendEmail(opts: SendEmailOptions): Promise<void> {
   const transport = nodemailer.createTransport({
     host: opts.account.smtpHost,
     port: opts.account.smtpPort,
-    secure: true,
+    secure: opts.account.smtpPort === 465,
     auth: { user: opts.account.email, pass: opts.account.password },
+    tls: { rejectUnauthorized: false },
   });
 
   const displayFrom = opts.account.displayName || opts.account.label;
