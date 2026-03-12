@@ -1,0 +1,17 @@
+VERDICT: REJECTED
+The implementation does not meet core requirements: it ignores `pushResult.destructiveStatements` and instead uses regex-based SAFE_PATTERNS to infer safe SQL. This means the error output does not list the exact destructive statementsVERDICT: REJECTED
+ returned by drizzle-kit, and the filter may block legitimate non-destructive statements or miss any statements that drizzle flags as destructive but happen to match the regex. The requirement explicitly calls for checking `hasDataLoss`/`destructiveStatements`, listing those blocked statements, applying all non-destructive statements, and failing the build. Current logging says “not confirmed safe” rather than “destructive statements,” and the blocking logic is detached from drizzle’s authoritative list.
+
+Security: none observed.
+
+Next actions:
+1) Use `pushResult.destructiveStatements` (and/or `hasDataLoss`) as the authoritative list of destructive statements, log them explicitly, and exit 1 after applying only the remaining statements.
+2) Define non-destructive statements as `statementsToExecute` minus `destructiveStatements`, rather than regex filtering.
+3) Ensure the failure message instructs devs to review and run manual migration if intentional, while still applying the remaining non-destructive statements.The implementation does not meet core requirements: it ignores `pushResult.destructiveStatements` and instead uses regex-based SAFE_PATTERNS to infer safe SQL. This means the error output does not list the exact destructive statements returned by drizzle-kit, and the filter may block legitimate non-destructive statements or miss any statements that drizzle flags as destructive but happen to match the regex. The requirement explicitly calls for checking `hasDataLoss`/`destructiveStatements`, listing those blocked statements, applying all non-destructive statements, and failing the build. Current logging says “not confirmed safe” rather than “destructive statements,” and the blocking logic is detached from drizzle’s authoritative list.
+
+Security: none observed.
+
+Next actions:
+1) Use `pushResult.destructiveStatements` (and/or `hasDataLoss`) as the authoritative list of destructive statements, log them explicitly, and exit 1 after applying only the remaining statements.
+2) Define non-destructive statements as `statementsToExecute` minus `destructiveStatements`, rather than regex filtering.
+3) Ensure the failure message instructs devs to review and run manual migration if intentional, while still applying the remaining non-destructive statements.

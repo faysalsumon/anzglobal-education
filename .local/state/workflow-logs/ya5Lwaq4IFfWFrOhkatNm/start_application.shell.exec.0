@@ -1,0 +1,390 @@
+WebSocket server initialized on path /ws with session-based authentication
+Chat routes registered with RAG-powered AI assistant
+[AdminChat] Admin chat routes registered
+Scraping routes registered for AI-powered course extraction
+Application workflow routes registered
+Application workflow routes registered for CRM-style application management
+Workflow validation routes registered
+Workflow validation routes registered for business rules enforcement
+CRM routes registered for leads and contacts management
+Institution CRM routes registered for contacts, business terms, and documents
+Region management routes registered
+Region management routes registered for global scalability
+Supabase authentication routes registered
+Attendance routes registered for People/HR module
+Mail routes registered
+Background job processing disabled (Redis not available)
+Use POST /api/admin/scraping/jobs/:jobId/process for manual scraping
+[Pinecone] Initialization attempt 1/3
+[Pinecone] Using existing index
+[2m3:07:24 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because lockfile has changed
+3:07:24 PM [express] serving on port 5000
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+3:07:46 PM [express] GET /api/public/meta-pixel 200 in 2ms
+[2m3:07:48 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ new dependencies optimized: [33mtailwindcss-animate, @tailwindcss/typography[32m[39m
+[2m3:07:48 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ optimized dependencies changed. reloading[39m
+3:08:06 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:08:07 PM [express] GET /api/public/regions 200 in 2ms
+3:08:07 PM [express] GET /api/public/pathways 200 in 6ms
+3:08:16 PM [express] GET /api/platform/stats 200 in 1201ms
+3:08:16 PM [express] GET /api/institutions 200 in 853ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:08:16 PM [express] GET /api/disciplines 200 in 1319ms
+3:08:16 PM [express] GET /api/courses/filter-options 200 in 1358ms
+3:08:16 PM [express] GET /api/courses 200 in 1226ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:08:16 PM [express] GET /api/courses 200 in 870ms
+3:08:16 PM [express] GET /api/blogs 200 in 26ms
+3:08:16 PM [express] GET /api/public/featured 200 in 90ms
+3:08:17 PM [express] GET /api/public/testimonials 200 in 8ms
+3:09:08 PM [express] GET /api/public/meta-pixel 200 in 0ms
+3:09:08 PM [express] GET /api/public/regions 200 in 2ms
+3:09:08 PM [express] GET /api/public/pathways 200 in 1ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:09:11 PM [express] GET /api/courses 200 in 175ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:09:11 PM [express] GET /api/disciplines 200 in 478ms
+3:09:11 PM [express] GET /api/courses 200 in 678ms
+3:09:11 PM [express] GET /api/platform/stats 200 in 383ms
+3:09:11 PM [express] GET /api/courses/filter-options 200 in 351ms
+3:09:12 PM [express] GET /api/institutions 200 in 11ms
+3:09:12 PM [express] GET /api/blogs 200 in 5ms
+3:09:12 PM [express] GET /api/public/testimonials 200 in 5ms
+3:09:12 PM [express] GET /api/public/featured 200 in 65ms
+3:09:45 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:09:45 PM [express] GET /api/public/pathways 200 in 1ms
+3:09:45 PM [express] GET /api/public/regions 200 in 2ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:09:48 PM [express] GET /api/courses 200 in 542ms
+3:09:48 PM [express] GET /api/courses 200 in 549ms
+3:09:48 PM [express] GET /api/institutions 200 in 85ms
+3:09:48 PM [express] GET /api/disciplines 200 in 635ms
+3:09:48 PM [express] GET /api/platform/stats 200 in 672ms
+3:09:49 PM [express] GET /api/courses/filter-options 200 in 457ms
+3:09:49 PM [express] GET /api/public/testimonials 200 in 5ms
+3:09:49 PM [express] GET /api/blogs 200 in 8ms
+3:09:49 PM [express] GET /api/public/featured 200 in 71ms
+3:14:47 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:14:47 PM [express] GET /api/public/regions 200 in 2ms
+3:14:47 PM [express] GET /api/public/pathways 200 in 2ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:14:50 PM [express] GET /api/courses 200 in 139ms
+3:14:50 PM [express] GET /api/courses/filter-options 200 in 190ms
+3:14:50 PM [express] GET /api/platform/stats 200 in 250ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:14:50 PM [express] GET /api/disciplines 200 in 237ms
+3:14:50 PM [express] GET /api/courses 200 in 250ms
+3:14:51 PM [express] GET /api/institutions 200 in 10ms
+3:14:51 PM [express] GET /api/blogs 200 in 4ms
+3:14:51 PM [express] GET /api/public/testimonials 200 in 4ms
+3:14:51 PM [express] GET /api/public/featured 200 in 49ms
+3:15:35 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:15:35 PM [express] GET /api/public/pathways 200 in 1ms
+3:15:35 PM [express] GET /api/public/regions 200 in 1ms
+3:15:42 PM [express] GET /api/courses/filter-options 200 in 131ms
+3:15:42 PM [express] GET /api/platform/stats 200 in 330ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:15:42 PM [express] GET /api/courses 200 in 397ms
+3:15:42 PM [express] GET /api/institutions 200 in 30ms
+3:15:42 PM [express] GET /api/disciplines 200 in 486ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:15:42 PM [express] GET /api/courses 200 in 191ms
+3:15:43 PM [express] GET /api/blogs 200 in 4ms
+3:15:43 PM [express] GET /api/public/testimonials 200 in 5ms
+3:15:43 PM [express] GET /api/public/featured 200 in 45ms
+3:16:13 PM [express] GET /api/public/regions 200 in 1ms
+3:16:13 PM [express] GET /api/public/pathways 200 in 2ms
+3:16:13 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:16:22 PM [express] GET /api/disciplines 200 in 144ms
+3:16:23 PM [express] GET /api/platform/stats 200 in 454ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:16:23 PM [express] GET /api/courses/filter-options 200 in 310ms
+3:16:23 PM [express] GET /api/courses 200 in 330ms
+3:16:23 PM [express] GET /api/institutions 200 in 10ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:16:23 PM [express] GET /api/blogs 200 in 6ms
+3:16:23 PM [express] GET /api/courses 200 in 154ms
+3:16:24 PM [express] GET /api/public/testimonials 200 in 4ms
+3:16:24 PM [express] GET /api/public/featured 200 in 47ms
+3:16:55 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:16:55 PM [express] GET /api/public/regions 200 in 1ms
+3:16:56 PM [express] GET /api/public/pathways 200 in 1ms
+3:17:02 PM [express] GET /api/disciplines 200 in 148ms
+3:17:02 PM [express] GET /api/courses/filter-options 200 in 260ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:17:02 PM [express] GET /api/courses 200 in 302ms
+3:17:02 PM [express] GET /api/platform/stats 200 in 223ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:17:03 PM [express] GET /api/institutions 200 in 86ms
+3:17:03 PM [express] GET /api/courses 200 in 158ms
+3:17:03 PM [express] GET /api/blogs 200 in 5ms
+3:17:03 PM [express] GET /api/public/testimonials 200 in 5ms
+3:17:04 PM [express] GET /api/public/featured 200 in 51ms
+3:17:27 PM [express] GET /api/public/regions 200 in 1ms
+3:17:27 PM [express] GET /api/public/pathways 200 in 2ms
+3:17:27 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:17:30 PM [express] GET /api/platform/stats 200 in 113ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:17:31 PM [express] GET /api/disciplines 200 in 618ms
+3:17:31 PM [express] GET /api/courses 200 in 495ms
+3:17:31 PM [express] GET /api/courses 200 in 520ms
+3:17:31 PM [express] GET /api/courses/filter-options 200 in 467ms
+3:17:31 PM [express] GET /api/institutions 200 in 71ms
+3:17:31 PM [express] GET /api/blogs 200 in 5ms
+3:17:31 PM [express] GET /api/public/testimonials 200 in 3ms
+3:17:32 PM [express] GET /api/public/featured 200 in 70ms
+3:18:30 PM [express] GET /api/public/meta-pixel 200 in 0ms
+3:18:30 PM [express] GET /api/public/regions 200 in 1ms
+3:18:30 PM [express] GET /api/public/pathways 200 in 1ms
+3:18:33 PM [express] GET /api/platform/stats 200 in 225ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:18:33 PM [express] GET /api/courses 200 in 251ms
+3:18:33 PM [express] GET /api/courses/filter-options 200 in 342ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:18:33 PM [express] GET /api/courses 200 in 317ms
+3:18:33 PM [express] GET /api/disciplines 200 in 234ms
+3:18:33 PM [express] GET /api/institutions 200 in 31ms
+3:18:34 PM [express] GET /api/blogs 200 in 3ms
+3:18:34 PM [express] GET /api/public/testimonials 200 in 5ms
+3:18:34 PM [express] GET /api/public/featured 200 in 47ms
+3:19:14 PM [express] GET /api/public/meta-pixel 200 in 0ms
+3:19:14 PM [express] GET /api/public/regions 200 in 2ms
+3:19:14 PM [express] GET /api/public/pathways 200 in 2ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:19:20 PM [express] GET /api/courses 200 in 150ms
+3:19:21 PM [express] GET /api/disciplines 200 in 150ms
+3:19:22 PM [express] GET /api/courses/filter-options 200 in 126ms
+3:19:22 PM [express] GET /api/platform/stats 200 in 127ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:19:22 PM [express] GET /api/courses 200 in 133ms
+3:19:22 PM [express] GET /api/institutions 200 in 26ms
+3:19:22 PM [express] GET /api/blogs 200 in 4ms
+3:19:23 PM [express] GET /api/public/testimonials 200 in 4ms
+3:19:23 PM [express] GET /api/public/featured 200 in 56ms
+3:19:59 PM [express] GET /api/public/meta-pixel 200 in 0ms
+3:19:59 PM [express] GET /api/public/regions 200 in 2ms
+3:20:00 PM [express] GET /api/public/pathways 200 in 2ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:20:07 PM [express] GET /api/courses 200 in 170ms
+3:20:08 PM [express] GET /api/disciplines 200 in 128ms
+3:20:08 PM [express] GET /api/courses/filter-options 200 in 352ms
+3:20:08 PM [express] GET /api/platform/stats 200 in 244ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:20:08 PM [express] GET /api/courses 200 in 223ms
+3:20:08 PM [express] GET /api/institutions 200 in 10ms
+3:20:09 PM [express] GET /api/blogs 200 in 5ms
+3:20:09 PM [express] GET /api/public/testimonials 200 in 4ms
+3:20:09 PM [express] GET /api/public/featured 200 in 53ms
+3:20:29 PM [express] GET /api/public/meta-pixel 200 in 0ms
+3:20:29 PM [express] GET /api/public/regions 200 in 1ms
+3:20:29 PM [express] GET /api/public/pathways 200 in 2ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:20:32 PM [express] GET /api/courses 200 in 422ms
+3:20:32 PM [express] GET /api/courses 200 in 418ms
+3:20:32 PM [express] GET /api/institutions 200 in 47ms
+3:20:32 PM [express] GET /api/disciplines 200 in 524ms
+3:20:32 PM [express] GET /api/platform/stats 200 in 590ms
+3:20:32 PM [express] GET /api/courses/filter-options 200 in 346ms
+3:20:32 PM [express] GET /api/blogs 200 in 5ms
+3:20:33 PM [express] GET /api/public/testimonials 200 in 4ms
+3:20:33 PM [express] GET /api/public/featured 200 in 69ms
+3:21:04 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:21:04 PM [express] GET /api/public/pathways 200 in 1ms
+3:21:04 PM [express] GET /api/public/regions 200 in 1ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:21:08 PM [express] GET /api/courses/filter-options 200 in 629ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:21:08 PM [express] GET /api/institutions 200 in 92ms
+3:21:08 PM [express] GET /api/courses 200 in 711ms
+3:21:08 PM [express] GET /api/courses 200 in 600ms
+3:21:08 PM [express] GET /api/platform/stats 200 in 588ms
+3:21:08 PM [express] GET /api/disciplines 200 in 557ms
+3:21:08 PM [express] GET /api/blogs 200 in 13ms
+3:21:08 PM [express] GET /api/public/testimonials 200 in 5ms
+3:21:09 PM [express] GET /api/public/featured 200 in 42ms
+3:21:40 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:21:40 PM [express] GET /api/public/regions 200 in 2ms
+3:21:40 PM [express] GET /api/public/pathways 200 in 1ms
+3:21:48 PM [express] GET /api/courses/filter-options 200 in 138ms
+3:21:48 PM [express] GET /api/platform/stats 200 in 313ms
+3:21:48 PM [express] GET /api/disciplines 200 in 301ms
+3:21:48 PM [express] GET /api/institutions 200 in 99ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:21:48 PM [express] GET /api/courses 200 in 327ms
+3:21:48 PM [express] GET /api/blogs 200 in 12ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:21:48 PM [express] GET /api/courses 200 in 159ms
+3:21:48 PM [express] GET /api/public/testimonials 200 in 4ms
+3:21:48 PM [express] GET /api/public/featured 200 in 35ms
+3:22:19 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:22:19 PM [express] GET /api/public/regions 200 in 1ms
+3:22:19 PM [express] GET /api/public/pathways 200 in 1ms
+3:22:22 PM [express] GET /api/platform/stats 200 in 121ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:22:22 PM [express] GET /api/courses 200 in 218ms
+3:22:22 PM [express] GET /api/courses 200 in 226ms
+3:22:22 PM [express] GET /api/courses/filter-options 200 in 233ms
+3:22:22 PM [express] GET /api/disciplines 200 in 236ms
+3:22:22 PM [express] GET /api/institutions 200 in 10ms
+3:22:22 PM [express] GET /api/blogs 200 in 3ms
+3:22:22 PM [express] GET /api/public/testimonials 200 in 4ms
+3:22:22 PM [express] GET /api/public/featured 200 in 42ms
+3:22:56 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:22:56 PM [express] GET /api/public/pathways 200 in 1ms
+3:22:57 PM [express] GET /api/public/regions 200 in 1ms
+3:22:59 PM [express] GET /api/courses/filter-options 200 in 139ms
+3:22:59 PM [express] GET /api/disciplines 200 in 353ms
+3:22:59 PM [express] GET /api/platform/stats 200 in 514ms
+3:22:59 PM [express] GET /api/institutions 200 in 67ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:22:59 PM [express] GET /api/blogs 200 in 14ms
+3:22:59 PM [express] GET /api/courses 200 in 493ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:22:59 PM [express] GET /api/courses 200 in 194ms
+3:23:00 PM [express] GET /api/public/testimonials 200 in 15ms
+3:23:00 PM [express] GET /api/public/featured 200 in 58ms
+3:23:39 PM [express] GET /api/public/meta-pixel 200 in 0ms
+3:23:39 PM [express] GET /api/public/pathways 200 in 2ms
+3:23:39 PM [express] GET /api/public/regions 200 in 1ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:23:43 PM [express] GET /api/courses 200 in 134ms
+3:23:43 PM [express] GET /api/institutions 200 in 36ms
+3:23:43 PM [express] GET /api/platform/stats 200 in 367ms
+3:23:43 PM [express] GET /api/disciplines 200 in 398ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:23:43 PM [express] GET /api/courses/filter-options 200 in 312ms
+3:23:43 PM [express] GET /api/courses 200 in 419ms
+3:23:43 PM [express] GET /api/blogs 200 in 4ms
+3:23:44 PM [express] GET /api/public/testimonials 200 in 4ms
+3:23:44 PM [express] GET /api/public/featured 200 in 62ms
+3:24:17 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:24:17 PM [express] GET /api/public/regions 200 in 1ms
+3:24:17 PM [express] GET /api/public/pathways 200 in 1ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:24:21 PM [express] GET /api/disciplines 200 in 603ms
+3:24:21 PM [express] GET /api/courses 200 in 655ms
+3:24:21 PM [express] GET /api/institutions 200 in 183ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:24:21 PM [express] GET /api/courses 200 in 593ms
+3:24:21 PM [express] GET /api/courses/filter-options 200 in 560ms
+3:24:21 PM [express] GET /api/blogs 200 in 16ms
+3:24:21 PM [express] GET /api/platform/stats 200 in 196ms
+3:24:21 PM [express] GET /api/public/testimonials 200 in 6ms
+3:24:22 PM [express] GET /api/public/featured 200 in 57ms
+3:24:52 PM [express] GET /api/public/pathways 200 in 1ms
+3:24:52 PM [express] GET /api/public/regions 200 in 1ms
+3:24:52 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:24:55 PM [express] GET /api/platform/stats 200 in 111ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:24:55 PM [express] GET /api/courses 200 in 285ms
+3:24:55 PM [express] GET /api/disciplines 200 in 185ms
+3:24:55 PM [express] GET /api/courses/filter-options 200 in 198ms
+3:24:55 PM [express] GET /api/institutions 200 in 33ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:24:55 PM [express] GET /api/blogs 200 in 41ms
+3:24:55 PM [express] GET /api/courses 200 in 241ms
+3:24:55 PM [express] GET /api/public/testimonials 200 in 3ms
+3:24:56 PM [express] GET /api/public/featured 200 in 45ms
+3:25:28 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:25:28 PM [express] GET /api/public/pathways 200 in 2ms
+3:25:28 PM [express] GET /api/public/regions 200 in 4ms
+3:25:31 PM [express] GET /api/disciplines 200 in 762ms
+3:25:31 PM [express] GET /api/platform/stats 200 in 745ms
+3:25:31 PM [express] GET /api/courses/filter-options 200 in 811ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:25:31 PM [express] GET /api/institutions 200 in 154ms
+3:25:31 PM [express] GET /api/courses 200 in 735ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:25:32 PM [express] GET /api/courses 200 in 785ms
+3:25:32 PM [express] GET /api/blogs 200 in 5ms
+3:25:32 PM [express] GET /api/public/testimonials 200 in 4ms
+3:25:32 PM [express] GET /api/public/featured 200 in 58ms
+3:26:07 PM [express] GET /api/public/meta-pixel 200 in 0ms
+3:26:07 PM [express] GET /api/public/regions 200 in 1ms
+3:26:07 PM [express] GET /api/public/pathways 200 in 2ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:26:10 PM [express] GET /api/courses 200 in 163ms
+3:26:11 PM [express] GET /api/courses/filter-options 200 in 591ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:26:11 PM [express] GET /api/platform/stats 200 in 646ms
+3:26:11 PM [express] GET /api/disciplines 200 in 653ms
+3:26:11 PM [express] GET /api/courses 200 in 705ms
+3:26:11 PM [express] GET /api/institutions 200 in 11ms
+3:26:11 PM [express] GET /api/blogs 200 in 4ms
+3:26:12 PM [express] GET /api/public/testimonials 200 in 4ms
+3:26:12 PM [express] GET /api/public/featured 200 in 58ms
+3:26:44 PM [express] GET /api/public/pathways 200 in 1ms
+3:26:44 PM [express] GET /api/public/meta-pixel 200 in 0ms
+3:26:44 PM [express] GET /api/public/regions 200 in 1ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:26:47 PM [express] GET /api/courses 200 in 333ms
+3:26:47 PM [express] GET /api/institutions 200 in 52ms
+3:26:47 PM [express] GET /api/platform/stats 200 in 546ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:26:47 PM [express] GET /api/courses/filter-options 200 in 426ms
+3:26:47 PM [express] GET /api/courses 200 in 601ms
+3:26:47 PM [express] GET /api/disciplines 200 in 694ms
+3:26:48 PM [express] GET /api/blogs 200 in 5ms
+3:26:48 PM [express] GET /api/public/featured 200 in 48ms
+3:26:48 PM [express] GET /api/public/testimonials 200 in 4ms
+3:27:19 PM [express] GET /api/public/meta-pixel 200 in 0ms
+3:27:19 PM [express] GET /api/public/regions 200 in 1ms
+3:27:19 PM [express] GET /api/public/pathways 200 in 1ms
+3:27:23 PM [express] GET /api/platform/stats 200 in 485ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:27:23 PM [express] GET /api/courses/filter-options 200 in 456ms
+3:27:23 PM [express] GET /api/courses 200 in 516ms
+3:27:23 PM [express] GET /api/institutions 200 in 75ms
+3:27:23 PM [express] GET /api/disciplines 200 in 220ms
+3:27:24 PM [express] GET /api/blogs 200 in 8ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:27:24 PM [express] GET /api/courses 200 in 230ms
+3:27:24 PM [express] GET /api/public/featured 200 in 60ms
+3:27:24 PM [express] GET /api/public/testimonials 200 in 3ms
+3:27:57 PM [express] GET /api/public/meta-pixel 200 in 0ms
+3:27:57 PM [express] GET /api/public/regions 200 in 2ms
+3:27:57 PM [express] GET /api/public/pathways 200 in 2ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:27:59 PM [express] GET /api/courses 200 in 563ms
+3:27:59 PM [express] GET /api/institutions 200 in 81ms
+3:27:59 PM [express] GET /api/platform/stats 200 in 634ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:27:59 PM [express] GET /api/courses 200 in 575ms
+3:27:59 PM [express] GET /api/disciplines 200 in 636ms
+3:27:59 PM [express] GET /api/courses/filter-options 200 in 250ms
+3:28:00 PM [express] GET /api/blogs 200 in 4ms
+3:28:00 PM [express] GET /api/public/featured 200 in 48ms
+3:28:01 PM [express] GET /api/public/testimonials 200 in 4ms
+3:28:32 PM [express] GET /api/public/meta-pixel 200 in 0ms
+3:28:32 PM [express] GET /api/public/pathways 200 in 1ms
+3:28:32 PM [express] GET /api/public/regions 200 in 1ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:28:35 PM [express] GET /api/courses 200 in 174ms
+3:28:35 PM [express] GET /api/courses/filter-options 200 in 425ms
+3:28:35 PM [express] GET /api/platform/stats 200 in 323ms
+3:28:35 PM [express] GET /api/disciplines 200 in 449ms
+3:28:36 PM [express] GET /api/institutions 200 in 29ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:28:36 PM [express] GET /api/blogs 200 in 5ms
+3:28:36 PM [express] GET /api/courses 200 in 210ms
+3:28:36 PM [express] GET /api/public/testimonials 200 in 4ms
+3:28:36 PM [express] GET /api/public/featured 200 in 57ms
+3:29:14 PM [express] GET /api/public/meta-pixel 200 in 1ms
+3:29:14 PM [express] GET /api/public/regions 200 in 1ms
+3:29:14 PM [express] GET /api/public/pathways 200 in 2ms
+3:29:17 PM [express] GET /api/platform/stats 200 in 419ms
+3:29:18 PM [express] GET /api/institutions 200 in 65ms
+3:29:18 PM [express] GET /api/courses/filter-options 200 in 713ms
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+[API /api/courses] Loaded 192 courses, 38 universities from DB
+3:29:18 PM [express] GET /api/courses 200 in 731ms
+3:29:18 PM [express] GET /api/courses 200 in 744ms
+3:29:18 PM [express] GET /api/disciplines 200 in 768ms
+3:29:18 PM [express] GET /api/blogs 200 in 5ms
+3:29:18 PM [express] GET /api/public/testimonials 200 in 5ms
+3:29:18 PM [express] GET /api/public/featured 200 in 74ms

@@ -60,3 +60,7 @@ SITE_URL = "https://anzglobal.com.au"
 
 [objectStorage]
 defaultBucketID = "replit-objstore-70143692-b6b1-4a5f-9015-fadf3da93c68"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 60000
