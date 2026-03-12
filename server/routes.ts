@@ -2438,6 +2438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: university.id,
             name: university.name,
             logo: university.logo,
+            country: university.country,
             campusAddresses: university.campusAddresses,
           } : undefined,
         };
