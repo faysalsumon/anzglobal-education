@@ -262,11 +262,16 @@ function ComposeDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl w-full" data-testid="dialog-compose">
-        <DialogHeader>
+      <DialogContent
+        className="max-w-2xl w-full flex flex-col max-h-[90vh] p-0 gap-0"
+        data-testid="dialog-compose"
+      >
+        <DialogHeader className="px-6 pt-6 pb-3 flex-shrink-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
+
+        {/* Scrollable fields */}
+        <div className="flex-1 overflow-y-auto px-6 pb-2 space-y-3 min-h-0">
           <div className="text-xs text-muted-foreground">
             From: <span className="font-medium">{accountEmail}</span>
           </div>
@@ -316,32 +321,34 @@ function ComposeDialog({
               value={data.body}
               onChange={(e) => setData((d) => ({ ...d, body: e.target.value }))}
               placeholder="Write your message..."
-              className="min-h-48 text-sm resize-none"
+              className="min-h-36 text-sm resize-none"
             />
           </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              data-testid="button-compose-cancel"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => sendMutation.mutate()}
-              disabled={sendMutation.isPending || !data.to || !data.subject || !canSend}
-              data-testid="button-compose-send"
-            >
-              {sendMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
-              )}
-              Send
-            </Button>
-          </div>
+        </div>
+
+        {/* Sticky footer — always visible */}
+        <div className="flex justify-end gap-2 px-6 py-4 border-t flex-shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            data-testid="button-compose-cancel"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={() => sendMutation.mutate()}
+            disabled={sendMutation.isPending || !data.to || !data.subject || !canSend}
+            data-testid="button-compose-send"
+          >
+            {sendMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4 mr-2" />
+            )}
+            Send
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
