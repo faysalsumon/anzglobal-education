@@ -1412,8 +1412,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         disciplines: [...MAIN_DISCIPLINES],
         tagsByCategory,
         scholarshipRange: {
-          min: scholarshipRanges.length > 0 ? Math.min(...scholarshipRanges.map(r => r.min || 0).filter(v => v > 0)) : 0,
-          max: scholarshipRanges.length > 0 ? Math.max(...scholarshipRanges.map(r => r.max || 0)) : 100,
+          min: scholarshipRanges.length > 0 ? (scholarshipRanges.some(r => r.min && r.min > 0) ? Math.min(...scholarshipRanges.map(r => r.min || 0).filter(v => v > 0)) : 0) : 0,
+          max: scholarshipRanges.some(r => r.max && r.max > 0) ? Math.max(...scholarshipRanges.map(r => r.max || 0).filter(v => v > 0)) : 100,
         },
         totalCount: approvedInstitutions.length,
       });
