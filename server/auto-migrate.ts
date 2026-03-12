@@ -6,19 +6,18 @@ import { pushSchema } from "drizzle-kit/api";
 
 const { Pool } = pkg;
 
-const DESTRUCTIVE_PATTERNS = [
-  /^DROP\s+TABLE/i,
-  /^DROP\s+INDEX/i,
-  /^DROP\s+TYPE/i,
-  /^ALTER\s+TABLE\s+.*\s+DROP\s+COLUMN/i,
-  /^ALTER\s+TABLE\s+.*\s+ALTER\s+COLUMN\s+.*\s+SET\s+DATA\s+TYPE/i,
-  /^ALTER\s+TABLE\s+.*\s+DROP\s+CONSTRAINT/i,
-  /^TRUNCATE/i,
-  /^DELETE\s+FROM/i,
+const SAFE_PATTERNS = [
+  /^CREATE\s+TABLE/i,
+  /^CREATE\s+INDEX/i,
+  /^CREATE\s+UNIQUE\s+INDEX/i,
+  /^CREATE\s+TYPE/i,
+  /^ALTER\s+TABLE\s+.*\s+ADD\s+COLUMN/i,
+  /^ALTER\s+TABLE\s+.*\s+ADD\s+CONSTRAINT/i,
+  /^DO\s+\$/i,
 ];
 
-function isDestructive(statement: string): boolean {
-  return DESTRUCTIVE_PATTERNS.some((pattern) => pattern.test(statement.trim()));
+function isSafe(statement: string): boolean {
+  return SAFE_PATTERNS.some((pattern) => pattern.test(statement.trim()));
 }
 
 async function migrate() {
@@ -58,29 +57,33 @@ async function migrate() {
         console.error(`  WARNING: ${w}`);
       }
     }
-    console.error(
-      "[AutoMigrate] To apply these changes intentionally, run: bun x drizzle-kit push",
-    );
 
-    const safeStatements = statements.filter((s) => !isDestructive(s));
-    const destructiveStatements = statements.filter((s) => isDestructive(s));
+    const safeStatements: string[] = [];
+    const blockedStatements: string[] = [];
 
-    if (destructiveStatements.length > 0) {
+    for (const stmt of statements) {
+      if (isSafe(stmt)) {
+        safeStatements.push(stmt);
+      } else {
+        blockedStatements.push(stmt);
+      }
+    }
+
+    if (blockedStatements.length > 0) {
       console.error(
-        `[AutoMigrate] ${destructiveStatements.length} destructive statement(s) blocked:`,
+        `[AutoMigrate] ${blockedStatements.length} statement(s) blocked (not confirmed safe):`,
       );
-      for (const stmt of destructiveStatements) {
+      for (const stmt of blockedStatements) {
         console.error(`  BLOCKED: ${stmt}`);
       }
     }
 
     if (safeStatements.length > 0) {
       console.log(
-        `[AutoMigrate] Applying ${safeStatements.length} safe (additive-only) statement(s) despite data-loss flag...`,
+        `[AutoMigrate] Applying ${safeStatements.length} confirmed-safe statement(s)...`,
       );
       let applied = 0;
       let skipped = 0;
-      let failed = 0;
       for (const stmt of safeStatements) {
         try {
           await db.execute(sql.raw(stmt));
@@ -91,7 +94,6 @@ async function migrate() {
           if (pgCode === "42P07" || pgCode === "42710") {
             skipped++;
           } else {
-            failed++;
             const msg =
               (err as { message?: string })?.message ?? String(err);
             console.error(`[AutoMigrate] Failed: ${stmt}`);
@@ -100,13 +102,16 @@ async function migrate() {
         }
       }
       console.log(
-        `[AutoMigrate] Safe statements: ${applied} applied, ${skipped} skipped (already exist), ${failed} failed.`,
+        `[AutoMigrate] Safe statements: ${applied} applied, ${skipped} skipped (already exist).`,
       );
     }
 
     await pool.end();
     console.error(
-      "[AutoMigrate] Build FAILED: data-loss detected. Destructive schema changes require manual review.",
+      "[AutoMigrate] Build FAILED: data-loss detected. Review blocked statements above.",
+    );
+    console.error(
+      "[AutoMigrate] To apply intentionally, run: bun x drizzle-kit push",
     );
     process.exit(1);
   }
@@ -141,7 +146,7 @@ async function migrate() {
   if (failed > 0) {
     await pool.end();
     console.error(
-      `[AutoMigrate] Build FAILED: ${failed} statement(s) failed to apply.`,
+      `[AutoMigrate] Build FAILED: ${failed} statement(s) could not be applied.`,
     );
     process.exit(1);
   }
