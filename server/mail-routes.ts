@@ -434,9 +434,9 @@ export function registerMailRoutes(app: Express): void {
     email: z.string().email(),
     accountType: z.enum(["personal", "group"]).default("group"),
     appPassword: z.string().min(1),
-    imapHost: z.string().default("imap.zoho.com"),
+    imapHost: z.string().default("imap.zoho.com.au"),
     imapPort: z.number().default(993),
-    smtpHost: z.string().default("smtp.zoho.com"),
+    smtpHost: z.string().default("smtp.zoho.com.au"),
     smtpPort: z.number().default(465),
     regionCode: z.string().max(10).optional(),
   });
