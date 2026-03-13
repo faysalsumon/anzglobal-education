@@ -378,7 +378,7 @@ function InvoiceDetail({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(invoice.items || []).map((item: any, idx: number) => (
+            {(invoice.lineItems || []).map((item: any, idx: number) => (
               <TableRow key={idx}>
                 <TableCell>{item.description}</TableCell>
                 <TableCell className="text-right">{item.quantity}</TableCell>
@@ -411,7 +411,7 @@ function InvoiceDetail({
             <TableBody>
               {invoice.payments.map((p: any) => (
                 <TableRow key={p.id}>
-                  <TableCell>{formatDate(p.paidOn)}</TableCell>
+                  <TableCell>{formatDate(p.paymentDate)}</TableCell>
                   <TableCell>{p.method || "-"}</TableCell>
                   <TableCell>{p.reference || "-"}</TableCell>
                   <TableCell className="text-right">{formatCurrency(parseFloat(p.amount), invoice.currency)}</TableCell>
@@ -860,7 +860,7 @@ function RecordPaymentDialog({ open, onClose, onSubmit, isPending, maxAmount, cu
 
   const handleSubmit = () => {
     if (!amount || !paidOn) return;
-    onSubmit({ amount: parseFloat(amount), paidOn, method, reference });
+    onSubmit({ amount: parseFloat(amount), paymentDate: paidOn, method, reference });
   };
 
   return (
@@ -883,11 +883,10 @@ function RecordPaymentDialog({ open, onClose, onSubmit, isPending, maxAmount, cu
             <Select value={method} onValueChange={setMethod}>
               <SelectTrigger data-testid="select-payment-method"><SelectValue placeholder="Select method" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                <SelectItem value="credit_card">Credit Card</SelectItem>
+                <SelectItem value="bank">Bank Transfer</SelectItem>
+                <SelectItem value="card">Credit Card</SelectItem>
                 <SelectItem value="cash">Cash</SelectItem>
                 <SelectItem value="cheque">Cheque</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -1348,8 +1347,8 @@ function BillPaymentDialog({ open, onClose, bill, onSubmit, isPending }: any) {
             <Select value={method} onValueChange={setMethod}>
               <SelectTrigger data-testid="select-bill-pay-method"><SelectValue placeholder="Select method" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                <SelectItem value="credit_card">Credit Card</SelectItem>
+                <SelectItem value="bank">Bank Transfer</SelectItem>
+                <SelectItem value="card">Credit Card</SelectItem>
                 <SelectItem value="cash">Cash</SelectItem>
                 <SelectItem value="cheque">Cheque</SelectItem>
               </SelectContent>
@@ -1362,7 +1361,7 @@ function BillPaymentDialog({ open, onClose, bill, onSubmit, isPending }: any) {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => onSubmit({ amount: parseFloat(amount), paidOn, method, reference })} disabled={isPending} data-testid="button-submit-bill-payment">
+          <Button type="button" onClick={() => onSubmit({ amount: parseFloat(amount), paidOn, method, reference })} disabled={isPending} data-testid="button-submit-bill-payment">
             {isPending ? "Processing..." : "Record Payment"}
           </Button>
         </DialogFooter>

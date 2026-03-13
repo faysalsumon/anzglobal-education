@@ -116,7 +116,7 @@ export default function PrintInvoice() {
             </tr>
           </thead>
           <tbody>
-            {(invoice.items || []).map((item: any, idx: number) => (
+            {(invoice.lineItems || []).map((item: any, idx: number) => (
               <tr key={idx} className="border-b border-gray-100">
                 <td className="py-3 text-sm text-gray-900">{item.description}</td>
                 <td className="py-3 text-sm text-gray-900 text-right">{item.quantity}</td>
@@ -161,7 +161,7 @@ export default function PrintInvoice() {
               <tbody>
                 {invoice.payments.map((p: any) => (
                   <tr key={p.id} className="border-b border-gray-100">
-                    <td className="py-2 text-sm text-gray-700">{formatDate(p.paidOn)}</td>
+                    <td className="py-2 text-sm text-gray-700">{formatDate(p.paymentDate)}</td>
                     <td className="py-2 text-sm text-gray-700">{p.method || "-"}</td>
                     <td className="py-2 text-sm text-gray-700">{p.reference || "-"}</td>
                     <td className="py-2 text-sm text-gray-700 text-right">{formatCurrency(parseFloat(p.amount), invoice.currency)}</td>
