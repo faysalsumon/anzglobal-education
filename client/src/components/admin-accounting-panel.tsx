@@ -380,7 +380,7 @@ function InvoiceDetail({
             <div className="mt-1">
               <p className="text-xs text-muted-foreground">{invoice.student.nationality || invoice.student.email}</p>
               {onNavigate && (
-                <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => onNavigate("crm-contacts", invoice.studentId)} data-testid="link-invoice-student">
+                <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => onNavigate("applications")} data-testid="link-invoice-student">
                   <ExternalLink className="h-3 w-3 mr-1" />View Student Profile
                 </Button>
               )}
@@ -725,11 +725,11 @@ function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
                 selected={selectedInstitution}
                 onClear={handleClearEntity}
               />
-              {selectedInstitution?.commissionPercentage && (
+              {(selectedInstitution?.commissionPercentage || selectedInstitution?.paymentTerms) && (
                 <div className="flex items-start gap-2 p-3 rounded-md bg-muted/50 border">
                   <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                   <div className="text-sm">
-                    <p><span className="font-medium">Commission:</span> {selectedInstitution.commissionPercentage}%</p>
+                    {selectedInstitution.commissionPercentage && <p><span className="font-medium">Commission:</span> {selectedInstitution.commissionPercentage}%</p>}
                     {selectedInstitution.paymentTerms && <p className="text-muted-foreground">{selectedInstitution.paymentTerms}</p>}
                   </div>
                 </div>
@@ -1019,11 +1019,11 @@ function EditInvoiceDialog({ open, onClose, onSubmit, isPending, invoice }: any)
           {billToType === "institution" && selectedInstitution && (
             <div className="space-y-3">
               <EntitySearchCombobox type="institution" onSelect={handleSelectInstitution} selected={selectedInstitution} onClear={handleClearEntity} />
-              {selectedInstitution?.commissionPercentage && (
+              {(selectedInstitution?.commissionPercentage || selectedInstitution?.paymentTerms) && (
                 <div className="flex items-start gap-2 p-3 rounded-md bg-muted/50 border">
                   <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                   <div className="text-sm">
-                    <p><span className="font-medium">Commission:</span> {selectedInstitution.commissionPercentage}%</p>
+                    {selectedInstitution.commissionPercentage && <p><span className="font-medium">Commission:</span> {selectedInstitution.commissionPercentage}%</p>}
                     {selectedInstitution.paymentTerms && <p className="text-muted-foreground">{selectedInstitution.paymentTerms}</p>}
                   </div>
                 </div>
