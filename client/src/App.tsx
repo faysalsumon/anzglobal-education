@@ -61,6 +61,7 @@ const AuthCallback = lazy(() => import("@/pages/auth-callback"));
 const AdminPendingApproval = lazy(() => import("@/pages/admin-pending-approval"));
 const AcceptInvitation = lazy(() => import("@/pages/accept-invitation"));
 const ForcePasswordReset = lazy(() => import("@/pages/force-password-reset"));
+const PrintInvoice = lazy(() => import("@/pages/print-invoice"));
 const AdminContactForm = lazy(() => import("@/pages/admin-contact-form"));
 const StudyAbroad = lazy(() => import("@/pages/study-abroad"));
 
@@ -120,6 +121,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
         <Route path="/admin/scraping/jobs/:jobId" component={ScrapingJobDetail} />
         <Route path="/admin/scraping/review/:jobId" component={ScrapingReviewDashboard} />
         <Route path="/admin/applications/:id" component={AdminApplicationDetail} />
+        <Route path="/admin/accounting/invoices/:id/print" component={PrintInvoice} />
         <Route path="/admin/contacts/new" component={AdminContactForm} />
         <Route path="/admin/contacts/:id/edit" component={AdminContactForm} />
         <Route path="/student/dashboard" component={StudentDashboardPage} />
@@ -150,7 +152,7 @@ function AppContent() {
   const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/study-abroad', '/our-story', '/student-reviews', '/auth', '/auth/callback', '/admin/login', '/admin/forgot-password'];
   
   // Standalone pages that have their own complete layout (no header/footer wrapping)
-  const standalonePages = ['/reset-password', '/force-password-reset', '/accept-invitation', '/auth/accept-invite'];
+  const standalonePages = ['/reset-password', '/force-password-reset', '/accept-invitation', '/auth/accept-invite', '/admin/accounting/invoices/'];
   const isPublicRoute = publicRoutes.some(route => 
     location === route || 
     location.startsWith('/courses/') || 
@@ -182,7 +184,7 @@ function AppContent() {
   const shouldShowFooter = !isAuthenticated || !isInternalDashboard;
 
   // Standalone pages have their own complete layout — render immediately, no auth gate needed
-  const isStandalonePage = standalonePages.includes(location);
+  const isStandalonePage = standalonePages.some(p => location === p || location.startsWith(p));
   if (isStandalonePage) {
     return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
   }

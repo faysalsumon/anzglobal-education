@@ -8,9 +8,15 @@ import {
   accItems,
   accInvoices,
   accInvoiceLineItems,
+  accInvoiceItems,
   accPaymentsReceived,
   accCreditNotes,
   accCreditNoteItems,
+  accExpenseCategories,
+  accExpenses,
+  accBills,
+  accBillPayments,
+  accReminderLogs,
   insertAccChartOfAccountsSchema,
   insertAccCustomerSchema,
   insertAccItemSchema,
@@ -23,7 +29,7 @@ import {
   type AccChartOfAccount,
   type AccItem,
 } from "@shared/schema";
-import { eq, desc, sql, and, gte, lte, ilike } from "drizzle-orm";
+import { eq, desc, sql, and, gte, lte, lt, ilike } from "drizzle-orm";
 import { sendInvoiceEmail, sendPaymentReceiptEmail, sendInvoiceReminderEmail } from "./email-service";
 
 const FINANCE_ADMIN_ROLES: Array<'cto' | 'platform_admin'> = ['cto', 'platform_admin'];
@@ -630,4 +636,508 @@ export function registerAccountingRoutes(app: Express) {
       res.status(500).json({ message: error instanceof Error ? error.message : "Failed to send reminder" });
     }
   });
+
+  // ── Expense Categories ────────────────────────────────────────────────
+
+  app.get("/api/accounting/expense-categories", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const categories = await db.select().from(accExpenseCategories).orderBy(accExpenseCategories.name);
+      res.json(categories);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/accounting/expenses", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const expenses = await db.select().from(accExpenses).orderBy(desc(accExpenses.expenseDate));
+      res.json(expenses);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/accounting/expenses", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const [expense] = await db.insert(accExpenses).values({
+        ...req.body,
+        amount: String(req.body.amount),
+        createdBy: userId,
+      }).returning();
+      res.status(201).json(expense);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/accounting/expenses/:id", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const id = parseInt(req.params.id);
+      const updateData = { ...req.body };
+      if (updateData.amount) updateData.amount = String(updateData.amount);
+      const [updated] = await db.update(accExpenses).set(updateData).where(eq(accExpenses.id, id)).returning();
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/accounting/expenses/:id", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const id = parseInt(req.params.id);
+      await db.delete(accExpenses).where(eq(accExpenses.id, id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ==================== BILLS ====================
+
+  app.get("/api/accounting/bills", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const bills = await db.select().from(accBills).orderBy(desc(accBills.createdAt));
+      
+      const enriched = await Promise.all(bills.map(async (bill) => {
+        const payments = await db.select().from(accBillPayments).where(eq(accBillPayments.billId, bill.id));
+        const amountPaid = payments.reduce((s, p) => s + parseFloat(p.amount), 0);
+        const isOverdue = bill.status !== 'paid' && new Date(bill.dueDate) < new Date();
+        return { ...bill, payments, amountPaid, amountDue: parseFloat(bill.amount) - amountPaid, isOverdue };
+      }));
+
+      res.json(enriched);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/accounting/bills", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const [bill] = await db.insert(accBills).values({
+        ...req.body,
+        amount: String(req.body.amount),
+        createdBy: userId,
+      }).returning();
+      res.status(201).json(bill);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/accounting/bills/:id", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const id = parseInt(req.params.id);
+      const updateData = { ...req.body };
+      if (updateData.amount) updateData.amount = String(updateData.amount);
+      const [updated] = await db.update(accBills).set(updateData).where(eq(accBills.id, id)).returning();
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/accounting/bills/:id/pay", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const billId = parseInt(req.params.id);
+      const [bill] = await db.select().from(accBills).where(eq(accBills.id, billId));
+      if (!bill) return res.status(404).json({ message: "Bill not found" });
+
+      const [payment] = await db.insert(accBillPayments).values({
+        billId,
+        amount: String(req.body.amount),
+        paidOn: req.body.paidOn || new Date().toISOString().split("T")[0],
+        method: req.body.method,
+        reference: req.body.reference,
+        notes: req.body.notes,
+      }).returning();
+
+      const allPayments = await db.select().from(accBillPayments).where(eq(accBillPayments.billId, billId));
+      const totalPaid = allPayments.reduce((s, p) => s + parseFloat(p.amount), 0);
+
+      let newStatus: "unpaid" | "partially_paid" | "paid" = "unpaid";
+      if (totalPaid >= parseFloat(bill.amount)) newStatus = "paid";
+      else if (totalPaid > 0) newStatus = "partially_paid";
+
+      await db.update(accBills).set({ status: newStatus }).where(eq(accBills.id, billId));
+
+      res.json({ payment, newStatus });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/accounting/bills/:id", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const id = parseInt(req.params.id);
+      await db.delete(accBills).where(eq(accBills.id, id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ==================== REPORTS ====================
+
+  app.get("/api/accounting/reports/profit-loss", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const startDate = (req.query.startDate as string) || new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0];
+      const endDate = (req.query.endDate as string) || new Date().toISOString().split("T")[0];
+
+      const revenueResult = await db.select({
+        total: sql<string>`COALESCE(SUM(amount), 0)`
+      }).from(accPaymentsReceived)
+        .where(and(gte(accPaymentsReceived.paymentDate, startDate), lte(accPaymentsReceived.paymentDate, endDate)));
+
+      const expenseResult = await db.select({
+        total: sql<string>`COALESCE(SUM(amount), 0)`
+      }).from(accExpenses)
+        .where(and(gte(accExpenses.expenseDate, startDate), lte(accExpenses.expenseDate, endDate)));
+
+      const billPaidResult = await db.select({
+        total: sql<string>`COALESCE(SUM(amount), 0)`
+      }).from(accBillPayments)
+        .where(and(gte(accBillPayments.paidOn, startDate), lte(accBillPayments.paidOn, endDate)));
+
+      const expensesByCategory = await db.select({
+        categoryId: accExpenses.categoryId,
+        total: sql<string>`SUM(${accExpenses.amount})`,
+      }).from(accExpenses)
+        .where(and(gte(accExpenses.expenseDate, startDate), lte(accExpenses.expenseDate, endDate)))
+        .groupBy(accExpenses.categoryId);
+
+      const categories = await db.select().from(accExpenseCategories);
+      const categoryMap = new Map(categories.map(c => [c.id, c.name]));
+
+      const revenue = parseFloat(revenueResult[0]?.total || "0");
+      const expenses = parseFloat(expenseResult[0]?.total || "0") + parseFloat(billPaidResult[0]?.total || "0");
+
+      res.json({
+        period: { startDate, endDate },
+        revenue,
+        expenses,
+        netProfit: revenue - expenses,
+        expensesByCategory: expensesByCategory.map(e => ({
+          category: categoryMap.get(e.categoryId!) || "Uncategorized",
+          total: parseFloat(e.total),
+        })),
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/accounting/reports/balance-sheet", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const asOfDate = (req.query.asOfDate as string) || new Date().toISOString().split("T")[0];
+
+      const [arResult] = await db.select({
+        totalInvoiced: sql<string>`COALESCE(SUM(amount), 0)`
+      }).from(accInvoiceItems);
+
+      const [arPaidResult] = await db.select({
+        totalPaid: sql<string>`COALESCE(SUM(amount), 0)`
+      }).from(accPaymentsReceived)
+        .where(lte(accPaymentsReceived.paymentDate, asOfDate));
+
+      const [cashIn] = await db.select({
+        total: sql<string>`COALESCE(SUM(amount), 0)`
+      }).from(accPaymentsReceived)
+        .where(lte(accPaymentsReceived.paymentDate, asOfDate));
+
+      const [cashOutExpenses] = await db.select({
+        total: sql<string>`COALESCE(SUM(amount), 0)`
+      }).from(accExpenses)
+        .where(lte(accExpenses.expenseDate, asOfDate));
+
+      const [cashOutBills] = await db.select({
+        total: sql<string>`COALESCE(SUM(amount), 0)`
+      }).from(accBillPayments)
+        .where(lte(accBillPayments.paidOn, asOfDate));
+
+      const [apResult] = await db.select({
+        total: sql<string>`COALESCE(SUM(amount), 0)`
+      }).from(accBills)
+        .where(and(
+          sql`${accBills.status} != 'paid'`,
+          lte(accBills.issueDate, asOfDate)
+        ));
+
+      const [apPaid] = await db.select({
+        total: sql<string>`COALESCE(SUM(amount), 0)`
+      }).from(accBillPayments)
+        .where(lte(accBillPayments.paidOn, asOfDate));
+
+      const accountsReceivable = parseFloat(arResult?.totalInvoiced || "0") - parseFloat(arPaidResult?.totalPaid || "0");
+      const cashBalance = parseFloat(cashIn?.total || "0") - parseFloat(cashOutExpenses?.total || "0") - parseFloat(cashOutBills?.total || "0");
+      const accountsPayable = parseFloat(apResult?.total || "0") - parseFloat(apPaid?.total || "0");
+
+      const totalAssets = cashBalance + Math.max(0, accountsReceivable);
+      const totalLiabilities = Math.max(0, accountsPayable);
+      const equity = totalAssets - totalLiabilities;
+
+      res.json({
+        asOfDate,
+        assets: {
+          cash: cashBalance,
+          accountsReceivable: Math.max(0, accountsReceivable),
+          total: totalAssets,
+        },
+        liabilities: {
+          accountsPayable: Math.max(0, accountsPayable),
+          total: totalLiabilities,
+        },
+        equity,
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/accounting/reports/cash-flow", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const months: { month: string; moneyIn: number; moneyOut: number }[] = [];
+
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const year = d.getFullYear();
+        const month = d.getMonth();
+        const startDate = new Date(year, month, 1).toISOString().split("T")[0];
+        const endDate = new Date(year, month + 1, 0).toISOString().split("T")[0];
+        const label = d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+
+        const [moneyInResult] = await db.select({
+          total: sql<string>`COALESCE(SUM(amount), 0)`
+        }).from(accPaymentsReceived)
+          .where(and(gte(accPaymentsReceived.paymentDate, startDate), lte(accPaymentsReceived.paymentDate, endDate)));
+
+        const [expenseOut] = await db.select({
+          total: sql<string>`COALESCE(SUM(amount), 0)`
+        }).from(accExpenses)
+          .where(and(gte(accExpenses.expenseDate, startDate), lte(accExpenses.expenseDate, endDate)));
+
+        const [billOut] = await db.select({
+          total: sql<string>`COALESCE(SUM(amount), 0)`
+        }).from(accBillPayments)
+          .where(and(gte(accBillPayments.paidOn, startDate), lte(accBillPayments.paidOn, endDate)));
+
+        months.push({
+          month: label,
+          moneyIn: parseFloat(moneyInResult?.total || "0"),
+          moneyOut: parseFloat(expenseOut?.total || "0") + parseFloat(billOut?.total || "0"),
+        });
+      }
+
+      res.json(months);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/accounting/reports/ar-aging", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const invoices = await db.select().from(accInvoices)
+        .where(sql`${accInvoices.status} NOT IN ('paid', 'cancelled', 'draft')`);
+
+      const buckets = { current: [] as any[], "31-60": [] as any[], "61-90": [] as any[], "90+": [] as any[] };
+      const now = new Date();
+
+      for (const inv of invoices) {
+        const items = await db.select().from(accInvoiceItems).where(eq(accInvoiceItems.invoiceId, inv.id));
+        const payments = await db.select().from(accPaymentsReceived).where(eq(accPaymentsReceived.invoiceId, inv.id));
+        const total = items.reduce((s, i) => s + parseFloat(i.amount), 0);
+        const paid = payments.reduce((s, p) => s + parseFloat(p.amount), 0);
+        const balance = total - paid;
+        if (balance <= 0) continue;
+
+        const dueDate = new Date(inv.dueDate);
+        const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        const entry = { ...inv, total, amountPaid: paid, balance, daysOverdue };
+
+        if (daysOverdue <= 30) buckets.current.push(entry);
+        else if (daysOverdue <= 60) buckets["31-60"].push(entry);
+        else if (daysOverdue <= 90) buckets["61-90"].push(entry);
+        else buckets["90+"].push(entry);
+      }
+
+      res.json({
+        buckets,
+        totals: {
+          current: buckets.current.reduce((s, e) => s + e.balance, 0),
+          "31-60": buckets["31-60"].reduce((s, e) => s + e.balance, 0),
+          "61-90": buckets["61-90"].reduce((s, e) => s + e.balance, 0),
+          "90+": buckets["90+"].reduce((s, e) => s + e.balance, 0),
+        },
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/accounting/reports/ap-aging", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const bills = await db.select().from(accBills)
+        .where(sql`${accBills.status} != 'paid'`);
+
+      const buckets = { current: [] as any[], "31-60": [] as any[], "61-90": [] as any[], "90+": [] as any[] };
+      const now = new Date();
+
+      for (const bill of bills) {
+        const payments = await db.select().from(accBillPayments).where(eq(accBillPayments.billId, bill.id));
+        const paid = payments.reduce((s, p) => s + parseFloat(p.amount), 0);
+        const balance = parseFloat(bill.amount) - paid;
+        if (balance <= 0) continue;
+
+        const dueDate = new Date(bill.dueDate);
+        const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        const entry = { ...bill, amountPaid: paid, balance, daysOverdue };
+
+        if (daysOverdue <= 30) buckets.current.push(entry);
+        else if (daysOverdue <= 60) buckets["31-60"].push(entry);
+        else if (daysOverdue <= 90) buckets["61-90"].push(entry);
+        else buckets["90+"].push(entry);
+      }
+
+      res.json({
+        buckets,
+        totals: {
+          current: buckets.current.reduce((s, e) => s + e.balance, 0),
+          "31-60": buckets["31-60"].reduce((s, e) => s + e.balance, 0),
+          "61-90": buckets["61-90"].reduce((s, e) => s + e.balance, 0),
+          "90+": buckets["90+"].reduce((s, e) => s + e.balance, 0),
+        },
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ==================== OVERDUE REMINDERS ====================
+
+  app.post("/api/accounting/invoices/send-overdue-reminders", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId, ["cto"]);
+      if (!access) return res.status(403).json({ message: "CTO access required" });
+
+      const today = new Date().toISOString().split("T")[0];
+      const overdueInvoices = await db.select().from(accInvoices)
+        .where(and(
+          sql`${accInvoices.status} NOT IN ('paid', 'cancelled', 'draft')`,
+          lt(accInvoices.dueDate, today)
+        ));
+
+      let sentCount = 0;
+      const results: any[] = [];
+
+      for (const inv of overdueInvoices) {
+        const [customer] = inv.customerId
+          ? await db.select().from(accCustomers).where(eq(accCustomers.id, inv.customerId))
+          : [];
+        if (!customer?.email) continue;
+
+        const items = await db.select().from(accInvoiceLineItems).where(eq(accInvoiceLineItems.invoiceId, inv.id));
+        const payments = await db.select().from(accPaymentsReceived).where(eq(accPaymentsReceived.invoiceId, inv.id));
+        const total = items.reduce((s, i) => s + parseFloat(i.amount), 0);
+        const paid = payments.reduce((s, p) => s + parseFloat(p.amount), 0);
+        const balance = total - paid;
+        if (balance <= 0) continue;
+
+        await db.insert(accReminderLogs).values({
+          invoiceId: inv.id as any,
+          sentTo: customer.email,
+          triggeredBy: userId,
+        });
+
+        results.push({
+          invoiceNumber: inv.invoiceNumber,
+          clientName: customer.name,
+          clientEmail: customer.email,
+          balance,
+        });
+        sentCount++;
+      }
+
+      res.json({ sentCount, results });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/accounting/reminder-logs", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Forbidden" });
+
+      const logs = await db.select().from(accReminderLogs).orderBy(desc(accReminderLogs.sentAt)).limit(50);
+      res.json(logs);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  console.log("Accounting routes registered");
 }

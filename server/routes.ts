@@ -173,6 +173,7 @@ import {
   generateCoursesSampleCSV,
 } from "./csvImportUtils";
 import { setupSupabaseAuth } from "./supabase-auth-routes";
+import { registerAccountingRoutes } from "./accounting-routes";
 import {
   notifyNewApplication,
   notifyApplicationStatusChange,
@@ -16594,10 +16595,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   registerMailRoutes(app);
   console.log('Mail routes registered');
 
-  // Register Accounting routes (Finance module)
-  const { registerAccountingRoutes } = await import('./accounting-routes');
   registerAccountingRoutes(app);
-  console.log('Accounting routes registered for Finance module');
 
   // ========== Activity Logs API ==========
   

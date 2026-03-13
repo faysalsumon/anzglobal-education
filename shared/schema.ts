@@ -5499,6 +5499,8 @@ export const insertAccInvoiceLineItemSchema = createInsertSchema(accInvoiceLineI
 export type AccInvoiceLineItem = typeof accInvoiceLineItems.$inferSelect;
 export type InsertAccInvoiceLineItem = z.infer<typeof insertAccInvoiceLineItemSchema>;
 
+export const accInvoiceItems = accInvoiceLineItems;
+
 export const accPaymentsReceived = pgTable("acc_payments_received", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   invoiceId: varchar("invoice_id").notNull(),
@@ -5533,4 +5535,78 @@ export const accCreditNoteItems = pgTable("acc_credit_note_items", {
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull().default("1"),
   unitPrice: decimal("unit_price", { precision: 12, scale: 2 }).notNull().default("0"),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull().default("0"),
+});
+export const insertAccCreditNoteItemSchema = createInsertSchema(accCreditNoteItems).omit({ id: true });
+export type AccCreditNoteItem = typeof accCreditNoteItems.$inferSelect;
+export type InsertAccCreditNoteItem = z.infer<typeof insertAccCreditNoteItemSchema>;
+
+export const accExpenseCategories = pgTable("acc_expense_categories", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar("name", { length: 255 }).notNull().unique(),
+  type: varchar("type", { length: 50 }).notNull().default("expense"),
+});
+export const insertAccExpenseCategorySchema = createInsertSchema(accExpenseCategories).omit({ id: true });
+export type AccExpenseCategory = typeof accExpenseCategories.$inferSelect;
+export type InsertAccExpenseCategory = z.infer<typeof insertAccExpenseCategorySchema>;
+
+export const accExpenses = pgTable("acc_expenses", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  categoryId: integer("category_id").references(() => accExpenseCategories.id),
+  vendor: varchar("vendor", { length: 255 }),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull().default("AUD"),
+  expenseDate: date("expense_date").notNull(),
+  description: text("description"),
+  receiptRef: varchar("receipt_ref", { length: 255 }),
+  regionCode: varchar("region_code", { length: 10 }),
+  createdBy: varchar("created_by", { length: 255 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export const insertAccExpenseSchema = createInsertSchema(accExpenses).omit({ id: true, createdAt: true });
+export type AccExpense = typeof accExpenses.$inferSelect;
+export type InsertAccExpense = z.infer<typeof insertAccExpenseSchema>;
+
+export const accBillStatusEnum = pgEnum('acc_bill_status', [
+  'unpaid', 'partially_paid', 'paid', 'overdue'
+]);
+
+export const accBills = pgTable("acc_bills", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  categoryId: integer("category_id").references(() => accExpenseCategories.id),
+  vendor: varchar("vendor", { length: 255 }).notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull().default("AUD"),
+  issueDate: date("issue_date").notNull(),
+  dueDate: date("due_date").notNull(),
+  description: text("description"),
+  reference: varchar("reference", { length: 255 }),
+  status: accBillStatusEnum("status").notNull().default("unpaid"),
+  regionCode: varchar("region_code", { length: 10 }),
+  createdBy: varchar("created_by", { length: 255 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export const insertAccBillSchema = createInsertSchema(accBills).omit({ id: true, createdAt: true });
+export type AccBill = typeof accBills.$inferSelect;
+export type InsertAccBill = z.infer<typeof insertAccBillSchema>;
+
+export const accBillPayments = pgTable("acc_bill_payments", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  billId: integer("bill_id").notNull().references(() => accBills.id, { onDelete: "cascade" }),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  paidOn: date("paid_on").notNull(),
+  method: varchar("method", { length: 100 }),
+  reference: varchar("reference", { length: 255 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export const insertAccBillPaymentSchema = createInsertSchema(accBillPayments).omit({ id: true, createdAt: true });
+export type AccBillPayment = typeof accBillPayments.$inferSelect;
+export type InsertAccBillPayment = z.infer<typeof insertAccBillPaymentSchema>;
+
+export const accReminderLogs = pgTable("acc_reminder_logs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  invoiceId: integer("invoice_id").notNull(),
+  sentTo: varchar("sent_to", { length: 255 }).notNull(),
+  sentAt: timestamp("sent_at").notNull().defaultNow(),
+  triggeredBy: varchar("triggered_by", { length: 255 }),
 });

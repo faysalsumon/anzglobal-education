@@ -29,7 +29,6 @@ import {
   FileText,
   LogOut,
   DollarSign,
-  Receipt,
   Package,
 } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -117,6 +116,45 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess, isCTO
     },
   ];
 
+  const financeItems = [
+    {
+      icon: BarChart3,
+      label: "Dashboard",
+      value: "finance-dashboard",
+      show: hasFullAdminAccess,
+    },
+    {
+      icon: FileText,
+      label: "Invoices",
+      value: "finance-invoices",
+      show: hasFullAdminAccess,
+    },
+    {
+      icon: Users,
+      label: "Customers",
+      value: "finance-customers",
+      show: hasFullAdminAccess,
+    },
+    {
+      icon: Package,
+      label: "Items",
+      value: "finance-items",
+      show: hasFullAdminAccess,
+    },
+    {
+      icon: BookOpen,
+      label: "Accounts",
+      value: "finance-accounts",
+      show: hasFullAdminAccess,
+    },
+    {
+      icon: DollarSign,
+      label: "Accounting",
+      value: "accounting",
+      show: hasFullAdminAccess,
+    },
+  ];
+
   // Tools items
   const toolsItems = [
     {
@@ -139,19 +177,11 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess, isCTO
     },
   ];
 
-  const financeItems = [
-    { icon: DollarSign, label: "Finance Dashboard", value: "finance-dashboard", show: hasFullAdminAccess },
-    { icon: Receipt, label: "Invoices", value: "finance-invoices", show: hasFullAdminAccess },
-    { icon: Users, label: "Customers", value: "finance-customers", show: hasFullAdminAccess },
-    { icon: Package, label: "Items", value: "finance-items", show: hasFullAdminAccess },
-    { icon: BookOpen, label: "Chart of Accounts", value: "finance-accounts", show: hasFullAdminAccess },
-  ];
-
   const visibleCRM = crmItems.filter(item => item.show);
   const visibleManagement = managementItems.filter(item => item.show);
   const visibleContent = contentItems.filter(item => item.show);
-  const visibleTools = toolsItems.filter(item => item.show);
   const visibleFinance = financeItems.filter(item => item.show);
+  const visibleTools = toolsItems.filter(item => item.show);
 
   const handleItemClick = (value: string) => {
     onTabChange(value);

@@ -44,7 +44,6 @@ import {
   UserCheck,
   Mail,
   DollarSign,
-  Receipt,
   Package,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -146,13 +145,14 @@ export function AdminMegaSidebar({
       id: "finance",
       label: "Finance",
       icon: DollarSign,
-      color: "text-green-600 bg-green-50 dark:bg-green-950 dark:text-green-400",
+      color: "text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-400",
       routes: [
-        { icon: LayoutDashboard, label: "Dashboard", value: "finance-dashboard", show: hasFullAdminAccess },
-        { icon: Receipt, label: "Invoices", value: "finance-invoices", show: hasFullAdminAccess },
+        { icon: BarChart3, label: "Dashboard", value: "finance-dashboard", show: hasFullAdminAccess },
+        { icon: FileText, label: "Invoices", value: "finance-invoices", show: hasFullAdminAccess },
         { icon: Users, label: "Customers", value: "finance-customers", show: hasFullAdminAccess },
         { icon: Package, label: "Items", value: "finance-items", show: hasFullAdminAccess },
         { icon: BookOpen, label: "Chart of Accounts", value: "finance-accounts", show: hasFullAdminAccess },
+        { icon: DollarSign, label: "Accounting", value: "accounting", show: hasFullAdminAccess },
       ],
     },
     {
