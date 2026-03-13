@@ -311,7 +311,7 @@ export function registerAccountingRoutes(app: Express) {
       const studentIdParam = req.query.studentId as string;
 
       const conditions: any[] = [
-        sql`${applications.currentStage} IN ('COE', 'Application Won')`,
+        sql`${applications.currentStage} IN ('Offer-Letter', 'COE', 'Application Won')`,
       ];
       if (instId) {
         conditions.push(sql`${courses.universityId} = ${instId}`);
