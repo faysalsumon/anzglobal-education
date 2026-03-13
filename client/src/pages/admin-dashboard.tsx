@@ -3437,7 +3437,7 @@ export default function AdminDashboard() {
         {activeTab === "finance-items" && <ItemsPanel />}
         {activeTab === "finance-accounts" && <ChartOfAccountsPanel />}
         {activeTab === "accounting" && hasFullAdminAccess && (
-          <AdminAccountingPanel isCTO={isCTO} />
+          <AdminAccountingPanel isCTO={isCTO} onNavigate={(tab) => setActiveTab(tab)} />
         )}
 
               </div>

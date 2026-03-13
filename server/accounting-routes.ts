@@ -701,9 +701,29 @@ export function registerAccountingRoutes(app: Express) {
   app.patch("/api/accounting/invoices/:id", isAuthenticated, async (req, res) => {
     if (!await requireFinanceAdmin(req, res)) return;
     const { id } = req.params;
-    const { lineItems, customerId, issueDate, dueDate, currency, gstEnabled, notes, terms, regionCode, status } = req.body;
+    const { lineItems, customerId, issueDate, dueDate, currency, gstEnabled, notes, terms, regionCode, status,
+      billToType, institutionId, studentId, applicationId, clientName, clientEmail, clientPhone, clientAddress } = req.body;
+
+    if (billToType !== undefined) {
+      if (!["institution", "student", "manual"].includes(billToType)) {
+        return res.status(400).json({ message: "Invalid billToType. Must be institution, student, or manual" });
+      }
+      if (billToType === "institution" && !institutionId) {
+        return res.status(400).json({ message: "institutionId is required when billToType is institution" });
+      }
+      if (billToType === "student" && !studentId) {
+        return res.status(400).json({ message: "studentId is required when billToType is student" });
+      }
+    }
+
     const safeUpdates: Record<string, string | boolean | Date | null> = {};
     if (customerId !== undefined) safeUpdates.customerId = customerId;
+    if (billToType !== undefined) safeUpdates.billToType = billToType;
+    if (billToType !== undefined) {
+      safeUpdates.institutionId = billToType === "institution" ? (institutionId || null) : null;
+      safeUpdates.studentId = billToType === "student" ? (studentId || null) : null;
+      safeUpdates.applicationId = applicationId || null;
+    }
     if (issueDate !== undefined) safeUpdates.issueDate = issueDate;
     if (dueDate !== undefined) safeUpdates.dueDate = dueDate;
     if (currency !== undefined) safeUpdates.currency = currency;

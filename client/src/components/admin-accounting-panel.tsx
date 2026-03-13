@@ -57,6 +57,7 @@ import {
   Search,
   X,
   Info,
+  ExternalLink,
 } from "lucide-react";
 import {
   BarChart,
@@ -112,7 +113,7 @@ function BillToTypeBadge({ billToType }: { billToType?: string }) {
 
 // ==================== INVOICES TAB ====================
 
-function InvoicesTab({ isCTO }: { isCTO: boolean }) {
+function InvoicesTab({ isCTO, onNavigate }: { isCTO: boolean; onNavigate?: (tab: string, entityId?: string) => void }) {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -185,6 +186,7 @@ function InvoicesTab({ isCTO }: { isCTO: boolean }) {
         onClosePaymentDialog={() => setShowPaymentDialog(false)}
         onSubmitPayment={(data: any) => paymentMutation.mutate({ id: inv.id, data })}
         paymentPending={paymentMutation.isPending}
+        onNavigate={onNavigate}
       />
     );
   }
@@ -274,7 +276,8 @@ function InvoicesTab({ isCTO }: { isCTO: boolean }) {
 
 function InvoiceDetail({
   invoice, onBack, onRecordPayment, onDelete, onStatusChange,
-  paymentDialog, onClosePaymentDialog, onSubmitPayment, paymentPending
+  paymentDialog, onClosePaymentDialog, onSubmitPayment, paymentPending,
+  onNavigate
 }: any) {
   return (
     <div className="space-y-4">
@@ -321,10 +324,24 @@ function InvoiceDetail({
           <p className="font-medium" data-testid="text-invoice-client">{invoice.clientName}</p>
           {invoice.clientEmail && <p className="text-sm text-muted-foreground">{invoice.clientEmail}</p>}
           {invoice.institution && (
-            <p className="text-xs text-muted-foreground mt-1">{invoice.institution.country}</p>
+            <div className="mt-1">
+              <p className="text-xs text-muted-foreground">{invoice.institution.country}</p>
+              {onNavigate && (
+                <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => onNavigate("institutions", invoice.institutionId)} data-testid="link-invoice-institution">
+                  <ExternalLink className="h-3 w-3 mr-1" />View Institution Profile
+                </Button>
+              )}
+            </div>
           )}
           {invoice.student && (
-            <p className="text-xs text-muted-foreground mt-1">{invoice.student.nationality || invoice.student.email}</p>
+            <div className="mt-1">
+              <p className="text-xs text-muted-foreground">{invoice.student.nationality || invoice.student.email}</p>
+              {onNavigate && (
+                <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => onNavigate("applications", invoice.studentId)} data-testid="link-invoice-student">
+                  <ExternalLink className="h-3 w-3 mr-1" />View Student Profile
+                </Button>
+              )}
+            </div>
           )}
         </Card>
         <Card className="p-4">
@@ -1722,9 +1739,10 @@ function OverdueRemindersSection() {
 
 interface AdminAccountingPanelProps {
   isCTO?: boolean;
+  onNavigate?: (tab: string, entityId?: string) => void;
 }
 
-export default function AdminAccountingPanel({ isCTO = false }: AdminAccountingPanelProps) {
+export default function AdminAccountingPanel({ isCTO = false, onNavigate }: AdminAccountingPanelProps) {
   return (
     <Tabs defaultValue="invoices" className="space-y-4">
       <TabsList data-testid="tabs-accounting">
@@ -1743,7 +1761,7 @@ export default function AdminAccountingPanel({ isCTO = false }: AdminAccountingP
       </TabsList>
 
       <TabsContent value="invoices">
-        <InvoicesTab isCTO={isCTO} />
+        <InvoicesTab isCTO={isCTO} onNavigate={onNavigate} />
       </TabsContent>
 
       <TabsContent value="expenses">
