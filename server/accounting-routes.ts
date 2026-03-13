@@ -311,7 +311,7 @@ export function registerAccountingRoutes(app: Express) {
       const studentIdParam = req.query.studentId as string;
 
       const conditions: any[] = [
-        sql`${applications.currentStage} IN ('Offer Accepted', 'GS/Visa', 'Enrolled')`,
+        sql`${applications.currentStage} IN ('Offer-Letter', 'GS-Clearance', 'COE', 'Health Cover', 'Visa Lodgment', 'Application Won')`,
       ];
       if (instId) {
         conditions.push(sql`${courses.universityId} = ${instId}`);
@@ -723,6 +723,10 @@ export function registerAccountingRoutes(app: Express) {
       safeUpdates.institutionId = billToType === "institution" ? (institutionId || null) : null;
       safeUpdates.studentId = billToType === "student" ? (studentId || null) : null;
       safeUpdates.applicationId = applicationId || null;
+    } else {
+      if (institutionId !== undefined) safeUpdates.institutionId = institutionId;
+      if (studentId !== undefined) safeUpdates.studentId = studentId;
+      if (applicationId !== undefined) safeUpdates.applicationId = applicationId;
     }
     if (issueDate !== undefined) safeUpdates.issueDate = issueDate;
     if (dueDate !== undefined) safeUpdates.dueDate = dueDate;

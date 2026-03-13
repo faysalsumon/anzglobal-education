@@ -337,7 +337,7 @@ function InvoiceDetail({
             <div className="mt-1">
               <p className="text-xs text-muted-foreground">{invoice.student.nationality || invoice.student.email}</p>
               {onNavigate && (
-                <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => onNavigate("applications", invoice.studentId)} data-testid="link-invoice-student">
+                <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => onNavigate("crm-contacts", invoice.studentId)} data-testid="link-invoice-student">
                   <ExternalLink className="h-3 w-3 mr-1" />View Student Profile
                 </Button>
               )}
@@ -747,18 +747,26 @@ function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
                   data-testid="input-client-email"
                 />
               </div>
-              {billToType === "manual" && (
-                <>
-                  <div>
-                    <Label>Phone</Label>
-                    <Input value={clientPhone} onChange={e => setClientPhone(e.target.value)} data-testid="input-client-phone" />
-                  </div>
-                  <div>
-                    <Label>Address</Label>
-                    <Input value={clientAddress} onChange={e => setClientAddress(e.target.value)} data-testid="input-client-address" />
-                  </div>
-                </>
-              )}
+              <div>
+                <Label>Phone</Label>
+                <Input
+                  value={clientPhone}
+                  onChange={e => setClientPhone(e.target.value)}
+                  readOnly={billToType !== "manual"}
+                  className={billToType !== "manual" ? "bg-muted/30" : ""}
+                  data-testid="input-client-phone"
+                />
+              </div>
+              <div>
+                <Label>Address</Label>
+                <Input
+                  value={clientAddress}
+                  onChange={e => setClientAddress(e.target.value)}
+                  readOnly={billToType !== "manual"}
+                  className={billToType !== "manual" ? "bg-muted/30" : ""}
+                  data-testid="input-client-address"
+                />
+              </div>
             </div>
           )}
 
