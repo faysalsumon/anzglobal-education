@@ -2043,3 +2043,224 @@ export async function sendReferralRegistrationConfirmation(data: ReferralRegistr
     return false;
   }
 }
+
+// ─── Accounting Email Functions ───────────────────────────────────────────
+
+interface InvoiceEmailData {
+  invoiceNumber: string;
+  issueDate: string;
+  dueDate: string;
+  currency: string;
+  subtotal: string;
+  gstAmount: string;
+  gstEnabled: boolean | null;
+  total: string;
+  amountPaid: string | null;
+  notes: string | null;
+  terms: string | null;
+}
+
+interface LineItemEmailData {
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  amount: string;
+}
+
+export async function sendInvoiceEmail(
+  recipientEmail: string,
+  customerName: string,
+  invoice: InvoiceEmailData,
+  lineItems: LineItemEmailData[],
+  regionCode?: string
+): Promise<boolean> {
+  if (!resend) { console.warn('[Email] Resend not configured, skipping invoice email'); return false; }
+  try {
+    const custom = await getCustomEmailTemplate('invoice_sent', {
+      customerName,
+      invoiceNumber: invoice.invoiceNumber,
+      total: invoice.total,
+      currency: invoice.currency,
+      dueDate: invoice.dueDate,
+    });
+
+    const baseUrl = getEmailBaseUrl();
+    let subject = custom?.subject || `Invoice ${invoice.invoiceNumber} from ANZ Global Education`;
+    let html: string;
+
+    if (custom?.body) {
+      html = emailShell(baseUrl, 'Invoice', undefined, custom.body, regionCode);
+    } else {
+      const lineItemRows = lineItems.map(item => `
+        <tr>
+          <td style="padding: 10px 12px; border-bottom: 1px solid ${EMAIL_COLORS.border}; font-family: ${EMAIL_FONT}; font-size: 14px; color: ${EMAIL_COLORS.textBody};">${item.description}</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid ${EMAIL_COLORS.border}; font-family: ${EMAIL_FONT}; font-size: 14px; color: ${EMAIL_COLORS.textBody}; text-align: right;">${item.quantity}</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid ${EMAIL_COLORS.border}; font-family: ${EMAIL_FONT}; font-size: 14px; color: ${EMAIL_COLORS.textBody}; text-align: right;">${invoice.currency} ${parseFloat(item.unitPrice).toFixed(2)}</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid ${EMAIL_COLORS.border}; font-family: ${EMAIL_FONT}; font-size: 14px; color: ${EMAIL_COLORS.textBody}; text-align: right;">${invoice.currency} ${parseFloat(item.amount).toFixed(2)}</td>
+        </tr>
+      `).join('');
+
+      const bodyContent = `
+        <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">Dear ${customerName},</p>
+        <p style="color: ${EMAIL_COLORS.textBody}; font-size: 15px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+          Please find below the details for invoice <strong>${invoice.invoiceNumber}</strong>.
+        </p>
+        ${emailInfoBox('Invoice Details', `
+          <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
+          <p><strong>Issue Date:</strong> ${invoice.issueDate}</p>
+          <p><strong>Due Date:</strong> ${invoice.dueDate}</p>
+          <p><strong>Currency:</strong> ${invoice.currency}</p>
+        `)}
+        <table cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0; border: 1px solid ${EMAIL_COLORS.border}; border-radius: 6px; overflow: hidden;">
+          <thead>
+            <tr style="background-color: ${EMAIL_COLORS.background};">
+              <th style="padding: 10px 12px; text-align: left; font-family: ${EMAIL_FONT}; font-size: 13px; color: ${EMAIL_COLORS.textSecondary}; font-weight: 600;">Description</th>
+              <th style="padding: 10px 12px; text-align: right; font-family: ${EMAIL_FONT}; font-size: 13px; color: ${EMAIL_COLORS.textSecondary}; font-weight: 600;">Qty</th>
+              <th style="padding: 10px 12px; text-align: right; font-family: ${EMAIL_FONT}; font-size: 13px; color: ${EMAIL_COLORS.textSecondary}; font-weight: 600;">Unit Price</th>
+              <th style="padding: 10px 12px; text-align: right; font-family: ${EMAIL_FONT}; font-size: 13px; color: ${EMAIL_COLORS.textSecondary}; font-weight: 600;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lineItemRows}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" style="padding: 10px 12px; text-align: right; font-family: ${EMAIL_FONT}; font-size: 14px; font-weight: 600; color: ${EMAIL_COLORS.textDark};">Subtotal</td>
+              <td style="padding: 10px 12px; text-align: right; font-family: ${EMAIL_FONT}; font-size: 14px; color: ${EMAIL_COLORS.textDark};">${invoice.currency} ${parseFloat(invoice.subtotal).toFixed(2)}</td>
+            </tr>
+            ${invoice.gstEnabled ? `
+            <tr>
+              <td colspan="3" style="padding: 10px 12px; text-align: right; font-family: ${EMAIL_FONT}; font-size: 14px; color: ${EMAIL_COLORS.textBody};">GST (10%)</td>
+              <td style="padding: 10px 12px; text-align: right; font-family: ${EMAIL_FONT}; font-size: 14px; color: ${EMAIL_COLORS.textBody};">${invoice.currency} ${parseFloat(invoice.gstAmount).toFixed(2)}</td>
+            </tr>` : ''}
+            <tr style="background-color: ${EMAIL_COLORS.infoBox};">
+              <td colspan="3" style="padding: 12px; text-align: right; font-family: ${EMAIL_FONT}; font-size: 16px; font-weight: 700; color: ${EMAIL_COLORS.primary};">Total Due</td>
+              <td style="padding: 12px; text-align: right; font-family: ${EMAIL_FONT}; font-size: 16px; font-weight: 700; color: ${EMAIL_COLORS.primary};">${invoice.currency} ${parseFloat(invoice.total).toFixed(2)}</td>
+            </tr>
+          </tfoot>
+        </table>
+        ${invoice.notes ? `<p style="color: ${EMAIL_COLORS.textSecondary}; font-size: 13px; font-family: ${EMAIL_FONT};"><strong>Notes:</strong> ${invoice.notes}</p>` : ''}
+        ${invoice.terms ? `<p style="color: ${EMAIL_COLORS.textSecondary}; font-size: 13px; font-family: ${EMAIL_FONT};"><strong>Terms:</strong> ${invoice.terms}</p>` : ''}
+        <p style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; line-height: 1.6; font-family: ${EMAIL_FONT}; margin-top: 24px;">
+          If you have any questions regarding this invoice, please don't hesitate to contact us.
+        </p>
+      `;
+      html = emailShell(baseUrl, 'Invoice', `Invoice ${invoice.invoiceNumber}`, bodyContent, regionCode);
+    }
+
+    const result = await resend.emails.send({ from: FROM_EMAIL, to: recipientEmail, subject, html });
+    if (result.error) { console.error('[Email] Resend error:', result.error); return false; }
+    console.log(`Invoice email sent to ${recipientEmail}, ID: ${result.data?.id}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending invoice email:', error instanceof Error ? error.message : error);
+    return false;
+  }
+}
+
+export async function sendPaymentReceiptEmail(
+  recipientEmail: string,
+  customerName: string,
+  invoiceNumber: string,
+  amount: string,
+  method: string,
+  regionCode?: string
+): Promise<boolean> {
+  if (!resend) { console.warn('[Email] Resend not configured, skipping payment receipt email'); return false; }
+  try {
+    const custom = await getCustomEmailTemplate('payment_receipt', {
+      customerName,
+      invoiceNumber,
+      amount,
+      method,
+    });
+
+    const baseUrl = getEmailBaseUrl();
+    let subject = custom?.subject || `Payment Receipt — Invoice ${invoiceNumber}`;
+    let html: string;
+
+    if (custom?.body) {
+      html = emailShell(baseUrl, 'Payment Receipt', undefined, custom.body, regionCode);
+    } else {
+      const bodyContent = `
+        <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">Dear ${customerName},</p>
+        <p style="color: ${EMAIL_COLORS.textBody}; font-size: 15px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+          We have received your payment. Thank you!
+        </p>
+        ${emailInfoBox('Payment Details', `
+          <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
+          <p><strong>Amount Received:</strong> ${amount}</p>
+          <p><strong>Payment Method:</strong> ${method.charAt(0).toUpperCase() + method.slice(1)}</p>
+          <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-AU')}</p>
+        `)}
+        <p style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; line-height: 1.6; font-family: ${EMAIL_FONT}; margin-top: 24px;">
+          If you have any questions, please contact us.
+        </p>
+      `;
+      html = emailShell(baseUrl, 'Payment Receipt', `Invoice ${invoiceNumber}`, bodyContent, regionCode);
+    }
+
+    const result = await resend.emails.send({ from: FROM_EMAIL, to: recipientEmail, subject, html });
+    if (result.error) { console.error('[Email] Resend error:', result.error); return false; }
+    console.log(`Payment receipt email sent to ${recipientEmail}, ID: ${result.data?.id}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending payment receipt email:', error instanceof Error ? error.message : error);
+    return false;
+  }
+}
+
+export async function sendInvoiceReminderEmail(
+  recipientEmail: string,
+  customerName: string,
+  invoice: InvoiceEmailData,
+  regionCode?: string
+): Promise<boolean> {
+  if (!resend) { console.warn('[Email] Resend not configured, skipping invoice reminder email'); return false; }
+  try {
+    const outstanding = (parseFloat(invoice.total) - parseFloat(invoice.amountPaid || '0')).toFixed(2);
+    const custom = await getCustomEmailTemplate('invoice_overdue_reminder', {
+      customerName,
+      invoiceNumber: invoice.invoiceNumber,
+      total: invoice.total,
+      outstanding,
+      currency: invoice.currency,
+      dueDate: invoice.dueDate,
+    });
+
+    const baseUrl = getEmailBaseUrl();
+    let subject = custom?.subject || `Reminder: Invoice ${invoice.invoiceNumber} — Payment Overdue`;
+    let html: string;
+
+    if (custom?.body) {
+      html = emailShell(baseUrl, 'Payment Reminder', undefined, custom.body, regionCode);
+    } else {
+      const bodyContent = `
+        <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">Dear ${customerName},</p>
+        <p style="color: ${EMAIL_COLORS.textBody}; font-size: 15px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+          This is a friendly reminder that invoice <strong>${invoice.invoiceNumber}</strong> is overdue.
+        </p>
+        ${emailWarningBox(`
+          <strong>Invoice #:</strong> ${invoice.invoiceNumber}<br/>
+          <strong>Due Date:</strong> ${invoice.dueDate}<br/>
+          <strong>Outstanding Amount:</strong> ${invoice.currency} ${outstanding}
+        `)}
+        <p style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; line-height: 1.6; font-family: ${EMAIL_FONT}; margin-top: 24px;">
+          Please arrange payment at your earliest convenience. If you have already made the payment, please disregard this reminder.
+        </p>
+        <p style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+          For any questions, please contact us.
+        </p>
+      `;
+      html = emailShell(baseUrl, 'Payment Reminder', `Invoice ${invoice.invoiceNumber}`, bodyContent, regionCode);
+    }
+
+    const result = await resend.emails.send({ from: FROM_EMAIL, to: recipientEmail, subject, html });
+    if (result.error) { console.error('[Email] Resend error:', result.error); return false; }
+    console.log(`Invoice reminder email sent to ${recipientEmail}, ID: ${result.data?.id}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending invoice reminder email:', error instanceof Error ? error.message : error);
+    return false;
+  }
+}

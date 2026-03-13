@@ -91,6 +91,11 @@ import { AdminMailTab } from "@/components/admin-mail-tab";
 import { AdminMobileBottomNav } from "@/components/admin-mobile-bottom-nav";
 import { ClockInButton } from "@/components/clock-in-button";
 import { AttendancePanel } from "@/components/attendance-panel";
+import { FinanceDashboardPanel } from "@/components/accounting/finance-dashboard";
+import { InvoicesPanel } from "@/components/accounting/invoices-panel";
+import { CustomersPanel } from "@/components/accounting/customers-panel";
+import { ItemsPanel } from "@/components/accounting/items-panel";
+import { ChartOfAccountsPanel } from "@/components/accounting/chart-of-accounts-panel";
 
 // Helper function to get ISO 2-letter country code for flag-icons library
 const getCountryIsoCode = (country: string | null | undefined): string | null => {
@@ -486,8 +491,8 @@ export default function AdminDashboard() {
   
   // Initialize activeTab from hash OR query parameters (for notification deep-linking)
   const getInitialTab = () => {
-    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance'];
-    const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team', 'notification-settings', 'attendance'];
+    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts'];
+    const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts'];
     const ctoOnlyTabs = ['ai-settings'];
     const superAdminOnlyTabs = ['role-management', 'profile-management'];
     const marketingExecutiveTabs = ['institutions'];
@@ -552,6 +557,11 @@ export default function AdminDashboard() {
     'email': 'Email',
     'notification-settings': 'Notification Settings',
     'attendance': 'Attendance',
+    'finance-dashboard': 'Finance Dashboard',
+    'finance-invoices': 'Invoices',
+    'finance-customers': 'Customers',
+    'finance-items': 'Items',
+    'finance-accounts': 'Chart of Accounts',
     'api-keys': 'Partner API',
     'tags': 'Tag Manager',
     'qualification-types': 'Qualification Types',
@@ -573,7 +583,7 @@ export default function AdminDashboard() {
     const searchParams = new URLSearchParams(searchString);
     const tabFromQuery = searchParams.get('tab');
     if (tabFromQuery && tabFromQuery !== activeTab) {
-      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings'];
+      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts'];
       if (validTabs.includes(tabFromQuery)) {
         setActiveTab(tabFromQuery);
       }
@@ -3418,6 +3428,13 @@ export default function AdminDashboard() {
             userBranchId={user?.branchId ?? null}
           />
         )}
+
+        {/* Finance Module Tabs */}
+        {activeTab === "finance-dashboard" && <FinanceDashboardPanel />}
+        {activeTab === "finance-invoices" && <InvoicesPanel />}
+        {activeTab === "finance-customers" && <CustomersPanel />}
+        {activeTab === "finance-items" && <ItemsPanel />}
+        {activeTab === "finance-accounts" && <ChartOfAccountsPanel />}
 
               </div>
               {/* End of space-y-4 md:space-y-5 */}

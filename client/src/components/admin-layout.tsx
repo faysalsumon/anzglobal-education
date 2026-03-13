@@ -49,6 +49,11 @@ const TAB_TO_ROUTE_MAP: Record<string, string> = {
   "web-scraping": "/admin/dashboard?tab=web-scraping",
   "activity-logs": "/admin/dashboard?tab=activity-logs",
   "scraping": "/admin/dashboard?tab=web-scraping",
+  "finance-dashboard": "/admin/dashboard?tab=finance-dashboard",
+  "finance-invoices": "/admin/dashboard?tab=finance-invoices",
+  "finance-customers": "/admin/dashboard?tab=finance-customers",
+  "finance-items": "/admin/dashboard?tab=finance-items",
+  "finance-accounts": "/admin/dashboard?tab=finance-accounts",
 };
 
 function getTabFromPath(pathname: string): string {

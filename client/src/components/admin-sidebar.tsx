@@ -28,6 +28,9 @@ import {
   Contact,
   FileText,
   LogOut,
+  DollarSign,
+  Receipt,
+  Package,
 } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { performLogout } from "@/lib/logout";
@@ -136,10 +139,19 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess, isCTO
     },
   ];
 
+  const financeItems = [
+    { icon: DollarSign, label: "Finance Dashboard", value: "finance-dashboard", show: hasFullAdminAccess },
+    { icon: Receipt, label: "Invoices", value: "finance-invoices", show: hasFullAdminAccess },
+    { icon: Users, label: "Customers", value: "finance-customers", show: hasFullAdminAccess },
+    { icon: Package, label: "Items", value: "finance-items", show: hasFullAdminAccess },
+    { icon: BookOpen, label: "Chart of Accounts", value: "finance-accounts", show: hasFullAdminAccess },
+  ];
+
   const visibleCRM = crmItems.filter(item => item.show);
   const visibleManagement = managementItems.filter(item => item.show);
   const visibleContent = contentItems.filter(item => item.show);
   const visibleTools = toolsItems.filter(item => item.show);
+  const visibleFinance = financeItems.filter(item => item.show);
 
   const handleItemClick = (value: string) => {
     onTabChange(value);
@@ -225,6 +237,35 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess, isCTO
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleContent.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <SidebarMenuItem key={item.value}>
+                      <SidebarMenuButton
+                        onClick={() => handleItemClick(item.value)}
+                        isActive={activeTab === item.value}
+                        tooltip={item.label}
+                        size="default"
+                        data-testid={`sidebar-${item.value}`}
+                        className="h-9 text-sm"
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Finance Section */}
+        {visibleFinance.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="px-1.5 text-[10px] uppercase tracking-wide">Finance</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleFinance.map((item) => {
                   const Icon = item.icon;
                   return (
                     <SidebarMenuItem key={item.value}>
