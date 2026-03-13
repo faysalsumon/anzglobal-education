@@ -1,12 +1,22 @@
 import { Link } from "wouter";
 import { Facebook, Instagram, Linkedin, Youtube, Twitter } from "lucide-react";
+import { SiTiktok } from "react-icons/si";
 import logoUrl from "@assets/ANZ_logo.webp";
 import { useRegion } from "@/context/RegionContext";
 import { getRegionConfig } from "@/lib/region-config";
 import { useTranslation } from "@/hooks/useTranslation";
 import { LanguageToggle } from "@/components/language-toggle";
 
-const socialLinks = [
+import type { ComponentType } from "react";
+
+type SocialLink = {
+  name: string;
+  href: string;
+  icon: ComponentType<{ className?: string }>;
+  testId: string;
+};
+
+const globalSocialLinks: SocialLink[] = [
   {
     name: "Facebook",
     href: "https://www.facebook.com/anzglobal",
@@ -39,6 +49,45 @@ const socialLinks = [
   },
 ];
 
+const bdSocialLinks: SocialLink[] = [
+  {
+    name: "Facebook",
+    href: "https://www.facebook.com/anzglobalbd",
+    icon: Facebook,
+    testId: "social-facebook",
+  },
+  {
+    name: "Instagram",
+    href: "https://www.instagram.com/anzglobal_bd",
+    icon: Instagram,
+    testId: "social-instagram",
+  },
+  {
+    name: "YouTube",
+    href: "https://www.youtube.com/@ANZGlobalEducation-Bangladesh",
+    icon: Youtube,
+    testId: "social-youtube",
+  },
+  {
+    name: "TikTok",
+    href: "https://www.tiktok.com/@anzglobaleducationbd",
+    icon: SiTiktok,
+    testId: "social-tiktok",
+  },
+  {
+    name: "LinkedIn",
+    href: "https://www.linkedin.com/company/anzglobal",
+    icon: Linkedin,
+    testId: "social-linkedin",
+  },
+  {
+    name: "X",
+    href: "https://x.com/anz_global",
+    icon: Twitter,
+    testId: "social-twitter",
+  },
+];
+
 export function Footer() {
   const currentYear = new Date().getFullYear();
   const { region, regionCode } = useRegion();
@@ -46,6 +95,7 @@ export function Footer() {
   const regionConfig = getRegionConfig(effectiveRegionCode);
   const footerNav = regionConfig.footerSections;
   const { t } = useTranslation();
+  const socialLinks = effectiveRegionCode === 'BD' ? bdSocialLinks : globalSocialLinks;
 
   return (
     <footer className="border-t bg-card dark:bg-card" data-testid="footer">
