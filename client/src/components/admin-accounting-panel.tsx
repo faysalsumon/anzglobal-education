@@ -117,6 +117,7 @@ function InvoicesTab({ isCTO, onNavigate }: { isCTO: boolean; onNavigate?: (tab:
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
@@ -160,6 +161,19 @@ function InvoicesTab({ isCTO, onNavigate }: { isCTO: boolean; onNavigate?: (tab:
     },
   });
 
+  const editMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await apiRequest("PATCH", `/api/accounting/invoices/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/accounting/invoices"] });
+      setShowEditDialog(false);
+      toast({ title: "Invoice updated" });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const statusUpdateMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
       const res = await apiRequest("PATCH", `/api/accounting/invoices/${id}`, { status });
@@ -176,18 +190,30 @@ function InvoicesTab({ isCTO, onNavigate }: { isCTO: boolean; onNavigate?: (tab:
   if (selectedInvoice) {
     const inv = invoices.find((i: any) => i.id === selectedInvoice) || selectedInvoice;
     return (
-      <InvoiceDetail
-        invoice={inv}
-        onBack={() => setSelectedInvoice(null)}
-        onRecordPayment={() => setShowPaymentDialog(true)}
-        onDelete={() => deleteMutation.mutate(inv.id)}
-        onStatusChange={(status: string) => statusUpdateMutation.mutate({ id: inv.id, status })}
-        paymentDialog={showPaymentDialog}
-        onClosePaymentDialog={() => setShowPaymentDialog(false)}
-        onSubmitPayment={(data: any) => paymentMutation.mutate({ id: inv.id, data })}
-        paymentPending={paymentMutation.isPending}
-        onNavigate={onNavigate}
-      />
+      <>
+        <InvoiceDetail
+          invoice={inv}
+          onBack={() => setSelectedInvoice(null)}
+          onRecordPayment={() => setShowPaymentDialog(true)}
+          onDelete={() => deleteMutation.mutate(inv.id)}
+          onStatusChange={(status: string) => statusUpdateMutation.mutate({ id: inv.id, status })}
+          paymentDialog={showPaymentDialog}
+          onClosePaymentDialog={() => setShowPaymentDialog(false)}
+          onSubmitPayment={(data: any) => paymentMutation.mutate({ id: inv.id, data })}
+          paymentPending={paymentMutation.isPending}
+          onNavigate={onNavigate}
+          onEdit={() => setShowEditDialog(true)}
+        />
+        {showEditDialog && (
+          <EditInvoiceDialog
+            open={showEditDialog}
+            onClose={() => setShowEditDialog(false)}
+            onSubmit={(data: any) => editMutation.mutate({ id: inv.id, data })}
+            isPending={editMutation.isPending}
+            invoice={inv}
+          />
+        )}
+      </>
     );
   }
 
@@ -277,7 +303,7 @@ function InvoicesTab({ isCTO, onNavigate }: { isCTO: boolean; onNavigate?: (tab:
 function InvoiceDetail({
   invoice, onBack, onRecordPayment, onDelete, onStatusChange,
   paymentDialog, onClosePaymentDialog, onSubmitPayment, paymentPending,
-  onNavigate
+  onNavigate, onEdit
 }: any) {
   return (
     <div className="space-y-4">
@@ -290,6 +316,11 @@ function InvoiceDetail({
           <StatusBadge status={invoice.status} />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {(invoice.status === "draft" || invoice.status === "sent") && onEdit && (
+            <Button type="button" variant="outline" onClick={onEdit} data-testid="button-edit-invoice">
+              <PenLine className="h-4 w-4 mr-1" /> Edit
+            </Button>
+          )}
           {invoice.status === "draft" && (
             <Button variant="outline" onClick={() => onStatusChange("sent")} data-testid="button-mark-sent">
               <Send className="h-4 w-4 mr-1" /> Mark Sent
@@ -321,6 +352,18 @@ function InvoiceDetail({
             <p className="text-xs text-muted-foreground">Billed To</p>
             <BillToTypeBadge billToType={invoice.billToType} />
           </div>
+          {invoice.institution && invoice.institution.logo && (
+            <div className="mb-2">
+              <img src={invoice.institution.logo} alt={invoice.clientName} className="h-8 w-8 rounded-md object-cover" data-testid="img-invoice-institution-logo" />
+            </div>
+          )}
+          {invoice.student && (
+            <div className="mb-2">
+              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium" data-testid="avatar-invoice-student">
+                {(invoice.clientName || "?").charAt(0).toUpperCase()}
+              </div>
+            </div>
+          )}
           <p className="font-medium" data-testid="text-invoice-client">{invoice.clientName}</p>
           {invoice.clientEmail && <p className="text-sm text-muted-foreground">{invoice.clientEmail}</p>}
           {invoice.institution && (
@@ -845,6 +888,263 @@ function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
           <Button type="button" onClick={handleSubmit} disabled={isPending} data-testid="button-submit-invoice">
             {isPending ? "Creating..." : "Create Invoice"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditInvoiceDialog({ open, onClose, onSubmit, isPending, invoice }: any) {
+  const [billToType, setBillToType] = useState<"institution" | "student" | "manual">(invoice.billToType || "manual");
+  const [selectedInstitution, setSelectedInstitution] = useState<any>(invoice.institution || null);
+  const [selectedStudent, setSelectedStudent] = useState<any>(invoice.student || null);
+  const [clientName, setClientName] = useState(invoice.clientName || "");
+  const [clientEmail, setClientEmail] = useState(invoice.clientEmail || "");
+  const [clientPhone, setClientPhone] = useState(invoice.customer?.phone || "");
+  const [clientAddress, setClientAddress] = useState(invoice.customer?.address || "");
+  const [issueDate, setIssueDate] = useState(invoice.issueDate || "");
+  const [dueDate, setDueDate] = useState(invoice.dueDate || "");
+  const [currency, setCurrency] = useState(invoice.currency || "AUD");
+  const [notes, setNotes] = useState(invoice.notes || "");
+  const [gstEnabled, setGstEnabled] = useState(invoice.gstEnabled || false);
+  const existingItems = (invoice.lineItems || []).map((li: any) => ({ description: li.description, quantity: li.quantity || "1", unitPrice: li.unitPrice || "" }));
+  const [items, setItems] = useState(existingItems.length > 0 ? existingItems : [{ description: "", quantity: "1", unitPrice: "" }]);
+
+  const handleSelectInstitution = (inst: any) => {
+    setSelectedInstitution(inst);
+    setClientName(inst.name || "");
+    setClientEmail(inst.contactEmail || "");
+    setClientPhone(inst.contactPhone || "");
+    const addresses = inst.campusAddresses;
+    if (Array.isArray(addresses) && addresses.length > 0) {
+      const addr = addresses[0];
+      setClientAddress([addr.address, addr.city, addr.state, addr.postcode, addr.country].filter(Boolean).join(", "));
+    }
+  };
+
+  const handleSelectStudent = (stud: any) => {
+    setSelectedStudent(stud);
+    setClientName(stud.fullName || "");
+    setClientEmail(stud.email || "");
+    setClientPhone(stud.phone || "");
+    setClientAddress(stud.address || "");
+  };
+
+  const handleClearEntity = () => {
+    setSelectedInstitution(null);
+    setSelectedStudent(null);
+    setClientName("");
+    setClientEmail("");
+    setClientPhone("");
+    setClientAddress("");
+  };
+
+  const handleBillToTypeChange = (type: "institution" | "student" | "manual") => {
+    setBillToType(type);
+    handleClearEntity();
+  };
+
+  const addItem = () => setItems([...items, { description: "", quantity: "1", unitPrice: "" }]);
+  const removeItem = (idx: number) => setItems(items.filter((_: any, i: number) => i !== idx));
+  const updateItem = (idx: number, field: string, value: string) => {
+    const updated = [...items];
+    (updated[idx] as any)[field] = value;
+    setItems(updated);
+  };
+
+  const addFeeType = (feeType: { description: string }) => {
+    const hasEmpty = items.some((i: any) => !i.description && !i.unitPrice);
+    if (hasEmpty) {
+      const idx = items.findIndex((i: any) => !i.description && !i.unitPrice);
+      updateItem(idx, "description", feeType.description);
+    } else {
+      setItems([...items, { description: feeType.description, quantity: "1", unitPrice: "" }]);
+    }
+  };
+
+  const subtotal = items.reduce((s: number, i: any) => s + (parseFloat(i.quantity) || 0) * (parseFloat(i.unitPrice) || 0), 0);
+  const gstAmount = gstEnabled ? subtotal * 0.1 : 0;
+  const total = subtotal + gstAmount;
+
+  const handleSubmit = () => {
+    if (!clientName || !issueDate || !dueDate || items.some((i: any) => !i.description || !i.unitPrice)) return;
+    const payload: any = {
+      billToType,
+      clientName,
+      clientEmail,
+      clientPhone,
+      clientAddress,
+      issueDate,
+      dueDate,
+      currency,
+      notes,
+      gstEnabled,
+      lineItems: items.map((i: any) => ({ description: i.description, quantity: i.quantity, unitPrice: i.unitPrice })),
+    };
+    if (billToType === "institution" && selectedInstitution) {
+      payload.institutionId = selectedInstitution.id;
+    }
+    if (billToType === "student" && selectedStudent) {
+      payload.studentId = selectedStudent.id;
+    }
+    onSubmit(payload);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Invoice</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label className="mb-2 block">Bill To</Label>
+            <div className="flex gap-1">
+              <Button type="button" variant={billToType === "institution" ? "default" : "outline"} size="sm" onClick={() => handleBillToTypeChange("institution")} data-testid="button-edit-billto-institution">
+                <Building2 className="h-3.5 w-3.5 mr-1" /> Institution
+              </Button>
+              <Button type="button" variant={billToType === "student" ? "default" : "outline"} size="sm" onClick={() => handleBillToTypeChange("student")} data-testid="button-edit-billto-student">
+                <GraduationCap className="h-3.5 w-3.5 mr-1" /> Student
+              </Button>
+              <Button type="button" variant={billToType === "manual" ? "default" : "outline"} size="sm" onClick={() => handleBillToTypeChange("manual")} data-testid="button-edit-billto-manual">
+                <PenLine className="h-3.5 w-3.5 mr-1" /> Manual
+              </Button>
+            </div>
+          </div>
+
+          {billToType === "institution" && !selectedInstitution && (
+            <EntitySearchCombobox type="institution" onSelect={handleSelectInstitution} selected={selectedInstitution} onClear={handleClearEntity} />
+          )}
+          {billToType === "institution" && selectedInstitution && (
+            <div className="space-y-3">
+              <EntitySearchCombobox type="institution" onSelect={handleSelectInstitution} selected={selectedInstitution} onClear={handleClearEntity} />
+              {selectedInstitution?.commissionPercentage && (
+                <div className="flex items-start gap-2 p-3 rounded-md bg-muted/50 border">
+                  <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <div className="text-sm">
+                    <p><span className="font-medium">Commission:</span> {selectedInstitution.commissionPercentage}%</p>
+                    {selectedInstitution.paymentTerms && <p className="text-muted-foreground">{selectedInstitution.paymentTerms}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {billToType === "student" && (
+            <div className="space-y-3">
+              <EntitySearchCombobox type="student" onSelect={handleSelectStudent} selected={selectedStudent} onClear={handleClearEntity} />
+              {selectedStudent && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1.5">Quick add fee types:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {STUDENT_FEE_TYPES.map(ft => (
+                      <Button type="button" key={ft.label} variant="outline" size="sm" onClick={() => addFeeType(ft)} data-testid={`button-edit-fee-${ft.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                        <Plus className="h-3 w-3 mr-1" /> {ft.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {(billToType === "manual" || selectedInstitution || selectedStudent) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Client Name *</Label>
+                <Input value={clientName} onChange={e => setClientName(e.target.value)} readOnly={billToType !== "manual"} className={billToType !== "manual" ? "bg-muted/30" : ""} data-testid="input-edit-client-name" />
+              </div>
+              <div>
+                <Label>Client Email</Label>
+                <Input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} readOnly={billToType !== "manual"} className={billToType !== "manual" ? "bg-muted/30" : ""} data-testid="input-edit-client-email" />
+              </div>
+              <div>
+                <Label>Phone</Label>
+                <Input value={clientPhone} onChange={e => setClientPhone(e.target.value)} readOnly={billToType !== "manual"} className={billToType !== "manual" ? "bg-muted/30" : ""} data-testid="input-edit-client-phone" />
+              </div>
+              <div>
+                <Label>Address</Label>
+                <Input value={clientAddress} onChange={e => setClientAddress(e.target.value)} readOnly={billToType !== "manual"} className={billToType !== "manual" ? "bg-muted/30" : ""} data-testid="input-edit-client-address" />
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label>Issue Date *</Label>
+              <Input type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} data-testid="input-edit-issue-date" />
+            </div>
+            <div>
+              <Label>Due Date *</Label>
+              <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} data-testid="input-edit-due-date" />
+            </div>
+            <div>
+              <Label>Currency</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger data-testid="select-edit-currency"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="AUD">AUD</SelectItem>
+                  <SelectItem value="BDT">BDT</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label>Notes</Label>
+            <Textarea value={notes} onChange={e => setNotes(e.target.value)} data-testid="input-edit-invoice-notes" />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <Label>Line Items</Label>
+              <Button type="button" variant="outline" size="sm" onClick={addItem} data-testid="button-edit-add-line-item">
+                <Plus className="h-3 w-3 mr-1" /> Add Item
+              </Button>
+            </div>
+            {items.map((item: any, idx: number) => (
+              <div key={idx} className="grid grid-cols-12 gap-2 items-end">
+                <div className="col-span-5">
+                  {idx === 0 && <Label className="text-xs">Description</Label>}
+                  <Input value={item.description} onChange={e => updateItem(idx, "description", e.target.value)} data-testid={`input-edit-item-desc-${idx}`} />
+                </div>
+                <div className="col-span-2">
+                  {idx === 0 && <Label className="text-xs">Qty</Label>}
+                  <Input type="number" min="1" value={item.quantity} onChange={e => updateItem(idx, "quantity", e.target.value)} data-testid={`input-edit-item-qty-${idx}`} />
+                </div>
+                <div className="col-span-3">
+                  {idx === 0 && <Label className="text-xs">Unit Price</Label>}
+                  <Input type="number" step="0.01" value={item.unitPrice} onChange={e => updateItem(idx, "unitPrice", e.target.value)} data-testid={`input-edit-item-price-${idx}`} />
+                </div>
+                <div className="col-span-2 flex items-center justify-end gap-1">
+                  <span className="text-sm font-medium">{formatCurrency((parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0), currency)}</span>
+                  {items.length > 1 && (
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)} data-testid={`button-edit-remove-item-${idx}`}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+            <div className="flex items-center justify-between gap-2 pt-2 border-t">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={gstEnabled} onChange={e => setGstEnabled(e.target.checked)} className="rounded" data-testid="checkbox-edit-gst" />
+                Include GST (10%)
+              </label>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Subtotal: {formatCurrency(subtotal, currency)}</p>
+                {gstEnabled && <p className="text-sm text-muted-foreground">GST (10%): {formatCurrency(gstAmount, currency)}</p>}
+                <p className="font-bold text-lg" data-testid="text-edit-invoice-total">Total: {formatCurrency(total, currency)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+          <Button type="button" onClick={handleSubmit} disabled={isPending} data-testid="button-submit-edit-invoice">
+            {isPending ? "Saving..." : "Save Changes"}
           </Button>
         </DialogFooter>
       </DialogContent>
