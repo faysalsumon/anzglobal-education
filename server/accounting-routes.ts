@@ -17,6 +17,12 @@ import {
   accBills,
   accBillPayments,
   accReminderLogs,
+  universities,
+  institutionBusinessTerms,
+  studentProfiles,
+  users,
+  applications,
+  courses,
   insertAccChartOfAccountsSchema,
   insertAccCustomerSchema,
   insertAccItemSchema,
@@ -29,7 +35,7 @@ import {
   type AccChartOfAccount,
   type AccItem,
 } from "@shared/schema";
-import { eq, desc, sql, and, gte, lte, lt, ilike } from "drizzle-orm";
+import { eq, desc, sql, and, gte, lte, lt, ilike, or } from "drizzle-orm";
 import { sendInvoiceEmail, sendPaymentReceiptEmail, sendInvoiceReminderEmail } from "./email-service";
 
 const FINANCE_ADMIN_ROLES: Array<'cto' | 'platform_admin'> = ['cto', 'platform_admin'];
@@ -121,7 +127,7 @@ async function generateInvoiceNumber(regionCode: string, maxRetries = 3): Promis
 export function registerAccountingRoutes(app: Express) {
 
   seedChartOfAccounts();
-  markOverdueInvoices();
+  markOverdueInvoices().catch(err => console.error('[Accounting] Error marking overdue invoices:', err.message));
 
   // ── Chart of Accounts ───────────────────────────────────────────────────
 
@@ -207,6 +213,159 @@ export function registerAccountingRoutes(app: Express) {
     if (!await requireFinanceAdmin(req, res)) return;
     await db.delete(accCustomers).where(eq(accCustomers.id, req.params.id));
     res.json({ success: true });
+  });
+
+  // ── Search Endpoints (Institution / Student / Enrollment) ─────────────
+
+  app.get("/api/accounting/search/institutions", isAuthenticated, async (req, res) => {
+    if (!await requireFinanceAdmin(req, res)) return;
+    try {
+      const q = (req.query.q as string || "").trim();
+      const conditions = q ? [ilike(universities.name, `%${q}%`)] : [];
+      const results = await db.select({
+        id: universities.id,
+        name: universities.name,
+        logo: universities.logo,
+        contactEmail: universities.contactEmail,
+        contactPhone: universities.contactPhone,
+        country: universities.country,
+        campusAddresses: universities.campusAddresses,
+        providerType: universities.providerType,
+      }).from(universities)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(universities.name)
+        .limit(50);
+
+      const institutionIds = results.map(r => r.id);
+      let termsMap: Record<string, any> = {};
+      if (institutionIds.length > 0) {
+        const terms = await db.select().from(institutionBusinessTerms)
+          .where(sql`${institutionBusinessTerms.institutionId} IN (${sql.join(institutionIds.map(id => sql`${id}`), sql`, `)})`);
+        termsMap = Object.fromEntries(terms.map(t => [t.institutionId, t]));
+      }
+
+      const enriched = results.map(inst => ({
+        ...inst,
+        commissionPercentage: termsMap[inst.id]?.commissionPercentage || null,
+        paymentTerms: termsMap[inst.id]?.paymentTerms || null,
+        contractStatus: termsMap[inst.id]?.contractStatus || null,
+      }));
+
+      res.json(enriched);
+    } catch (error) {
+      console.error("Error searching institutions:", error);
+      res.status(500).json({ message: "Failed to search institutions" });
+    }
+  });
+
+  app.get("/api/accounting/search/students", isAuthenticated, async (req, res) => {
+    if (!await requireFinanceAdmin(req, res)) return;
+    try {
+      const q = (req.query.q as string || "").trim();
+      const conditions: any[] = [];
+      if (q) {
+        conditions.push(or(
+          ilike(studentProfiles.firstName, `%${q}%`),
+          ilike(studentProfiles.lastName, `%${q}%`),
+          ilike(users.email, `%${q}%`),
+        ));
+      }
+
+      const results = await db.select({
+        id: studentProfiles.id,
+        userId: studentProfiles.userId,
+        firstName: studentProfiles.firstName,
+        lastName: studentProfiles.lastName,
+        phone: studentProfiles.phone,
+        nationality: studentProfiles.nationality,
+        street: studentProfiles.street,
+        city: studentProfiles.city,
+        state: studentProfiles.state,
+        postcode: studentProfiles.postcode,
+        country: studentProfiles.country,
+        email: users.email,
+      }).from(studentProfiles)
+        .innerJoin(users, eq(users.id, studentProfiles.userId))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(studentProfiles.firstName)
+        .limit(50);
+
+      const enriched = results.map(s => ({
+        ...s,
+        fullName: [s.firstName, s.lastName].filter(Boolean).join(" ") || "Unnamed Student",
+        address: [s.street, s.city, s.state, s.postcode, s.country].filter(Boolean).join(", "),
+      }));
+
+      res.json(enriched);
+    } catch (error) {
+      console.error("Error searching students:", error);
+      res.status(500).json({ message: "Failed to search students" });
+    }
+  });
+
+  app.get("/api/accounting/search/enrollments", isAuthenticated, async (req, res) => {
+    if (!await requireFinanceAdmin(req, res)) return;
+    try {
+      const q = (req.query.q as string || "").trim();
+      const instId = req.query.institutionId as string;
+      const studentIdParam = req.query.studentId as string;
+
+      const conditions: any[] = [
+        sql`${applications.currentStage} IN ('Offer Accepted', 'GS/Visa', 'Enrolled')`,
+      ];
+      if (instId) {
+        conditions.push(sql`${courses.universityId} = ${instId}`);
+      }
+      if (studentIdParam) {
+        conditions.push(eq(applications.studentId, studentIdParam));
+      }
+      if (q) {
+        conditions.push(or(
+          ilike(studentProfiles.firstName, `%${q}%`),
+          ilike(studentProfiles.lastName, `%${q}%`),
+          ilike(courses.title, `%${q}%`),
+        ));
+      }
+
+      const results = await db.select({
+        applicationId: applications.id,
+        applicationNumber: applications.applicationNumber,
+        currentStage: applications.currentStage,
+        studentId: applications.studentId,
+        studentFirstName: studentProfiles.firstName,
+        studentLastName: studentProfiles.lastName,
+        courseId: courses.id,
+        courseName: courses.title,
+        universityId: courses.universityId,
+        universityName: universities.name,
+        tuitionFee: courses.fees,
+      }).from(applications)
+        .innerJoin(studentProfiles, eq(studentProfiles.id, applications.studentId))
+        .leftJoin(courses, eq(courses.id, applications.courseId))
+        .leftJoin(universities, eq(universities.id, courses.universityId))
+        .where(and(...conditions))
+        .orderBy(desc(applications.createdAt))
+        .limit(30);
+
+      const universityIds = [...new Set(results.filter(r => r.universityId).map(r => r.universityId!))];
+      let termsMap: Record<string, any> = {};
+      if (universityIds.length > 0) {
+        const terms = await db.select().from(institutionBusinessTerms)
+          .where(sql`${institutionBusinessTerms.institutionId} IN (${sql.join(universityIds.map(id => sql`${id}`), sql`, `)})`);
+        termsMap = Object.fromEntries(terms.map(t => [t.institutionId, t]));
+      }
+
+      const enriched = results.map(r => ({
+        ...r,
+        studentName: [r.studentFirstName, r.studentLastName].filter(Boolean).join(" "),
+        commissionPercentage: r.universityId ? (termsMap[r.universityId]?.commissionPercentage || null) : null,
+      }));
+
+      res.json(enriched);
+    } catch (error) {
+      console.error("Error searching enrollments:", error);
+      res.status(500).json({ message: "Failed to search enrollments" });
+    }
   });
 
   // ── Items ───────────────────────────────────────────────────────────────
@@ -323,9 +482,35 @@ export function registerAccountingRoutes(app: Express) {
       : [];
     const customerMap = Object.fromEntries(customers.map(c => [c.id, c]));
 
+    const instIds = [...new Set(invoices.filter(i => i.institutionId).map(i => i.institutionId!))];
+    let institutionMap: Record<string, any> = {};
+    if (instIds.length > 0) {
+      const insts = await db.select({ id: universities.id, name: universities.name, logo: universities.logo })
+        .from(universities).where(sql`${universities.id} IN (${sql.join(instIds.map(id => sql`${id}`), sql`, `)})`);
+      institutionMap = Object.fromEntries(insts.map(i => [i.id, i]));
+    }
+
+    const studIds = [...new Set(invoices.filter(i => i.studentId).map(i => i.studentId!))];
+    let studentMap: Record<string, any> = {};
+    if (studIds.length > 0) {
+      const studs = await db.select({
+        id: studentProfiles.id, firstName: studentProfiles.firstName, lastName: studentProfiles.lastName, email: users.email,
+      }).from(studentProfiles).innerJoin(users, eq(users.id, studentProfiles.userId))
+        .where(sql`${studentProfiles.id} IN (${sql.join(studIds.map(id => sql`${id}`), sql`, `)})`);
+      studentMap = Object.fromEntries(studs.map(s => [s.id, { ...s, fullName: [s.firstName, s.lastName].filter(Boolean).join(" ") }]));
+    }
+
     const enriched = invoices.map(inv => ({
       ...inv,
       customer: customerMap[inv.customerId] || null,
+      institution: inv.institutionId ? (institutionMap[inv.institutionId] || null) : null,
+      student: inv.studentId ? (studentMap[inv.studentId] || null) : null,
+      clientName: inv.billToType === "institution" && inv.institutionId
+        ? (institutionMap[inv.institutionId]?.name || customerMap[inv.customerId]?.name || "Unknown")
+        : inv.billToType === "student" && inv.studentId
+        ? (studentMap[inv.studentId]?.fullName || customerMap[inv.customerId]?.name || "Unknown")
+        : (customerMap[inv.customerId]?.name || "Unknown"),
+      clientEmail: customerMap[inv.customerId]?.email || null,
     }));
     res.json(enriched);
   });
@@ -347,9 +532,34 @@ export function registerAccountingRoutes(app: Express) {
 
     const [customer] = await db.select().from(accCustomers).where(eq(accCustomers.id, invoice.customerId));
 
+    let institution = null;
+    if (invoice.institutionId) {
+      const [inst] = await db.select({ id: universities.id, name: universities.name, logo: universities.logo, contactEmail: universities.contactEmail, contactPhone: universities.contactPhone, country: universities.country })
+        .from(universities).where(eq(universities.id, invoice.institutionId));
+      institution = inst || null;
+    }
+
+    let student = null;
+    if (invoice.studentId) {
+      const [stud] = await db.select({
+        id: studentProfiles.id, firstName: studentProfiles.firstName, lastName: studentProfiles.lastName,
+        email: users.email, phone: studentProfiles.phone, nationality: studentProfiles.nationality,
+      }).from(studentProfiles).innerJoin(users, eq(users.id, studentProfiles.userId))
+        .where(eq(studentProfiles.id, invoice.studentId));
+      if (stud) student = { ...stud, fullName: [stud.firstName, stud.lastName].filter(Boolean).join(" ") };
+    }
+
+    const clientName = invoice.billToType === "institution" ? (institution?.name || customer?.name || "Unknown")
+      : invoice.billToType === "student" ? (student?.fullName || customer?.name || "Unknown")
+      : (customer?.name || "Unknown");
+
     res.json({
       ...invoice,
       customer: customer || null,
+      institution,
+      student,
+      clientName,
+      clientEmail: customer?.email || null,
       lineItems,
       payments,
       creditNotes: creditNotes.map(cn => ({
@@ -363,8 +573,78 @@ export function registerAccountingRoutes(app: Express) {
     if (!await requireFinanceAdmin(req, res)) return;
     try {
       const { lineItems, ...invoiceData } = req.body;
+
+      if (!invoiceData.issueDate || !invoiceData.dueDate) {
+        return res.status(400).json({ message: "Issue date and due date are required" });
+      }
+      if (!lineItems || !Array.isArray(lineItems) || lineItems.length === 0) {
+        return res.status(400).json({ message: "At least one line item is required" });
+      }
+      if (lineItems.some((li: any) => !li.description)) {
+        return res.status(400).json({ message: "All line items must have a description" });
+      }
+
+      const billToType = invoiceData.billToType || "manual";
+      if (!["institution", "student", "manual"].includes(billToType)) {
+        return res.status(400).json({ message: "Invalid billToType. Must be institution, student, or manual" });
+      }
+      if (billToType === "institution" && !invoiceData.institutionId) {
+        return res.status(400).json({ message: "institutionId is required when billToType is institution" });
+      }
+      if (billToType === "student" && !invoiceData.studentId) {
+        return res.status(400).json({ message: "studentId is required when billToType is student" });
+      }
+      if (billToType === "manual" && !invoiceData.clientName) {
+        return res.status(400).json({ message: "clientName is required when billToType is manual" });
+      }
+
       const regionCode = invoiceData.regionCode || "AU";
       const invoiceNumber = await generateInvoiceNumber(regionCode);
+
+      let customerId = invoiceData.customerId;
+
+      if (!customerId) {
+        const customerData: any = {
+          name: invoiceData.clientName || "Unknown",
+          email: invoiceData.clientEmail || null,
+          phone: invoiceData.clientPhone || null,
+          address: invoiceData.clientAddress || null,
+          currency: invoiceData.currency || "AUD",
+        };
+
+        if (billToType === "institution" && invoiceData.institutionId) {
+          customerData.institutionId = invoiceData.institutionId;
+          const [existing] = await db.select().from(accCustomers)
+            .where(eq(accCustomers.institutionId, invoiceData.institutionId)).limit(1);
+          if (existing) {
+            customerId = existing.id;
+            await db.update(accCustomers).set({
+              name: customerData.name,
+              email: customerData.email,
+              phone: customerData.phone,
+              address: customerData.address,
+            }).where(eq(accCustomers.id, existing.id));
+          }
+        } else if (billToType === "student" && invoiceData.studentId) {
+          customerData.studentId = invoiceData.studentId;
+          const [existing] = await db.select().from(accCustomers)
+            .where(eq(accCustomers.studentId, invoiceData.studentId)).limit(1);
+          if (existing) {
+            customerId = existing.id;
+            await db.update(accCustomers).set({
+              name: customerData.name,
+              email: customerData.email,
+              phone: customerData.phone,
+              address: customerData.address,
+            }).where(eq(accCustomers.id, existing.id));
+          }
+        }
+
+        if (!customerId) {
+          const [newCustomer] = await db.insert(accCustomers).values(customerData).returning();
+          customerId = newCustomer.id;
+        }
+      }
 
       let subtotal = 0;
       if (lineItems && Array.isArray(lineItems)) {
@@ -380,7 +660,11 @@ export function registerAccountingRoutes(app: Express) {
       const total = subtotal + gstAmount;
 
       const [invoice] = await db.insert(accInvoices).values({
-        customerId: invoiceData.customerId,
+        customerId,
+        billToType,
+        institutionId: billToType === "institution" ? (invoiceData.institutionId || null) : null,
+        studentId: billToType === "student" ? (invoiceData.studentId || null) : null,
+        applicationId: invoiceData.applicationId || null,
         issueDate: invoiceData.issueDate,
         dueDate: invoiceData.dueDate,
         currency: invoiceData.currency || "AUD",
@@ -402,7 +686,7 @@ export function registerAccountingRoutes(app: Express) {
           description: item.description,
           quantity: String(item.quantity || 1),
           unitPrice: String(item.unitPrice || 0),
-          amount: String((parseFloat(item.quantity || 1) * parseFloat(item.unitPrice || 0)).toFixed(2)),
+          amount: String((parseFloat(String(item.quantity) || "1") * parseFloat(String(item.unitPrice) || "0")).toFixed(2)),
         }));
         await db.insert(accInvoiceLineItems).values(items);
       }

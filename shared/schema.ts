@@ -5420,6 +5420,10 @@ export const accPaymentMethodEnum = pgEnum('acc_payment_method', [
   'bank', 'cash', 'card', 'cheque',
 ]);
 
+export const accBillToTypeEnum = pgEnum('acc_bill_to_type', [
+  'institution', 'student', 'manual',
+]);
+
 export const accChartOfAccounts = pgTable("acc_chart_of_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   code: varchar("code", { length: 20 }).notNull(),
@@ -5442,6 +5446,8 @@ export const accCustomers = pgTable("acc_customers", {
   address: text("address"),
   currency: varchar("currency", { length: 3 }).default("AUD"),
   crmContactId: varchar("crm_contact_id"),
+  institutionId: varchar("institution_id"),
+  studentId: varchar("student_id"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -5467,6 +5473,10 @@ export const accInvoices = pgTable("acc_invoices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   invoiceNumber: varchar("invoice_number", { length: 30 }).notNull().unique(),
   customerId: varchar("customer_id").notNull(),
+  billToType: accBillToTypeEnum("bill_to_type").notNull().default("manual"),
+  institutionId: varchar("institution_id"),
+  studentId: varchar("student_id"),
+  applicationId: varchar("application_id"),
   issueDate: date("issue_date").notNull(),
   dueDate: date("due_date").notNull(),
   currency: varchar("currency", { length: 3 }).notNull().default("AUD"),
