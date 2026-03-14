@@ -1300,11 +1300,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         i.publishStatus === 'published' && i.approvalStatus === 'approved' && i.isActive && i.visibility !== 'private'
       );
 
-      // Region-based country filtering for filter metadata
+      // Region-based market filtering for filter metadata
+      const SUPPORTED_MARKETS = ['AU', 'BD'];
       const regionContext = getRegionContext(req);
       const regionCode = (req.query.region as string)?.toUpperCase() || regionContext.region?.code;
-      if (regionCode === 'AU') {
-        approvedInstitutions = approvedInstitutions.filter(i => i.country === 'Australia');
+      if (regionCode && SUPPORTED_MARKETS.includes(regionCode)) {
+        approvedInstitutions = approvedInstitutions.filter(i => 
+          i.availableMarkets && i.availableMarkets.includes(regionCode)
+        );
       }
 
       // Extract unique values for each filter category
@@ -1473,11 +1476,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (shouldIncludePrivate || i.visibility !== 'private')
       );
 
-      // Region-based country filtering: AU region shows only Australian institutions
+      // Region-based market filtering: filter institutions by availableMarkets
+      const SUPPORTED_MARKETS_LIST = ['AU', 'BD'];
       const regionContext = getRegionContext(req);
       const regionCode = (req.query.region as string)?.toUpperCase() || regionContext.region?.code;
-      if (regionCode === 'AU') {
-        institutions = institutions.filter(i => i.country === 'Australia');
+      if (regionCode && SUPPORTED_MARKETS_LIST.includes(regionCode)) {
+        institutions = institutions.filter(i => 
+          i.availableMarkets && i.availableMarkets.includes(regionCode)
+        );
       }
 
       // Search filter (name, description, disciplines)
@@ -2337,8 +2343,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!courseIsPublic || !institutionIsPublic) return false;
 
-        // Region filter: AU shows only Australian institution courses
-        if (regionCode === 'AU' && university?.country !== 'Australia') return false;
+        // Region filter: only show courses/institutions available in the detected market
+        const VALID_MARKETS = ['AU', 'BD'];
+        if (regionCode && VALID_MARKETS.includes(regionCode)) {
+          if (!(course as any).availableMarkets?.includes(regionCode)) return false;
+          if (!university?.availableMarkets?.includes(regionCode)) return false;
+        }
         
         // Apply tag filter if provided
         if (courseIdsWithTags !== null && !courseIdsWithTags.has(course.id)) {
@@ -7475,9 +7485,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const regionContext = getRegionContext(req);
       const regionCode = (req.query.region as string)?.toUpperCase() || regionContext.region?.code;
 
+      const VALID_MARKET_CODES = ['AU', 'BD'];
       let approvedInstitutions = allInstitutions.filter(i => i.approvalStatus === 'approved' && i.isActive);
-      if (regionCode === 'AU') {
-        approvedInstitutions = approvedInstitutions.filter(i => i.country === 'Australia');
+      if (regionCode && VALID_MARKET_CODES.includes(regionCode)) {
+        approvedInstitutions = approvedInstitutions.filter(i => 
+          i.availableMarkets && i.availableMarkets.includes(regionCode)
+        );
       }
 
       const approvedInstitutionIds = new Set(approvedInstitutions.map(i => i.id));
@@ -18933,8 +18946,8 @@ Sitemap: ${baseUrl}/sitemap.xml
         eq(universities.visibility, 'public'),
         eq(universities.isActive, true),
       ];
-      if (regionCode === 'AU') {
-        instConditions.push(eq(universities.country, 'Australia'));
+      if (regionCode && ['AU', 'BD'].includes(regionCode)) {
+        instConditions.push(dsql`${universities.availableMarkets} @> ARRAY[${regionCode}]::text[]`);
       }
 
       // Batch 2: Get institution details and raw courses in parallel
@@ -19001,8 +19014,8 @@ Sitemap: ${baseUrl}/sitemap.xml
         eq(universities.visibility, 'public'),
         eq(universities.isActive, true),
       ];
-      if (regionCode === 'AU') {
-        uniConditions.push(eq(universities.country, 'Australia'));
+      if (regionCode && ['AU', 'BD'].includes(regionCode)) {
+        uniConditions.push(dsql`${universities.availableMarkets} @> ARRAY[${regionCode}]::text[]`);
       }
 
       // Batch 3: Get university data, scholarship counts, and pricing tiers in parallel

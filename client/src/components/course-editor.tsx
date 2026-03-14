@@ -443,6 +443,7 @@ interface Course {
   thumbnailUrl?: string | null;
   thumbnailStatus?: string | null;
   thumbnailGeneratedAt?: string | null;
+  availableMarkets?: string[] | null;
   isActive: boolean;
   approvalStatus: string;
   publishStatus?: string | null;
@@ -522,6 +523,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const [selectedCampusIds, setSelectedCampusIds] = useState<string[]>(course?.campusLocations || []);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedScholarshipIds, setSelectedScholarshipIds] = useState<string[]>([]);
+  const [selectedMarkets, setSelectedMarkets] = useState<string[]>(course?.availableMarkets || ['AU', 'BD']);
   
   // Entry requirements state
   const [selectedEntryRequirements, setSelectedEntryRequirements] = useState<Array<{
@@ -1584,6 +1586,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       ...data,
       thumbnailUrl,
       campusLocations: selectedCampusIds,
+      availableMarkets: selectedMarkets.length > 0 ? selectedMarkets : ['AU', 'BD'],
       intakes: data.intakes ? data.intakes.split(',').map(s => s.trim()).filter(Boolean) : undefined,
       pathways: data.pathways ? data.pathways.split(',').map(s => s.trim()).filter(Boolean) : undefined,
       studyAreas: data.studyAreas ? data.studyAreas.split(',').map(s => s.trim()).filter(Boolean) : undefined,
@@ -3802,6 +3805,41 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
               </div>
 
               <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Available Markets</CardTitle>
+                    <CardDescription>Which regional domains should display this course</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {[
+                      { code: 'AU', label: 'Australia (AU)' },
+                      { code: 'BD', label: 'Bangladesh (BD)' },
+                    ].map((market) => (
+                      <label
+                        key={market.code}
+                        className="flex items-center gap-3 cursor-pointer"
+                        data-testid={`label-course-market-${market.code.toLowerCase()}`}
+                      >
+                        <Checkbox
+                          checked={selectedMarkets.includes(market.code)}
+                          onCheckedChange={(checked) => {
+                            setSelectedMarkets(prev =>
+                              checked
+                                ? [...prev, market.code]
+                                : prev.filter(m => m !== market.code)
+                            );
+                          }}
+                          data-testid={`checkbox-course-market-${market.code.toLowerCase()}`}
+                        />
+                        <span className="text-sm">{market.label}</span>
+                      </label>
+                    ))}
+                    {selectedMarkets.length === 0 && (
+                      <p className="text-xs text-destructive">At least one market must be selected. Defaults to both if none selected on save.</p>
+                    )}
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">

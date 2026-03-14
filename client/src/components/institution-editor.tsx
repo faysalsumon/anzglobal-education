@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -100,11 +101,12 @@ interface Institution {
     postcode: string;
     country: string;
   }> | null;
-  rtoNumber: string | null; // RTO number for Australian institutions
-  cricosProviderCode: string | null; // CRICOS Provider Code for international students
+  rtoNumber: string | null;
+  cricosProviderCode: string | null;
   approvalStatus: string | null;
   publishStatus?: string | null;
-  visibility?: string | null; // 'public' | 'private'
+  visibility?: string | null;
+  availableMarkets?: string[] | null;
   isActive: boolean;
 }
 
@@ -166,6 +168,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
   const [featuredCourses, setFeaturedCourses] = useState<FeaturedCourse[]>([]);
   const [legacyCourseNames, setLegacyCourseNames] = useState<string[]>([]); // Preserve legacy text entries
   const [activeTab, setActiveTab] = useState<string>("website");
+  const [selectedMarkets, setSelectedMarkets] = useState<string[]>(institution?.availableMarkets || ['AU', 'BD']);
   const [extractionWarnings, setExtractionWarnings] = useState<string[]>([]);
   const [extractionConfidence, setExtractionConfidence] = useState<number | null>(null);
 
@@ -442,6 +445,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
         : undefined,
       rtoNumber: data.rtoNumber?.trim() || null,
       cricosProviderCode: data.cricosProviderCode?.trim() || null,
+      availableMarkets: selectedMarkets.length > 0 ? selectedMarkets : ['AU', 'BD'],
       publishStatus,
       visibility,
       ...(publishStatus === 'published' && {
@@ -1145,6 +1149,41 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
               </div>
 
               <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Available Markets</CardTitle>
+                    <CardDescription>Which regional domains should display this institution</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {[
+                      { code: 'AU', label: 'Australia (AU)' },
+                      { code: 'BD', label: 'Bangladesh (BD)' },
+                    ].map((market) => (
+                      <label
+                        key={market.code}
+                        className="flex items-center gap-3 cursor-pointer"
+                        data-testid={`label-market-${market.code.toLowerCase()}`}
+                      >
+                        <Checkbox
+                          checked={selectedMarkets.includes(market.code)}
+                          onCheckedChange={(checked) => {
+                            setSelectedMarkets(prev =>
+                              checked
+                                ? [...prev, market.code]
+                                : prev.filter(m => m !== market.code)
+                            );
+                          }}
+                          data-testid={`checkbox-market-${market.code.toLowerCase()}`}
+                        />
+                        <span className="text-sm">{market.label}</span>
+                      </label>
+                    ))}
+                    {selectedMarkets.length === 0 && (
+                      <p className="text-xs text-destructive">At least one market must be selected. Defaults to both if none selected on save.</p>
+                    )}
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader>
                     <CardTitle>Logo</CardTitle>

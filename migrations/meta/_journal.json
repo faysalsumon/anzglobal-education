@@ -50,6 +50,13 @@
       "when": 1773514800000,
       "tag": "0006_cleanup_all_phantom_objects",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1773520000000,
+      "tag": "0007_market_availability",
+      "breakpoints": true
     }
   ]
 }
