@@ -10,11 +10,17 @@ interface DetailPageFooterProps {
 function formatLastUpdated(date: string | Date): string {
   const d = typeof date === "string" ? new Date(date) : date;
   if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-AU", {
+  const datePart = d.toLocaleDateString("en-AU", {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
+  const timePart = d.toLocaleTimeString("en-AU", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${datePart} at ${timePart}`;
 }
 
 export function DetailPageFooter({ updatedAt, entityType }: DetailPageFooterProps) {
