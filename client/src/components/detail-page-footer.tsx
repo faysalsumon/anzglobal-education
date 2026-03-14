@@ -1,4 +1,3 @@
-import { Link } from "wouter";
 import { Shield, Clock } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
@@ -53,22 +52,6 @@ export function DetailPageFooter({ updatedAt, entityType }: DetailPageFooterProp
             </p>
           </div>
 
-          <div className="flex items-center gap-4 text-xs">
-            <Link
-              href="/privacy"
-              className="text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
-              data-testid="link-privacy-policy"
-            >
-              Privacy Policy
-            </Link>
-            <Link
-              href="/terms"
-              className="text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
-              data-testid="link-terms"
-            >
-              Terms of Service
-            </Link>
-          </div>
         </div>
       </div>
     </div>
