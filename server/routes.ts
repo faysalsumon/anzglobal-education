@@ -7547,6 +7547,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/ai/generate-institution-description-from-url", isAuthenticated, async (req: any, res) => {
+    try {
+      const { url } = req.body;
+
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ message: "URL is required" });
+      }
+
+      try {
+        new URL(url);
+      } catch {
+        return res.status(400).json({ message: "Invalid URL format" });
+      }
+
+      const description = await generateInstitutionDescriptionFromWebsite(url);
+      res.json({ description });
+    } catch (error: any) {
+      console.error("Error generating institution description from URL:", error);
+
+      if (error?.code === 'ai_not_configured' || error?.status === 503) {
+        return res.status(503).json({
+          message: "AI features are not yet configured. Please configure OpenRouter in AI Settings."
+        });
+      }
+
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({
+          message: "API quota exceeded. Please check your OpenRouter account."
+        });
+      }
+
+      if (error?.status === 402 || error?.code === 402) {
+        return res.status(402).json({
+          message: "OpenRouter credits exhausted. Please add more credits to your OpenRouter account or use a different API key."
+        });
+      }
+
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('SSRF') || error.message?.includes('Redirects are not allowed')) {
+        return res.status(400).json({
+          message: error.message || "Could not access the URL. The website may be blocking requests or the URL may be incorrect."
+        });
+      }
+
+      res.status(500).json({ message: "Failed to generate description from website. Please try again." });
+    }
+  });
+
   app.post("/api/ai/generate-course-description", isAuthenticated, async (req, res) => {
     try {
       const { 
