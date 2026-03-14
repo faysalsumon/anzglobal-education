@@ -10659,9 +10659,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If an institutionId was provided, persist the logo path immediately
       const institutionId = req.body?.institutionId;
       if (institutionId) {
-        const institution = await storage.getUniversity(institutionId);
+        const institution = await storage.getUniversityById(institutionId);
         if (institution) {
-          await storage.updateUniversity(institutionId, { ...institution, logo: logoPath });
+          await storage.updateUniversity(institutionId, { logo: logoPath });
         }
       }
 
