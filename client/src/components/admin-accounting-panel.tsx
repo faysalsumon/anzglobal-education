@@ -380,7 +380,7 @@ function InvoiceDetail({
             <div className="mt-1">
               <p className="text-xs text-muted-foreground">{invoice.student.nationality || invoice.student.email}</p>
               {onNavigate && (
-                <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => onNavigate("applications", invoice.studentId)} data-testid="link-invoice-student">
+                <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => onNavigate("crm-contacts", invoice.studentId)} data-testid="link-invoice-student">
                   <ExternalLink className="h-3 w-3 mr-1" />View Student Profile
                 </Button>
               )}
