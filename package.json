@@ -10,7 +10,7 @@
     "check": "tsc",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:push:dev": "drizzle-kit push"
+    "db:push:dev": "echo \"⚠ DESTRUCTIVE: This drops and recreates tables. Never run on production.\" && drizzle-kit push"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
