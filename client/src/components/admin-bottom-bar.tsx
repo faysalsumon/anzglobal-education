@@ -11,7 +11,6 @@ import { queryClient } from "@/lib/queryClient";
 import {
   MessageCircle,
   Hash,
-  Users,
   Search,
   Circle,
   X,
@@ -61,16 +60,6 @@ type Channel = {
   lastMessageAt?: string | null;
 };
 
-type CrmContact = {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string | null;
-  phone: string | null;
-  contactType: string;
-  photoUrl: string | null;
-  company: string | null;
-};
 
 const STATUS_COLORS: Record<string, string> = {
   available: "bg-green-500",
@@ -80,7 +69,7 @@ const STATUS_COLORS: Record<string, string> = {
   invisible: "bg-gray-400",
 };
 
-type ActivePanel = "chats" | "channels" | "contacts" | null;
+type ActivePanel = "chats" | "channels" | null;
 
 export function AdminBottomBar() {
   const { user } = useAuth();
@@ -111,11 +100,6 @@ export function AdminBottomBar() {
   const { data: channelsData = [] } = useQuery<Channel[]>({
     queryKey: ["/api/channels"],
     enabled: activePanel === "channels",
-  });
-
-  const { data: crmContactsData } = useQuery<{ contacts: CrmContact[] }>({
-    queryKey: ["/api/crm/contacts", { search: searchQuery }],
-    enabled: activePanel === "contacts",
   });
 
   const totalUnread = unreadData?.count || 0;
@@ -211,14 +195,11 @@ export function AdminBottomBar() {
     setActivePanel(null);
   }, [conversations, openChatWithConversation]);
 
-  const openChannelView = useCallback(() => {
-    window.dispatchEvent(new CustomEvent("open-admin-chat"));
-    setActivePanel(null);
-  }, []);
-
-  const navigateToCrmContacts = useCallback(() => {
+  const openChannelMini = useCallback((channel: Channel) => {
     window.dispatchEvent(
-      new CustomEvent("admin-tab-change", { detail: { tab: "crm-contacts" } })
+      new CustomEvent("open-mini-channel", {
+        detail: { channelId: channel.id, channelName: channel.name },
+      })
     );
     setActivePanel(null);
   }, []);
@@ -242,16 +223,6 @@ export function AdminBottomBar() {
   const existingConversationMemberIds = new Set(conversations?.map((c) => c.otherParticipant?.id) || []);
   const newTeamMembers = filteredTeamMembers.filter((m) => !existingConversationMemberIds.has(m.id));
 
-  const crmContacts = crmContactsData?.contacts || [];
-  const filteredCrmContacts = crmContacts.filter((c) => {
-    if (!searchQuery) return true;
-    const name = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
-    return (
-      name.includes(searchQuery.toLowerCase()) ||
-      (c.email || "").toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
-
   const filteredChannels = channelsData.filter((ch) => {
     if (!searchQuery) return true;
     return ch.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -260,7 +231,6 @@ export function AdminBottomBar() {
   const tabs: { id: ActivePanel; icon: typeof MessageCircle; label: string; badge?: number }[] = [
     { id: "chats", icon: MessageCircle, label: "Chats", badge: totalUnread },
     { id: "channels", icon: Hash, label: "Channels" },
-    { id: "contacts", icon: Users, label: "Contacts" },
   ];
 
   return (
@@ -423,7 +393,7 @@ export function AdminBottomBar() {
                       <div
                         key={channel.id}
                         className="flex items-center gap-2 p-2 rounded-md cursor-pointer hover-elevate"
-                        onClick={openChannelView}
+                        onClick={() => openChannelMini(channel)}
                         data-testid={`bottom-bar-channel-${channel.id}`}
                       >
                         <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted shrink-0">
@@ -454,64 +424,9 @@ export function AdminBottomBar() {
                       </p>
                     </div>
                   )}
-
-                  <div className="px-2 pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={openChannelView}
-                      data-testid="button-open-full-channels"
-                    >
-                      Open Full View
-                    </Button>
-                  </div>
                 </>
               )}
 
-              {activePanel === "contacts" && (
-                <>
-                  {filteredCrmContacts.length > 0 ? (
-                    filteredCrmContacts.slice(0, 50).map((contact) => (
-                      <div
-                        key={contact.id}
-                        className="flex items-center gap-2 p-2 rounded-md cursor-pointer hover-elevate"
-                        onClick={navigateToCrmContacts}
-                        data-testid={`bottom-bar-contact-${contact.id}`}
-                      >
-                        <Avatar className="h-8 w-8">
-                          {contact.photoUrl && <AvatarImage src={contact.photoUrl} />}
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                            {getInitials(contact.firstName, contact.lastName, contact.email || undefined)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium truncate block">
-                            {contact.firstName} {contact.lastName}
-                          </span>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <Badge variant="secondary" className="text-xs capitalize">
-                              {contact.contactType?.replace(/_/g, " ") || "Contact"}
-                            </Badge>
-                            {contact.email && (
-                              <span className="text-xs text-muted-foreground truncate">
-                                {contact.email}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-8">
-                      <Users className="h-8 w-8 text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        {searchQuery ? "No contacts found" : "No contacts available"}
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
             </div>
           </ScrollArea>
         </div>

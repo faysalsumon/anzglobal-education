@@ -13,6 +13,7 @@ import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import {
   MessageCircle,
+  Hash,
   Send,
   X,
   Minus,
@@ -106,12 +107,225 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return headers;
 }
 
+type ChannelMessage = {
+  id: string;
+  channelId: string;
+  senderId: string;
+  content: string;
+  fileUrl: string | null;
+  fileName: string | null;
+  fileSize: number | null;
+  fileType: string | null;
+  createdAt: Date;
+  sender: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    profileImageUrl: string | null;
+    availabilityStatus: string | null;
+  } | null;
+};
+
+type ChannelWindow = {
+  channelId: string;
+  channelName: string;
+  isMinimized: boolean;
+};
+
+function MiniChannelWindow({
+  channelId,
+  channelName,
+  isMinimized,
+  currentUserId,
+  messageInput,
+  onMessageInputChange,
+  onClose,
+  onToggleMinimize,
+}: {
+  channelId: string;
+  channelName: string;
+  isMinimized: boolean;
+  currentUserId: string;
+  messageInput: string;
+  onMessageInputChange: (val: string) => void;
+  onClose: () => void;
+  onToggleMinimize: () => void;
+}) {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { data: messages = [], isLoading } = useQuery<ChannelMessage[]>({
+    queryKey: ["/api/channels", channelId, "messages"],
+    refetchInterval: 5000,
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: async (content: string) => {
+      await apiRequest("POST", `/api/channels/${channelId}/messages`, { content });
+    },
+    onSuccess: () => {
+      onMessageInputChange("");
+      queryClient.invalidateQueries({ queryKey: ["/api/channels", channelId, "messages"] });
+    },
+  });
+
+  useEffect(() => {
+    if (!isMinimized) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isMinimized]);
+
+  const handleSend = () => {
+    const content = messageInput.trim();
+    if (!content) return;
+    sendMutation.mutate(content);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  if (isMinimized) {
+    return (
+      <div
+        className="flex items-center gap-2 bg-card border rounded-t-md px-3 py-2 cursor-pointer shadow-md"
+        style={{ width: 280 }}
+        onClick={onToggleMinimize}
+        data-testid={`mini-channel-minimized-${channelId}`}
+      >
+        <Hash className="h-4 w-4 text-muted-foreground shrink-0" />
+        <span className="text-sm font-medium truncate flex-1">{channelName}</span>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="no-default-hover-elevate"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          data-testid={`button-close-channel-${channelId}`}
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex flex-col bg-card border rounded-t-md shadow-lg overflow-hidden"
+      style={{ width: 320, height: 400 }}
+      data-testid={`mini-channel-window-${channelId}`}
+    >
+      <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30">
+        <Hash className="h-4 w-4 text-muted-foreground shrink-0" />
+        <span className="text-sm font-medium truncate flex-1">{channelName}</span>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="no-default-hover-elevate"
+          onClick={onToggleMinimize}
+          data-testid={`button-minimize-channel-${channelId}`}
+        >
+          <Minus className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="no-default-hover-elevate"
+          onClick={onClose}
+          data-testid={`button-close-channel-${channelId}`}
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      <ScrollArea className="flex-1 p-3">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full py-8">
+            <Hash className="h-8 w-8 text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">No messages yet</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {messages.map((msg) => {
+              const isOwn = msg.senderId === currentUserId;
+              const senderName = msg.sender
+                ? `${msg.sender.firstName || ""} ${msg.sender.lastName || ""}`.trim()
+                : "Unknown";
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex flex-col gap-0.5 ${isOwn ? "items-end" : "items-start"}`}
+                  data-testid={`channel-msg-${msg.id}`}
+                >
+                  {!isOwn && (
+                    <span className="text-xs text-muted-foreground ml-1">{senderName}</span>
+                  )}
+                  <div
+                    className={`px-3 py-1.5 rounded-md text-sm max-w-[85%] ${
+                      isOwn
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted"
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground mx-1">
+                    {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                  </span>
+                </div>
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </ScrollArea>
+
+      <div className="flex items-center gap-1 p-2 border-t">
+        <Input
+          className="flex-1 text-sm"
+          placeholder={`Message #${channelName}`}
+          value={messageInput}
+          onChange={(e) => onMessageInputChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          data-testid={`input-channel-message-${channelId}`}
+        />
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          onClick={handleSend}
+          disabled={!messageInput.trim() || sendMutation.isPending}
+          data-testid={`button-send-channel-${channelId}`}
+        >
+          {sendMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 const MAX_VISIBLE_WINDOWS = 3;
 
 export function FloatingChatBar() {
   const { user } = useAuth();
   const { lastMessage, sendMessage } = useWebSocket();
   const [chatWindows, setChatWindows] = useState<ChatWindow[]>([]);
+  const [channelWindows, setChannelWindows] = useState<ChannelWindow[]>([]);
   const [messageInputs, setMessageInputs] = useState<Record<string, string>>({});
 
   const userData = user as any;
@@ -177,6 +391,23 @@ export function FloatingChatBar() {
     setChatWindows((prev) =>
       prev.map((w) =>
         w.conversationId === conversationId ? { ...w, isMinimized: !w.isMinimized } : w
+      )
+    );
+  }, []);
+
+  const closeChannelWindow = useCallback((channelId: string) => {
+    setChannelWindows((prev) => prev.filter((w) => w.channelId !== channelId));
+    setMessageInputs((prev) => {
+      const next = { ...prev };
+      delete next[`ch-${channelId}`];
+      return next;
+    });
+  }, []);
+
+  const toggleChannelMinimize = useCallback((channelId: string) => {
+    setChannelWindows((prev) =>
+      prev.map((w) =>
+        w.channelId === channelId ? { ...w, isMinimized: !w.isMinimized } : w
       )
     );
   }, []);
@@ -263,16 +494,56 @@ export function FloatingChatBar() {
       }
     };
 
+    const handleOpenMiniChannel = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.channelId) return;
+      const win: ChannelWindow = {
+        channelId: detail.channelId,
+        channelName: detail.channelName,
+        isMinimized: false,
+      };
+      setChannelWindows((prev) => {
+        const exists = prev.find((w) => w.channelId === detail.channelId);
+        if (exists) {
+          return prev.map((w) =>
+            w.channelId === detail.channelId ? { ...w, isMinimized: false } : w
+          );
+        }
+        const next = [...prev, win];
+        if (next.length > MAX_VISIBLE_WINDOWS) {
+          return next.slice(next.length - MAX_VISIBLE_WINDOWS);
+        }
+        return next;
+      });
+    };
+
     window.addEventListener("open-mini-chat", handleOpenMiniChat);
     window.addEventListener("open-mini-chat-new", handleOpenMiniChatNew);
+    window.addEventListener("open-mini-channel", handleOpenMiniChannel);
     return () => {
       window.removeEventListener("open-mini-chat", handleOpenMiniChat);
       window.removeEventListener("open-mini-chat-new", handleOpenMiniChatNew);
+      window.removeEventListener("open-mini-channel", handleOpenMiniChannel);
     };
   }, [createConversationMutation, markAsReadMutation]);
 
   return (
     <div className="fixed bottom-10 right-4 z-50 flex items-end gap-2" data-testid="floating-chat-bar">
+      {channelWindows.map((win) => (
+        <MiniChannelWindow
+          key={`ch-${win.channelId}`}
+          channelId={win.channelId}
+          channelName={win.channelName}
+          isMinimized={win.isMinimized}
+          currentUserId={currentUserId}
+          messageInput={messageInputs[`ch-${win.channelId}`] || ""}
+          onMessageInputChange={(val) =>
+            setMessageInputs((prev) => ({ ...prev, [`ch-${win.channelId}`]: val }))
+          }
+          onClose={() => closeChannelWindow(win.channelId)}
+          onToggleMinimize={() => toggleChannelMinimize(win.channelId)}
+        />
+      ))}
       {visibleWindows.map((win) => (
         <MiniChatWindow
           key={win.conversationId}
