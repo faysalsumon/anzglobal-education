@@ -152,7 +152,7 @@ function AppContent() {
   const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/study-abroad', '/our-story', '/student-reviews', '/auth', '/auth/callback', '/admin/login', '/admin/forgot-password'];
   
   // Standalone pages that have their own complete layout (no header/footer wrapping)
-  const standalonePages = ['/reset-password', '/force-password-reset', '/accept-invitation', '/auth/accept-invite', '/admin/accounting/invoices/'];
+  const standalonePages = ['/reset-password', '/force-password-reset', '/accept-invitation', '/auth/accept-invite', '/admin/accounting/invoices/', '/admin/login', '/admin/forgot-password'];
   const isPublicRoute = publicRoutes.some(route => 
     location === route || 
     location.startsWith('/courses/') || 

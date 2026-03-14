@@ -32,6 +32,10 @@ process.on('unhandledRejection', (reason) => {
 
 // Catch any uncaught synchronous exceptions without crashing the server
 process.on('uncaughtException', (err) => {
+  // Suppress known bun/ws HMR WebSocket compatibility error — harmless, does not affect app
+  if (err instanceof TypeError && err.message?.includes('undefined is not an object') && err.stack?.includes('abortHandshake')) {
+    return;
+  }
   console.error('[Server] Uncaught exception:', err);
 });
 
