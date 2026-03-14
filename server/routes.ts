@@ -19067,6 +19067,56 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
+  // Get related courses for a course (multi-signal relevance: sub-discipline > discipline > university)
+  app.get("/api/public/courses/:id/related", async (req, res) => {
+    try {
+      const limit = Math.min(Number(req.query.limit) || 8, 16);
+      const source = await storage.getCourseByIdOrSlug(req.params.id);
+      if (!source) return res.status(404).json({ message: "Course not found" });
+
+      const allCourses = await storage.getAllCourses();
+
+      const scored = allCourses
+        .filter(c =>
+          c.id !== source.id &&
+          c.isActive &&
+          c.publishStatus === "published" &&
+          c.approvalStatus === "approved"
+        )
+        .map(c => {
+          let score = 0;
+          if (source.subDisciplineId && c.subDisciplineId === source.subDisciplineId) score += 3;
+          if (source.discipline && c.discipline === source.discipline) score += 2;
+          if (source.universityId && c.universityId === source.universityId) score += 1;
+          return { course: c, score };
+        })
+        .filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit);
+
+      const result = scored.map(({ course: c }) => ({
+        id: c.id,
+        title: c.title,
+        slug: c.slug,
+        discipline: c.discipline,
+        level: c.level,
+        duration: c.duration,
+        deliveryMode: c.deliveryMode,
+        thumbnailUrl: c.thumbnailUrl,
+        tuitionFee: c.fees ? Number(c.fees) : null,
+        currency: c.currency || "AUD",
+        university: c.university
+          ? { id: c.universityId, name: c.university.name, logo: c.university.logo }
+          : null,
+      }));
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error fetching related courses:", error);
+      res.status(500).json({ message: "Failed to fetch related courses" });
+    }
+  });
+
   // Get institution courses with pricing tier info and scholarship data (for public institution detail page)
   app.get("/api/public/institutions/:id/courses", async (req, res) => {
     try {

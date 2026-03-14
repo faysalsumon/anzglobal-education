@@ -26,6 +26,7 @@ import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { CampusLocationMapDialog } from "@/components/campus-location-map-dialog";
 import { CampusMapTabs } from "@/components/campus-map-tabs";
 import { DetailPageFooter } from "@/components/detail-page-footer";
+import { RelatedCoursesCarousel } from "@/components/related-courses-carousel";
 import { useAuth } from "@/hooks/useAuth";
 import { CourseSectionNav } from "@/components/course-section-nav";
 import { ResponsiveSection } from "@/components/responsive-section";
@@ -2088,6 +2089,8 @@ export default function PublicCourseDetail() {
           )}
         </div>
       </div>
+
+      <RelatedCoursesCarousel courseId={course.id} discipline={course.discipline ?? null} />
 
       <DetailPageFooter updatedAt={course.updatedAt} entityType="course" />
 
