@@ -10578,6 +10578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fullDescription,
         tags,
         availableMarkets,
+        featuredMarkets,
       } = req.body;
 
       if (!name || !country) {
@@ -10631,6 +10632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fullDescription: fullDescription || null,
         tags: tags || null,
         availableMarkets: Array.isArray(availableMarkets) && availableMarkets.length > 0 ? availableMarkets : ['AU', 'BD'],
+        featuredMarkets: Array.isArray(featuredMarkets) ? featuredMarkets : [],
         createdByUserId: userId,
         updatedByUserId: userId,
         assignedToUserId: userId,
@@ -18905,7 +18907,7 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
-  // Public endpoint - get featured institutions and courses (by "featured" tag)
+  // Public endpoint - get featured institutions and courses (by featuredMarkets column)
   app.get("/api/public/featured", async (req, res) => {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 12, 20);
@@ -18913,81 +18915,62 @@ Sitemap: ${baseUrl}/sitemap.xml
       // Region-based filtering for featured content
       const regionContext = getRegionContext(req);
       const regionCode = (req.query.region as string)?.toUpperCase() || regionContext.region?.code;
+      const validRegion = regionCode && ['AU', 'BD'].includes(regionCode);
 
-      // Find the "featured" tag
-      const [featuredTag] = await db.select().from(tags).where(eq(tags.slug, 'featured')).limit(1);
-      
-      if (!featuredTag) {
-        return res.json({ institutions: [], courses: [] });
-      }
-      
-      // Batch 1: Get institution IDs and course IDs in parallel
-      const [featuredInstitutionIds, featuredCourseIds] = await Promise.all([
-        db.select({ institutionId: institutionTags.institutionId })
-          .from(institutionTags)
-          .where(and(
-            eq(institutionTags.tagId, featuredTag.id),
-            isNotNull(institutionTags.institutionId)
-          )),
-        db.select({ courseId: courseTags.courseId })
-          .from(courseTags)
-          .where(and(
-            eq(courseTags.tagId, featuredTag.id),
-            isNotNull(courseTags.courseId)
-          )),
-      ]);
-
-      const instIds = featuredInstitutionIds.map(i => i.institutionId).filter((id): id is string => id !== null);
-      const courseIds = featuredCourseIds.map(c => c.courseId).filter((id): id is string => id !== null);
-
-      // Build institution conditions
+      // Build institution conditions — filter by featuredMarkets column
       const instConditions: any[] = [
-        inArray(universities.id, instIds.length > 0 ? instIds : ['']),
         eq(universities.approvalStatus, 'approved'),
         eq(universities.publishStatus, 'published'),
         eq(universities.visibility, 'public'),
         eq(universities.isActive, true),
       ];
-      if (regionCode && ['AU', 'BD'].includes(regionCode)) {
+      if (validRegion) {
+        instConditions.push(dsql`${universities.featuredMarkets} @> ARRAY[${regionCode}]::text[]`);
         instConditions.push(dsql`${universities.availableMarkets} @> ARRAY[${regionCode}]::text[]`);
+      } else {
+        instConditions.push(dsql`array_length(${universities.featuredMarkets}, 1) > 0`);
       }
 
-      // Batch 2: Get institution details and raw courses in parallel
+      // Build course conditions — filter by featuredMarkets column
+      const courseConditions: any[] = [
+        eq(courses.approvalStatus, 'approved'),
+        eq(courses.publishStatus, 'published'),
+      ];
+      if (validRegion) {
+        courseConditions.push(dsql`${courses.featuredMarkets} @> ARRAY[${regionCode}]::text[]`);
+        courseConditions.push(dsql`${courses.availableMarkets} @> ARRAY[${regionCode}]::text[]`);
+      } else {
+        courseConditions.push(dsql`array_length(${courses.featuredMarkets}, 1) > 0`);
+      }
+
+      // Batch 1: Get featured institutions and raw courses in parallel
       const [rawInstitutions, rawCourses] = await Promise.all([
-        instIds.length > 0
-          ? db.select({
-              id: universities.id,
-              name: universities.name,
-              logo: universities.logo,
-              country: universities.country,
-              smallDescription: universities.smallDescription,
-              campusAddresses: universities.campusAddresses,
-            })
-            .from(universities)
-            .where(and(...instConditions))
-            .limit(limit)
-          : Promise.resolve([] as any[]),
-        courseIds.length > 0
-          ? db.select({
-              id: courses.id,
-              title: courses.title,
-              slug: courses.slug,
-              thumbnailUrl: courses.thumbnailUrl,
-              subject: courses.subject,
-              level: courses.level,
-              duration: courses.duration,
-              fees: courses.fees,
-              currency: courses.currency,
-              universityId: courses.universityId,
-            })
-            .from(courses)
-            .where(and(
-              inArray(courses.id, courseIds),
-              eq(courses.approvalStatus, 'approved'),
-              eq(courses.publishStatus, 'published')
-            ))
-            .limit(limit)
-          : Promise.resolve([] as any[]),
+        db.select({
+            id: universities.id,
+            name: universities.name,
+            logo: universities.logo,
+            country: universities.country,
+            smallDescription: universities.smallDescription,
+            campusAddresses: universities.campusAddresses,
+          })
+          .from(universities)
+          .where(and(...instConditions))
+          .limit(limit),
+        db.select({
+            id: courses.id,
+            title: courses.title,
+            slug: courses.slug,
+            thumbnailUrl: courses.thumbnailUrl,
+            subject: courses.subject,
+            level: courses.level,
+            duration: courses.duration,
+            fees: courses.fees,
+            currency: courses.currency,
+            universityId: courses.universityId,
+          })
+          .from(courses)
+          .where(and(...courseConditions))
+          .limit(limit),
       ]);
 
       // Process institutions
@@ -19005,10 +18988,11 @@ Sitemap: ${baseUrl}/sitemap.xml
         };
       });
 
-      // Get unique university IDs from rawCourses
+      // Get unique university IDs and course IDs from rawCourses
       const universityIds = [...new Set(rawCourses.map((c: any) => c.universityId).filter((id: any): id is string => id !== null))];
+      const featuredCourseIds = rawCourses.map((c: any) => c.id).filter((id: any): id is string => id !== null);
 
-      // Build university conditions for batch 3
+      // Build university conditions for batch 2
       const uniConditions: any[] = [
         inArray(universities.id, universityIds.length > 0 ? universityIds : ['']),
         eq(universities.approvalStatus, 'approved'),
@@ -19016,18 +19000,18 @@ Sitemap: ${baseUrl}/sitemap.xml
         eq(universities.visibility, 'public'),
         eq(universities.isActive, true),
       ];
-      if (regionCode && ['AU', 'BD'].includes(regionCode)) {
+      if (validRegion) {
         uniConditions.push(dsql`${universities.availableMarkets} @> ARRAY[${regionCode}]::text[]`);
       }
 
-      // Batch 3: Get university data, scholarship counts, and pricing tiers in parallel
+      // Batch 2: Get university data, scholarship counts, and pricing tiers in parallel
       const [validUniversities, scholarshipCounts, pricingTiersMin] = await Promise.all([
         universityIds.length > 0
           ? db.select({ id: universities.id, name: universities.name, logo: universities.logo })
               .from(universities)
               .where(and(...uniConditions))
           : Promise.resolve([] as any[]),
-        courseIds.length > 0
+        featuredCourseIds.length > 0
           ? db.select({
               courseId: courseScholarships.courseId,
               count: dsql<number>`count(*)::int`
@@ -19038,17 +19022,17 @@ Sitemap: ${baseUrl}/sitemap.xml
               eq(scholarships.isActive, true),
               eq(scholarships.status, 'open')
             ))
-            .where(inArray(courseScholarships.courseId, courseIds))
+            .where(inArray(courseScholarships.courseId, featuredCourseIds))
             .groupBy(courseScholarships.courseId)
           : Promise.resolve([] as any[]),
-        courseIds.length > 0
+        featuredCourseIds.length > 0
           ? db.select({
               courseId: coursePricingTiers.courseId,
               minAmount: dsql<string>`MIN(amount)`,
               currency: dsql<string>`MIN(currency)`
             })
             .from(coursePricingTiers)
-            .where(inArray(coursePricingTiers.courseId, courseIds))
+            .where(inArray(coursePricingTiers.courseId, featuredCourseIds))
             .groupBy(coursePricingTiers.courseId)
           : Promise.resolve([] as any[]),
       ]);

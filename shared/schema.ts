@@ -781,6 +781,7 @@ export const universities = pgTable("universities", {
   internationalStudentSupport: boolean("international_student_support"),
   
   availableMarkets: text("available_markets").array().notNull().default(sql`ARRAY['AU','BD']::text[]`),
+  featuredMarkets: text("featured_markets").array().notNull().default(sql`ARRAY[]::text[]`),
   
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -790,6 +791,7 @@ export const universities = pgTable("universities", {
   topDisciplinesIdx: index("universities_top_disciplines_gin_idx").using("gin", table.topDisciplines),
   tagsIdx: index("universities_tags_gin_idx").using("gin", table.tags),
   availableMarketsIdx: index("universities_available_markets_gin_idx").using("gin", table.availableMarkets),
+  featuredMarketsIdx: index("universities_featured_markets_gin_idx").using("gin", table.featuredMarkets),
   // B-tree indexes for range filtering
   scholarshipRangeIdx: index("universities_scholarship_range_idx").on(table.scholarshipPercentageMin, table.scholarshipPercentageMax),
   // Composite indexes for common filter patterns
@@ -1054,6 +1056,7 @@ export const courses = pgTable("courses", {
   assignedToUserId: varchar("assigned_to_user_id").references(() => users.id), // User currently assigned to manage/edit this course
   
   availableMarkets: text("available_markets").array().notNull().default(sql`ARRAY['AU','BD']::text[]`),
+  featuredMarkets: text("featured_markets").array().notNull().default(sql`ARRAY[]::text[]`),
   
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1061,6 +1064,7 @@ export const courses = pgTable("courses", {
 }, (table) => ({
   // GIN indexes for array and JSONB fields for fast filtering
   availableMarketsIdx: index("courses_available_markets_gin_idx").using("gin", table.availableMarkets),
+  featuredMarketsIdx: index("courses_featured_markets_gin_idx").using("gin", table.featuredMarkets),
   intakesIdx: index("courses_intakes_gin_idx").using("gin", table.intakes),
   studyAreasIdx: index("courses_study_areas_gin_idx").using("gin", table.studyAreas),
   careerOutcomesIdx: index("courses_career_outcomes_gin_idx").using("gin", table.careerOutcomes),
@@ -3309,6 +3313,7 @@ export const insertUniversitySchema = createInsertSchema(universities).omit({
   rankingBand: z.string().optional(),
   internationalStudentSupport: z.boolean().optional(),
   availableMarkets: z.array(z.string()).optional(),
+  featuredMarkets: z.array(z.string()).optional(),
 }).refine((data) => {
   // If both scholarship min and max are provided, ensure min <= max
   if (data.scholarshipPercentageMin !== null && data.scholarshipPercentageMin !== undefined &&

@@ -57,6 +57,13 @@
       "when": 1773520000000,
       "tag": "0007_market_availability",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1773523200000,
+      "tag": "0008_featured_markets",
+      "breakpoints": true
     }
   ]
 }

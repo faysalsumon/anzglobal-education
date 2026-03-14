@@ -107,6 +107,7 @@ interface Institution {
   publishStatus?: string | null;
   visibility?: string | null;
   availableMarkets?: string[] | null;
+  featuredMarkets?: string[] | null;
   isActive: boolean;
 }
 
@@ -169,6 +170,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
   const [legacyCourseNames, setLegacyCourseNames] = useState<string[]>([]); // Preserve legacy text entries
   const [activeTab, setActiveTab] = useState<string>("website");
   const [selectedMarkets, setSelectedMarkets] = useState<string[]>(institution?.availableMarkets || ['AU', 'BD']);
+  const [selectedFeaturedMarkets, setSelectedFeaturedMarkets] = useState<string[]>(institution?.featuredMarkets || []);
   const [extractionWarnings, setExtractionWarnings] = useState<string[]>([]);
   const [extractionConfidence, setExtractionConfidence] = useState<number | null>(null);
 
@@ -446,6 +448,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
       rtoNumber: data.rtoNumber?.trim() || null,
       cricosProviderCode: data.cricosProviderCode?.trim() || null,
       availableMarkets: selectedMarkets.length > 0 ? selectedMarkets : ['AU', 'BD'],
+      featuredMarkets: selectedFeaturedMarkets,
       publishStatus,
       visibility,
       ...(publishStatus === 'published' && {
@@ -1180,6 +1183,41 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                     ))}
                     {selectedMarkets.length === 0 && (
                       <p className="text-xs text-destructive">At least one market must be selected. Defaults to both if none selected on save.</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Featured On</CardTitle>
+                    <CardDescription>Which regional homepages should feature this institution</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {[
+                      { code: 'AU', label: 'Australia (AU)' },
+                      { code: 'BD', label: 'Bangladesh (BD)' },
+                    ].map((market) => (
+                      <label
+                        key={market.code}
+                        className="flex items-center gap-3 cursor-pointer"
+                        data-testid={`label-featured-${market.code.toLowerCase()}`}
+                      >
+                        <Checkbox
+                          checked={selectedFeaturedMarkets.includes(market.code)}
+                          onCheckedChange={(checked) => {
+                            setSelectedFeaturedMarkets(prev =>
+                              checked
+                                ? [...prev, market.code]
+                                : prev.filter(m => m !== market.code)
+                            );
+                          }}
+                          data-testid={`checkbox-featured-${market.code.toLowerCase()}`}
+                        />
+                        <span className="text-sm">{market.label}</span>
+                      </label>
+                    ))}
+                    {selectedFeaturedMarkets.length === 0 && (
+                      <p className="text-xs text-muted-foreground">Not featured on any homepage.</p>
                     )}
                   </CardContent>
                 </Card>
