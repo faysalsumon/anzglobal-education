@@ -3,9 +3,11 @@ import { storage } from "./storage";
 interface MetaTags {
   title: string;
   description: string;
+  ogImage?: string;
+  ogUrl?: string;
 }
 
-const STATIC_METAS: Record<string, MetaTags> = {
+const STATIC_METAS: Record<string, Omit<MetaTags, "ogImage" | "ogUrl">> = {
   "/courses": {
     title: "Find Courses in Australia, UK & Canada | ANZ Global Education",
     description: "Browse 1000+ courses from top universities in Australia, UK, Canada and New Zealand. Filter by subject, level, and location. Compare programs and apply directly.",
@@ -62,40 +64,86 @@ function trim(text: string, max = 160): string {
   return plain.length > max ? plain.substring(0, max - 3) + "..." : plain;
 }
 
-function replaceMeta(html: string, tags: MetaTags): string {
-  const { title, description } = tags;
+/** Derive the canonical origin from the incoming Host header */
+function getCanonicalOrigin(hostname: string): { origin: string; isBD: boolean } {
+  const h = hostname.toLowerCase().split(":")[0]; // strip port
+  const isBD = h.includes("anzglobal.com.bd") || h.endsWith(".bd");
+  const origin = isBD ? "https://anzglobal.com.bd" : "https://anzglobal.com.au";
+  return { origin, isBD };
+}
 
-  html = html.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`);
-  html = html.replace(
-    /(<meta\s+name="title"\s+content=")[^"]*(")/,
-    `$1${title}$2`,
-  );
-  html = html.replace(
-    /(<meta\s+name="description"\s+content=")[^"]*(")/,
-    `$1${description}$2`,
-  );
-  html = html.replace(
-    /(<meta\s+property="og:title"\s+content=")[^"]*(")/,
-    `$1${title}$2`,
-  );
-  html = html.replace(
-    /(<meta\s+property="og:description"\s+content=")[^"]*(")/,
-    `$1${description}$2`,
-  );
-  html = html.replace(
-    /(<meta\s+name="twitter:title"\s+content=")[^"]*(")/,
-    `$1${title}$2`,
-  );
-  html = html.replace(
-    /(<meta\s+name="twitter:description"\s+content=")[^"]*(")/,
-    `$1${description}$2`,
-  );
+function replaceMeta(html: string, tags: MetaTags): string {
+  const { title, description, ogImage, ogUrl } = tags;
+
+  if (title) {
+    html = html.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`);
+    html = html.replace(
+      /(<meta\s+name="title"\s+content=")[^"]*(")/,
+      `$1${title}$2`,
+    );
+    html = html.replace(
+      /(<meta\s+property="og:title"\s+content=")[^"]*(")/,
+      `$1${title}$2`,
+    );
+    html = html.replace(
+      /(<meta\s+name="twitter:title"\s+content=")[^"]*(")/,
+      `$1${title}$2`,
+    );
+  }
+
+  if (description) {
+    html = html.replace(
+      /(<meta\s+name="description"\s+content=")[^"]*(")/,
+      `$1${description}$2`,
+    );
+    html = html.replace(
+      /(<meta\s+property="og:description"\s+content=")[^"]*(")/,
+      `$1${description}$2`,
+    );
+    html = html.replace(
+      /(<meta\s+name="twitter:description"\s+content=")[^"]*(")/,
+      `$1${description}$2`,
+    );
+  }
+
+  if (ogImage) {
+    html = html.replace(
+      /(<meta\s+property="og:image"\s+content=")[^"]*(")/,
+      `$1${ogImage}$2`,
+    );
+    html = html.replace(
+      /(<meta\s+name="twitter:image"\s+content=")[^"]*(")/,
+      `$1${ogImage}$2`,
+    );
+  }
+
+  if (ogUrl) {
+    html = html.replace(
+      /(<meta\s+property="og:url"\s+content=")[^"]*(")/,
+      `$1${ogUrl}$2`,
+    );
+  }
+
   return html;
 }
 
-export async function injectPageMeta(url: string, html: string): Promise<string> {
+export async function injectPageMeta(
+  url: string,
+  html: string,
+  hostname: string = "anzglobal.com.au",
+): Promise<string> {
   try {
     const pathname = url.split("?")[0].split("#")[0];
+    const { origin, isBD } = getCanonicalOrigin(hostname);
+
+    // Domain-specific OG image — always inject this regardless of page
+    const ogImage = isBD
+      ? `${origin}/og-image-bd.png`
+      : `${origin}/og-image.png`;
+    const ogUrl = `${origin}${pathname}`;
+
+    // Inject domain-level OG tags into every page
+    html = replaceMeta(html, { title: "", description: "", ogImage, ogUrl });
 
     const courseMatch = pathname.match(/^\/courses\/([^/]+)$/);
     if (courseMatch) {

@@ -213,7 +213,8 @@ app.use((req, res, next) => {
       try {
         const indexPath = path.resolve(distPath, "index.html");
         const html = await fs.promises.readFile(indexPath, "utf-8");
-        const injected = await injectPageMeta(req.originalUrl, html);
+        const hostname = req.hostname || req.headers.host || "anzglobal.com.au";
+        const injected = await injectPageMeta(req.originalUrl, html, hostname);
         res.set("Content-Type", "text/html").send(injected);
       } catch {
         res.sendFile(path.resolve(distPath, "index.html"));
