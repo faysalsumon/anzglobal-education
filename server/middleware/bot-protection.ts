@@ -10,7 +10,6 @@ const AI_BOT_USER_AGENTS = [
   'CCBot',
   'PerplexityBot',
   'cohere-ai',
-  'FacebookBot',
   'Meta-ExternalAgent',
   'Bytespider',
   'Diffbot',
@@ -117,11 +116,17 @@ const SEARCH_ENGINE_BOTS = [
   'Baiduspider',
   'YandexBot',
   'Applebot',
+  // Facebook / Meta — link preview and social sharing crawlers
   'facebookexternalhit',
+  'meta-webindexer',
+  'Meta-ExternalFetcher',
+  // LinkedIn, Twitter/X, Slack, WhatsApp link previews
   'LinkedInBot',
   'Twitterbot',
   'Slackbot',
   'WhatsApp',
+  // Telegram link previews
+  'TelegramBot',
 ];
 
 function isSearchEngineBot(userAgent: string): boolean {
