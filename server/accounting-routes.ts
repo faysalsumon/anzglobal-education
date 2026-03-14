@@ -761,6 +761,21 @@ export function registerAccountingRoutes(app: Express) {
       }
     }
 
+    // Sync acc_customers when client contact fields are provided
+    if (clientName !== undefined || clientEmail !== undefined || clientPhone !== undefined || clientAddress !== undefined) {
+      const [existingInv] = await db.select({ customerId: accInvoices.customerId }).from(accInvoices).where(eq(accInvoices.id, id));
+      if (existingInv?.customerId) {
+        const customerUpdates: Record<string, string | null> = {};
+        if (clientName !== undefined) customerUpdates.name = clientName;
+        if (clientEmail !== undefined) customerUpdates.email = clientEmail;
+        if (clientPhone !== undefined) customerUpdates.phone = clientPhone;
+        if (clientAddress !== undefined) customerUpdates.address = clientAddress;
+        if (Object.keys(customerUpdates).length > 0) {
+          await db.update(accCustomers).set(customerUpdates).where(eq(accCustomers.id, existingInv.customerId));
+        }
+      }
+    }
+
     safeUpdates.updatedAt = new Date();
     const [updated] = await db.update(accInvoices).set(safeUpdates).where(eq(accInvoices.id, id)).returning();
     if (!updated) return res.status(404).json({ message: "Invoice not found" });
