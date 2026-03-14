@@ -143,7 +143,7 @@ export function RelatedCoursesCarousel({ courseId, discipline }: RelatedCoursesC
                     />
                     <CardContent className="p-4 flex flex-col gap-2">
                       {course.level && (
-                        <Badge variant="secondary" className="w-fit text-xs">
+                        <Badge variant="outline" className="w-fit text-xs">
                           {course.level}
                         </Badge>
                       )}
