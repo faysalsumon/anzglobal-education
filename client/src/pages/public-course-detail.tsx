@@ -498,7 +498,7 @@ export default function PublicCourseDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Helmet>
         {/* Primary Meta Tags */}
         <title>{metaTitle}</title>
@@ -747,7 +747,7 @@ export default function PublicCourseDetail() {
               <div className="flex flex-col gap-6">
                 {/* University Badge */}
                 {course.university && (
-                  <div className="flex flex-wrap items-center gap-3 bg-background/60 backdrop-blur-sm rounded-xl p-4 border border-primary/10 w-fit">
+                  <div className="flex flex-wrap items-center gap-3 bg-background/60 backdrop-blur-sm rounded-xl p-4 border border-primary/10 w-fit max-w-full">
                     {course.university.logo && (
                       <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-white p-2 flex items-center justify-center">
                         <img
@@ -953,7 +953,7 @@ export default function PublicCourseDetail() {
               title="About This Program"
               defaultOpen={true}
             >
-              <p className="text-muted-foreground leading-relaxed whitespace-pre-line" data-testid="text-description">
+              <p className="text-muted-foreground leading-relaxed whitespace-pre-line break-words" data-testid="text-description">
                 {course.description || "No description available"}
               </p>
             </ResponsiveSection>
@@ -1261,7 +1261,7 @@ export default function PublicCourseDetail() {
                             <FileText className="h-5 w-5 text-primary" />
                             <h4 className="font-semibold">Prerequisites</h4>
                           </div>
-                          <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-prerequisites">
+                          <p className="text-muted-foreground whitespace-pre-line leading-relaxed break-words" data-testid="text-prerequisites">
                             {course.prerequisites}
                           </p>
                         </div>
@@ -1276,7 +1276,7 @@ export default function PublicCourseDetail() {
                               <h4 className="font-semibold text-sm text-muted-foreground">Additional Notes</h4>
                             </div>
                           )}
-                          <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-eligibility">
+                          <p className="text-muted-foreground whitespace-pre-line leading-relaxed break-words" data-testid="text-eligibility">
                             {course.eligibilityRequirements}
                           </p>
                         </div>
@@ -1603,7 +1603,7 @@ export default function PublicCourseDetail() {
                         <TrendingUp className="h-5 w-5 text-primary" />
                         Your Career Journey
                       </h3>
-                      <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-career-path">
+                      <p className="text-muted-foreground whitespace-pre-line leading-relaxed break-words" data-testid="text-career-path">
                         {course.careerPath}
                       </p>
                     </div>
@@ -1646,7 +1646,7 @@ export default function PublicCourseDetail() {
                 testId="card-internship-details"
                 defaultOpen={false}
               >
-                <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-internship-details">
+                <p className="text-muted-foreground whitespace-pre-line leading-relaxed break-words" data-testid="text-internship-details">
                   {course.internshipDetails}
                 </p>
               </ResponsiveSection>
