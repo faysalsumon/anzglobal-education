@@ -10631,6 +10631,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload institution logo (admin)
+  app.post("/api/university/upload-logo", isAuthenticated, upload.single("logo"), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: "Only image files are accepted (JPEG, PNG, GIF, WebP)" });
+      }
+      if (req.file.size > 5 * 1024 * 1024) {
+        return res.status(400).json({ message: "Logo file must be under 5MB" });
+      }
+
+      const sharp = (await import("sharp")).default;
+      const resizedBuffer = await sharp(req.file.buffer)
+        .resize(160, 160, { fit: "contain", background: { r: 255, g: 255, b: 255, alpha: 0 } })
+        .png()
+        .toBuffer();
+
+      const filename = `college-logo-admin-upload-${Date.now()}.png`;
+      const localPath = path.join(process.cwd(), "public", "institutions");
+      await fs.mkdir(localPath, { recursive: true });
+      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+
+      const logoPath = `/institutions/${filename}`;
+
+      // If an institutionId was provided, persist the logo path immediately
+      const institutionId = req.body?.institutionId;
+      if (institutionId) {
+        const institution = await storage.getUniversity(institutionId);
+        if (institution) {
+          await storage.updateUniversity(institutionId, { ...institution, logo: logoPath });
+        }
+      }
+
+      // Backup to object storage
+      try {
+        const { Client: LogoClient } = await import("@replit/object-storage");
+        const logoClient = new LogoClient();
+        await logoClient.uploadFromBytes(`public/institution-logos/${filename}`, resizedBuffer, { contentType: "image/png" });
+      } catch (_) { /* object storage optional */ }
+
+      res.json({ logoPath });
+    } catch (error: any) {
+      console.error("Error uploading institution logo:", error);
+      res.status(500).json({ message: "Failed to upload institution logo" });
+    }
+  });
+
   // Update institution
   app.patch("/api/super-admin/institutions/:id", isAuthenticated, async (req: any, res) => {
     try {
