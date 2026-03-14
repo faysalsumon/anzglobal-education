@@ -25,6 +25,7 @@ import { trackViewContent, trackInitiateApplication } from "@/lib/meta-pixel";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { CampusLocationMapDialog } from "@/components/campus-location-map-dialog";
 import { CampusMapTabs } from "@/components/campus-map-tabs";
+import { DetailPageFooter } from "@/components/detail-page-footer";
 import { useAuth } from "@/hooks/useAuth";
 import { CourseSectionNav } from "@/components/course-section-nav";
 import { ResponsiveSection } from "@/components/responsive-section";
@@ -2078,6 +2079,8 @@ export default function PublicCourseDetail() {
           )}
         </div>
       </div>
+
+      <DetailPageFooter updatedAt={course.updatedAt} entityType="course" />
 
       {/* Bottom padding spacer for mobile sticky bars (section nav + CTA) - accounts for safe area */}
       <div className="md:hidden h-36 pb-safe" aria-hidden="true" />

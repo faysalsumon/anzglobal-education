@@ -30,6 +30,7 @@ import { GoogleCampusMap } from "@/components/google-campus-map";
 import { ResponsiveSection } from "@/components/responsive-section";
 import { InstitutionSectionNav } from "@/components/institution-section-nav";
 import { CampusMapTabs } from "@/components/campus-map-tabs";
+import { DetailPageFooter } from "@/components/detail-page-footer";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -958,6 +959,8 @@ export default function PublicInstitutionDetail() {
           </div>
         </div>
       </div>
+
+      <DetailPageFooter updatedAt={institution.updatedAt} entityType="institution" />
 
       {/* Gallery Lightbox Modal */}
       {lightboxIndex !== null && galleryImages.length > 0 && (
