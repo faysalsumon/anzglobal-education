@@ -872,62 +872,71 @@ export default function PublicCourseDetail() {
 
             {/* Hero CTA Card - Desktop only (mobile uses sticky bottom CTA bar) */}
             <div className="hidden lg:flex lg:col-span-1">
-              <Card className="bg-background/60 backdrop-blur-sm border-primary/20 flex-1" data-testid="hero-cta-card">
-                <CardContent className="p-4 space-y-4">
-                  <p className="text-sm font-semibold text-foreground">Interested in this course?</p>
+              <div className="flex-1 flex flex-col gap-3" data-testid="hero-cta-card">
+                {/* Primary CTA */}
+                <div className="rounded-xl border border-primary/25 bg-background/70 backdrop-blur-sm overflow-hidden">
+                  <div className="bg-gradient-to-r from-primary/10 to-primary/5 px-4 py-3 border-b border-primary/15">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-primary">Ready to enrol?</p>
+                    <p className="text-sm font-semibold text-foreground mt-0.5">Start your application today</p>
+                  </div>
+                  <div className="p-4 space-y-2.5">
+                    {existingApplication ? (
+                      <Button 
+                        asChild 
+                        className="w-full bg-green-600" 
+                        data-testid="button-already-applied"
+                      >
+                        <Link href="/student/applications">
+                          <CheckCircle className="h-4 w-4 mr-1.5" />
+                          Applied for this course
+                        </Link>
+                      </Button>
+                    ) : isStudent ? (
+                      <Button 
+                        asChild 
+                        className="w-full" 
+                        data-testid="button-apply-now"
+                        onClick={() => trackInitiateApplication(course.title, String(course.id), course.fees ? Number(course.fees) : undefined, course.currency || "AUD")}
+                      >
+                        <Link href={`/student/courses/${course.id}`}>
+                          <GraduationCap className="h-4 w-4 mr-1.5" />
+                          Apply Now
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button 
+                        asChild 
+                        className="w-full" 
+                        data-testid="button-login-apply"
+                      >
+                        <a href="/auth">
+                          <LogIn className="h-4 w-4 mr-1.5" />
+                          Login to Apply
+                        </a>
+                      </Button>
+                    )}
 
-                  {existingApplication ? (
-                    <Button 
-                      asChild 
-                      className="w-full bg-green-600" 
-                      data-testid="button-already-applied"
-                    >
-                      <Link href="/student/applications">
-                        <CheckCircle className="h-4 w-4 mr-1.5" />
-                        Applied for this course
-                      </Link>
-                    </Button>
-                  ) : isStudent ? (
-                    <Button 
-                      asChild 
-                      className="w-full" 
-                      data-testid="button-apply-now"
-                      onClick={() => trackInitiateApplication(course.title, String(course.id), course.fees ? Number(course.fees) : undefined, course.currency || "AUD")}
-                    >
-                      <Link href={`/student/courses/${course.id}`}>
-                        <GraduationCap className="h-4 w-4 mr-1.5" />
-                        Apply Now
-                      </Link>
-                    </Button>
-                  ) : (
-                    <Button 
-                      asChild 
-                      className="w-full" 
-                      data-testid="button-login-apply"
-                    >
-                      <a href="/auth">
-                        <LogIn className="h-4 w-4 mr-1.5" />
-                        Login to Apply
-                      </a>
-                    </Button>
-                  )}
-
-                  {course.university && (
-                    <div className="pt-2 border-t">
-                      <p className="text-[11px] text-muted-foreground text-center mb-2">Not ready to apply?</p>
+                    {course.university && (
                       <LeadFormDialog
                         courseId={course.id}
                         universityId={course.universityId}
                         courseName={course.title}
                         universityName={course.university.name}
-                        buttonVariant="ghost"
+                        buttonVariant="outline"
                         courseValue={course.fees ? Number(course.fees) : undefined}
                         courseCurrency={course.currency || "AUD"}
                       />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                    )}
+                  </div>
+                </div>
+
+                {/* Trust signal */}
+                <div className="flex items-center gap-2 px-1">
+                  <div className="h-px flex-1 bg-border/60" />
+                  <p className="text-[10px] text-muted-foreground whitespace-nowrap">Secure &amp; free to apply</p>
+                  <div className="h-px flex-1 bg-border/60" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1616,14 +1625,14 @@ export default function PublicCourseDetail() {
                   <p className="text-sm text-muted-foreground mb-4">
                     This course can lead to further study opportunities:
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <ul className="space-y-2">
                     {course.pathways.map((pathway, index) => (
-                      <Badge key={index} variant="outline" className="px-3 py-1.5" data-testid={`badge-pathway-${index}`}>
-                        <ArrowUpRight className="h-3 w-3 mr-1" />
-                        {pathway}
-                      </Badge>
+                      <li key={index} className="flex items-start gap-2.5 text-sm text-foreground" data-testid={`pathway-item-${index}`}>
+                        <ArrowUpRight className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        <span className="leading-relaxed">{pathway}</span>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
               </ResponsiveSection>
             )}
