@@ -43,6 +43,13 @@
       "when": 1773513401047,
       "tag": "0005_fix_source_lead_id_varchar",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1773514800000,
+      "tag": "0006_cleanup_all_phantom_objects",
+      "breakpoints": true
     }
   ]
 }
