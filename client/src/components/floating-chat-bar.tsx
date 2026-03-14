@@ -16,12 +16,6 @@ import {
   Send,
   X,
   Minus,
-  Search,
-  Users,
-  Circle,
-  Plus,
-  ChevronUp,
-  ChevronDown,
   Paperclip,
   FileText,
   FileSpreadsheet,
@@ -116,9 +110,7 @@ const MAX_VISIBLE_WINDOWS = 3;
 
 export function FloatingChatBar() {
   const { user } = useAuth();
-  const { isConnected, lastMessage, sendMessage } = useWebSocket();
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const { lastMessage, sendMessage } = useWebSocket();
   const [chatWindows, setChatWindows] = useState<ChatWindow[]>([]);
   const [messageInputs, setMessageInputs] = useState<Record<string, string>>({});
 
@@ -130,17 +122,9 @@ export function FloatingChatBar() {
     refetchInterval: 15000,
   });
 
-  const { data: unreadData } = useQuery<{ count: number }>({
-    queryKey: ["/api/conversations/unread-count"],
-    refetchInterval: 15000,
-  });
-
   const { data: teamMembers = [] } = useQuery<AdminTeamMember[]>({
     queryKey: ["/api/admin/messaging/team"],
-    enabled: isPanelOpen,
   });
-
-  const totalUnread = unreadData?.count || 0;
 
   const createConversationMutation = useMutation({
     mutationFn: async (otherUserId: string) => {
@@ -179,64 +163,6 @@ export function FloatingChatBar() {
       }
     }
   }, [lastMessage]);
-
-  const openChatWindow = useCallback(
-    async (conversation?: Conversation, member?: AdminTeamMember) => {
-      if (conversation) {
-        const p = conversation.otherParticipant;
-        const win: ChatWindow = {
-          conversationId: conversation.id,
-          recipientId: p?.id || "",
-          recipientName: p ? `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.email : "Unknown",
-          recipientRole: p?.role,
-          recipientImage: p?.profileImageUrl,
-          isMinimized: false,
-        };
-        setChatWindows((prev) => {
-          const exists = prev.find((w) => w.conversationId === conversation.id);
-          if (exists) {
-            return prev.map((w) =>
-              w.conversationId === conversation.id ? { ...w, isMinimized: false } : w
-            );
-          }
-          return [...prev, win];
-        });
-        if (conversation.unreadCount > 0) {
-          markAsReadMutation.mutate(conversation.id);
-        }
-      } else if (member) {
-        const existing = conversations?.find((c) => c.otherParticipant?.id === member.id);
-        if (existing) {
-          openChatWindow(existing);
-          return;
-        }
-        try {
-          const data = await createConversationMutation.mutateAsync(member.id);
-          const win: ChatWindow = {
-            conversationId: data.id,
-            recipientId: member.id,
-            recipientName: `${member.firstName || ""} ${member.lastName || ""}`.trim() || member.email,
-            recipientRole: member.role || undefined,
-            recipientImage: member.profileImageUrl,
-            isMinimized: false,
-          };
-          setChatWindows((prev) => {
-            const exists = prev.find((w) => w.conversationId === data.id);
-            if (exists) {
-              return prev.map((w) =>
-                w.conversationId === data.id ? { ...w, isMinimized: false } : w
-              );
-            }
-            return [...prev, win];
-          });
-        } catch {
-          // mutation error handled by react-query
-        }
-      }
-      setIsPanelOpen(false);
-    },
-    [conversations, createConversationMutation, markAsReadMutation]
-  );
 
   const closeChatWindow = useCallback((conversationId: string) => {
     setChatWindows((prev) => prev.filter((w) => w.conversationId !== conversationId));
@@ -284,31 +210,70 @@ export function FloatingChatBar() {
       .join(" ");
   };
 
-  const filteredConversations = conversations
-    ?.filter((c) => {
-      if (!searchQuery) return true;
-      const name = `${c.otherParticipant?.firstName || ""} ${c.otherParticipant?.lastName || ""}`.toLowerCase();
-      return name.includes(searchQuery.toLowerCase());
-    })
-    ?.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
-
-  const filteredTeamMembers = teamMembers.filter((m) => {
-    if (m.id === currentUserId) return false;
-    if (!m.isActive) return false;
-    if (!searchQuery) return true;
-    const name = `${m.firstName || ""} ${m.lastName || ""}`.toLowerCase();
-    return name.includes(searchQuery.toLowerCase()) || m.email.toLowerCase().includes(searchQuery.toLowerCase());
-  });
-
-  const existingConversationMemberIds = new Set(conversations?.map((c) => c.otherParticipant?.id) || []);
-  const newTeamMembers = filteredTeamMembers.filter((m) => !existingConversationMemberIds.has(m.id));
-
   const visibleWindows = chatWindows.slice(-MAX_VISIBLE_WINDOWS);
-  const hiddenWindows = chatWindows.slice(0, Math.max(0, chatWindows.length - MAX_VISIBLE_WINDOWS));
+
+  useEffect(() => {
+    const handleOpenMiniChat = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+      const win: ChatWindow = {
+        conversationId: detail.conversationId,
+        recipientId: detail.recipientId,
+        recipientName: detail.recipientName,
+        recipientRole: detail.recipientRole,
+        recipientImage: detail.recipientImage,
+        isMinimized: false,
+      };
+      setChatWindows((prev) => {
+        const exists = prev.find((w) => w.conversationId === detail.conversationId);
+        if (exists) {
+          return prev.map((w) =>
+            w.conversationId === detail.conversationId ? { ...w, isMinimized: false } : w
+          );
+        }
+        return [...prev, win];
+      });
+      markAsReadMutation.mutate(detail.conversationId);
+    };
+
+    const handleOpenMiniChatNew = async (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+      try {
+        const data = await createConversationMutation.mutateAsync(detail.memberId);
+        const win: ChatWindow = {
+          conversationId: data.id,
+          recipientId: detail.memberId,
+          recipientName: detail.memberName,
+          recipientRole: detail.memberRole,
+          recipientImage: detail.memberImage,
+          isMinimized: false,
+        };
+        setChatWindows((prev) => {
+          const exists = prev.find((w) => w.conversationId === data.id);
+          if (exists) {
+            return prev.map((w) =>
+              w.conversationId === data.id ? { ...w, isMinimized: false } : w
+            );
+          }
+          return [...prev, win];
+        });
+      } catch {
+        // handled by react-query
+      }
+    };
+
+    window.addEventListener("open-mini-chat", handleOpenMiniChat);
+    window.addEventListener("open-mini-chat-new", handleOpenMiniChatNew);
+    return () => {
+      window.removeEventListener("open-mini-chat", handleOpenMiniChat);
+      window.removeEventListener("open-mini-chat-new", handleOpenMiniChatNew);
+    };
+  }, [createConversationMutation, markAsReadMutation]);
 
   return (
-    <div className="fixed bottom-0 right-0 z-50 flex items-end gap-2" data-testid="floating-chat-bar">
-      {visibleWindows.map((win, idx) => (
+    <div className="fixed bottom-10 right-4 z-50 flex items-end gap-2" data-testid="floating-chat-bar">
+      {visibleWindows.map((win) => (
         <MiniChatWindow
           key={win.conversationId}
           chatWindow={win}
@@ -326,201 +291,6 @@ export function FloatingChatBar() {
           lastMessage={lastMessage}
         />
       ))}
-
-      <div className="flex flex-col items-end" data-testid="chat-bar-container">
-        {isPanelOpen && (
-          <div
-            className="w-80 bg-card border border-border shadow-lg rounded-t-lg mb-0 overflow-hidden"
-            data-testid="team-panel"
-          >
-            <div className="p-3 border-b flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span className="font-semibold text-sm" data-testid="text-panel-title">
-                  Team Members
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsPanelOpen(false)}
-                data-testid="button-close-panel"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="p-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search team members..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                  data-testid="input-search-team"
-                />
-              </div>
-            </div>
-            <ScrollArea className="max-h-[400px]">
-              <div className="p-2 space-y-1">
-                {filteredConversations && filteredConversations.length > 0 && (
-                  <>
-                    <p className="text-xs text-muted-foreground px-2 py-1 font-medium">
-                      Conversations
-                    </p>
-                    {filteredConversations.map((conv) => (
-                      <div
-                        key={conv.id}
-                        className="flex items-center gap-2 p-2 rounded-md cursor-pointer hover-elevate"
-                        onClick={() => openChatWindow(conv)}
-                        data-testid={`panel-conversation-${conv.id}`}
-                      >
-                        <div className="relative">
-                          <Avatar className="h-8 w-8">
-                            {conv.otherParticipant?.profileImageUrl && (
-                              <AvatarImage src={conv.otherParticipant.profileImageUrl} />
-                            )}
-                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                              {getInitials(
-                                conv.otherParticipant?.firstName,
-                                conv.otherParticipant?.lastName,
-                                conv.otherParticipant?.email
-                              )}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card ${STATUS_COLORS[conv.otherParticipant?.availabilityStatus || 'available'] || STATUS_COLORS.available}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1">
-                            <span
-                              className={`text-sm truncate ${conv.unreadCount > 0 ? "font-bold" : "font-medium"}`}
-                            >
-                              {conv.otherParticipant?.firstName} {conv.otherParticipant?.lastName}
-                            </span>
-                            {conv.unreadCount > 0 && (
-                              <Badge
-                                variant="destructive"
-                                className="text-xs shrink-0"
-                                data-testid={`badge-unread-${conv.id}`}
-                              >
-                                {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
-                              </Badge>
-                            )}
-                          </div>
-                          {conv.lastMessage && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {conv.lastMessage.content}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
-
-                {newTeamMembers.length > 0 && (
-                  <>
-                    <p className="text-xs text-muted-foreground px-2 py-1 font-medium mt-2">
-                      Start New Chat
-                    </p>
-                    {newTeamMembers.map((member) => (
-                      <div
-                        key={member.id}
-                        className="flex items-center gap-2 p-2 rounded-md cursor-pointer hover-elevate"
-                        onClick={() => openChatWindow(undefined, member)}
-                        data-testid={`panel-member-${member.id}`}
-                      >
-                        <div className="relative">
-                          <Avatar className="h-8 w-8">
-                            {member.profileImageUrl && <AvatarImage src={member.profileImageUrl} />}
-                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                              {getInitials(member.firstName, member.lastName, member.email)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card ${STATUS_COLORS[member.availabilityStatus || 'available'] || STATUS_COLORS.available}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium truncate block">
-                            {member.firstName} {member.lastName}
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            <Badge variant="secondary" className="text-xs">
-                              {formatRole(member.role)}
-                            </Badge>
-                            {member.customStatusText && (
-                              <span className="text-xs text-muted-foreground truncate">{member.customStatusText}</span>
-                            )}
-                          </div>
-                        </div>
-                        <Plus className="h-4 w-4 text-muted-foreground shrink-0" />
-                      </div>
-                    ))}
-                  </>
-                )}
-
-                {(!filteredConversations || filteredConversations.length === 0) &&
-                  newTeamMembers.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-8">
-                      <Users className="h-8 w-8 text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        {searchQuery ? "No results found" : "No team members available"}
-                      </p>
-                    </div>
-                  )}
-              </div>
-            </ScrollArea>
-          </div>
-        )}
-
-        <div
-          className="bg-card border-t border-l border-border rounded-tl-lg flex items-center gap-2 px-3 py-2 cursor-pointer select-none"
-          onClick={() => window.dispatchEvent(new CustomEvent("open-admin-chat"))}
-          data-testid="chat-bar-toggle"
-        >
-          <div className="flex items-center gap-2">
-            <MessageCircle className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-semibold" data-testid="text-team-chat-label">
-              Chat
-            </span>
-            <Circle
-              className={`h-2 w-2 ${isConnected ? "fill-green-500 text-green-500" : "fill-yellow-500 text-yellow-500"}`}
-              data-testid="status-indicator"
-            />
-          </div>
-
-          {totalUnread > 0 && (
-            <Badge variant="destructive" className="text-xs" data-testid="badge-total-unread">
-              {totalUnread > 99 ? "99+" : totalUnread}
-            </Badge>
-          )}
-
-          {hiddenWindows.map((win) => (
-            <Avatar
-              key={win.conversationId}
-              className="h-6 w-6 cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                setChatWindows((prev) => {
-                  const without = prev.filter((w) => w.conversationId !== win.conversationId);
-                  return [...without, { ...win, isMinimized: false }];
-                });
-              }}
-              data-testid={`bubble-avatar-${win.conversationId}`}
-            >
-              {win.recipientImage && <AvatarImage src={win.recipientImage} />}
-              <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                {getInitials(win.recipientName.split(" ")[0], win.recipientName.split(" ")[1])}
-              </AvatarFallback>
-            </Avatar>
-          ))}
-
-          {isPanelOpen ? (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-          )}
-        </div>
-      </div>
     </div>
   );
 }

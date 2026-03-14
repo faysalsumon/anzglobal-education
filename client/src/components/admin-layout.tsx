@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Breadcrumb,
@@ -20,6 +20,7 @@ import {
 import { Home } from "lucide-react";
 import { AdminMegaSidebar } from "@/components/admin-mega-sidebar";
 import { FloatingChatBar } from "@/components/floating-chat-bar";
+import { AdminBottomBar } from "@/components/admin-bottom-bar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
 import { AdminChatWidget } from "@/components/admin-chat-widget";
@@ -37,7 +38,6 @@ const TAB_TO_ROUTE_MAP: Record<string, string> = {
   "data-import": "/admin/csv-import",
   "overview": "/admin/dashboard",
   "my-tasks": "/admin/dashboard?tab=my-tasks",
-  "messages": "/admin/dashboard?tab=messages",
   "team-workload": "/admin/dashboard?tab=team-workload",
   "crm-contacts": "/admin/dashboard?tab=crm-contacts",
   "applications": "/admin/dashboard?tab=applications",
@@ -80,13 +80,7 @@ export function AdminLayout({
     enabled: hasFullAdminAccess,
   });
 
-  useEffect(() => {
-    const handler = () => setIsChatOpen(true);
-    window.addEventListener("open-admin-chat", handler);
-    return () => window.removeEventListener("open-admin-chat", handler);
-  }, []);
-
-  const handleTabChange = (tab: string) => {
+  const handleTabChange = useCallback((tab: string) => {
     const route = TAB_TO_ROUTE_MAP[tab];
     if (route) {
       if (route.includes("?tab=")) {
@@ -99,7 +93,25 @@ export function AdminLayout({
     } else {
       setLocation(`/admin/dashboard?tab=${tab}`);
     }
-  };
+  }, [setLocation]);
+
+  useEffect(() => {
+    const handler = () => setIsChatOpen(true);
+    window.addEventListener("open-admin-chat", handler);
+
+    const tabHandler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.tab) {
+        handleTabChange(detail.tab);
+      }
+    };
+    window.addEventListener("admin-tab-change", tabHandler);
+
+    return () => {
+      window.removeEventListener("open-admin-chat", handler);
+      window.removeEventListener("admin-tab-change", tabHandler);
+    };
+  }, [handleTabChange]);
 
   return (
     <div className="flex min-h-screen w-full bg-muted/30">
@@ -132,12 +144,13 @@ export function AdminLayout({
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-6 overflow-auto">
+        <main className="flex-1 p-4 lg:p-6 pb-14 overflow-auto">
           {children}
         </main>
       </div>
 
       <FloatingChatBar />
+      <AdminBottomBar />
       <AdminChatWidget />
 
       <Sheet open={isChatOpen} onOpenChange={setIsChatOpen}>

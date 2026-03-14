@@ -40,7 +40,6 @@ import {
   Search,
   Key,
   Bell,
-  MessageCircle,
   UserCheck,
   Mail,
   DollarSign,
@@ -104,7 +103,6 @@ export function AdminMegaSidebar({
       routes: [
         { icon: ListTodo, label: "My Tasks", value: "my-tasks", show: true },
         { icon: BarChart3, label: "Team Workload", value: "team-workload", show: isCTO },
-        { icon: MessageCircle, label: "Messages", value: "messages", show: true },
         { icon: Mail, label: "Email", value: "email", show: true },
         { icon: Contact, label: "Contacts", value: "crm-contacts", show: true },
         { icon: ClipboardList, label: "Applications", value: "applications", show: true },
