@@ -1579,7 +1579,8 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
 
   const getSelectedTags = (): TagType[] => {
     if (!groupedTags) return [];
-    const allTags = Object.values(groupedTags).flat();
+    // Exclude "featured" slug — homepage featuring is controlled by the "Featured On" card instead
+    const allTags = Object.values(groupedTags).flat().filter((tag: TagType) => tag.slug !== 'featured');
     return allTags.filter(tag => selectedTagIds.includes(String(tag.id)));
   };
 
@@ -3897,7 +3898,8 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                     {groupedTags && Object.entries(groupedTags).map(([category, categoryTags]) => {
                       const categoryConfig = TAG_CATEGORY_LABELS[category];
                       const CategoryIcon = categoryConfig?.icon || Tag;
-                      const selectedInCategory = categoryTags.filter((tag: TagType) => 
+                      const filteredCategoryTags = categoryTags.filter((tag: TagType) => tag.slug !== 'featured');
+                      const selectedInCategory = filteredCategoryTags.filter((tag: TagType) => 
                         selectedTagIds.includes(String(tag.id))
                       ).length;
                       
@@ -3917,7 +3919,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                           </CollapsibleTrigger>
                           <CollapsibleContent className="pt-1 pb-2">
                             <div className="space-y-0.5 pl-6">
-                              {categoryTags.map((tag: TagType) => {
+                              {filteredCategoryTags.map((tag: TagType) => {
                                 const isSelected = selectedTagIds.includes(String(tag.id));
                                 return (
                                   <div

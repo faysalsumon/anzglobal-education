@@ -354,7 +354,8 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
   };
 
   // Get all available tags as flat array for display
-  const allTags = groupedTags ? Object.values(groupedTags).flat() : [];
+  // Exclude the "featured" slug — homepage featuring is controlled by the "Featured On" card instead
+  const allTags = groupedTags ? Object.values(groupedTags).flat().filter(t => t.slug !== 'featured') : [];
   const selectedTags = allTags.filter(t => selectedTagIds.includes(t.id));
 
   const form = useForm<z.infer<typeof institutionSchema>>({
@@ -1343,7 +1344,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                               <CommandEmpty data-testid="text-no-tags-found">No tags found.</CommandEmpty>
                               {groupedTags && Object.entries(groupedTags).map(([category, categoryTags]) => (
                                 <CommandGroup key={category} heading={INSTITUTION_TAG_CATEGORY_LABELS[category] || category}>
-                                  {categoryTags.map((tag) => {
+                                  {categoryTags.filter(t => t.slug !== 'featured').map((tag) => {
                                     const isSelected = selectedTagIds.includes(tag.id);
                                     return (
                                       <CommandItem
