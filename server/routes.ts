@@ -10645,16 +10645,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Logo file must be under 5MB" });
       }
 
-      const sharp = (await import("sharp")).default;
-      const resizedBuffer = await sharp(req.file.buffer)
-        .resize(160, 160, { fit: "contain", background: { r: 255, g: 255, b: 255, alpha: 0 } })
-        .png()
-        .toBuffer();
-
-      const filename = `college-logo-admin-upload-${Date.now()}.png`;
+      const ext = req.file.mimetype === "image/png" ? "png"
+        : req.file.mimetype === "image/gif" ? "gif"
+        : req.file.mimetype === "image/webp" ? "webp"
+        : "jpg";
+      const filename = `college-logo-admin-upload-${Date.now()}.${ext}`;
       const localPath = path.join(process.cwd(), "public", "institutions");
       await fs.mkdir(localPath, { recursive: true });
-      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+      await fs.writeFile(path.join(localPath, filename), req.file.buffer);
 
       const logoPath = `/institutions/${filename}`;
 
@@ -10667,11 +10665,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Backup to object storage
+      // Backup to object storage (best-effort)
       try {
         const { Client: LogoClient } = await import("@replit/object-storage");
         const logoClient = new LogoClient();
-        await logoClient.uploadFromBytes(`public/institution-logos/${filename}`, resizedBuffer, { contentType: "image/png" });
+        await logoClient.uploadFromBytes(`public/institution-logos/${filename}`, req.file.buffer, { contentType: req.file.mimetype });
       } catch (_) { /* object storage optional */ }
 
       res.json({ logoPath });
