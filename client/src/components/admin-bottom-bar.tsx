@@ -263,9 +263,7 @@ export function AdminBottomBar() {
                 placeholder={
                   activePanel === "chats"
                     ? "Search conversations..."
-                    : activePanel === "channels"
-                      ? "Search channels..."
-                      : "Search contacts..."
+                    : "Search channels..."
                 }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
