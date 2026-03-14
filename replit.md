@@ -21,7 +21,7 @@ The platform adheres to ANZ Global Education's brand identity, using a specific 
 - **API**: RESTful.
 - **Real-time**: WebSockets for chat and notifications.
 - **AI Integration**: OpenAI API (GPT-4o for content, GPT-4o-mini for web scraping).
-- **Database**: PostgreSQL (Neon, Drizzle ORM).
+- **Database**: PostgreSQL (Neon, Drizzle ORM). Safe migration system: `bun run db:generate` creates migration files from schema changes, `bun run db:migrate` applies them. Server auto-runs pending migrations on startup via `server/migrate.ts`. `bun run db:push:dev` exists for dev-only destructive sync — never use against production.
 - **Job Queue**: BullMQ with Redis.
 - **Web Scraping**: Playwright, Cheerio, robots-parser.
 - **Object Storage**: Replit Object Storage for persistent logo backups and general file storage, with a fallback mechanism for missing files.
