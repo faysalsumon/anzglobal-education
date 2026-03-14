@@ -29,6 +29,13 @@
       "when": 1773496188737,
       "tag": "0003_fix_crm_leads_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1773497104746,
+      "tag": "0004_fix_crm_leads_varchar_id",
+      "breakpoints": true
     }
   ]
 }
