@@ -22,6 +22,13 @@
       "when": 1773495619956,
       "tag": "0002_restore_phantom_objects",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1773496188737,
+      "tag": "0003_fix_crm_leads_identity",
+      "breakpoints": true
     }
   ]
 }
