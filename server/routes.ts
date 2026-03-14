@@ -10577,6 +10577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         smallDescription,
         fullDescription,
         tags,
+        availableMarkets,
       } = req.body;
 
       if (!name || !country) {
@@ -10629,6 +10630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         smallDescription: smallDescription || null,
         fullDescription: fullDescription || null,
         tags: tags || null,
+        availableMarkets: Array.isArray(availableMarkets) && availableMarkets.length > 0 ? availableMarkets : ['AU', 'BD'],
         createdByUserId: userId,
         updatedByUserId: userId,
         assignedToUserId: userId,
