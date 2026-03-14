@@ -375,6 +375,20 @@ export function FloatingChatBar() {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/messaging/team"] });
         queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
       }
+      if (lastMessage.type === "channel_message") {
+        const chId = lastMessage.channelId;
+        if (chId) {
+          queryClient.invalidateQueries({
+            queryKey: ["/api/channels", chId, "messages"],
+          });
+        } else {
+          queryClient.invalidateQueries({
+            queryKey: ["/api/channels"],
+            predicate: (query) =>
+              Array.isArray(query.queryKey) && query.queryKey[2] === "messages",
+          });
+        }
+      }
     }
   }, [lastMessage]);
 
