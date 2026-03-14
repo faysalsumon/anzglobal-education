@@ -523,11 +523,7 @@ export function FloatingChatBar() {
             w.channelId === detail.channelId ? { ...w, isMinimized: false } : w
           );
         }
-        const next = [...prev, win];
-        if (next.length > MAX_VISIBLE_WINDOWS) {
-          return next.slice(next.length - MAX_VISIBLE_WINDOWS);
-        }
-        return next;
+        return [...prev, win];
       });
     };
 
@@ -543,7 +539,7 @@ export function FloatingChatBar() {
 
   return (
     <div className="fixed bottom-10 right-4 z-50 flex items-end gap-2" data-testid="floating-chat-bar">
-      {channelWindows.map((win) => (
+      {channelWindows.slice(-MAX_VISIBLE_WINDOWS).map((win) => (
         <MiniChannelWindow
           key={`ch-${win.channelId}`}
           channelId={win.channelId}
