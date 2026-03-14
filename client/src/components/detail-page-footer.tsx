@@ -28,7 +28,7 @@ export function DetailPageFooter({ updatedAt, entityType }: DetailPageFooterProp
 
   return (
     <div className="container mx-auto px-4" data-testid="detail-page-footer">
-      <div className="border-t bg-muted/30 rounded-b-xl px-6 py-8 md:py-10">
+      <div className="border-t pt-8 pb-6 md:pt-10 md:pb-8">
         {formattedDate && (
           <>
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6" data-testid="text-last-updated">
