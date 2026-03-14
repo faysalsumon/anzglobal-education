@@ -86,7 +86,6 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
-        <Route path="/" component={Landing} />
         <Route path="/auth" component={AuthPage} />
         <Route path="/admin/login" component={AdminLogin} />
         <Route path="/admin/forgot-password" component={AdminForgotPassword} />
@@ -136,6 +135,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
         <Route path="/student/ai-assistant" component={StudentAIAssistant} />
         <Route path="/student/preferences" component={StudentPreferences} />
         <Route path="/chat" component={ChatPage} />
+        <Route path="/" component={Landing} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
