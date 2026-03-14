@@ -1998,7 +1998,7 @@ export default function PublicCourseDetail() {
       </section>
 
       {/* Mobile Sticky Bottom CTA Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg z-50 safe-area-bottom" data-testid="mobile-sticky-cta">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg z-50 safe-area-bottom" data-testid="mobile-sticky-cta">
         <div className="flex items-center justify-between gap-2 p-3">
           {/* Save/Favorite Button */}
           {isStudent ? (
@@ -2091,8 +2091,8 @@ export default function PublicCourseDetail() {
 
       <DetailPageFooter updatedAt={course.updatedAt} entityType="course" />
 
-      {/* Bottom padding spacer for mobile sticky bars (section nav + CTA) - accounts for safe area */}
-      <div className="md:hidden h-36 pb-safe" aria-hidden="true" />
+      {/* Bottom padding spacer for sticky CTA bar (shows on mobile + tablet, i.e. < lg) */}
+      <div className="lg:hidden h-36 pb-safe" aria-hidden="true" />
     </div>
   );
 }

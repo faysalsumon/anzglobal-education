@@ -27,12 +27,12 @@ export function DetailPageFooter({ updatedAt, entityType }: DetailPageFooterProp
   const formattedDate = updatedAt ? formatLastUpdated(updatedAt) : null;
 
   return (
-    <div className="border-t bg-muted/30" data-testid="detail-page-footer">
-      <div className="container mx-auto px-4 py-8 md:py-10">
+    <div className="container mx-auto px-4" data-testid="detail-page-footer">
+      <div className="border-t bg-muted/30 rounded-b-xl px-6 py-8 md:py-10">
         {formattedDate && (
           <>
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6" data-testid="text-last-updated">
-              <Clock className="h-3.5 w-3.5" />
+              <Clock className="h-3.5 w-3.5 shrink-0" />
               <span>
                 {entityType === "institution" ? "Institution" : "Course"} information last updated on {formattedDate}
               </span>
@@ -45,10 +45,10 @@ export function DetailPageFooter({ updatedAt, entityType }: DetailPageFooterProp
           <div className="flex items-start gap-2">
             <Shield className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
             <p className="text-xs text-muted-foreground leading-relaxed" data-testid="text-partner-disclaimer">
-              Some institutions listed on this platform may be facilitated through our authorised partner network. 
-              ANZ Global Education does not directly represent all listed institutions. 
-              For institutions where we do not hold a direct contract, student enrolments may be processed 
-              through our trusted partner channels. All information is provided in good faith and is subject to change 
+              Some institutions listed on this platform may be facilitated through our authorised partner network.
+              ANZ Global Education does not directly represent all listed institutions.
+              For institutions where we do not hold a direct contract, student enrolments may be processed
+              through our trusted partner channels. All information is provided in good faith and is subject to change
               by the respective institution without notice.
             </p>
           </div>
