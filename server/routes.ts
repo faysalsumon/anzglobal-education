@@ -10685,6 +10685,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignedToUserId: userId,
       });
 
+      // Log creation activity
+      await logCreate({
+        req,
+        entityType: 'institution',
+        entityId: newInstitution.id,
+        entityName: newInstitution.name,
+      });
+
       // Trigger async knowledge base rebuild
       triggerKnowledgeBaseRebuild('super-admin institution creation');
 
@@ -10810,7 +10818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityName: existingInstitution.name,
         oldData: existingInstitution,
         newData: updatedInstitution,
-        fieldsToTrack: ['name', 'description', 'smallDescription', 'country', 'city', 'state', 'logo', 'coverImage', 'website', 'email', 'phone', 'establishedYear', 'providerType', 'campusAddresses', 'publishStatus', 'approvalStatus', 'featuredOrder'],
+        fieldsToTrack: ['name', 'description', 'smallDescription', 'country', 'city', 'state', 'logo', 'coverImage', 'website', 'email', 'phone', 'establishedYear', 'providerType', 'campusAddresses', 'publishStatus', 'approvalStatus', 'featuredOrder', 'availableMarkets', 'featuredMarkets', 'visibility', 'rtoNumber', 'cricosProviderCode', 'hasScholarship', 'isActive', 'internationalStudentSupport'],
       });
       
       // Trigger async knowledge base rebuild
