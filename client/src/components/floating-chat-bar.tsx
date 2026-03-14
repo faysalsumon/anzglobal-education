@@ -179,7 +179,6 @@ function MiniChannelWindow({
 
   const { data: members = [], isLoading: isLoadingMembers } = useQuery<ChannelMember[]>({
     queryKey: ["/api/channels", channelId, "members"],
-    enabled: showMembers,
   });
 
   const isSystemManager = isCTO || isBranchManager || adminRole === "ceo";
@@ -304,7 +303,7 @@ function MiniChannelWindow({
         <span className="text-sm font-medium truncate flex-1">
           {showMembers ? "Members" : channelName}
         </span>
-        {!showMembers && (
+        {!showMembers && canManageMembers && (
           <Button
             type="button"
             size="icon"
