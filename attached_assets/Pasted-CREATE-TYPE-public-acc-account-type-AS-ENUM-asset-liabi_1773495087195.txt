@@ -1,0 +1,333 @@
+CREATE TYPE "public"."acc_account_type" AS ENUM('asset', 'liability', 'income', 'expense', 'equity');
+CREATE TYPE "public"."acc_bill_status" AS ENUM('unpaid', 'partially_paid', 'paid', 'overdue');
+CREATE TYPE "public"."acc_bill_to_type" AS ENUM('institution', 'student', 'manual');
+CREATE TYPE "public"."acc_invoice_status" AS ENUM('draft', 'sent', 'partially_paid', 'paid', 'void', 'overdue');
+CREATE TYPE "public"."acc_payment_method" AS ENUM('bank', 'cash', 'card', 'cheque');
+CREATE TABLE "acc_bills" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "acc_bills_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"category_id" integer,
+	"vendor" varchar(255) NOT NULL,
+	"amount" numeric(12, 2) NOT NULL,
+	"currency" varchar(10) DEFAULT 'AUD' NOT NULL,
+	"issue_date" date NOT NULL,
+	"due_date" date NOT NULL,
+	"description" text,
+	"reference" varchar(255),
+	"status" "acc_bill_status" DEFAULT 'unpaid' NOT NULL,
+	"region_code" varchar(10),
+	"created_by" varchar(255) NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+CREATE TABLE "acc_expense_categories" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "acc_expense_categories_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"name" varchar(255) NOT NULL,
+	"type" varchar(50) DEFAULT 'expense' NOT NULL,
+	CONSTRAINT "acc_expense_categories_name_unique" UNIQUE("name")
+);
+CREATE TABLE "acc_credit_note_items" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"credit_note_id" varchar NOT NULL,
+	"description" varchar(500) NOT NULL,
+	"quantity" numeric(10, 2) DEFAULT '1' NOT NULL,
+	"unit_price" numeric(12, 2) DEFAULT '0' NOT NULL,
+	"amount" numeric(12, 2) DEFAULT '0' NOT NULL
+);
+CREATE TABLE "acc_payments_received" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"invoice_id" varchar NOT NULL,
+	"amount" numeric(12, 2) NOT NULL,
+	"payment_date" date NOT NULL,
+	"method" "acc_payment_method" NOT NULL,
+	"reference" varchar(255),
+	"notes" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+CREATE TABLE "acc_reminder_logs" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "acc_reminder_logs_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"invoice_id" integer NOT NULL,
+	"sent_to" varchar(255) NOT NULL,
+	"sent_at" timestamp DEFAULT now() NOT NULL,
+	"triggered_by" varchar(255)
+);
+CREATE TABLE "acc_invoice_line_items" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"invoice_id" varchar NOT NULL,
+	"item_id" varchar,
+	"description" varchar(500) NOT NULL,
+	"quantity" numeric(10, 2) DEFAULT '1' NOT NULL,
+	"unit_price" numeric(12, 2) DEFAULT '0' NOT NULL,
+	"amount" numeric(12, 2) DEFAULT '0' NOT NULL
+);
+CREATE TABLE "acc_items" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" varchar(50) NOT NULL,
+	"description" varchar(500) NOT NULL,
+	"default_price" numeric(12, 2) DEFAULT '0',
+	"unit" varchar(50) DEFAULT 'unit',
+	"income_account_id" varchar,
+	"is_active" boolean DEFAULT true,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+CREATE TABLE "acc_expenses" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "acc_expenses_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"category_id" integer,
+	"vendor" varchar(255),
+	"amount" numeric(12, 2) NOT NULL,
+	"currency" varchar(10) DEFAULT 'AUD' NOT NULL,
+	"expense_date" date NOT NULL,
+	"description" text,
+	"receipt_ref" varchar(255),
+	"region_code" varchar(10),
+	"created_by" varchar(255) NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+CREATE TABLE "acc_customers" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"email" varchar(255),
+	"phone" varchar(50),
+	"address" text,
+	"currency" varchar(3) DEFAULT 'AUD',
+	"crm_contact_id" varchar,
+	"institution_id" varchar,
+	"student_id" varchar,
+	"is_active" boolean DEFAULT true,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+CREATE TABLE "acc_credit_notes" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"invoice_id" varchar NOT NULL,
+	"credit_note_number" varchar(30) NOT NULL,
+	"issue_date" date NOT NULL,
+	"total" numeric(12, 2) DEFAULT '0' NOT NULL,
+	"reason" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+CREATE TABLE "acc_chart_of_accounts" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" varchar(20) NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"account_type" "acc_account_type" NOT NULL,
+	"description" text,
+	"is_system" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+CREATE TABLE "acc_bill_payments" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "acc_bill_payments_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"bill_id" integer NOT NULL,
+	"amount" numeric(12, 2) NOT NULL,
+	"paid_on" date NOT NULL,
+	"method" varchar(100),
+	"reference" varchar(255),
+	"notes" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+CREATE TABLE "acc_invoices" (
+	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"invoice_number" varchar(30) NOT NULL,
+	"customer_id" varchar NOT NULL,
+	"bill_to_type" "acc_bill_to_type" DEFAULT 'manual' NOT NULL,
+	"institution_id" varchar,
+	"student_id" varchar,
+	"application_id" varchar,
+	"issue_date" date NOT NULL,
+	"due_date" date NOT NULL,
+	"currency" varchar(3) DEFAULT 'AUD' NOT NULL,
+	"subtotal" numeric(12, 2) DEFAULT '0' NOT NULL,
+	"gst_enabled" boolean DEFAULT false,
+	"gst_amount" numeric(12, 2) DEFAULT '0',
+	"total" numeric(12, 2) DEFAULT '0' NOT NULL,
+	"amount_paid" numeric(12, 2) DEFAULT '0',
+	"status" "acc_invoice_status" DEFAULT 'draft' NOT NULL,
+	"notes" text,
+	"terms" text,
+	"region_code" varchar(5) DEFAULT 'AU',
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "acc_invoices_invoice_number_unique" UNIQUE("invoice_number")
+);
+ALTER TABLE "lead_notes" DISABLE ROW LEVEL SECURITY;
+ALTER TABLE "lead_status_history" DISABLE ROW LEVEL SECURITY;
+ALTER TABLE "student_leads" DISABLE ROW LEVEL SECURITY;
+ALTER TABLE "lead_history" DISABLE ROW LEVEL SECURITY;
+ALTER TABLE "crm_leads" DISABLE ROW LEVEL SECURITY;
+DROP TABLE "lead_notes" CASCADE;
+DROP TABLE "lead_status_history" CASCADE;
+DROP TABLE "student_leads" CASCADE;
+DROP TABLE "lead_history" CASCADE;
+DROP TABLE "crm_leads" CASCADE;
+ALTER TABLE "channel_members" DROP CONSTRAINT "channel_members_channel_id_user_id_key";
+ALTER TABLE "course_scholarships" DROP CONSTRAINT "course_scholarships_course_id_scholarship_id_key";
+ALTER TABLE "course_entry_requirements" DROP CONSTRAINT "course_entry_requirements_course_id_qualification_type_id_key";
+ALTER TABLE "applications" DROP CONSTRAINT "applications_application_number_key";
+ALTER TABLE "email_accounts" DROP CONSTRAINT "email_accounts_email_key";
+ALTER TABLE "ai_settings" DROP CONSTRAINT "ai_settings_setting_key_key";
+ALTER TABLE "email_templates" DROP CONSTRAINT "email_templates_notification_type_key";
+ALTER TABLE "profile_section_verifications" DROP CONSTRAINT "profile_section_verifications_student_profile_id_section_key";
+ALTER TABLE "email_account_access" DROP CONSTRAINT "email_account_access_account_id_admin_user_id_key";
+ALTER TABLE "universities" DROP CONSTRAINT "universities_slug_key";
+ALTER TABLE "courses" DROP CONSTRAINT "courses_slug_key";
+ALTER TABLE "channel_members" DROP CONSTRAINT "channel_members_channel_id_fkey";
+ALTER TABLE "channel_members" DROP CONSTRAINT "channel_members_user_id_fkey";
+ALTER TABLE "channels" DROP CONSTRAINT "channels_created_by_id_fkey";
+ALTER TABLE "application_courses" DROP CONSTRAINT "application_courses_added_by_fkey";
+ALTER TABLE "application_courses" DROP CONSTRAINT "application_courses_application_id_fkey";
+ALTER TABLE "application_courses" DROP CONSTRAINT "application_courses_course_id_fkey";
+ALTER TABLE "course_specializations" DROP CONSTRAINT "course_specializations_sub_discipline_id_fkey";
+ALTER TABLE "application_profile_snapshots" DROP CONSTRAINT "application_profile_snapshots_application_id_fkey";
+ALTER TABLE "application_profile_snapshots" DROP CONSTRAINT "application_profile_snapshots_student_profile_id_fkey";
+ALTER TABLE "course_scholarships" DROP CONSTRAINT "course_scholarships_course_id_fkey";
+ALTER TABLE "course_scholarships" DROP CONSTRAINT "course_scholarships_scholarship_id_fkey";
+ALTER TABLE "email_account_secrets" DROP CONSTRAINT "email_account_secrets_account_id_fkey";
+ALTER TABLE "course_entry_requirements" DROP CONSTRAINT "course_entry_requirements_course_id_fkey";
+ALTER TABLE "course_entry_requirements" DROP CONSTRAINT "course_entry_requirements_qualification_type_id_fkey";
+ALTER TABLE "channel_messages" DROP CONSTRAINT "channel_messages_channel_id_fkey";
+ALTER TABLE "channel_messages" DROP CONSTRAINT "channel_messages_sender_id_fkey";
+ALTER TABLE "course_english_requirements" DROP CONSTRAINT "course_english_requirements_course_id_fkey";
+ALTER TABLE "applications" DROP CONSTRAINT "applications_branch_id_fkey";
+ALTER TABLE "applications" DROP CONSTRAINT "applications_course_id_courses_id_fk";
+ALTER TABLE "course_pricing_config" DROP CONSTRAINT "course_pricing_config_course_id_fkey";
+ALTER TABLE "saved_filters" DROP CONSTRAINT "saved_filters_user_id_fkey";
+ALTER TABLE "ai_settings" DROP CONSTRAINT "ai_settings_updated_by_user_id_fkey";
+ALTER TABLE "course_intake_templates" DROP CONSTRAINT "course_intake_templates_course_id_fkey";
+ALTER TABLE "qualification_equivalencies" DROP CONSTRAINT "qualification_equivalencies_source_qualification_id_fkey";
+ALTER TABLE "qualification_equivalencies" DROP CONSTRAINT "qualification_equivalencies_target_qualification_id_fkey";
+ALTER TABLE "api_keys" DROP CONSTRAINT "api_keys_created_by_user_id_fkey";
+ALTER TABLE "api_keys" DROP CONSTRAINT "api_keys_revoked_by_user_id_fkey";
+ALTER TABLE "attendance_records" DROP CONSTRAINT "attendance_records_user_id_fkey";
+ALTER TABLE "attendance_breaks" DROP CONSTRAINT "attendance_breaks_attendance_record_id_fkey";
+ALTER TABLE "attendance_breaks" DROP CONSTRAINT "attendance_breaks_user_id_fkey";
+ALTER TABLE "email_templates" DROP CONSTRAINT "email_templates_updated_by_fkey";
+ALTER TABLE "profile_change_history" DROP CONSTRAINT "profile_change_history_changed_by_fkey";
+ALTER TABLE "profile_change_history" DROP CONSTRAINT "profile_change_history_student_profile_id_fkey";
+ALTER TABLE "user_notification_overrides" DROP CONSTRAINT "user_notification_overrides_user_id_fkey";
+ALTER TABLE "task_notes" DROP CONSTRAINT "task_notes_author_id_fkey";
+ALTER TABLE "task_notes" DROP CONSTRAINT "task_notes_task_id_fkey";
+ALTER TABLE "profile_section_verifications" DROP CONSTRAINT "profile_section_verifications_student_profile_id_fkey";
+ALTER TABLE "profile_section_verifications" DROP CONSTRAINT "profile_section_verifications_verified_by_fkey";
+ALTER TABLE "course_pricing_tiers" DROP CONSTRAINT "course_pricing_tiers_course_id_fkey";
+ALTER TABLE "email_account_access" DROP CONSTRAINT "email_account_access_account_id_fkey";
+ALTER TABLE "referral_invitations" DROP CONSTRAINT "referral_invitations_referrer_id_fkey";
+ALTER TABLE "referral_invitations" DROP CONSTRAINT "referral_invitations_registered_student_id_fkey";
+ALTER TABLE "student_educations" DROP CONSTRAINT "student_educations_qualification_type_id_fkey";
+ALTER TABLE "seo_metadata" DROP CONSTRAINT "seo_metadata_approved_by_fkey";
+ALTER TABLE "seo_metadata" DROP CONSTRAINT "seo_metadata_created_by_id_fkey";
+ALTER TABLE "seo_metadata" DROP CONSTRAINT "seo_metadata_updated_by_id_fkey";
+ALTER TABLE "scholarships" DROP CONSTRAINT "scholarships_institution_id_fkey";
+ALTER TABLE "api_key_usage_logs" DROP CONSTRAINT "api_key_usage_logs_api_key_id_fkey";
+ALTER TABLE "course_level_requirement_templates" DROP CONSTRAINT "course_level_requirement_templates_qualification_type_id_fkey";
+ALTER TABLE "student_profiles" DROP CONSTRAINT "student_profiles_highest_qualification_type_id_fkey";
+ALTER TABLE "crm_contacts" DROP CONSTRAINT "crm_contacts_source_lead_id_crm_leads_id_fk";
+ALTER TABLE "course_level_requirement_templates" ALTER COLUMN "course_level" SET DATA TYPE text;
+ALTER TABLE "courses" ALTER COLUMN "level" SET DATA TYPE text;
+ALTER TABLE "student_profiles" ALTER COLUMN "preferred_course_level" SET DATA TYPE text;
+DROP TYPE "public"."course_level";
+CREATE TYPE "public"."course_level" AS ENUM('VCE (11-12)', 'Certificate I', 'Certificate II', 'Certificate III', 'Certificate IV', 'Diploma', 'Advanced Diploma', 'Associate Degree', 'Graduate Certificate', 'Graduate Diploma', 'Bachelor Degree', 'Bachelor Honours', 'Masters Degree', 'Doctoral Degree', 'Higher Doctoral Degree', 'ELICOS - General English', 'ELICOS - EAP', 'ELICOS - Exam Prep', 'Professional Year - Accounting', 'Professional Year - IT', 'Professional Year - Engineering', 'Foundation', 'Pathway Program', 'Short Course', 'RQF Entry Level', 'RQF Level 1', 'RQF Level 2', 'RQF Level 3', 'RQF Level 4', 'RQF Level 5', 'RQF Level 6', 'RQF Level 7', 'RQF Level 8', 'NZQF Level 1', 'NZQF Level 2', 'NZQF Level 3', 'NZQF Level 4', 'NZQF Level 5', 'NZQF Level 6', 'NZQF Level 7', 'NZQF Level 8', 'NZQF Level 9', 'NZQF Level 10', 'MQF Level 1', 'MQF Level 2', 'MQF Level 3', 'MQF Foundation', 'MQF Level 4', 'MQF Level 5', 'MQF Level 6', 'MQF Level 7', 'MQF Level 8', 'US Associate Degree', 'US Bachelor Degree', 'US Master Degree', 'US Doctoral Degree', 'US Professional Doctorate', 'Canadian Certificate', 'Canadian Diploma', 'Canadian Advanced Diploma', 'Canadian Associate Degree', 'Canadian Bachelor Degree', 'Canadian Master Degree', 'Canadian Doctoral Degree', 'Canadian CEGEP', 'EQF Level 1', 'EQF Level 2', 'EQF Level 3', 'EQF Level 4', 'EQF Level 5', 'EQF Level 6', 'EQF Level 7', 'EQF Level 8', 'Other');
+ALTER TABLE "course_level_requirement_templates" ALTER COLUMN "course_level" SET DATA TYPE "public"."course_level" USING "course_level"::"public"."course_level";
+ALTER TABLE "courses" ALTER COLUMN "level" SET DATA TYPE "public"."course_level" USING "level"::"public"."course_level";
+ALTER TABLE "student_profiles" ALTER COLUMN "preferred_course_level" SET DATA TYPE "public"."course_level" USING "preferred_course_level"::"public"."course_level";
+ALTER TABLE "crm_contacts" ALTER COLUMN "entry_source" SET DATA TYPE text;
+ALTER TABLE "crm_contacts" ALTER COLUMN "entry_source" SET DEFAULT 'consultant'::text;
+DROP TYPE "public"."entry_source";
+CREATE TYPE "public"."entry_source" AS ENUM('website', 'consultant', 'sub_agent', 'affiliate', 'import', 'referral', 'facebook_ads', 'walk_in', 'other');
+ALTER TABLE "crm_contacts" ALTER COLUMN "entry_source" SET DEFAULT 'consultant'::"public"."entry_source";
+ALTER TABLE "crm_contacts" ALTER COLUMN "entry_source" SET DATA TYPE "public"."entry_source" USING "entry_source"::"public"."entry_source";
+DROP INDEX "course_specializations_sub_discipline_slug_unique";
+DROP INDEX "universities_delivery_modes_gin_idx";
+DROP INDEX "universities_facilities_gin_idx";
+DROP INDEX "universities_intake_periods_gin_idx";
+DROP INDEX "universities_tuition_range_idx";
+DROP INDEX "crm_contacts_source_lead_idx";
+ALTER TABLE "student_educations" ALTER COLUMN "institution" DROP NOT NULL;
+ALTER TABLE "universities" ALTER COLUMN "tuition_currency" DROP DEFAULT;
+ALTER TABLE "acc_bills" ADD CONSTRAINT "acc_bills_category_id_acc_expense_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."acc_expense_categories"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "acc_expenses" ADD CONSTRAINT "acc_expenses_category_id_acc_expense_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."acc_expense_categories"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "acc_customers" ADD CONSTRAINT "acc_customers_institution_id_universities_id_fk" FOREIGN KEY ("institution_id") REFERENCES "public"."universities"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "acc_customers" ADD CONSTRAINT "acc_customers_student_id_student_profiles_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."student_profiles"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "acc_bill_payments" ADD CONSTRAINT "acc_bill_payments_bill_id_acc_bills_id_fk" FOREIGN KEY ("bill_id") REFERENCES "public"."acc_bills"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "acc_invoices" ADD CONSTRAINT "acc_invoices_application_id_applications_id_fk" FOREIGN KEY ("application_id") REFERENCES "public"."applications"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "acc_invoices" ADD CONSTRAINT "acc_invoices_institution_id_universities_id_fk" FOREIGN KEY ("institution_id") REFERENCES "public"."universities"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "acc_invoices" ADD CONSTRAINT "acc_invoices_student_id_student_profiles_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."student_profiles"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "channel_members" ADD CONSTRAINT "channel_members_channel_id_channels_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channels"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "channel_members" ADD CONSTRAINT "channel_members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "channels" ADD CONSTRAINT "channels_created_by_id_users_id_fk" FOREIGN KEY ("created_by_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "application_courses" ADD CONSTRAINT "application_courses_added_by_users_id_fk" FOREIGN KEY ("added_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "application_courses" ADD CONSTRAINT "application_courses_application_id_applications_id_fk" FOREIGN KEY ("application_id") REFERENCES "public"."applications"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "application_courses" ADD CONSTRAINT "application_courses_course_id_courses_id_fk" FOREIGN KEY ("course_id") REFERENCES "public"."courses"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "course_specializations" ADD CONSTRAINT "course_specializations_sub_discipline_id_sub_disciplines_id_fk" FOREIGN KEY ("sub_discipline_id") REFERENCES "public"."sub_disciplines"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "application_profile_snapshots" ADD CONSTRAINT "application_profile_snapshots_application_id_applications_id_fk" FOREIGN KEY ("application_id") REFERENCES "public"."applications"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "application_profile_snapshots" ADD CONSTRAINT "application_profile_snapshots_student_profile_id_student_profil" FOREIGN KEY ("student_profile_id") REFERENCES "public"."student_profiles"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "course_scholarships" ADD CONSTRAINT "course_scholarships_course_id_courses_id_fk" FOREIGN KEY ("course_id") REFERENCES "public"."courses"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "course_scholarships" ADD CONSTRAINT "course_scholarships_scholarship_id_scholarships_id_fk" FOREIGN KEY ("scholarship_id") REFERENCES "public"."scholarships"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "email_account_secrets" ADD CONSTRAINT "email_account_secrets_account_id_email_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."email_accounts"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "course_entry_requirements" ADD CONSTRAINT "course_entry_requirements_course_id_courses_id_fk" FOREIGN KEY ("course_id") REFERENCES "public"."courses"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "course_entry_requirements" ADD CONSTRAINT "course_entry_requirements_qualification_type_id_academic_qualif" FOREIGN KEY ("qualification_type_id") REFERENCES "public"."academic_qualification_types"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "channel_messages" ADD CONSTRAINT "channel_messages_channel_id_channels_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channels"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "channel_messages" ADD CONSTRAINT "channel_messages_sender_id_users_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "course_english_requirements" ADD CONSTRAINT "course_english_requirements_course_id_courses_id_fk" FOREIGN KEY ("course_id") REFERENCES "public"."courses"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "applications" ADD CONSTRAINT "applications_branch_id_branches_id_fk" FOREIGN KEY ("branch_id") REFERENCES "public"."branches"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "applications" ADD CONSTRAINT "applications_course_id_courses_id_fk" FOREIGN KEY ("course_id") REFERENCES "public"."courses"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "course_pricing_config" ADD CONSTRAINT "course_pricing_config_course_id_courses_id_fk" FOREIGN KEY ("course_id") REFERENCES "public"."courses"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "saved_filters" ADD CONSTRAINT "saved_filters_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "ai_settings" ADD CONSTRAINT "ai_settings_updated_by_user_id_users_id_fk" FOREIGN KEY ("updated_by_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "course_intake_templates" ADD CONSTRAINT "course_intake_templates_course_id_courses_id_fk" FOREIGN KEY ("course_id") REFERENCES "public"."courses"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "qualification_equivalencies" ADD CONSTRAINT "qualification_equivalencies_source_qualification_id_academic_qu" FOREIGN KEY ("source_qualification_id") REFERENCES "public"."academic_qualification_types"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "qualification_equivalencies" ADD CONSTRAINT "qualification_equivalencies_target_qualification_id_academic_qu" FOREIGN KEY ("target_qualification_id") REFERENCES "public"."academic_qualification_types"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "api_keys" ADD CONSTRAINT "api_keys_created_by_user_id_users_id_fk" FOREIGN KEY ("created_by_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "api_keys" ADD CONSTRAINT "api_keys_revoked_by_user_id_users_id_fk" FOREIGN KEY ("revoked_by_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "attendance_records" ADD CONSTRAINT "attendance_records_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "attendance_breaks" ADD CONSTRAINT "attendance_breaks_attendance_record_id_attendance_records_id_fk" FOREIGN KEY ("attendance_record_id") REFERENCES "public"."attendance_records"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "attendance_breaks" ADD CONSTRAINT "attendance_breaks_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "email_templates" ADD CONSTRAINT "email_templates_updated_by_users_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "profile_change_history" ADD CONSTRAINT "profile_change_history_changed_by_users_id_fk" FOREIGN KEY ("changed_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "profile_change_history" ADD CONSTRAINT "profile_change_history_student_profile_id_student_profiles_id_f" FOREIGN KEY ("student_profile_id") REFERENCES "public"."student_profiles"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "user_notification_overrides" ADD CONSTRAINT "user_notification_overrides_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "task_notes" ADD CONSTRAINT "task_notes_author_id_users_id_fk" FOREIGN KEY ("author_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "task_notes" ADD CONSTRAINT "task_notes_task_id_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."tasks"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "profile_section_verifications" ADD CONSTRAINT "profile_section_verifications_student_profile_id_student_profil" FOREIGN KEY ("student_profile_id") REFERENCES "public"."student_profiles"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "profile_section_verifications" ADD CONSTRAINT "profile_section_verifications_verified_by_users_id_fk" FOREIGN KEY ("verified_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "course_pricing_tiers" ADD CONSTRAINT "course_pricing_tiers_course_id_courses_id_fk" FOREIGN KEY ("course_id") REFERENCES "public"."courses"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "email_account_access" ADD CONSTRAINT "email_account_access_account_id_email_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."email_accounts"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "referral_invitations" ADD CONSTRAINT "referral_invitations_referrer_id_student_profiles_id_fk" FOREIGN KEY ("referrer_id") REFERENCES "public"."student_profiles"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "referral_invitations" ADD CONSTRAINT "referral_invitations_registered_student_id_student_profiles_id_" FOREIGN KEY ("registered_student_id") REFERENCES "public"."student_profiles"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "student_educations" ADD CONSTRAINT "student_educations_qualification_type_id_academic_qualification" FOREIGN KEY ("qualification_type_id") REFERENCES "public"."academic_qualification_types"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "seo_metadata" ADD CONSTRAINT "seo_metadata_approved_by_users_id_fk" FOREIGN KEY ("approved_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "seo_metadata" ADD CONSTRAINT "seo_metadata_created_by_id_users_id_fk" FOREIGN KEY ("created_by_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "seo_metadata" ADD CONSTRAINT "seo_metadata_updated_by_id_users_id_fk" FOREIGN KEY ("updated_by_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "scholarships" ADD CONSTRAINT "scholarships_institution_id_universities_id_fk" FOREIGN KEY ("institution_id") REFERENCES "public"."universities"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "api_key_usage_logs" ADD CONSTRAINT "api_key_usage_logs_api_key_id_api_keys_id_fk" FOREIGN KEY ("api_key_id") REFERENCES "public"."api_keys"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "course_level_requirement_templates" ADD CONSTRAINT "course_level_requirement_templates_qualification_type_id_academ" FOREIGN KEY ("qualification_type_id") REFERENCES "public"."academic_qualification_types"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "student_profiles" ADD CONSTRAINT "student_profiles_highest_qualification_type_id_academic_qualifi" FOREIGN KEY ("highest_qualification_type_id") REFERENCES "public"."academic_qualification_types"("id") ON DELETE set null ON UPDATE no action;
+CREATE INDEX "courses_discipline_sub_spec_idx" ON "courses" USING btree ("discipline","sub_discipline_id","specialization");
+ALTER TABLE "scholarships" DROP COLUMN "application_url";
+ALTER TABLE "scraped_courses" DROP COLUMN "scholarship_percentage_min";
+ALTER TABLE "scraped_courses" DROP COLUMN "scholarship_percentage_max";
+ALTER TABLE "scraped_courses" DROP COLUMN "academic_requirements";
+ALTER TABLE "scraped_courses" DROP COLUMN "work_rights";
+ALTER TABLE "courses" DROP COLUMN "academic_requirements";
+ALTER TABLE "courses" DROP COLUMN "work_rights";
+ALTER TABLE "courses" DROP COLUMN "scholarship_percentage_min";
+ALTER TABLE "courses" DROP COLUMN "scholarship_percentage_max";
+ALTER TABLE "crm_contacts" DROP COLUMN "source_lead_id";
+ALTER TABLE "course_specializations" ADD CONSTRAINT "course_specializations_sub_discipline_slug_unique" UNIQUE("sub_discipline_id","slug");
+ALTER TABLE "course_scholarships" ADD CONSTRAINT "course_scholarship_unique" UNIQUE("course_id","scholarship_id");
+ALTER TABLE "course_entry_requirements" ADD CONSTRAINT "course_qual_unique" UNIQUE("course_id","qualification_type_id");
+ALTER TABLE "applications" ADD CONSTRAINT "applications_application_number_unique" UNIQUE("application_number");
+ALTER TABLE "email_accounts" ADD CONSTRAINT "email_accounts_email_unique" UNIQUE("email");
+ALTER TABLE "ai_settings" ADD CONSTRAINT "ai_settings_setting_key_unique" UNIQUE("setting_key");
+ALTER TABLE "email_templates" ADD CONSTRAINT "email_templates_notification_type_unique" UNIQUE("notification_type");
+ALTER TABLE "profile_section_verifications" ADD CONSTRAINT "profile_section_verifications_student_profile_id_section_unique" UNIQUE("student_profile_id","section");
+ALTER TABLE "email_account_access" ADD CONSTRAINT "email_account_access_account_id_admin_user_id_unique" UNIQUE("account_id","admin_user_id");
+ALTER TABLE "universities" ADD CONSTRAINT "universities_slug_unique" UNIQUE("slug");
+ALTER TABLE "courses" ADD CONSTRAINT "courses_slug_unique" UNIQUE("slug");
+DROP TYPE "public"."lead_creation_method";
+DROP TYPE "public"."lead_status";
+You may notice a temporary downtime of your deployment. What's happening?
+Migrations failed validation, please review
+Your database schema changes conflict with existing production data and could not be applied, learn more. To resolve this, you can:
+Copy your development database schema & data to production.
+Cancel deployment and retry once your schema conflicts are resolved.
+Failed to run database migration statement
+ALTER TABLE "crm_contacts" DROP CONSTRAINT "crm_contacts_source_lead_id_crm_leads_id_fk";
+constraint "crm_contacts_source_lead_id_crm_leads_id_fk" of relation "crm_contacts" does not exist

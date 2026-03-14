@@ -15,6 +15,13 @@
       "when": 1773494609811,
       "tag": "0001_safe_column_cleanup",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773495619956,
+      "tag": "0002_restore_phantom_objects",
+      "breakpoints": true
     }
   ]
 }
