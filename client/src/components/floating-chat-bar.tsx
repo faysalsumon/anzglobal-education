@@ -24,6 +24,10 @@ import {
   Download,
   Image as ImageIcon,
   Loader2,
+  Users,
+  ArrowLeft,
+  UserPlus,
+  UserMinus,
 } from "lucide-react";
 
 type Message = {
@@ -126,6 +130,18 @@ type ChannelMessage = {
   } | null;
 };
 
+type ChannelMember = {
+  id: number;
+  userId: string;
+  role: string;
+  joinedAt: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  profileImageUrl: string | null;
+  availabilityStatus: string | null;
+};
+
 type ChannelWindow = {
   channelId: string;
   channelName: string;
@@ -151,11 +167,28 @@ function MiniChannelWindow({
   onClose: () => void;
   onToggleMinimize: () => void;
 }) {
+  const { isCTO, isBranchManager, adminRole } = useAuth();
+  const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showMembers, setShowMembers] = useState(false);
 
   const { data: messages = [], isLoading } = useQuery<ChannelMessage[]>({
     queryKey: ["/api/channels", channelId, "messages"],
     refetchInterval: 5000,
+  });
+
+  const { data: members = [], isLoading: isLoadingMembers } = useQuery<ChannelMember[]>({
+    queryKey: ["/api/channels", channelId, "members"],
+    enabled: showMembers,
+  });
+
+  const isSystemManager = isCTO || isBranchManager || adminRole === "ceo";
+  const myMembership = members.find((m) => m.userId === currentUserId);
+  const canManageMembers = isSystemManager || myMembership?.role === "admin";
+
+  const { data: teamMembers = [] } = useQuery<AdminTeamMember[]>({
+    queryKey: ["/api/admin/messaging/team"],
+    enabled: showMembers && canManageMembers,
   });
 
   const sendMutation = useMutation({
@@ -168,11 +201,33 @@ function MiniChannelWindow({
     },
   });
 
+  const addMemberMutation = useMutation({
+    mutationFn: async (userId: string) =>
+      apiRequest("POST", `/api/channels/${channelId}/members`, { userId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/channels", channelId, "members"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
+      toast({ title: "Member added" });
+    },
+    onError: () => toast({ title: "Failed to add member", variant: "destructive" }),
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: async (userId: string) =>
+      apiRequest("DELETE", `/api/channels/${channelId}/members/${userId}`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/channels", channelId, "members"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
+      toast({ title: "Member removed" });
+    },
+    onError: () => toast({ title: "Failed to remove member", variant: "destructive" }),
+  });
+
   useEffect(() => {
-    if (!isMinimized) {
+    if (!isMinimized && !showMembers) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isMinimized]);
+  }, [messages, isMinimized, showMembers]);
 
   const handleSend = () => {
     const content = messageInput.trim();
@@ -186,6 +241,17 @@ function MiniChannelWindow({
       handleSend();
     }
   };
+
+  const getInitials = (firstName?: string | null, lastName?: string | null, email?: string) => {
+    if (firstName && lastName) return `${firstName[0]}${lastName[0]}`.toUpperCase();
+    if (email) return email.substring(0, 2).toUpperCase();
+    return "??";
+  };
+
+  const memberUserIds = new Set(members.map((m) => m.userId));
+  const nonMembers = teamMembers.filter(
+    (tm) => tm.isActive && tm.id !== currentUserId && !memberUserIds.has(tm.id)
+  );
 
   if (isMinimized) {
     return (
@@ -221,8 +287,35 @@ function MiniChannelWindow({
       data-testid={`mini-channel-window-${channelId}`}
     >
       <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30">
-        <Hash className="h-4 w-4 text-muted-foreground shrink-0" />
-        <span className="text-sm font-medium truncate flex-1">{channelName}</span>
+        {showMembers ? (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="no-default-hover-elevate"
+            onClick={() => setShowMembers(false)}
+            data-testid={`button-back-messages-${channelId}`}
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+          </Button>
+        ) : (
+          <Hash className="h-4 w-4 text-muted-foreground shrink-0" />
+        )}
+        <span className="text-sm font-medium truncate flex-1">
+          {showMembers ? "Members" : channelName}
+        </span>
+        {!showMembers && (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="no-default-hover-elevate"
+            onClick={() => setShowMembers(true)}
+            data-testid={`button-channel-members-${channelId}`}
+          >
+            <Users className="h-3.5 w-3.5" />
+          </Button>
+        )}
         <Button
           type="button"
           size="icon"
@@ -245,76 +338,170 @@ function MiniChannelWindow({
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 p-3">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full py-8">
-            <Hash className="h-8 w-8 text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">No messages yet</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {messages.map((msg) => {
-              const isOwn = msg.senderId === currentUserId;
-              const senderName = msg.sender
-                ? `${msg.sender.firstName || ""} ${msg.sender.lastName || ""}`.trim()
-                : "Unknown";
-              return (
-                <div
-                  key={msg.id}
-                  className={`flex flex-col gap-0.5 ${isOwn ? "items-end" : "items-start"}`}
-                  data-testid={`channel-msg-${msg.id}`}
-                >
-                  {!isOwn && (
-                    <span className="text-xs text-muted-foreground ml-1">{senderName}</span>
-                  )}
-                  <div
-                    className={`px-3 py-1.5 rounded-md text-sm max-w-[85%] ${
-                      isOwn
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    }`}
-                  >
-                    {msg.content}
-                  </div>
-                  <span className="text-[10px] text-muted-foreground mx-1">
-                    {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
-                  </span>
-                </div>
-              );
-            })}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-      </ScrollArea>
-
-      <div className="flex items-center gap-1 p-2 border-t">
-        <Input
-          className="flex-1 text-sm"
-          placeholder={`Message #${channelName}`}
-          value={messageInput}
-          onChange={(e) => onMessageInputChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          data-testid={`input-channel-message-${channelId}`}
-        />
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          onClick={handleSend}
-          disabled={!messageInput.trim() || sendMutation.isPending}
-          data-testid={`button-send-channel-${channelId}`}
-        >
-          {sendMutation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+      {showMembers ? (
+        <ScrollArea className="flex-1 p-2">
+          {isLoadingMembers ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
           ) : (
-            <Send className="h-4 w-4" />
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground px-2 py-1 font-medium">
+                Current Members ({members.length})
+              </p>
+              {members.map((member) => {
+                const cantRemove = member.userId === currentUserId || member.role === "admin";
+                return (
+                  <div
+                    key={member.userId}
+                    className="flex items-center gap-2 p-1.5 rounded-md"
+                    data-testid={`channel-member-${member.userId}`}
+                  >
+                    <Avatar className="h-7 w-7">
+                      {member.profileImageUrl && <AvatarImage src={member.profileImageUrl} />}
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {getInitials(member.firstName, member.lastName, member.email)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-medium truncate block">
+                        {member.firstName} {member.lastName}
+                      </span>
+                    </div>
+                    {member.role === "admin" && (
+                      <Badge variant="secondary" className="text-[10px]">Admin</Badge>
+                    )}
+                    {canManageMembers && !cantRemove && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="no-default-hover-elevate"
+                        onClick={() => removeMemberMutation.mutate(member.userId)}
+                        disabled={removeMemberMutation.isPending}
+                        data-testid={`button-remove-member-${member.userId}`}
+                      >
+                        <UserMinus className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {canManageMembers && nonMembers.length > 0 && (
+                <>
+                  <p className="text-xs text-muted-foreground px-2 py-1 font-medium mt-3">
+                    Add Members
+                  </p>
+                  {nonMembers.map((tm) => (
+                    <div
+                      key={tm.id}
+                      className="flex items-center gap-2 p-1.5 rounded-md"
+                      data-testid={`channel-add-member-${tm.id}`}
+                    >
+                      <Avatar className="h-7 w-7">
+                        {tm.profileImageUrl && <AvatarImage src={tm.profileImageUrl} />}
+                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                          {getInitials(tm.firstName, tm.lastName, tm.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-medium truncate block">
+                          {tm.firstName} {tm.lastName}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="no-default-hover-elevate"
+                        onClick={() => addMemberMutation.mutate(tm.id)}
+                        disabled={addMemberMutation.isPending}
+                        data-testid={`button-add-member-${tm.id}`}
+                      >
+                        <UserPlus className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
           )}
-        </Button>
-      </div>
+        </ScrollArea>
+      ) : (
+        <>
+          <ScrollArea className="flex-1 p-3">
+            {isLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full py-8">
+                <Hash className="h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No messages yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {messages.map((msg) => {
+                  const isOwn = msg.senderId === currentUserId;
+                  const senderName = msg.sender
+                    ? `${msg.sender.firstName || ""} ${msg.sender.lastName || ""}`.trim()
+                    : "Unknown";
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex flex-col gap-0.5 ${isOwn ? "items-end" : "items-start"}`}
+                      data-testid={`channel-msg-${msg.id}`}
+                    >
+                      {!isOwn && (
+                        <span className="text-xs text-muted-foreground ml-1">{senderName}</span>
+                      )}
+                      <div
+                        className={`px-3 py-1.5 rounded-md text-sm max-w-[85%] ${
+                          isOwn
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        }`}
+                      >
+                        {msg.content}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground mx-1">
+                        {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                      </span>
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </ScrollArea>
+
+          <div className="flex items-center gap-1 p-2 border-t">
+            <Input
+              className="flex-1 text-sm"
+              placeholder={`Message #${channelName}`}
+              value={messageInput}
+              onChange={(e) => onMessageInputChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              data-testid={`input-channel-message-${channelId}`}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={handleSend}
+              disabled={!messageInput.trim() || sendMutation.isPending}
+              data-testid={`button-send-channel-${channelId}`}
+            >
+              {sendMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

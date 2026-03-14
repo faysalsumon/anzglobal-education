@@ -1,19 +1,30 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { queryClient } from "@/lib/queryClient";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
   MessageCircle,
   Hash,
   Search,
   Circle,
   X,
+  Plus,
 } from "lucide-react";
 
 type Conversation = {
@@ -72,15 +83,37 @@ const STATUS_COLORS: Record<string, string> = {
 type ActivePanel = "chats" | "channels" | null;
 
 export function AdminBottomBar() {
-  const { user } = useAuth();
+  const { user, isCTO, isBranchManager, adminRole } = useAuth();
   const { isConnected, lastMessage } = useWebSocket();
+  const { toast } = useToast();
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isNewChannelDialogOpen, setIsNewChannelDialogOpen] = useState(false);
+  const [newChannelName, setNewChannelName] = useState("");
+  const [newChannelDescription, setNewChannelDescription] = useState("");
+  const [newChannelIsPrivate, setNewChannelIsPrivate] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
 
   const userData = user as any;
   const currentUserId = userData?.claims?.sub || userData?.id;
+  const canCreateChannel = isCTO || isBranchManager || adminRole === "ceo";
+
+  const createChannelMutation = useMutation({
+    mutationFn: async (values: { name: string; description: string; isPrivate: boolean }) =>
+      apiRequest("POST", "/api/channels", values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
+      setIsNewChannelDialogOpen(false);
+      setNewChannelName("");
+      setNewChannelDescription("");
+      setNewChannelIsPrivate(false);
+      toast({ title: "Success", description: "Channel created successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create channel", variant: "destructive" });
+    },
+  });
 
   const { data: conversations } = useQuery<Conversation[]>({
     queryKey: ["/api/conversations"],
@@ -245,15 +278,28 @@ export function AdminBottomBar() {
             <span className="text-sm font-semibold capitalize" data-testid="text-panel-heading">
               {activePanel}
             </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setActivePanel(null)}
-              data-testid="button-close-bottom-panel"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-0.5">
+              {activePanel === "channels" && canCreateChannel && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsNewChannelDialogOpen(true)}
+                  data-testid="button-new-channel"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setActivePanel(null)}
+                data-testid="button-close-bottom-panel"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           <div className="p-2">
@@ -471,6 +517,70 @@ export function AdminBottomBar() {
           })}
         </div>
       </div>
+
+      <Dialog open={isNewChannelDialogOpen} onOpenChange={setIsNewChannelDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create a Channel</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newChannelName.trim()) return;
+              createChannelMutation.mutate({
+                name: newChannelName.trim(),
+                description: newChannelDescription.trim(),
+                isPrivate: newChannelIsPrivate,
+              });
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="channel-name">Channel Name</Label>
+              <div className="relative">
+                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="channel-name"
+                  placeholder="e.g. general"
+                  className="pl-9"
+                  value={newChannelName}
+                  onChange={(e) => setNewChannelName(e.target.value)}
+                  data-testid="input-new-channel-name"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="channel-desc">Description (Optional)</Label>
+              <Input
+                id="channel-desc"
+                placeholder="What's this channel about?"
+                value={newChannelDescription}
+                onChange={(e) => setNewChannelDescription(e.target.value)}
+                data-testid="input-new-channel-description"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="channel-private">Private Channel</Label>
+                <p className="text-xs text-muted-foreground">
+                  Only invited members can see this channel.
+                </p>
+              </div>
+              <Switch
+                id="channel-private"
+                checked={newChannelIsPrivate}
+                onCheckedChange={setNewChannelIsPrivate}
+                data-testid="switch-channel-private"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={createChannelMutation.isPending || !newChannelName.trim()} data-testid="button-create-channel-submit">
+                {createChannelMutation.isPending ? "Creating..." : "Create Channel"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
