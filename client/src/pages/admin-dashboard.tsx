@@ -89,6 +89,9 @@ import { AdminNotificationSettingsPanel } from "@/components/admin-notification-
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
 import { AdminMailTab } from "@/components/admin-mail-tab";
 import { AdminMobileBottomNav } from "@/components/admin-mobile-bottom-nav";
+import { AdminBottomBar } from "@/components/admin-bottom-bar";
+import { FloatingChatBar } from "@/components/floating-chat-bar";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ClockInButton } from "@/components/clock-in-button";
 import { AttendancePanel } from "@/components/attendance-panel";
 import { FinanceDashboardPanel } from "@/components/accounting/finance-dashboard";
@@ -530,6 +533,7 @@ export default function AdminDashboard() {
   
   const [activeTab, setActiveTab] = useState(getInitialTab);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isChatSheetOpen, setIsChatSheetOpen] = useState(false);
 
   // Tab display name mapping for breadcrumb
   const tabDisplayNames: Record<string, string> = {
@@ -1885,6 +1889,25 @@ export default function AdminDashboard() {
     "--sidebar-width": "14rem",        // Compact: 224px (was 256px)
     "--sidebar-width-icon": "3.5rem",  // Icon mode: 56px (was 72px)
   } as React.CSSProperties;
+
+  useEffect(() => {
+    const handleAdminTabChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.tab) {
+        setActiveTab(detail.tab);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    };
+    const handleOpenAdminChat = () => {
+      setIsChatSheetOpen(true);
+    };
+    window.addEventListener("admin-tab-change", handleAdminTabChange);
+    window.addEventListener("open-admin-chat", handleOpenAdminChat);
+    return () => {
+      window.removeEventListener("admin-tab-change", handleAdminTabChange);
+      window.removeEventListener("open-admin-chat", handleOpenAdminChat);
+    };
+  }, []);
 
   // Handle tab change with scroll to top
   const handleTabChange = (tab: string) => {
@@ -4154,6 +4177,15 @@ export default function AdminDashboard() {
       isMarketingExecutive={isMarketingExecutive}
       onLogout={handleLogout}
     />
+
+    <AdminBottomBar />
+    <FloatingChatBar />
+
+    <Sheet open={isChatSheetOpen} onOpenChange={setIsChatSheetOpen}>
+      <SheetContent side="right" className="w-full sm:max-w-[520px] p-0 flex flex-col [&>button]:z-50">
+        <AdminMessagesTab inSheet />
+      </SheetContent>
+    </Sheet>
 
     <AlertDialog open={showInactivityWarning}>
       <AlertDialogContent data-testid="dialog-inactivity-warning">

@@ -268,7 +268,7 @@ export function AdminBottomBar() {
       {activePanel && (
         <div
           ref={panelRef}
-          className="fixed bottom-10 left-0 lg:left-[240px] z-[60] w-80 bg-card border border-border shadow-lg rounded-t-lg overflow-hidden animate-in slide-in-from-bottom-2 duration-200"
+          className="fixed bottom-10 left-0 lg:left-[240px] z-[60] w-80 bg-card border border-border shadow-lg rounded-t-lg overflow-hidden animate-in slide-in-from-bottom-2 duration-200 hidden lg:block"
           data-testid={`bottom-bar-panel-${activePanel}`}
         >
           <div className="flex items-center justify-between gap-2 px-3 py-2 border-b">
@@ -519,7 +519,7 @@ export function AdminBottomBar() {
 
       <div
         ref={barRef}
-        className="fixed bottom-0 left-0 right-0 z-50 h-10 bg-card border-t border-border flex items-center px-2 lg:pl-[240px]"
+        className="fixed bottom-0 left-0 right-0 z-50 h-10 bg-card border-t border-border hidden lg:flex items-center px-2 lg:pl-[240px]"
         data-testid="admin-bottom-bar"
       >
         <div className="flex items-center gap-1">
