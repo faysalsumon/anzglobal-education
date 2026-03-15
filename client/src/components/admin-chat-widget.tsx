@@ -210,6 +210,12 @@ export function AdminChatWidget() {
     setIsOpen(false);
   };
 
+  useEffect(() => {
+    const handleOpenEvent = () => openWidget();
+    window.addEventListener("open-admin-chat-widget", handleOpenEvent);
+    return () => window.removeEventListener("open-admin-chat-widget", handleOpenEvent);
+  }, []);
+
   if (!isOpen) {
     return (
       <div

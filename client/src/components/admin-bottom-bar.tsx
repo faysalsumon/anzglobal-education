@@ -25,7 +25,9 @@ import {
   Circle,
   X,
   Plus,
+  Sparkles,
 } from "lucide-react";
+import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.webp";
 
 type Conversation = {
   id: string;
@@ -271,7 +273,7 @@ export function AdminBottomBar() {
       {activePanel && (
         <div
           ref={panelRef}
-          className="fixed bottom-10 left-0 lg:left-[240px] z-[60] w-80 bg-card border border-border shadow-lg rounded-t-lg overflow-hidden animate-in slide-in-from-bottom-2 duration-200 hidden lg:block"
+          className="fixed bottom-10 left-0 lg:left-[240px] z-[60] w-full lg:w-80 bg-card border border-border shadow-lg rounded-t-lg overflow-hidden animate-in slide-in-from-bottom-2 duration-200"
           data-testid={`bottom-bar-panel-${activePanel}`}
         >
           <div className="flex items-center justify-between gap-2 px-3 py-2 border-b">
@@ -323,6 +325,34 @@ export function AdminBottomBar() {
             <div className="p-2 space-y-1">
               {activePanel === "chats" && (
                 <>
+                  <div
+                    className="flex items-center gap-2 p-2 rounded-md cursor-pointer hover-elevate"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent("open-admin-chat-widget"));
+                      setActivePanel(null);
+                    }}
+                    data-testid="bottom-bar-zan-ai"
+                  >
+                    <div className="relative">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={chatAvatarImage} alt="Zan" />
+                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                          <Sparkles className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-green-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium truncate block">
+                        Zan
+                      </span>
+                      <p className="text-xs text-muted-foreground truncate">
+                        AI Assistant
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="text-xs shrink-0">AI</Badge>
+                  </div>
+
                   {filteredConversations && filteredConversations.length > 0 && (
                     <>
                       <p className="text-xs text-muted-foreground px-2 py-1 font-medium">

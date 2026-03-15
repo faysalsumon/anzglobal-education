@@ -724,7 +724,7 @@ export function FloatingChatBar() {
   }, [createConversationMutation, markAsReadMutation]);
 
   return (
-    <div className="fixed bottom-10 right-4 z-50 flex items-end gap-2" data-testid="floating-chat-bar">
+    <div className="fixed bottom-10 left-0 lg:left-[244px] z-50 flex items-end gap-2" data-testid="floating-chat-bar">
       {channelWindows.slice(-MAX_VISIBLE_WINDOWS).map((win) => (
         <MiniChannelWindow
           key={`ch-${win.channelId}`}
