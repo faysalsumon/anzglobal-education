@@ -38,7 +38,7 @@ function AdminRedirectOverlay() {
         <div className="space-y-2">
           <h2 className="text-2xl font-bold text-foreground">Admin Portal Access</h2>
           <p className="text-muted-foreground max-w-sm">
-            Redirecting you to the secure admin login portal...
+            Redirecting you to the admin dashboard...
           </p>
         </div>
         <div className="flex justify-center">
