@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Calendar, Clock, ArrowRight } from "lucide-react";
 import type { BlogWithAuthor } from "@shared/schema";
+import { useRegion } from "@/context/RegionContext";
 
 const POSTS_PER_PAGE = 9;
 
@@ -17,10 +18,13 @@ export default function PublicBlogArchive() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const { region, regionCode } = useRegion();
+  const effectiveMarket = region?.code || regionCode;
 
-  // Fetch published blogs
+  // Fetch published blogs filtered by current market
   const { data: blogsData, isLoading } = useQuery<{ blogs: BlogWithAuthor[]; total: number }>({
-    queryKey: ["/api/blogs"],
+    queryKey: ["/api/blogs", { limit: 100, market: effectiveMarket || undefined }],
+    enabled: !!effectiveMarket,
   });
 
   const blogs = blogsData?.blogs || [];

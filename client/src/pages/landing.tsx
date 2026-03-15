@@ -87,9 +87,10 @@ export default function Landing() {
     queryKey: ["/api/institutions", regionQuery],
   });
 
-  // Fetch latest blog posts
+  // Fetch latest blog posts filtered by current market
   const { data: blogsData } = useQuery<{ blogs: Blog[]; total: number }>({
-    queryKey: ["/api/blogs", { limit: 60 }],
+    queryKey: ["/api/blogs", { limit: 60, market: effectiveRegionCode || undefined }],
+    enabled: !!effectiveRegionCode,
   });
 
   const blogs = blogsData?.blogs || [];

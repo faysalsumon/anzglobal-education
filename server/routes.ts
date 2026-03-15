@@ -15468,11 +15468,12 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
   // Get published blogs with pagination
   app.get("/api/blogs", async (req, res) => {
     try {
-      const { category, tag, limit, offset } = req.query;
+      const { category, tag, market, limit, offset } = req.query;
       
       const result = await storage.getPublishedBlogs({
         category: category as string,
         tag: tag as string,
+        market: market as string,
         limit: limit ? parseInt(limit as string) : 10,
         offset: offset ? parseInt(offset as string) : 0,
       });

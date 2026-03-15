@@ -3839,6 +3839,7 @@ export const blogs = pgTable("blogs", {
   featuredImageUrl: text("featured_image_url"),
   category: varchar("category", { length: 100 }),
   postType: varchar("post_type", { length: 20 }).notNull().default("blog"),
+  availableMarkets: text("available_markets").array().notNull().default(sql`ARRAY['AU','BD']::text[]`),
   tags: text("tags").array(),
   status: blogStatusEnum("status").notNull().default("draft"),
   
@@ -3856,6 +3857,7 @@ export const blogs = pgTable("blogs", {
   categoryIdx: index("blogs_category_idx").on(table.category),
   tagsIdx: index("blogs_tags_gin_idx").using("gin", table.tags),
   publishedAtIdx: index("blogs_published_at_idx").on(table.publishedAt),
+  availableMarketsIdx: index("blogs_available_markets_gin_idx").using("gin", table.availableMarkets),
 }));
 
 export const insertBlogSchema = createInsertSchema(blogs).omit({
@@ -3869,6 +3871,7 @@ export const insertBlogSchema = createInsertSchema(blogs).omit({
   content: z.string().min(1),
   category: z.string().max(100).optional(),
   postType: z.enum(["blog", "news", "update"]).default("blog"),
+  availableMarkets: z.array(z.enum(["AU", "BD"])).default(["AU", "BD"]),
   tags: z.array(z.string()).optional(),
   metaTitle: z.string().max(60).optional(),
   metaDescription: z.string().max(160).optional(),

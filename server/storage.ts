@@ -1806,11 +1806,15 @@ export class DatabaseStorage implements IStorage {
     return await baseQuery.orderBy(desc(blogs.createdAt));
   }
 
-  async getPublishedBlogs(filters?: { category?: string; tag?: string; limit?: number; offset?: number }): Promise<{ blogs: BlogWithAuthor[]; total: number }> {
+  async getPublishedBlogs(filters?: { category?: string; tag?: string; market?: string; limit?: number; offset?: number }): Promise<{ blogs: BlogWithAuthor[]; total: number }> {
     const conditions = [eq(blogs.status, "published")];
     
     if (filters?.category) {
       conditions.push(eq(blogs.category, filters.category));
+    }
+
+    if (filters?.market) {
+      conditions.push(sql`${filters.market} = ANY(${blogs.availableMarkets})`);
     }
     
     const limit = filters?.limit || 10;
