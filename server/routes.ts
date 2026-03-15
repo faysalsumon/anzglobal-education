@@ -371,6 +371,11 @@ export async function checkAdminAccess(
   }
   
   const userType = user.userType;
+
+  // platform_admin has unrestricted access — satisfies any role requirement
+  if (requiredRoles && requiredRoles.length > 0 && userType === 'platform_admin') {
+    return { role: 'cto', userType };
+  }
   
   // If no requiredRoles specified, just check userType (for basic dashboard access)
   if (!requiredRoles || requiredRoles.length === 0) {
@@ -10554,17 +10559,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // SECURITY: Restrict to CTO only (most trusted role)
-      const access = await checkAdminAccess(userId, ['cto']);
+      // Allow CTO, branch managers, and support staff (marketing executives map to support_staff)
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ 
-          message: "Super admin access required. This feature is restricted for security reasons." 
+          message: "Admin access required. Only admin team members can use this feature." 
         });
       }
 
-      // SECURITY: Environment-aware rate limiting with super admin bypass
-      const rateLimitResult = checkAIExtractionRateLimit(userId, true); // Super admins get higher limits
+      // Rate limiting — higher limit for senior roles
+      const isSeniorRole = access.role === 'cto';
+      const rateLimitResult = checkAIExtractionRateLimit(userId, isSeniorRole);
       
       if (!rateLimitResult.allowed) {
         const resetDate = new Date(rateLimitResult.resetTime);
@@ -10641,17 +10647,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // SECURITY: Restrict to CTO only (most trusted role)
-      const access = await checkAdminAccess(userId, ['cto']);
+      // Allow CTO, branch managers, and support staff (marketing executives map to support_staff)
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ 
-          message: "Super admin access required. This feature is restricted for security reasons." 
+          message: "Admin access required. Only admin team members can use this feature." 
         });
       }
 
-      // SECURITY: Environment-aware rate limiting with super admin bypass
-      const rateLimitResult = checkAIExtractionRateLimit(userId, true); // Super admins get higher limits
+      // Rate limiting — higher limit for senior roles
+      const isSeniorRole = access.role === 'cto';
+      const rateLimitResult = checkAIExtractionRateLimit(userId, isSeniorRole);
       
       if (!rateLimitResult.allowed) {
         const resetDate = new Date(rateLimitResult.resetTime);
@@ -19739,7 +19746,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.get("/api/admin/institution-tags/grouped", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'consultant']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
       }
@@ -19801,7 +19808,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.get("/api/admin/institutions/:institutionId/tags", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'consultant']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
       }
@@ -19832,7 +19839,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.put("/api/admin/institutions/:institutionId/tags", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'consultant']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });

@@ -33,11 +33,19 @@ async function requireAdmin(req: any, res: any, next: any) {
 
     const user = await db.select().from(users).where(eq(users.id, userId)).limit(1).then((r) => r[0]);
 
+    // Non-student, non-university roles from the roles table are considered admin staff
+    const ADMIN_ROLE_IDS = [
+      'role_super_admin', 'role_ceo', 'role_cfo',
+      'role_branch_manager', 'role_marketing_executive',
+      'role_senior_consultant', 'role_junior_consultant',
+    ];
+
     const isAdmin =
       !!member ||
       user?.userType === "admin" ||
       user?.userType === "platform_admin" ||
-      user?.userType === "super_admin";
+      user?.userType === "super_admin" ||
+      (!!user?.roleId && ADMIN_ROLE_IDS.includes(user.roleId));
 
     if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
 
