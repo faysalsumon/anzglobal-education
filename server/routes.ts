@@ -4729,14 +4729,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
         }
-      } else if (filter === "missing") {
-        const conditions = [
+      } else if (filter === "missing" || filter === "failed") {
+        const conditions: any[] = [
           eq(courses.isActive, true),
-          or(
-            isNull(courses.thumbnailUrl),
-            eq(courses.thumbnailUrl, "")
-          ),
         ];
+        if (filter === "failed") {
+          conditions.push(eq(courses.thumbnailStatus, "failed"));
+        } else {
+          conditions.push(
+            or(
+              isNull(courses.thumbnailUrl),
+              eq(courses.thumbnailUrl, "")
+            )
+          );
+          conditions.push(
+            or(
+              isNull(courses.thumbnailStatus),
+              eq(courses.thumbnailStatus, ""),
+              eq(courses.thumbnailStatus, "failed")
+            )
+          );
+        }
         if (universityId) {
           conditions.push(eq(courses.universityId, universityId));
         }

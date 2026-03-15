@@ -127,7 +127,7 @@ export function AdminThumbnailManager() {
     }
   }, [expandedUnis, fetchUniversityCourses, toast]);
 
-  const generateBatch = useCallback(async (universityId?: string) => {
+  const generateBatch = useCallback(async (universityId?: string, filter: "missing" | "failed" = "missing") => {
     setIsGenerating(true);
     setGenerationProgress({ completed: 0, failed: 0, total: 0 });
 
@@ -138,7 +138,7 @@ export function AdminThumbnailManager() {
 
     try {
       while (true) {
-        const body: any = { filter: "missing", limit: batchSize };
+        const body: any = { filter, limit: batchSize };
         if (universityId) body.universityId = universityId;
 
         const res = await apiRequest("POST", "/api/admin/courses/bulk-generate-thumbnails", body);
@@ -160,7 +160,7 @@ export function AdminThumbnailManager() {
 
         queryClient.invalidateQueries({ queryKey: ["/api/admin/courses/thumbnail-stats"] });
 
-        if ((data.completed || 0) + (data.failed || 0) < batchSize) {
+        if ((data.completed || 0) + (data.failed || 0) === 0) {
           break;
         }
 
@@ -185,14 +185,23 @@ export function AdminThumbnailManager() {
     }
   }, [toast, expandedUnis, fetchUniversityCourses]);
 
+  const [confirmFilter, setConfirmFilter] = useState<"missing" | "failed">("missing");
+
   const handleGenerateClick = (universityId?: string, universityName?: string) => {
     setConfirmTarget(universityId ? { universityId, universityName } : null);
+    setConfirmFilter("missing");
+    setConfirmOpen(true);
+  };
+
+  const handleRetryClick = (universityId: string, universityName: string) => {
+    setConfirmTarget({ universityId, universityName });
+    setConfirmFilter("failed");
     setConfirmOpen(true);
   };
 
   const handleConfirm = () => {
     setConfirmOpen(false);
-    generateBatch(confirmTarget?.universityId);
+    generateBatch(confirmTarget?.universityId, confirmFilter);
   };
 
   const groupedByCountry = stats?.byUniversity?.reduce<Record<string, UniversityStat[]>>((acc, uni) => {
@@ -381,7 +390,7 @@ export function AdminThumbnailManager() {
                         ) : (
                           <span className="text-xs text-muted-foreground">{pct}%</span>
                         )}
-                        {(uni.missing > 0 || uni.failed > 0) && (
+                        {uni.missing > 0 && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -390,7 +399,19 @@ export function AdminThumbnailManager() {
                             data-testid={`button-generate-${uni.universityId}`}
                           >
                             <Play className="h-3 w-3 mr-1" />
-                            {uni.missing > 0 ? `Generate (${uni.missing})` : "Retry"}
+                            Generate ({uni.missing})
+                          </Button>
+                        )}
+                        {uni.missing === 0 && uni.failed > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRetryClick(uni.universityId, uni.universityName)}
+                            disabled={isGenerating}
+                            data-testid={`button-retry-${uni.universityId}`}
+                          >
+                            <RotateCcw className="h-3 w-3 mr-1" />
+                            Retry ({uni.failed})
                           </Button>
                         )}
                       </div>

@@ -54,6 +54,7 @@ export async function addThumbnailJob(data: ThumbnailJobData): Promise<string | 
   try {
     const job = await queue.add(`thumbnail-${data.courseId}`, data, {
       priority: 10,
+      jobId: `thumb-${data.courseId}`,
     });
     console.log(`[Thumbnail] Queued job ${job.id} for course ${data.courseId}`);
     return job.id || null;
@@ -75,7 +76,7 @@ export async function addBulkThumbnailJobs(courses: ThumbnailJobData[]): Promise
     const jobs = courses.map((course) => ({
       name: `thumbnail-${course.courseId}`,
       data: course,
-      opts: { priority: 10 },
+      opts: { priority: 10, jobId: `thumb-${course.courseId}` },
     }));
     
     await queue.addBulk(jobs);
