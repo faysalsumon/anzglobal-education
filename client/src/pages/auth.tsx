@@ -118,19 +118,11 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (isAuthResolved && isAuthenticated && user && !redirectingToAdmin) {
-      // Platform admins should not be on this page - they use /admin/login
       if (user.userType === "platform_admin" || user.userType === "admin") {
         setRedirectingToAdmin(true);
-        // Sign them out and redirect to admin login after a brief delay for the animation
-        const handleAdminRedirect = async () => {
-          const { supabase } = await import("@/lib/supabase");
-          supabase?.auth.signOut().finally(() => {
-            setTimeout(() => {
-              window.location.href = "/admin/login";
-            }, 1000);
-          });
-        };
-        handleAdminRedirect();
+        setTimeout(() => {
+          window.location.href = "/admin/dashboard";
+        }, 800);
       } else if (user.userType === "student") {
         window.location.href = "/student/dashboard";
       }
@@ -363,20 +355,14 @@ export default function AuthPage() {
             }
             
             const responseData = await response.json();
-            const detectedUserType = responseData.user?.platformUser?.userType;
+            const detectedUserType = responseData.userType;
             
-            // Platform admins should use /admin/login - show overlay and redirect
             if (detectedUserType === "platform_admin" || detectedUserType === "admin") {
-              // Set overlay state first, then sign out and redirect
               setRedirectingToAdmin(true);
-              setIsLoading(false); // Reset loading so finally block doesn't interfere
-              
-              // Sign out async and redirect - don't await to avoid race conditions
-              supabase?.auth.signOut().finally(() => {
-                setTimeout(() => {
-                  window.location.href = "/admin/login";
-                }, 1000);
-              });
+              setIsLoading(false);
+              setTimeout(() => {
+                window.location.href = "/admin/dashboard";
+              }, 800);
               return;
             }
             
