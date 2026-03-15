@@ -146,7 +146,7 @@ export function AdminThumbnailManager() {
 
         if (data.mode === "async") {
           totalQueued += data.queued || 0;
-          if ((data.queued || 0) < batchSize) {
+          if ((data.queued || 0) === 0) {
             toast({ title: "Queued for generation", description: `${totalQueued} thumbnails queued via background worker.` });
             break;
           }
