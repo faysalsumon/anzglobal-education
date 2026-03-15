@@ -82,7 +82,7 @@ async function hasDataEntryPermission(user: any, userId: string): Promise<boolea
   if (user.userType === "platform_admin") return true;
   if (user.userType === "super_admin") return true;
   if (user.roleId === "role_super_admin") return true;
-  if (user.roleId === "role_marketing_executive") return true;
+  if (user.roleId === "role_marketing_executive" || user.roleId === "marketing_executive") return true;
   if (user.userType === "cto") return true;
   if ((user as any).role === "cto") return true;
 
