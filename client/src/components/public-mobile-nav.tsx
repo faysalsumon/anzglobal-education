@@ -19,7 +19,7 @@ interface PublicMobileNavProps {
 export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
   const [location, setLocation] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user, isAuthenticated, isAdmin, isStudent } = useAuth();
+  const { user, isAuthenticated, isAdmin, isStudent, isStaff } = useAuth();
   const { t } = useTranslation();
   const { signOut } = useSupabaseAuth();
 
@@ -46,12 +46,12 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
   };
 
   const getDashboardUrl = () => {
-    if (isAdmin) return "/admin/dashboard";
+    if (isStaff || isAdmin) return "/admin/dashboard";
     return "/dashboard";
   };
 
   const getProfileUrl = () => {
-    if (isAdmin) return "/admin/profile";
+    if (isStaff || isAdmin) return "/admin/profile";
     if (isStudent) return "/student/profile";
     return "/dashboard";
   };
@@ -70,8 +70,8 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
   };
 
   const handleChatClick = () => {
-    if (isAdmin) {
-      setLocation('/admin/dashboard?tab=messages');
+    if (isStaff) {
+      window.dispatchEvent(new CustomEvent("open-admin-chat-widget"));
     } else {
       window.dispatchEvent(new CustomEvent("open-chat-widget"));
     }
@@ -144,7 +144,7 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
                       : user?.email}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {user?.userType === "student" ? "Student" : user?.userType === "admin" || user?.userType === "platform_admin" ? "Admin" : "User"}
+                    {user?.userType === "student" ? "Student" : isStaff ? "Admin" : "User"}
                   </p>
                 </div>
               </div>

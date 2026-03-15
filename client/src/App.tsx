@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { TopNavBar } from "@/components/top-nav-bar";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 const ChatWidget = lazy(() => import("@/components/chat-widget").then(m => ({ default: m.ChatWidget })));
+const AdminChatWidget = lazy(() => import("@/components/admin-chat-widget").then(m => ({ default: m.AdminChatWidget })));
 import { Footer } from "@/components/footer";
 import { PublicHeader } from "@/components/public-header";
 import { useAuth } from "@/hooks/useAuth";
@@ -143,7 +144,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
 }
 
 function AppContent() {
-  const { user, isAuthenticated, isLoading, isAuthResolved } = useAuth();
+  const { user, isAuthenticated, isLoading, isAuthResolved, isStaff } = useAuth();
   const [location, setLocation] = useLocation();
   useMetaPixel();
   useGoogleAnalytics();
@@ -201,9 +202,9 @@ function AppContent() {
           <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />
         </main>
         <Footer />
-        {!isLoading && (!user || user.userType === 'student') && (
+        {!isLoading && (
           <Suspense fallback={null}>
-            <ChatWidget />
+            {isStaff ? <AdminChatWidget /> : (!user || user.userType === 'student') && <ChatWidget />}
           </Suspense>
         )}
       </div>
@@ -255,7 +256,7 @@ function AppContent() {
       {shouldShowFooter && <Footer />}
       <MobileBottomNav />
       <Suspense fallback={null}>
-        <ChatWidget />
+        {isStaff ? <AdminChatWidget /> : <ChatWidget />}
       </Suspense>
     </div>
   );

@@ -1,7 +1,9 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, lazy, Suspense } from "react";
 import { ChatWidget } from "@/components/chat-widget";
 import { PublicMobileNav } from "@/components/public-mobile-nav";
 import { CourseMatchQuiz } from "@/components/course-match-quiz";
+import { useAuth } from "@/hooks/useAuth";
+const AdminChatWidget = lazy(() => import("@/components/admin-chat-widget").then(m => ({ default: m.AdminChatWidget })));
 
 interface PublicLayoutProps {
   children: ReactNode;
@@ -10,6 +12,7 @@ interface PublicLayoutProps {
 }
 
 export function PublicLayout({ children, onStudentLoginClick, onMatchClick }: PublicLayoutProps) {
+  const { isStaff } = useAuth();
   const [quizOpen, setQuizOpen] = useState(false);
 
   useEffect(() => {
@@ -31,7 +34,11 @@ export function PublicLayout({ children, onStudentLoginClick, onMatchClick }: Pu
       <main className="flex-1 pb-16 md:pb-0">
         {children}
       </main>
-      <ChatWidget />
+      {isStaff ? (
+        <Suspense fallback={null}><AdminChatWidget /></Suspense>
+      ) : (
+        <ChatWidget />
+      )}
       <PublicMobileNav onMatchClick={handleMatchClick} />
       <CourseMatchQuiz open={quizOpen} onClose={() => setQuizOpen(false)} />
     </div>

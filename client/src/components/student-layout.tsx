@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { StudentSidebar, StudentSidebarProvider } from "@/components/student-sidebar";
 import { ChatWidget } from "@/components/chat-widget";
+const AdminChatWidget = lazy(() => import("@/components/admin-chat-widget").then(m => ({ default: m.AdminChatWidget })));
 import { Helmet } from "react-helmet";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -230,7 +231,11 @@ function StudentLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <ChatWidget />
+      {user?.userType && ["admin", "platform_admin", "cto", "super_admin"].includes(user.userType) ? (
+        <Suspense fallback={null}><AdminChatWidget /></Suspense>
+      ) : (
+        <ChatWidget />
+      )}
     </>
   );
 }

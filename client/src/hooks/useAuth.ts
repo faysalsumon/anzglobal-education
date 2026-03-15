@@ -91,6 +91,9 @@ export function useAuth() {
   // User is authenticated if we have a valid Supabase session
   const isAuthenticated = !!supabaseUser && !!session;
 
+  const STAFF_USER_TYPES = ["admin", "platform_admin", "cto", "super_admin"];
+  const isStaff = STAFF_USER_TYPES.includes(user?.userType ?? "") || !!adminRole;
+
   return {
     user,
     isLoading,
@@ -98,6 +101,7 @@ export function useAuth() {
     isAuthenticated,
     isStudent: user?.userType === "student",
     isAdmin: user?.userType === "admin" || user?.userType === "platform_admin",
+    isStaff,
     adminRole,
     isCTO,
     isBranchManager,
