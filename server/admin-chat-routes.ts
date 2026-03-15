@@ -9,9 +9,13 @@ import {
   crmContacts,
   tasks,
   applications,
+  universities,
+  courses,
 } from "@shared/schema";
-import { eq, and, lt, gte, lte, ne, sql, count, inArray } from "drizzle-orm";
+import { eq, and, lt, gte, lte, ne, sql, count, inArray, ilike } from "drizzle-orm";
 import OpenAI from "openai";
+import { scrapeWebsite } from "./web-scraper-service";
+import { extractInstitutionData, extractCourseData } from "./ai-extractor-service";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -33,7 +37,6 @@ async function requireAdmin(req: any, res: any, next: any) {
 
     const user = await db.select().from(users).where(eq(users.id, userId)).limit(1).then((r) => r[0]);
 
-    // Non-student, non-university roles from the roles table are considered admin staff
     const ADMIN_ROLE_IDS = [
       'role_super_admin', 'role_ceo', 'role_cfo',
       'role_branch_manager', 'role_marketing_executive',
@@ -49,6 +52,7 @@ async function requireAdmin(req: any, res: any, next: any) {
 
     if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
 
+    (req as any)._zanUser = user;
     next();
   } catch (err) {
     console.error("[AdminChat] requireAdmin error:", err);
@@ -70,6 +74,519 @@ async function verifyConversationOwnership(req: any, res: any, next: any) {
     next();
   } catch (err) {
     res.status(500).json({ error: "Failed to verify access" });
+  }
+}
+
+function hasDataEntryPermission(user: any): boolean {
+  if (!user) return false;
+  if (user.userType === "platform_admin") return true;
+  if (user.roleId === "role_super_admin") return true;
+  if (user.roleId === "role_ceo") return true;
+  if (user.roleId === "role_marketing_executive") return true;
+  return false;
+}
+
+const DATA_ENTRY_INTENT_KEYWORDS = [
+  "upload", "add institution", "add university", "create institution", "create university",
+  "find and upload", "find and add", "add course", "create course", "upload course",
+  "add a course", "add bachelor", "add master", "add diploma", "add certificate",
+  "data entry", "add tafe", "add school", "register institution", "register university",
+];
+
+function detectsDataEntryIntent(message: string): boolean {
+  const lower = message.toLowerCase();
+  return DATA_ENTRY_INTENT_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+const DATA_ENTRY_SYSTEM_PROMPT = `
+DATA ENTRY CAPABILITY:
+You have data entry tools available. When the user asks you to find, add, upload, or create an institution or course, use the tools below.
+
+WORKFLOW FOR INSTITUTIONS:
+1. First call check_institution_exists to see if it's already in the platform
+2. If it exists, inform the user and provide the existing record details
+3. If not found, try to scrape the institution website using scrape_and_extract_institution with a likely official URL
+4. If scraping fails, use your own knowledge to populate as many fields as possible
+5. Present all extracted data to the user for confirmation
+6. When the user confirms, call save_institution_draft to save it
+
+WORKFLOW FOR COURSES:
+1. First call find_institution_by_name to locate the parent institution
+2. If the institution doesn't exist, tell the user they need to add the institution first
+3. If found, try to scrape the course page using scrape_and_extract_course if a URL is available
+4. Alternatively, populate fields from the user's message and your knowledge
+5. Present extracted data to the user for confirmation
+6. When the user confirms, call save_course_draft to save it
+
+INSTITUTION REQUIRED FIELDS:
+- name: Full official institution name
+- providerType: Exactly one of: University, Institution, Tafe, School
+- country: Country name (e.g., "Australia")
+
+INSTITUTION IMPORTANT OPTIONAL FIELDS (always try to fill):
+- website, logo, description, smallDescription (max 100 words), fullDescription
+- contactEmail, contactPhone, establishedYear, numberOfCampuses
+- campusAddresses (array of {name, address, city, state, postcode, country})
+- scholarshipPercentageMin/Max, tuitionFeesMin/Max, tuitionCurrency
+- deliveryModes (array: "on-campus", "online", "hybrid", "blended")
+- intakePeriods (array of month names)
+- topDisciplines, accreditationStatus, rankingBand
+- facilities (array: "Library", "Sports Center", etc.)
+- internationalStudentSupport (boolean), tags (array)
+- rtoNumber, cricosProviderCode, institutionGallery (up to 3 image URLs)
+- availableMarkets: default ["AU", "BD"]
+
+COURSE REQUIRED FIELDS:
+- title: Full course name
+- universityId: Must link to existing institution (use find_institution_by_name first)
+- subject: Brief subject area label
+- level: Must be exactly one of the course level enum values
+- discipline: Must be exactly one of: Accounting, Business & Finance | Agriculture & Forestry | Applied Sciences & Professions | Arts, Design & Architecture | Computer Science & IT | Education & Training | Engineering & Technology | Environmental Studies & Earth Sciences | Hospitality, Leisure & Sports | Humanities | Journalism & Media | Law | Medicine & Health | Short Courses | Trade
+
+COURSE LEVEL ENUM (select most appropriate):
+AQF: Certificate I, Certificate II, Certificate III, Certificate IV, Diploma, Advanced Diploma, Associate Degree, Graduate Certificate, Graduate Diploma, Bachelor Degree, Bachelor Honours, Masters Degree, Doctoral Degree, Higher Doctoral Degree
+Non-AQF: ELICOS - General English, ELICOS - EAP, ELICOS - Exam Preparation, Professional Year - Accounting, Professional Year - IT, Professional Year - Engineering, Foundation, Pathway Program, Short Course
+RQF (UK): RQF Entry Level, RQF Level 1, RQF Level 2, RQF Level 3, RQF Level 4, RQF Level 5, RQF Level 6, RQF Level 7, RQF Level 8
+NZQF: NZQF Level 1-10
+MQF: MQF Level 1-8, MQF Foundation
+US: US Associate Degree, US Bachelor Degree, US Master Degree, US Doctoral Degree, US Professional Doctorate
+Canadian: Canadian Certificate, Canadian Diploma, Canadian Advanced Diploma, Canadian Associate Degree, Canadian Bachelor Degree, Canadian Master Degree, Canadian Doctoral Degree, CEGEP
+EQF: EQF Level 1-8
+Other
+
+COURSE IMPORTANT OPTIONAL FIELDS (always try to fill):
+- description, duration, durationMonths, durationWeeks
+- fees (decimal), currency (default "AUD")
+- location, country, startDate, applicationDeadline
+- deliveryMode ("online" | "on-campus" | "hybrid")
+- prPathway (boolean), intakes (array of month names)
+- careerOutcomes (array), prerequisites, eligibilityRequirements
+- englishRequirements, campusLocations (array)
+- internshipAvailable (boolean), sourceUrl
+- availableMarkets: default ["AU", "BD"]
+
+RULES:
+- All records are saved as publishStatus: 'draft', approvalStatus: 'pending'
+- Never publish directly — admin reviews and publishes manually
+- Always check for duplicates before creating
+- When presenting data for confirmation, clearly list ALL populated fields
+- Flag any missing required fields in amber/warning
+- You CANNOT save records directly. You can only PREPARE drafts for user confirmation.
+- Use prepare_institution_draft or prepare_course_draft to structure the data. The user will then confirm via a button in the UI.
+
+PRESENTATION FORMAT:
+When you have data ready to present for confirmation, call the appropriate prepare tool with the structured data. Then format your response clearly with sections for each field group. Use this structure:
+- Start with "Here's what I found for [name]:"
+- List all fields with their values
+- Note any fields that couldn't be filled
+- End with "Click 'Save as Draft' below to save this record."
+`;
+
+const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
+  {
+    type: "function",
+    function: {
+      name: "check_institution_exists",
+      description: "Check if an institution already exists in the platform by searching the name. Returns matching institutions if found.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Institution name to search for (partial match supported)" },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "scrape_and_extract_institution",
+      description: "Scrape an institution's website and extract structured data using AI. Provide the official institution website URL.",
+      parameters: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "The official website URL of the institution (e.g., https://www.swinburne.edu.au)" },
+        },
+        required: ["url"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "prepare_institution_draft",
+      description: "Prepare structured institution data for the user to review and confirm. Does NOT save anything — the user must click 'Save as Draft' to persist. Call this when you have assembled all available institution data.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          providerType: { type: "string", enum: ["University", "Institution", "Tafe", "School"] },
+          country: { type: "string" },
+          website: { type: "string" },
+          logo: { type: "string" },
+          description: { type: "string" },
+          smallDescription: { type: "string" },
+          fullDescription: { type: "string" },
+          contactEmail: { type: "string" },
+          contactPhone: { type: "string" },
+          establishedYear: { type: "number" },
+          numberOfCampuses: { type: "number" },
+          campusAddresses: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                address: { type: "string" },
+                city: { type: "string" },
+                state: { type: "string" },
+                postcode: { type: "string" },
+                country: { type: "string" },
+              },
+            },
+          },
+          scholarshipPercentageMin: { type: "number" },
+          scholarshipPercentageMax: { type: "number" },
+          tuitionFeesMin: { type: "number" },
+          tuitionFeesMax: { type: "number" },
+          tuitionCurrency: { type: "string" },
+          deliveryModes: { type: "array", items: { type: "string" } },
+          intakePeriods: { type: "array", items: { type: "string" } },
+          topDisciplines: { type: "array", items: { type: "string" } },
+          accreditationStatus: { type: "string" },
+          rankingBand: { type: "string" },
+          facilities: { type: "array", items: { type: "string" } },
+          internationalStudentSupport: { type: "boolean" },
+          tags: { type: "array", items: { type: "string" } },
+          rtoNumber: { type: "string" },
+          cricosProviderCode: { type: "string" },
+          institutionGallery: { type: "array", items: { type: "string" } },
+        },
+        required: ["name", "providerType", "country"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "find_institution_by_name",
+      description: "Find an existing institution by name to get its ID for linking courses. Returns the institution ID, name, and country.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Institution name to search for" },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "scrape_and_extract_course",
+      description: "Scrape a course page URL and extract structured course data using AI.",
+      parameters: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "Direct URL to the course page" },
+          institutionName: { type: "string", description: "Name of the institution offering the course" },
+        },
+        required: ["url"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "prepare_course_draft",
+      description: "Prepare structured course data for the user to review and confirm. Does NOT save anything — the user must click 'Save as Draft' to persist. Call this when you have assembled all available course data.",
+      parameters: {
+        type: "object",
+        properties: {
+          universityId: { type: "string", description: "ID of the parent institution" },
+          title: { type: "string" },
+          subject: { type: "string" },
+          level: { type: "string" },
+          discipline: { type: "string" },
+          description: { type: "string" },
+          duration: { type: "string" },
+          durationMonths: { type: "number" },
+          durationWeeks: { type: "number" },
+          fees: { type: "number" },
+          currency: { type: "string" },
+          location: { type: "string" },
+          country: { type: "string" },
+          startDate: { type: "string" },
+          applicationDeadline: { type: "string" },
+          deliveryMode: { type: "string" },
+          prPathway: { type: "boolean" },
+          intakes: { type: "array", items: { type: "string" } },
+          careerOutcomes: { type: "array", items: { type: "string" } },
+          prerequisites: { type: "string" },
+          eligibilityRequirements: { type: "string" },
+          englishRequirements: { type: "string" },
+          campusLocations: { type: "array", items: { type: "string" } },
+          internshipAvailable: { type: "boolean" },
+          sourceUrl: { type: "string" },
+          courseCode: { type: "string" },
+        },
+        required: ["universityId", "title", "subject", "level", "discipline"],
+      },
+    },
+  },
+];
+
+async function executeToolCall(
+  toolName: string,
+  args: any,
+  userId: string
+): Promise<string> {
+  try {
+    switch (toolName) {
+      case "check_institution_exists": {
+        const matches = await db
+          .select({ id: universities.id, name: universities.name, country: universities.country, website: universities.website })
+          .from(universities)
+          .where(ilike(universities.name, `%${args.name}%`))
+          .limit(5);
+        if (matches.length === 0) {
+          return JSON.stringify({ found: false, message: `No institution matching "${args.name}" found in the platform.` });
+        }
+        return JSON.stringify({ found: true, count: matches.length, institutions: matches });
+      }
+
+      case "scrape_and_extract_institution": {
+        try {
+          const url = new URL(args.url);
+          if (!["http:", "https:"].includes(url.protocol)) {
+            return JSON.stringify({ success: false, error: "Only http/https URLs are allowed" });
+          }
+          const scraped = await scrapeWebsite({ url: args.url, timeout: 20000 });
+          const extracted = await extractInstitutionData(scraped.html, args.url);
+          return JSON.stringify({
+            success: true,
+            data: extracted.data,
+            confidence: extracted.confidence,
+            warnings: extracted.warnings,
+            sourceUrl: args.url,
+          });
+        } catch (err: any) {
+          return JSON.stringify({
+            success: false,
+            error: err.message || "Failed to scrape/extract institution data",
+            suggestion: "Try providing data manually or use a different URL",
+          });
+        }
+      }
+
+      case "save_institution_draft": {
+        const slug = args.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
+
+        const existingSlug = await db
+          .select({ id: universities.id })
+          .from(universities)
+          .where(eq(universities.slug, slug))
+          .limit(1)
+          .then((r) => r[0]);
+
+        const finalSlug = existingSlug ? `${slug}-${Date.now()}` : slug;
+
+        const insertData: any = {
+          name: args.name,
+          slug: finalSlug,
+          providerType: args.providerType,
+          country: args.country,
+          publishStatus: "draft",
+          approvalStatus: "pending",
+          createdByUserId: userId,
+          availableMarkets: ["AU", "BD"],
+        };
+
+        if (args.website) insertData.website = args.website;
+        if (args.logo) insertData.logo = args.logo;
+        if (args.description) insertData.description = args.description;
+        if (args.smallDescription) insertData.smallDescription = args.smallDescription;
+        if (args.fullDescription) insertData.fullDescription = args.fullDescription;
+        if (args.contactEmail) insertData.contactEmail = args.contactEmail;
+        if (args.contactPhone) insertData.contactPhone = args.contactPhone;
+        if (args.establishedYear) insertData.establishedYear = args.establishedYear;
+        if (args.numberOfCampuses) insertData.numberOfCampuses = args.numberOfCampuses;
+        if (args.campusAddresses) insertData.campusAddresses = args.campusAddresses;
+        if (args.scholarshipPercentageMin != null) insertData.scholarshipPercentageMin = args.scholarshipPercentageMin;
+        if (args.scholarshipPercentageMax != null) insertData.scholarshipPercentageMax = args.scholarshipPercentageMax;
+        if (args.tuitionFeesMin != null) insertData.tuitionFeesMin = String(args.tuitionFeesMin);
+        if (args.tuitionFeesMax != null) insertData.tuitionFeesMax = String(args.tuitionFeesMax);
+        if (args.tuitionCurrency) insertData.tuitionCurrency = args.tuitionCurrency;
+        if (args.deliveryModes) insertData.deliveryModes = args.deliveryModes;
+        if (args.intakePeriods) insertData.intakePeriods = args.intakePeriods;
+        if (args.topDisciplines) insertData.topDisciplines = args.topDisciplines;
+        if (args.accreditationStatus) insertData.accreditationStatus = args.accreditationStatus;
+        if (args.rankingBand) insertData.rankingBand = args.rankingBand;
+        if (args.facilities) insertData.facilities = args.facilities;
+        if (args.internationalStudentSupport != null) insertData.internationalStudentSupport = args.internationalStudentSupport;
+        if (args.tags) insertData.tags = args.tags;
+        if (args.rtoNumber) insertData.rtoNumber = args.rtoNumber;
+        if (args.cricosProviderCode) insertData.cricosProviderCode = args.cricosProviderCode;
+        if (args.institutionGallery) insertData.institutionGallery = args.institutionGallery;
+
+        const [created] = await db.insert(universities).values(insertData).returning();
+        return JSON.stringify({
+          success: true,
+          id: created.id,
+          name: created.name,
+          slug: created.slug,
+          message: `Institution "${created.name}" saved as draft (ID: ${created.id}). An admin must review and publish it.`,
+        });
+      }
+
+      case "find_institution_by_name": {
+        const matches = await db
+          .select({ id: universities.id, name: universities.name, country: universities.country })
+          .from(universities)
+          .where(ilike(universities.name, `%${args.name}%`))
+          .limit(5);
+        if (matches.length === 0) {
+          return JSON.stringify({ found: false, message: `No institution matching "${args.name}" found. You need to add the institution first.` });
+        }
+        return JSON.stringify({ found: true, institutions: matches });
+      }
+
+      case "scrape_and_extract_course": {
+        try {
+          const url = new URL(args.url);
+          if (!["http:", "https:"].includes(url.protocol)) {
+            return JSON.stringify({ success: false, error: "Only http/https URLs are allowed" });
+          }
+          const scraped = await scrapeWebsite({ url: args.url, timeout: 20000 });
+          const extracted = await extractCourseData(scraped.html, args.url, args.institutionName);
+          return JSON.stringify({
+            success: true,
+            data: extracted.data,
+            confidence: extracted.confidence,
+            warnings: extracted.warnings,
+            sourceUrl: args.url,
+          });
+        } catch (err: any) {
+          return JSON.stringify({
+            success: false,
+            error: err.message || "Failed to scrape/extract course data",
+            suggestion: "Try providing course data manually or use a different URL",
+          });
+        }
+      }
+
+      case "prepare_institution_draft": {
+        return JSON.stringify({
+          success: true,
+          type: "institution",
+          data: args,
+          message: "Institution data prepared for review. The user can now click 'Save as Draft' to persist this record.",
+        });
+      }
+
+      case "prepare_course_draft": {
+        if (args.universityId) {
+          const inst = await db
+            .select({ id: universities.id })
+            .from(universities)
+            .where(eq(universities.id, args.universityId))
+            .limit(1)
+            .then((r) => r[0]);
+          if (!inst) {
+            return JSON.stringify({
+              success: false,
+              error: `Institution with ID "${args.universityId}" not found. Use find_institution_by_name to get the correct ID.`,
+            });
+          }
+        }
+        return JSON.stringify({
+          success: true,
+          type: "course",
+          data: args,
+          message: "Course data prepared for review. The user can now click 'Save as Draft' to persist this record.",
+        });
+      }
+
+      case "save_course_draft": {
+        const instExists = await db
+          .select({ id: universities.id })
+          .from(universities)
+          .where(eq(universities.id, args.universityId))
+          .limit(1)
+          .then((r) => r[0]);
+        if (!instExists) {
+          return JSON.stringify({ success: false, error: `Institution "${args.universityId}" not found` });
+        }
+
+        const slug = args.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
+
+        const existingSlug = await db
+          .select({ id: courses.id })
+          .from(courses)
+          .where(eq(courses.slug, slug))
+          .limit(1)
+          .then((r) => r[0]);
+
+        const finalSlug = existingSlug ? `${slug}-${Date.now()}` : slug;
+
+        const insertData: any = {
+          universityId: args.universityId,
+          title: args.title,
+          slug: finalSlug,
+          subject: args.subject,
+          level: args.level,
+          discipline: args.discipline,
+          publishStatus: "draft",
+          approvalStatus: "pending",
+          createdByUserId: userId,
+          availableMarkets: ["AU", "BD"],
+          currency: args.currency || "AUD",
+        };
+
+        if (args.description) insertData.description = args.description;
+        if (args.duration) insertData.duration = args.duration;
+        if (args.durationMonths) insertData.durationMonths = args.durationMonths;
+        if (args.durationWeeks) insertData.durationWeeks = args.durationWeeks;
+        if (args.fees != null) insertData.fees = String(args.fees);
+        if (args.location) insertData.location = args.location;
+        if (args.country) insertData.country = args.country;
+        if (args.startDate) insertData.startDate = args.startDate;
+        if (args.applicationDeadline) insertData.applicationDeadline = args.applicationDeadline;
+        if (args.deliveryMode) insertData.deliveryMode = args.deliveryMode;
+        if (args.prPathway != null) insertData.prPathway = args.prPathway;
+        if (args.intakes) insertData.intakes = args.intakes;
+        if (args.careerOutcomes) insertData.careerOutcomes = args.careerOutcomes;
+        if (args.prerequisites) insertData.prerequisites = args.prerequisites;
+        if (args.eligibilityRequirements) insertData.eligibilityRequirements = args.eligibilityRequirements;
+        if (args.englishRequirements) insertData.englishRequirements = args.englishRequirements;
+        if (args.campusLocations) insertData.campusLocations = args.campusLocations;
+        if (args.internshipAvailable != null) insertData.internshipAvailable = args.internshipAvailable;
+        if (args.sourceUrl) insertData.sourceUrl = args.sourceUrl;
+        if (args.courseCode) insertData.courseCode = args.courseCode;
+
+        const [created] = await db.insert(courses).values(insertData).returning();
+        return JSON.stringify({
+          success: true,
+          id: created.id,
+          title: created.title,
+          slug: created.slug,
+          universityId: created.universityId,
+          message: `Course "${created.title}" saved as draft (ID: ${created.id}). An admin must review and publish it.`,
+        });
+      }
+
+      default:
+        return JSON.stringify({ error: `Unknown tool: ${toolName}` });
+    }
+  } catch (err: any) {
+    console.error(`[ZAN] Tool ${toolName} error:`, err);
+    return JSON.stringify({ error: `Tool execution failed: ${err.message}` });
   }
 }
 
@@ -293,8 +810,7 @@ COWORK GUIDANCE:
 BEHAVIOUR:
 - Keep responses short and actionable (2–3 paragraphs max, use bullet points for lists).
 - Always suggest a clear next action.
-- Only discuss topics relevant to CRM operations, contacts, applications, tasks, and team coordination.
-- Do not discuss courses, visa policy, or student-facing content — refer those to the student portal.`;
+- Only discuss topics relevant to CRM operations, contacts, applications, tasks, team coordination, and data entry (institutions/courses).`;
 }
 
 export function registerAdminChatRoutes(app: Express) {
@@ -338,11 +854,36 @@ export function registerAdminChatRoutes(app: Express) {
     async (req: any, res: Response) => {
       try {
         const userId = getUserId(req)!;
+        const user = (req as any)._zanUser;
         const { content } = req.body;
         if (!content?.trim()) return res.status(400).json({ message: "Message content required" });
 
         const ctx = await getAdminContext(userId);
-        const systemPrompt = buildSystemPrompt(ctx);
+        let systemPrompt = buildSystemPrompt(ctx);
+
+        const isDataEntry = detectsDataEntryIntent(content);
+        const canDoDataEntry = hasDataEntryPermission(user);
+
+        await db.insert(chatMessages).values({
+          conversationId: req.params.id,
+          role: "user",
+          content,
+          sources: null,
+        });
+
+        if (isDataEntry && !canDoDataEntry) {
+          const deniedMsg = "You don't have permission for data entry — contact your CTO or Marketing Executive to add institutions and courses.";
+          const [saved] = await db
+            .insert(chatMessages)
+            .values({
+              conversationId: req.params.id,
+              role: "assistant",
+              content: deniedMsg,
+              sources: null,
+            })
+            .returning();
+          return res.json(saved);
+        }
 
         const history = await db
           .select()
@@ -352,20 +893,110 @@ export function registerAdminChatRoutes(app: Express) {
           .limit(20);
 
         const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-          { role: "system", content: systemPrompt },
-          ...history.map((m) => ({
+          { role: "system", content: systemPrompt + (isDataEntry ? DATA_ENTRY_SYSTEM_PROMPT : "") },
+          ...history.slice(0, -1).map((m) => ({
             role: m.role as "user" | "assistant",
             content: m.content,
           })),
           { role: "user", content },
         ];
 
-        await db.insert(chatMessages).values({
-          conversationId: req.params.id,
-          role: "user",
-          content,
-          sources: null,
-        });
+        if (isDataEntry) {
+          let assistantContent = "";
+          let dataEntryPreview: any = null;
+          const MAX_TOOL_ITERATIONS = 8;
+          let iterations = 0;
+          let usedExtractionTool = false;
+          let lastExtractedData: any = null;
+          let lastExtractedType: string = "";
+
+          while (iterations < MAX_TOOL_ITERATIONS) {
+            iterations++;
+            const completion = await openai.chat.completions.create({
+              model: "gpt-4o",
+              messages: openaiMessages,
+              tools: TOOL_DEFINITIONS,
+              tool_choice: "auto",
+              max_tokens: 2000,
+              temperature: 0.3,
+            });
+
+            const msg = completion.choices[0]?.message;
+            if (!msg) break;
+
+            if (msg.tool_calls && msg.tool_calls.length > 0) {
+              openaiMessages.push(msg);
+              for (const toolCall of msg.tool_calls) {
+                const fnName = toolCall.function.name;
+                let fnArgs: any = {};
+                try {
+                  fnArgs = JSON.parse(toolCall.function.arguments);
+                } catch {
+                  fnArgs = {};
+                }
+                console.log(`[ZAN] Executing tool: ${fnName}`, JSON.stringify(fnArgs).substring(0, 200));
+                const result = await executeToolCall(fnName, fnArgs, userId);
+
+                if (fnName === "scrape_and_extract_institution" || fnName === "scrape_and_extract_course") {
+                  usedExtractionTool = true;
+                  lastExtractedType = fnName.includes("institution") ? "institution" : "course";
+                  try {
+                    const parsed = JSON.parse(result);
+                    if (parsed.success) lastExtractedData = parsed.data;
+                  } catch {}
+                }
+
+                if (fnName === "prepare_institution_draft" || fnName === "prepare_course_draft") {
+                  const prepType = fnName.includes("institution") ? "institution" : "course";
+                  try {
+                    const parsed = JSON.parse(result);
+                    if (parsed.success) {
+                      lastExtractedData = parsed.data;
+                      lastExtractedType = prepType;
+                      usedExtractionTool = true;
+                    }
+                  } catch {}
+                }
+
+                openaiMessages.push({
+                  role: "tool" as const,
+                  tool_call_id: toolCall.id,
+                  content: result,
+                });
+              }
+            } else {
+              assistantContent = msg.content ?? "I couldn't process that data entry request. Could you try again?";
+              break;
+            }
+          }
+
+          if (!assistantContent) {
+            assistantContent = "I've completed the data entry operations. Check above for the results.";
+          }
+
+          if (usedExtractionTool && lastExtractedData) {
+            dataEntryPreview = {
+              type: lastExtractedType,
+              action: "confirm",
+              data: lastExtractedData,
+            };
+          }
+
+          const [saved] = await db
+            .insert(chatMessages)
+            .values({
+              conversationId: req.params.id,
+              role: "assistant",
+              content: assistantContent,
+              sources: dataEntryPreview ? JSON.stringify(dataEntryPreview) : null,
+            })
+            .returning();
+
+          return res.json({
+            ...saved,
+            data_entry_preview: dataEntryPreview,
+          });
+        }
 
         const completion = await openai.chat.completions.create({
           model: "gpt-4o-mini",
@@ -394,6 +1025,45 @@ export function registerAdminChatRoutes(app: Express) {
     }
   );
 
+  app.post("/api/admin-chat/save-draft", requireAdmin, async (req: any, res: Response) => {
+    try {
+      const userId = getUserId(req)!;
+      const user = (req as any)._zanUser;
+
+      if (!hasDataEntryPermission(user)) {
+        return res.status(403).json({ message: "You don't have permission for data entry" });
+      }
+
+      const { type, data } = req.body;
+      if (!type || !data) {
+        return res.status(400).json({ message: "Missing type or data" });
+      }
+
+      if (type === "institution") {
+        if (!data.name || !data.providerType || !data.country) {
+          return res.status(400).json({ message: "Missing required institution fields: name, providerType, country" });
+        }
+        const result = await executeToolCall("save_institution_draft", data, userId);
+        const parsed = JSON.parse(result);
+        return res.json(parsed);
+      }
+
+      if (type === "course") {
+        if (!data.universityId || !data.title || !data.subject || !data.level || !data.discipline) {
+          return res.status(400).json({ message: "Missing required course fields: universityId, title, subject, level, discipline" });
+        }
+        const result = await executeToolCall("save_course_draft", data, userId);
+        const parsed = JSON.parse(result);
+        return res.json(parsed);
+      }
+
+      return res.status(400).json({ message: "Invalid type. Must be 'institution' or 'course'" });
+    } catch (err) {
+      console.error("[AdminChat] save-draft error:", err);
+      res.status(500).json({ message: "Failed to save draft" });
+    }
+  });
+
   app.post("/api/admin-chat/context", requireAdmin, async (req: any, res: Response) => {
     try {
       const userId = getUserId(req)!;
@@ -405,5 +1075,5 @@ export function registerAdminChatRoutes(app: Express) {
     }
   });
 
-  console.log("[AdminChat] Admin chat routes registered");
+  console.log("[AdminChat] Admin chat routes registered (with data entry tools)");
 }

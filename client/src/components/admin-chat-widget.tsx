@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { MessageCircle, X, Send, Minimize2, Users } from "lucide-react";
+import { MessageCircle, X, Send, Minimize2, Users, CheckCircle2, Building2, GraduationCap, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,10 +30,200 @@ interface AdminContext {
   pendingApplications: number;
 }
 
+interface DataEntryPreview {
+  type: "institution" | "course";
+  action: "confirm" | "saved";
+  data?: Record<string, any>;
+  id?: string;
+  name?: string;
+  slug?: string;
+}
+
 interface LocalMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  data_entry_preview?: DataEntryPreview | null;
+}
+
+const INSTITUTION_REQUIRED = ["name", "providerType", "country"];
+const COURSE_REQUIRED = ["title", "universityId", "subject", "level", "discipline"];
+
+const FIELD_LABELS: Record<string, string> = {
+  name: "Name",
+  providerType: "Provider Type",
+  country: "Country",
+  website: "Website",
+  logo: "Logo URL",
+  description: "Description",
+  smallDescription: "Short Description",
+  fullDescription: "Full Description",
+  contactEmail: "Contact Email",
+  contactPhone: "Contact Phone",
+  establishedYear: "Established Year",
+  numberOfCampuses: "Number of Campuses",
+  campusAddresses: "Campus Addresses",
+  scholarshipPercentageMin: "Min Scholarship %",
+  scholarshipPercentageMax: "Max Scholarship %",
+  tuitionFeesMin: "Min Tuition Fee",
+  tuitionFeesMax: "Max Tuition Fee",
+  tuitionCurrency: "Tuition Currency",
+  deliveryModes: "Delivery Modes",
+  intakePeriods: "Intake Periods",
+  topDisciplines: "Top Disciplines",
+  accreditationStatus: "Accreditation",
+  rankingBand: "Ranking Band",
+  facilities: "Facilities",
+  internationalStudentSupport: "Intl Student Support",
+  tags: "Tags",
+  rtoNumber: "RTO Number",
+  cricosProviderCode: "CRICOS Code",
+  institutionGallery: "Gallery Images",
+  title: "Title",
+  universityId: "Institution ID",
+  subject: "Subject",
+  level: "Level",
+  discipline: "Discipline",
+  duration: "Duration",
+  durationMonths: "Duration (months)",
+  fees: "Fees",
+  currency: "Currency",
+  location: "Location",
+  startDate: "Start Date",
+  applicationDeadline: "Application Deadline",
+  deliveryMode: "Delivery Mode",
+  prPathway: "PR Pathway",
+  intakes: "Intakes",
+  careerOutcomes: "Career Outcomes",
+  prerequisites: "Prerequisites",
+  eligibilityRequirements: "Eligibility",
+  englishRequirements: "English Requirements",
+  campusLocations: "Campus Locations",
+  internshipAvailable: "Internship Available",
+  sourceUrl: "Source URL",
+  courseCode: "Course Code",
+};
+
+function formatFieldValue(value: any): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "";
+    if (typeof value[0] === "object") return `${value.length} item(s)`;
+    return value.join(", ");
+  }
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+function DataEntryConfirmCard({
+  preview,
+  onSave,
+  onCancel,
+  isSaving,
+}: {
+  preview: DataEntryPreview;
+  onSave: () => void;
+  onCancel: () => void;
+  isSaving: boolean;
+}) {
+  const isInstitution = preview.type === "institution";
+  const requiredFields = isInstitution ? INSTITUTION_REQUIRED : COURSE_REQUIRED;
+  const data = preview.data || {};
+  const Icon = isInstitution ? Building2 : GraduationCap;
+
+  const filledEntries = Object.entries(data).filter(
+    ([, v]) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)
+  );
+
+  const missingRequired = requiredFields.filter((f) => {
+    const val = data[f];
+    return val === null || val === undefined || val === "";
+  });
+
+  return (
+    <div className="bg-card border border-border rounded-lg overflow-hidden mt-2" data-testid="data-entry-confirm-card">
+      <div className="flex items-center gap-2 px-3 py-2 bg-muted/60 border-b border-border">
+        <Icon className="h-4 w-4 text-primary" />
+        <span className="text-xs font-semibold">
+          {isInstitution ? "Institution" : "Course"} Draft Preview
+        </span>
+        <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 ml-auto no-default-active-elevate">
+          Draft
+        </Badge>
+      </div>
+
+      <div className="px-3 py-2 max-h-48 overflow-y-auto">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+          {filledEntries.map(([key, value]) => {
+            const label = FIELD_LABELS[key] || key;
+            const formatted = formatFieldValue(value);
+            if (!formatted) return null;
+            const isRequired = requiredFields.includes(key);
+            return (
+              <div key={key} className="min-w-0">
+                <div className={`text-[10px] truncate ${isRequired ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+                  {label}
+                </div>
+                <div className="text-xs text-foreground truncate" title={formatted}>
+                  {formatted}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {missingRequired.length > 0 && (
+        <div className="px-3 py-1.5 bg-amber-500/10 border-t border-amber-500/20 flex items-start gap-1.5">
+          <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+          <span className="text-[10px] text-amber-700 dark:text-amber-400">
+            Missing required: {missingRequired.map((f) => FIELD_LABELS[f] || f).join(", ")}
+          </span>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 px-3 py-2 border-t border-border">
+        <Button
+          size="sm"
+          onClick={onSave}
+          disabled={isSaving || missingRequired.length > 0}
+          data-testid="button-save-draft"
+        >
+          {isSaving ? "Saving..." : "Save as Draft"}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onCancel}
+          disabled={isSaving}
+          data-testid="button-cancel-draft"
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function DataEntrySavedCard({ preview }: { preview: DataEntryPreview }) {
+  const isInstitution = preview.type === "institution";
+  const Icon = isInstitution ? Building2 : GraduationCap;
+
+  return (
+    <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2 mt-2 flex items-center gap-2" data-testid="data-entry-saved-card">
+      <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+      <div className="min-w-0">
+        <div className="text-xs font-semibold text-green-700 dark:text-green-300">
+          {isInstitution ? "Institution" : "Course"} saved as draft
+        </div>
+        <div className="text-[10px] text-green-600 dark:text-green-400 truncate">
+          {preview.name} (ID: {preview.id?.substring(0, 8)}...)
+        </div>
+      </div>
+      <Icon className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0 ml-auto" />
+    </div>
+  );
 }
 
 function buildGreeting(ctx: AdminContext): string {
@@ -54,30 +244,30 @@ function buildGreeting(ctx: AdminContext): string {
 
   if (ctx.tasks.overdue > 0) {
     lines.push(
-      `🔴 **${ctx.tasks.overdue} overdue task${ctx.tasks.overdue !== 1 ? "s" : ""}** — ${ctx.tasks.overdueItems.slice(0, 3).map((t) => `"${t}"`).join(", ")}${ctx.tasks.overdue > 3 ? "..." : ""}`
+      `**${ctx.tasks.overdue} overdue task${ctx.tasks.overdue !== 1 ? "s" : ""}** — ${ctx.tasks.overdueItems.slice(0, 3).map((t) => `"${t}"`).join(", ")}${ctx.tasks.overdue > 3 ? "..." : ""}`
     );
   }
   if (ctx.tasks.dueToday > 0) {
     lines.push(
-      `🟡 **${ctx.tasks.dueToday} due today** — ${ctx.tasks.dueTodayItems.slice(0, 3).map((t) => `"${t}"`).join(", ")}${ctx.tasks.dueToday > 3 ? "..." : ""}`
+      `**${ctx.tasks.dueToday} due today** — ${ctx.tasks.dueTodayItems.slice(0, 3).map((t) => `"${t}"`).join(", ")}${ctx.tasks.dueToday > 3 ? "..." : ""}`
     );
   }
   if (ctx.tasks.upcomingWeek > 0) {
-    lines.push(`📅 **${ctx.tasks.upcomingWeek} task${ctx.tasks.upcomingWeek !== 1 ? "s" : ""}** coming up this week`);
+    lines.push(`**${ctx.tasks.upcomingWeek} task${ctx.tasks.upcomingWeek !== 1 ? "s" : ""}** coming up this week`);
   }
   if (ctx.tasks.overdue === 0 && ctx.tasks.dueToday === 0 && ctx.tasks.upcomingWeek === 0) {
-    lines.push("✅ **No tasks due** — your queue is clear");
+    lines.push("**No tasks due** — your queue is clear");
   }
 
-  lines.push(`📋 **${ctx.contacts.total} contact${ctx.contacts.total !== 1 ? "s" : ""}** assigned to you`);
+  lines.push(`**${ctx.contacts.total} contact${ctx.contacts.total !== 1 ? "s" : ""}** assigned to you`);
 
   if (ctx.pendingApplications > 0) {
-    lines.push(`📨 **${ctx.pendingApplications} application${ctx.pendingApplications !== 1 ? "s" : ""}** awaiting review platform-wide`);
+    lines.push(`**${ctx.pendingApplications} application${ctx.pendingApplications !== 1 ? "s" : ""}** awaiting review platform-wide`);
   }
 
   if (ctx.teammates.length > 0) {
     const teamLine = ctx.teammates.map((t) => `${t.name} (${t.contactCount} contacts)`).join(", ");
-    lines.push(`👥 **Branch team:** ${teamLine}`);
+    lines.push(`**Branch team:** ${teamLine}`);
   }
 
   lines.push("", "What would you like to work on first?");
@@ -106,6 +296,7 @@ export function AdminChatWidget() {
   const [hasGreeting, setHasGreeting] = useState(false);
   const [adminCtx, setAdminCtx] = useState<AdminContext | null>(null);
   const [briefingReady, setBriefingReady] = useState(false);
+  const [dismissedPreviews, setDismissedPreviews] = useState<Set<string>>(new Set());
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -172,14 +363,47 @@ export function AdminChatWidget() {
       return res.json();
     },
     onSuccess: (data) => {
-      setMessages((prev) => [
-        ...prev,
-        { id: data.id, role: "assistant", content: data.content },
-      ]);
+      const newMsg: LocalMessage = {
+        id: data.id,
+        role: "assistant",
+        content: data.content,
+        data_entry_preview: data.data_entry_preview || null,
+      };
+      setMessages((prev) => [...prev, newMsg]);
     },
     onError: (err: any) => {
       toast({ title: "Failed to send message", description: err.message, variant: "destructive" });
       setMessages((prev) => prev.slice(0, -1));
+    },
+  });
+
+  const saveDraftMutation = useMutation({
+    mutationFn: async ({ type, data }: { type: string; data: any }) => {
+      const res = await apiRequest("POST", "/api/admin-chat/save-draft", { type, data });
+      return res.json();
+    },
+    onSuccess: (result, variables) => {
+      if (result.success) {
+        const successMsg: LocalMessage = {
+          id: `saved-${Date.now()}`,
+          role: "assistant",
+          content: `${variables.type === "institution" ? "Institution" : "Course"} "${result.name || result.title}" has been saved as a draft.`,
+          data_entry_preview: {
+            type: variables.type as "institution" | "course",
+            action: "saved",
+            id: result.id,
+            name: result.name || result.title,
+            slug: result.slug,
+          },
+        };
+        setMessages((prev) => [...prev, successMsg]);
+        toast({ title: "Draft saved", description: `${result.name || result.title} saved successfully` });
+      } else {
+        toast({ title: "Save failed", description: result.message || "Unknown error", variant: "destructive" });
+      }
+    },
+    onError: (err: any) => {
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
     },
   });
 
@@ -215,6 +439,16 @@ export function AdminChatWidget() {
     window.addEventListener("open-admin-chat-widget", handleOpenEvent);
     return () => window.removeEventListener("open-admin-chat-widget", handleOpenEvent);
   }, []);
+
+  const handleSaveDraft = (msgId: string, preview: DataEntryPreview) => {
+    if (!preview.data) return;
+    setDismissedPreviews((prev) => new Set(prev).add(msgId));
+    saveDraftMutation.mutate({ type: preview.type, data: preview.data });
+  };
+
+  const handleCancelDraft = (msgId: string) => {
+    setDismissedPreviews((prev) => new Set(prev).add(msgId));
+  };
 
   if (!isOpen) {
     return (
@@ -339,31 +573,48 @@ export function AdminChatWidget() {
                 </div>
               )}
               {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex items-start gap-2 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
-                >
-                  {msg.role === "assistant" && (
-                    <Avatar className="h-7 w-7 shrink-0 mt-0.5">
-                      <AvatarImage src={chatAvatarImage} alt="Zan" />
-                      <AvatarFallback className="text-[10px]">Z</AvatarFallback>
-                    </Avatar>
-                  )}
+                <div key={msg.id}>
                   <div
-                    className={`max-w-[85%] rounded-xl px-3 py-2 text-sm leading-relaxed ${
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-tr-sm"
-                        : "bg-muted text-foreground rounded-tl-sm"
-                    }`}
+                    className={`flex items-start gap-2 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
                   >
-                    {msg.role === "assistant" ? (
-                      <ReactMarkdown components={markdownComponents} remarkPlugins={[remarkGfm]}>
-                        {msg.content}
-                      </ReactMarkdown>
-                    ) : (
-                      msg.content
+                    {msg.role === "assistant" && (
+                      <Avatar className="h-7 w-7 shrink-0 mt-0.5">
+                        <AvatarImage src={chatAvatarImage} alt="Zan" />
+                        <AvatarFallback className="text-[10px]">Z</AvatarFallback>
+                      </Avatar>
                     )}
+                    <div
+                      className={`max-w-[85%] rounded-xl px-3 py-2 text-sm leading-relaxed ${
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-tr-sm"
+                          : "bg-muted text-foreground rounded-tl-sm"
+                      }`}
+                    >
+                      {msg.role === "assistant" ? (
+                        <ReactMarkdown components={markdownComponents} remarkPlugins={[remarkGfm]}>
+                          {msg.content}
+                        </ReactMarkdown>
+                      ) : (
+                        msg.content
+                      )}
+                    </div>
                   </div>
+
+                  {msg.data_entry_preview && !dismissedPreviews.has(msg.id) && (
+                    <div className="ml-9">
+                      {msg.data_entry_preview.action === "confirm" && (
+                        <DataEntryConfirmCard
+                          preview={msg.data_entry_preview}
+                          onSave={() => handleSaveDraft(msg.id, msg.data_entry_preview!)}
+                          onCancel={() => handleCancelDraft(msg.id)}
+                          isSaving={saveDraftMutation.isPending}
+                        />
+                      )}
+                      {msg.data_entry_preview.action === "saved" && (
+                        <DataEntrySavedCard preview={msg.data_entry_preview} />
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
               {sendMutation.isPending && (

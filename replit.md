@@ -48,6 +48,7 @@ The platform adheres to ANZ Global Education's brand identity, using a specific 
 - **Communication**: Facebook-style notifications, WhatsApp-style real-time chat with file sharing, and Zoho Cliq-style team availability status.
 - **Document & Data Management**: Student document management, enterprise CSV bulk import, and AI data extraction.
 - **AI Web Scraping**: Automated course data extraction with human-in-the-loop approval.
+- **ZAN Data Entry**: Admin chat assistant can upload institutions and courses via natural-language commands. Uses OpenAI tool calling with an agentic loop (check duplicates, scrape/extract, prepare draft). Admins with CTO or Marketing Executive roles can say "Find Swinburne University and upload it" and ZAN handles lookup, extraction, and presents a confirmation card. Records are saved as drafts pending admin review. Backend: `server/admin-chat-routes.ts`. Frontend confirmation card: `client/src/components/admin-chat-widget.tsx`.
 - **AI Course Thumbnail Generation**: Automatic thumbnail creation using OpenAI DALL-E 3 with async processing.
 - **Activity Logging**: CRM-style audit trail.
 - **Content & SEO**: Course pages with scholarship info, markdown blog, dynamic SEO, and SEO-friendly slug URLs for institutions and courses.
