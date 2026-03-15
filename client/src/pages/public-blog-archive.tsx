@@ -26,7 +26,13 @@ export default function PublicBlogArchive() {
     queryKey: ["/api/blogs", { limit: 100, market: effectiveMarket || undefined }],
   });
 
-  const blogs = blogsData?.blogs || [];
+  // Client-side market filter as safety net
+  const blogs = (blogsData?.blogs || []).filter(b => {
+    if (!effectiveMarket) return true;
+    const markets = (b as any).availableMarkets as string[] | null | undefined;
+    if (!markets || markets.length === 0) return true;
+    return markets.includes(effectiveMarket);
+  });
 
   // Filter blogs based on search and category
   const filteredBlogs = blogs.filter((blog) => {

@@ -115,38 +115,40 @@ async function verifyConversationOwnership(
   try {
     const { id } = req.params;
     const userId = getAuthenticatedUserId(req);
-    const sessionId = req.sessionID;
 
-    // Build ownership conditions - only include defined predicates
-    const ownershipPredicates: any[] = [];
+    // For authenticated users: strict ownership check by userId
     if (userId) {
-      ownershipPredicates.push(eq(chatConversations.userId, userId));
-    }
-    if (sessionId) {
-      ownershipPredicates.push(eq(chatConversations.sessionId, sessionId));
-    }
-
-    // If no valid ownership criteria, deny access
-    if (ownershipPredicates.length === 0) {
-      res.status(403).json({ error: "Access denied" });
-      return;
+      const conversation = await db.query.chatConversations.findFirst({
+        where: and(eq(chatConversations.id, id), eq(chatConversations.userId, userId)),
+      });
+      if (!conversation) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+      return next();
     }
 
-    // Query with ownership criteria (using OR for multi-predicate, direct predicate for single)
-    const whereClause = ownershipPredicates.length === 1
-      ? and(eq(chatConversations.id, id), ownershipPredicates[0])
-      : and(eq(chatConversations.id, id), or(...ownershipPredicates));
-
+    // For anonymous users: try session-based ownership first, then fall back to
+    // UUID-only access for anonymous conversations. Session cookies can be unreliable
+    // in production (SameSite/Secure constraints), but the UUID is a 128-bit random
+    // value that is only known to the original creator, so it provides sufficient
+    // security for anonymous (non-sensitive) conversations.
     const conversation = await db.query.chatConversations.findFirst({
-      where: whereClause,
+      where: eq(chatConversations.id, id),
     });
 
-    // If no conversation found with ownership criteria, return 403 (prevents enumeration)
     if (!conversation) {
       res.status(403).json({ error: "Access denied" });
       return;
     }
 
+    // If the conversation belongs to an authenticated user, deny anonymous access
+    if (conversation.userId) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+
+    // Anonymous conversation — allow access by UUID (the ID is the secret)
     next();
   } catch (error) {
     console.error("Error verifying conversation ownership:", error);

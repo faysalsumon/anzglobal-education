@@ -92,7 +92,15 @@ export default function Landing() {
     queryKey: ["/api/blogs", { limit: 60, market: effectiveRegionCode || undefined }],
   });
 
-  const blogs = blogsData?.blogs || [];
+  // Client-side market filter as safety net — server already filters by market param,
+  // but this ensures CDN-cached responses or fallback (no-market) results are
+  // also correctly scoped to the visitor's region.
+  const blogs = (blogsData?.blogs || []).filter(b => {
+    if (!effectiveRegionCode) return true;
+    const markets = (b as any).availableMarkets as string[] | null | undefined;
+    if (!markets || markets.length === 0) return true;
+    return markets.includes(effectiveRegionCode);
+  });
 
   // Fetch published testimonials from CMS
   const { data: cmsTestimonials = [] } = useQuery<Testimonial[]>({
