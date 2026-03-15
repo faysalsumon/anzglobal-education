@@ -1,6 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { db } from "./db";
-import { chatConversations, chatMessages, insertChatMessageSchema } from "@shared/schema";
+import { chatConversations, chatMessages, insertChatMessageSchema, users, adminTeamMembers } from "@shared/schema";
 import { eq, desc, or, and } from "drizzle-orm";
 import { z } from "zod";
 import OpenAI from "openai";
@@ -256,35 +256,70 @@ export function registerChatRoutes(app: Express) {
         })
         .returning();
 
-      // Query knowledge base for relevant context
-      const relevantDocs = await queryKnowledgeBase(content, 5);
+      // Parallel fetch: knowledge base + conversation history + staff check (independent of each other)
+      const [relevantDocs, allPreviousMessages, staffInfo] = await Promise.all([
+        queryKnowledgeBase(content, 5),
+        db.query.chatMessages.findMany({
+          where: eq(chatMessages.conversationId, id),
+          orderBy: chatMessages.createdAt,
+        }),
+        userId
+          ? db
+              .select({ userType: users.userType, role: users.role, firstName: users.firstName, lastName: users.lastName })
+              .from(users)
+              .where(eq(users.id, userId))
+              .limit(1)
+              .then(async (rows) => {
+                const u = rows[0];
+                const isAdminByType =
+                  u?.userType === "platform_admin" ||
+                  u?.userType === "super_admin" ||
+                  u?.userType === "admin" ||
+                  u?.userType === "cto";
+                if (isAdminByType) return { isStaff: true, role: u.userType, firstName: u.firstName };
+                // Check admin team members table
+                const member = await db
+                  .select({ role: adminTeamMembers.role })
+                  .from(adminTeamMembers)
+                  .where(and(eq(adminTeamMembers.userId, userId), eq(adminTeamMembers.isActive, true)))
+                  .limit(1)
+                  .then((r) => r[0]);
+                if (member) return { isStaff: true, role: member.role, firstName: u?.firstName ?? null };
+                return { isStaff: false, role: null, firstName: u?.firstName ?? null };
+              })
+          : Promise.resolve({ isStaff: false, role: null, firstName: null }),
+      ]);
+
+      // Exclude the just-added user message (last one)
+      const previousMessages = allPreviousMessages.slice(0, -1).slice(-10);
 
       // Build context from retrieved documents
       const context = relevantDocs
         .map((doc, idx) => `[Source ${idx + 1}]:\n${doc.content}`)
         .join("\n\n");
 
-      // Get previous messages for conversation history (get last 10 messages BEFORE the current one)
-      const allPreviousMessages = await db.query.chatMessages.findMany({
-        where: eq(chatMessages.conversationId, id),
-        orderBy: chatMessages.createdAt,
-      });
-      
-      // Exclude the just-added user message (last one)
-      const previousMessages = allPreviousMessages.slice(0, -1).slice(-10);
-
       // Build personalized system prompt
       let systemPromptWithContext = SYSTEM_PROMPT;
-      
-      // Add user personalization if logged in
-      if (isLoggedIn && userFirstName) {
+
+      if (staffInfo.isStaff) {
+        const roleLabel = staffInfo.role ?? "team member";
+        const name = staffInfo.firstName || userFirstName || "there";
+        systemPromptWithContext += `\n\nSTAFF CONTEXT:
+- This user is an ANZ Global Education team member, NOT a student
+- Their name is "${name}", role: "${roleLabel}"
+- Do NOT treat them as a prospective student or pitch study abroad
+- Do NOT ask them to "start their study journey" or "register an account"
+- You can help them with: platform questions, course lookups, institution info, answering student queries on their behalf
+- Be professional and collegial — they are your colleague
+- Greet them as a colleague: "Hi ${name}!" and offer relevant admin/staff assistance`;
+      } else if (isLoggedIn && userFirstName) {
         systemPromptWithContext += `\n\nUSER PERSONALIZATION:
 - The user is logged in and their first name is "${userFirstName}"
 - Address them by their first name to create a personalized experience
 - For greetings, say "Hi ${userFirstName}!" instead of generic greetings
 - Remember to be warm and personal since you know who they are`;
       }
-      
+
       systemPromptWithContext += `\n\nCONTEXT FROM KNOWLEDGE BASE:\n${context}`;
 
       // Build messages array for OpenAI
@@ -375,8 +410,10 @@ export function registerChatRoutes(app: Express) {
   app.post("/api/chat/admin/build-knowledge-base", async (req: Request, res: Response) => {
     try {
       // Check if user is admin
-      const userType = (req.user as any)?.userType;
-      if (!req.user || (userType !== 'admin' && userType !== 'super_admin')) {
+      const userType = (req.user as any)?.userType ?? (req as any).supabaseUser?.userType;
+      const allowedTypes = ['admin', 'super_admin', 'platform_admin', 'cto'];
+      if (!req.user && !(req as any).supabaseUser) return res.status(403).json({ error: "Unauthorized" });
+      if (!allowedTypes.includes(userType)) {
         return res.status(403).json({ error: "Unauthorized" });
       }
 
@@ -394,8 +431,10 @@ export function registerChatRoutes(app: Express) {
   app.post("/api/chat/admin/test-query", async (req: Request, res: Response) => {
     try {
       // Check if user is admin
-      const userType = (req.user as any)?.userType;
-      if (!req.user || (userType !== 'admin' && userType !== 'super_admin')) {
+      const userType = (req.user as any)?.userType ?? (req as any).supabaseUser?.userType;
+      const allowedTypes = ['admin', 'super_admin', 'platform_admin', 'cto'];
+      if (!req.user && !(req as any).supabaseUser) return res.status(403).json({ error: "Unauthorized" });
+      if (!allowedTypes.includes(userType)) {
         return res.status(403).json({ error: "Unauthorized" });
       }
 

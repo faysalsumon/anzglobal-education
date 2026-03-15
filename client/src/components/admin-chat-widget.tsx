@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { MessageCircle, X, Send, Minimize2, Users, CheckCircle2, Building2, GraduationCap, AlertTriangle } from "lucide-react";
+import { ZanThinkingIndicator } from "@/components/zan-thinking-indicator";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -574,19 +575,7 @@ export function AdminChatWidget() {
           <ScrollArea className="flex-1 min-h-0 px-3 py-2">
             <div className="space-y-3">
               {initMutation.isPending && messages.length === 0 && (
-                <div className="flex items-start gap-2">
-                  <Avatar className="h-7 w-7 shrink-0 mt-0.5">
-                    <AvatarImage src={chatAvatarImage} alt="Zan" />
-                    <AvatarFallback className="text-[10px]">Z</AvatarFallback>
-                  </Avatar>
-                  <div className="bg-muted rounded-xl rounded-tl-sm px-3 py-2">
-                    <div className="flex gap-1 items-center h-5">
-                      <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                      <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                      <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce" />
-                    </div>
-                  </div>
-                </div>
+                <ZanThinkingIndicator variant="admin" size="sm" />
               )}
               {messages.map((msg) => (
                 <div key={msg.id}>
@@ -634,19 +623,7 @@ export function AdminChatWidget() {
                 </div>
               ))}
               {sendMutation.isPending && (
-                <div className="flex items-start gap-2">
-                  <Avatar className="h-7 w-7 shrink-0 mt-0.5">
-                    <AvatarImage src={chatAvatarImage} alt="Zan" />
-                    <AvatarFallback className="text-[10px]">Z</AvatarFallback>
-                  </Avatar>
-                  <div className="bg-muted rounded-xl rounded-tl-sm px-3 py-2">
-                    <div className="flex gap-1 items-center h-5">
-                      <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                      <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                      <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce" />
-                    </div>
-                  </div>
-                </div>
+                <ZanThinkingIndicator variant="admin" size="sm" />
               )}
               <div ref={messagesEndRef} />
             </div>
