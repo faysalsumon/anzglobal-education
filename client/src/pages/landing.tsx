@@ -89,7 +89,7 @@ export default function Landing() {
 
   // Fetch latest blog posts
   const { data: blogsData } = useQuery<{ blogs: Blog[]; total: number }>({
-    queryKey: ["/api/blogs"],
+    queryKey: ["/api/blogs", { limit: 60 }],
   });
 
   const blogs = blogsData?.blogs || [];

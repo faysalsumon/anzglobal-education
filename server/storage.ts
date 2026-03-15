@@ -1822,7 +1822,7 @@ export class DatabaseStorage implements IStorage {
         .from(blogs)
         .leftJoin(users, eq(blogs.authorId, users.id))
         .where(and(...conditions))
-        .orderBy(desc(blogs.publishedAt))
+        .orderBy(sql`${blogs.publishedAt} DESC NULLS LAST`, desc(blogs.createdAt))
         .limit(limit)
         .offset(offset),
       db.select({ id: blogs.id }).from(blogs).where(and(...conditions))
