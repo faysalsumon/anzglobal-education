@@ -456,8 +456,10 @@ export function AdminChatWidget() {
 
   const handleSaveDraft = (msgId: string, preview: DataEntryPreview) => {
     if (!preview.data) return;
-    setDismissedPreviews((prev) => new Set(prev).add(msgId));
-    saveDraftMutation.mutate({ type: preview.type, data: preview.data });
+    saveDraftMutation.mutate(
+      { type: preview.type, data: preview.data },
+      { onSuccess: () => setDismissedPreviews((prev) => new Set(prev).add(msgId)) }
+    );
   };
 
   const handleCancelDraft = (msgId: string) => {
