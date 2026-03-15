@@ -90,7 +90,6 @@ export default function Landing() {
   // Fetch latest blog posts filtered by current market
   const { data: blogsData } = useQuery<{ blogs: Blog[]; total: number }>({
     queryKey: ["/api/blogs", { limit: 60, market: effectiveRegionCode || undefined }],
-    enabled: !!effectiveRegionCode,
   });
 
   const blogs = blogsData?.blogs || [];

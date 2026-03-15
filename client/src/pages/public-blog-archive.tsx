@@ -24,7 +24,6 @@ export default function PublicBlogArchive() {
   // Fetch published blogs filtered by current market
   const { data: blogsData, isLoading } = useQuery<{ blogs: BlogWithAuthor[]; total: number }>({
     queryKey: ["/api/blogs", { limit: 100, market: effectiveMarket || undefined }],
-    enabled: !!effectiveMarket,
   });
 
   const blogs = blogsData?.blogs || [];
