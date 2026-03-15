@@ -209,17 +209,27 @@ function DataEntryConfirmCard({
 function DataEntrySavedCard({ preview }: { preview: DataEntryPreview }) {
   const isInstitution = preview.type === "institution";
   const Icon = isInstitution ? Building2 : GraduationCap;
+  const recordLink = isInstitution
+    ? `/admin/institutions/${preview.slug || preview.id}`
+    : `/admin/courses/${preview.id}`;
 
   return (
     <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2 mt-2 flex items-center gap-2" data-testid="data-entry-saved-card">
       <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="text-xs font-semibold text-green-700 dark:text-green-300">
           {isInstitution ? "Institution" : "Course"} saved as draft
         </div>
         <div className="text-[10px] text-green-600 dark:text-green-400 truncate">
-          {preview.name} (ID: {preview.id?.substring(0, 8)}...)
+          {preview.name}
         </div>
+        <a
+          href={recordLink}
+          className="text-[10px] text-green-700 dark:text-green-300 underline hover:no-underline"
+          data-testid="link-view-saved-record"
+        >
+          View record
+        </a>
       </div>
       <Icon className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0 ml-auto" />
     </div>

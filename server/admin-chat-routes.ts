@@ -82,7 +82,6 @@ async function hasDataEntryPermission(user: any, userId: string): Promise<boolea
   if (user.userType === "platform_admin") return true;
   if (user.userType === "super_admin") return true;
   if (user.roleId === "role_super_admin") return true;
-  if (user.roleId === "role_ceo") return true;
   if (user.roleId === "role_marketing_executive") return true;
   if ((user as any).role === "cto") return true;
 
@@ -113,6 +112,33 @@ function isPrivateUrl(urlStr: string): boolean {
   }
 }
 
+const VALID_COURSE_LEVELS = [
+  'VCE (11-12)', 'Certificate I', 'Certificate II', 'Certificate III', 'Certificate IV',
+  'Diploma', 'Advanced Diploma', 'Associate Degree', 'Graduate Certificate', 'Graduate Diploma',
+  'Bachelor Degree', 'Bachelor Honours', 'Masters Degree', 'Doctoral Degree', 'Higher Doctoral Degree',
+  'ELICOS - General English', 'ELICOS - EAP', 'ELICOS - Exam Prep',
+  'Professional Year - Accounting', 'Professional Year - IT', 'Professional Year - Engineering',
+  'Foundation', 'Pathway Program', 'Short Course',
+  'RQF Entry Level', 'RQF Level 1', 'RQF Level 2', 'RQF Level 3', 'RQF Level 4', 'RQF Level 5', 'RQF Level 6', 'RQF Level 7', 'RQF Level 8',
+  'NZQF Level 1', 'NZQF Level 2', 'NZQF Level 3', 'NZQF Level 4', 'NZQF Level 5', 'NZQF Level 6', 'NZQF Level 7', 'NZQF Level 8', 'NZQF Level 9', 'NZQF Level 10',
+  'MQF Level 1', 'MQF Level 2', 'MQF Level 3', 'MQF Foundation', 'MQF Level 4', 'MQF Level 5', 'MQF Level 6', 'MQF Level 7', 'MQF Level 8',
+  'US Associate Degree', 'US Bachelor Degree', 'US Master Degree', 'US Doctoral Degree', 'US Professional Doctorate',
+  'Canadian Certificate', 'Canadian Diploma', 'Canadian Advanced Diploma', 'Canadian Associate Degree', 'Canadian Bachelor Degree', 'Canadian Master Degree', 'Canadian Doctoral Degree', 'Canadian CEGEP',
+  'EQF Level 1', 'EQF Level 2', 'EQF Level 3', 'EQF Level 4', 'EQF Level 5', 'EQF Level 6', 'EQF Level 7', 'EQF Level 8',
+  'Other',
+];
+
+const VALID_DISCIPLINES = [
+  'Accounting, Business & Finance', 'Agriculture & Forestry', 'Applied Sciences & Professions',
+  'Arts, Design & Architecture', 'Computer Science & IT', 'Education & Training',
+  'Engineering & Technology', 'Environmental Studies & Earth Sciences', 'Hospitality, Leisure & Sports',
+  'Humanities', 'Journalism & Media', 'Law', 'Medicine & Health', 'Short Courses', 'Trade',
+];
+
+const VALID_QUALIFICATION_FRAMEWORKS = ['AQF', 'Non-AQF', 'RQF', 'EQF', 'NZQF', 'MQF', 'US', 'Canadian', 'Other'];
+
+const VALID_PROVIDER_TYPES = ['University', 'Institution', 'Tafe', 'School'];
+
 const DATA_ENTRY_INTENT_KEYWORDS = [
   "upload", "add institution", "add university", "create institution", "create university",
   "find and upload", "find and add", "add course", "create course", "upload course",
@@ -140,7 +166,7 @@ WORKFLOW FOR INSTITUTIONS:
 
 WORKFLOW FOR COURSES:
 1. First call find_institution_by_name to locate the parent institution
-2. If the institution doesn't exist, tell the user they need to add the institution first
+2. If the institution doesn't exist, automatically start the institution workflow first: search_web, scrape, and prepare_institution_draft for the institution. Once the institution is saved, proceed with the course.
 3. If found, optionally call search_web to find the course page, then scrape_and_extract_course if a URL is available
 4. Alternatively, populate fields from the user's message, search results, and your knowledge
 5. Call prepare_course_draft with all assembled data — this presents a confirmation card to the user
@@ -171,16 +197,27 @@ COURSE REQUIRED FIELDS:
 - level: Must be exactly one of the course level enum values
 - discipline: Must be exactly one of: Accounting, Business & Finance | Agriculture & Forestry | Applied Sciences & Professions | Arts, Design & Architecture | Computer Science & IT | Education & Training | Engineering & Technology | Environmental Studies & Earth Sciences | Hospitality, Leisure & Sports | Humanities | Journalism & Media | Law | Medicine & Health | Short Courses | Trade
 
-COURSE LEVEL ENUM (select most appropriate):
-AQF: Certificate I, Certificate II, Certificate III, Certificate IV, Diploma, Advanced Diploma, Associate Degree, Graduate Certificate, Graduate Diploma, Bachelor Degree, Bachelor Honours, Masters Degree, Doctoral Degree, Higher Doctoral Degree
-Non-AQF: ELICOS - General English, ELICOS - EAP, ELICOS - Exam Preparation, Professional Year - Accounting, Professional Year - IT, Professional Year - Engineering, Foundation, Pathway Program, Short Course
-RQF (UK): RQF Entry Level, RQF Level 1, RQF Level 2, RQF Level 3, RQF Level 4, RQF Level 5, RQF Level 6, RQF Level 7, RQF Level 8
-NZQF: NZQF Level 1-10
-MQF: MQF Level 1-8, MQF Foundation
-US: US Associate Degree, US Bachelor Degree, US Master Degree, US Doctoral Degree, US Professional Doctorate
-Canadian: Canadian Certificate, Canadian Diploma, Canadian Advanced Diploma, Canadian Associate Degree, Canadian Bachelor Degree, Canadian Master Degree, Canadian Doctoral Degree, CEGEP
-EQF: EQF Level 1-8
-Other
+COURSE LEVEL ENUM (use EXACT values — these are database-enforced, any deviation will fail):
+AQF framework: "VCE (11-12)", "Certificate I", "Certificate II", "Certificate III", "Certificate IV", "Diploma", "Advanced Diploma", "Associate Degree", "Graduate Certificate", "Graduate Diploma", "Bachelor Degree", "Bachelor Honours", "Masters Degree", "Doctoral Degree", "Higher Doctoral Degree"
+Non-AQF framework: "ELICOS - General English", "ELICOS - EAP", "ELICOS - Exam Prep", "Professional Year - Accounting", "Professional Year - IT", "Professional Year - Engineering", "Foundation", "Pathway Program", "Short Course"
+RQF framework: "RQF Entry Level", "RQF Level 1", "RQF Level 2", "RQF Level 3", "RQF Level 4", "RQF Level 5", "RQF Level 6", "RQF Level 7", "RQF Level 8"
+NZQF framework: "NZQF Level 1", "NZQF Level 2", "NZQF Level 3", "NZQF Level 4", "NZQF Level 5", "NZQF Level 6", "NZQF Level 7", "NZQF Level 8", "NZQF Level 9", "NZQF Level 10"
+MQF framework: "MQF Level 1", "MQF Level 2", "MQF Level 3", "MQF Foundation", "MQF Level 4", "MQF Level 5", "MQF Level 6", "MQF Level 7", "MQF Level 8"
+US framework: "US Associate Degree", "US Bachelor Degree", "US Master Degree", "US Doctoral Degree", "US Professional Doctorate"
+Canadian framework: "Canadian Certificate", "Canadian Diploma", "Canadian Advanced Diploma", "Canadian Associate Degree", "Canadian Bachelor Degree", "Canadian Master Degree", "Canadian Doctoral Degree", "Canadian CEGEP"
+EQF framework: "EQF Level 1", "EQF Level 2", "EQF Level 3", "EQF Level 4", "EQF Level 5", "EQF Level 6", "EQF Level 7", "EQF Level 8"
+"Other"
+
+QUALIFICATION FRAMEWORK (must match level):
+"AQF" — for AQF levels (Australian courses)
+"Non-AQF" — for ELICOS, Professional Year, Foundation, Pathway, Short Course
+"RQF" — for RQF levels (UK courses)
+"EQF" — for EQF levels (European courses)
+"NZQF" — for NZQF levels (New Zealand courses)
+"MQF" — for MQF levels (Malaysian courses)
+"US" — for US degree levels
+"Canadian" — for Canadian qualification levels
+"Other" — for anything else
 
 COURSE IMPORTANT OPTIONAL FIELDS (always try to fill):
 - description, duration, durationMonths, durationWeeks
@@ -348,8 +385,9 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
           universityId: { type: "string", description: "ID of the parent institution" },
           title: { type: "string" },
           subject: { type: "string" },
-          level: { type: "string" },
-          discipline: { type: "string" },
+          level: { type: "string", description: "Must be an exact value from the COURSE LEVEL ENUM" },
+          qualificationFramework: { type: "string", description: "Must match the level: AQF, Non-AQF, RQF, EQF, NZQF, MQF, US, Canadian, or Other" },
+          discipline: { type: "string", description: "Must be an exact value from the discipline list" },
           description: { type: "string" },
           duration: { type: "string" },
           durationMonths: { type: "number" },
@@ -1112,6 +1150,9 @@ export function registerAdminChatRoutes(app: Express) {
         if (!data.name || !data.providerType || !data.country) {
           return res.status(400).json({ message: "Missing required institution fields: name, providerType, country" });
         }
+        if (!VALID_PROVIDER_TYPES.includes(data.providerType)) {
+          return res.status(400).json({ message: `Invalid providerType "${data.providerType}". Must be one of: ${VALID_PROVIDER_TYPES.join(", ")}` });
+        }
         const duplicate = await db
           .select({ id: universities.id, name: universities.name })
           .from(universities)
@@ -1132,6 +1173,15 @@ export function registerAdminChatRoutes(app: Express) {
       if (type === "course") {
         if (!data.universityId || !data.title || !data.subject || !data.level || !data.discipline) {
           return res.status(400).json({ message: "Missing required course fields: universityId, title, subject, level, discipline" });
+        }
+        if (!VALID_COURSE_LEVELS.includes(data.level)) {
+          return res.status(400).json({ message: `Invalid course level "${data.level}". Must be an exact enum value.` });
+        }
+        if (!VALID_DISCIPLINES.includes(data.discipline)) {
+          return res.status(400).json({ message: `Invalid discipline "${data.discipline}". Must be an exact enum value.` });
+        }
+        if (data.qualificationFramework && !VALID_QUALIFICATION_FRAMEWORKS.includes(data.qualificationFramework)) {
+          return res.status(400).json({ message: `Invalid qualificationFramework "${data.qualificationFramework}". Must be one of: ${VALID_QUALIFICATION_FRAMEWORKS.join(", ")}` });
         }
         const duplicate = await db
           .select({ id: courses.id, title: courses.title })
