@@ -77,13 +77,40 @@ async function verifyConversationOwnership(req: any, res: any, next: any) {
   }
 }
 
-function hasDataEntryPermission(user: any): boolean {
+async function hasDataEntryPermission(user: any, userId: string): Promise<boolean> {
   if (!user) return false;
   if (user.userType === "platform_admin") return true;
+  if (user.userType === "super_admin") return true;
   if (user.roleId === "role_super_admin") return true;
   if (user.roleId === "role_ceo") return true;
   if (user.roleId === "role_marketing_executive") return true;
+  if ((user as any).role === "cto") return true;
+
+  const member = await db
+    .select({ role: adminTeamMembers.role })
+    .from(adminTeamMembers)
+    .where(and(eq(adminTeamMembers.userId, userId), eq(adminTeamMembers.isActive, true)))
+    .limit(1)
+    .then((r) => r[0]);
+  if (member?.role === "cto" || member?.role === "marketing_executive") return true;
+
   return false;
+}
+
+function isPrivateUrl(urlStr: string): boolean {
+  try {
+    const url = new URL(urlStr);
+    const hostname = url.hostname.toLowerCase();
+    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0") return true;
+    if (hostname === "::1" || hostname === "[::1]") return true;
+    if (hostname.endsWith(".local") || hostname.endsWith(".internal")) return true;
+    if (hostname.startsWith("10.") || hostname.startsWith("192.168.")) return true;
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true;
+    if (hostname === "metadata.google.internal" || hostname === "169.254.169.254") return true;
+    return false;
+  } catch {
+    return true;
+  }
 }
 
 const DATA_ENTRY_INTENT_KEYWORDS = [
@@ -105,18 +132,19 @@ You have data entry tools available. When the user asks you to find, add, upload
 WORKFLOW FOR INSTITUTIONS:
 1. First call check_institution_exists to see if it's already in the platform
 2. If it exists, inform the user and provide the existing record details
-3. If not found, try to scrape the institution website using scrape_and_extract_institution with a likely official URL
-4. If scraping fails, use your own knowledge to populate as many fields as possible
-5. Present all extracted data to the user for confirmation
-6. When the user confirms, call save_institution_draft to save it
+3. If not found, call search_web to find the institution's official website and key information
+4. Once you have the URL, call scrape_and_extract_institution with the official website URL
+5. If scraping fails, use search_web results and your own knowledge to populate as many fields as possible
+6. Call prepare_institution_draft with all assembled data — this presents a confirmation card to the user
+7. The user will click "Save as Draft" in the UI to save the record — you CANNOT save directly
 
 WORKFLOW FOR COURSES:
 1. First call find_institution_by_name to locate the parent institution
 2. If the institution doesn't exist, tell the user they need to add the institution first
-3. If found, try to scrape the course page using scrape_and_extract_course if a URL is available
-4. Alternatively, populate fields from the user's message and your knowledge
-5. Present extracted data to the user for confirmation
-6. When the user confirms, call save_course_draft to save it
+3. If found, optionally call search_web to find the course page, then scrape_and_extract_course if a URL is available
+4. Alternatively, populate fields from the user's message, search results, and your knowledge
+5. Call prepare_course_draft with all assembled data — this presents a confirmation card to the user
+6. The user will click "Save as Draft" in the UI to save the record — you CANNOT save directly
 
 INSTITUTION REQUIRED FIELDS:
 - name: Full official institution name
@@ -183,6 +211,20 @@ When you have data ready to present for confirmation, call the appropriate prepa
 `;
 
 const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
+  {
+    type: "function",
+    function: {
+      name: "search_web",
+      description: "Search the web for information about an institution, course, or education provider. Use this to find official websites, key details, and verify information before scraping.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Search query (e.g., 'Swinburne University of Technology official website Australia')" },
+        },
+        required: ["query"],
+      },
+    },
+  },
   {
     type: "function",
     function: {
@@ -355,11 +397,35 @@ async function executeToolCall(
         return JSON.stringify({ found: true, count: matches.length, institutions: matches });
       }
 
+      case "search_web": {
+        try {
+          const response = await openai.responses.create({
+            model: "gpt-4o-mini",
+            tools: [{ type: "web_search_preview" }],
+            input: args.query,
+          });
+          let textContent = "";
+          for (const item of response.output) {
+            if (item.type === "message") {
+              for (const c of item.content) {
+                if (c.type === "output_text") textContent += c.text;
+              }
+            }
+          }
+          return JSON.stringify({ success: true, results: textContent || "No results found." });
+        } catch (err: any) {
+          return JSON.stringify({ success: false, error: err.message || "Web search failed" });
+        }
+      }
+
       case "scrape_and_extract_institution": {
         try {
           const url = new URL(args.url);
           if (!["http:", "https:"].includes(url.protocol)) {
             return JSON.stringify({ success: false, error: "Only http/https URLs are allowed" });
+          }
+          if (isPrivateUrl(args.url)) {
+            return JSON.stringify({ success: false, error: "Cannot scrape private/internal URLs" });
           }
           const scraped = await scrapeWebsite({ url: args.url, timeout: 20000 });
           const extracted = await extractInstitutionData(scraped.html, args.url);
@@ -459,6 +525,9 @@ async function executeToolCall(
           const url = new URL(args.url);
           if (!["http:", "https:"].includes(url.protocol)) {
             return JSON.stringify({ success: false, error: "Only http/https URLs are allowed" });
+          }
+          if (isPrivateUrl(args.url)) {
+            return JSON.stringify({ success: false, error: "Cannot scrape private/internal URLs" });
           }
           const scraped = await scrapeWebsite({ url: args.url, timeout: 20000 });
           const extracted = await extractCourseData(scraped.html, args.url, args.institutionName);
@@ -862,7 +931,7 @@ export function registerAdminChatRoutes(app: Express) {
         let systemPrompt = buildSystemPrompt(ctx);
 
         const isDataEntry = detectsDataEntryIntent(content);
-        const canDoDataEntry = hasDataEntryPermission(user);
+        const canDoDataEntry = await hasDataEntryPermission(user, userId);
 
         await db.insert(chatMessages).values({
           conversationId: req.params.id,
@@ -1030,7 +1099,7 @@ export function registerAdminChatRoutes(app: Express) {
       const userId = getUserId(req)!;
       const user = (req as any)._zanUser;
 
-      if (!hasDataEntryPermission(user)) {
+      if (!(await hasDataEntryPermission(user, userId))) {
         return res.status(403).json({ message: "You don't have permission for data entry" });
       }
 
@@ -1043,6 +1112,18 @@ export function registerAdminChatRoutes(app: Express) {
         if (!data.name || !data.providerType || !data.country) {
           return res.status(400).json({ message: "Missing required institution fields: name, providerType, country" });
         }
+        const duplicate = await db
+          .select({ id: universities.id, name: universities.name })
+          .from(universities)
+          .where(ilike(universities.name, data.name.trim()))
+          .limit(1)
+          .then((r) => r[0]);
+        if (duplicate) {
+          return res.status(409).json({
+            success: false,
+            message: `Institution "${duplicate.name}" already exists (ID: ${duplicate.id}). Duplicate creation blocked.`,
+          });
+        }
         const result = await executeToolCall("save_institution_draft", data, userId);
         const parsed = JSON.parse(result);
         return res.json(parsed);
@@ -1051,6 +1132,21 @@ export function registerAdminChatRoutes(app: Express) {
       if (type === "course") {
         if (!data.universityId || !data.title || !data.subject || !data.level || !data.discipline) {
           return res.status(400).json({ message: "Missing required course fields: universityId, title, subject, level, discipline" });
+        }
+        const duplicate = await db
+          .select({ id: courses.id, title: courses.title })
+          .from(courses)
+          .where(and(
+            eq(courses.universityId, data.universityId),
+            ilike(courses.title, data.title.trim())
+          ))
+          .limit(1)
+          .then((r) => r[0]);
+        if (duplicate) {
+          return res.status(409).json({
+            success: false,
+            message: `Course "${duplicate.title}" already exists at this institution (ID: ${duplicate.id}). Duplicate creation blocked.`,
+          });
         }
         const result = await executeToolCall("save_course_draft", data, userId);
         const parsed = JSON.parse(result);

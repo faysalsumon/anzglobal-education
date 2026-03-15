@@ -380,7 +380,11 @@ export function AdminChatWidget() {
   const saveDraftMutation = useMutation({
     mutationFn: async ({ type, data }: { type: string; data: any }) => {
       const res = await apiRequest("POST", "/api/admin-chat/save-draft", { type, data });
-      return res.json();
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.message || "Save failed");
+      }
+      return result;
     },
     onSuccess: (result, variables) => {
       if (result.success) {
