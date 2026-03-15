@@ -44,6 +44,7 @@ import {
   Mail,
   DollarSign,
   Package,
+  ImageIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -170,6 +171,7 @@ export function AdminMegaSidebar({
       routes: [
         { icon: Upload, label: "Data Import", value: "data-import", show: hasFullAdminAccess && canSeeFeature('dataImport') },
         { icon: Globe, label: "Web Scraping", value: "web-scraping", show: hasFullAdminAccess && canSeeFeature('webScraping') },
+        { icon: ImageIcon, label: "Thumbnails", value: "thumbnails", show: hasFullAdminAccess },
         { icon: Activity, label: "Activity Logs", value: "activity-logs", show: hasFullAdminAccess },
         { icon: Bot, label: "AI Settings", value: "ai-settings", show: isCTO && canSeeFeature('aiSettings') },
         { icon: Key, label: "Partner API", value: "api-keys", show: (hasFullAdminAccess || isCTO) && canSeeFeature('partnerApi') },

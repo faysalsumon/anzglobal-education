@@ -4613,6 +4613,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.get("/api/admin/courses/thumbnail-stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user || !['platform_admin', 'admin', 'super_admin'].includes(user.userType)) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const stats = await db.select({
+        total: dsql<number>`COUNT(*)::int`,
+        completed: dsql<number>`COUNT(*) FILTER (WHERE ${courses.thumbnailStatus} = 'completed')::int`,
+        missing: dsql<number>`COUNT(*) FILTER (WHERE ${courses.thumbnailUrl} IS NULL OR ${courses.thumbnailUrl} = '')::int`,
+        pending: dsql<number>`COUNT(*) FILTER (WHERE ${courses.thumbnailStatus} = 'pending')::int`,
+        generating: dsql<number>`COUNT(*) FILTER (WHERE ${courses.thumbnailStatus} = 'generating')::int`,
+        failed: dsql<number>`COUNT(*) FILTER (WHERE ${courses.thumbnailStatus} = 'failed')::int`,
+      }).from(courses).where(eq(courses.isActive, true));
+
+      const byUniversity = await db.select({
+        universityId: universities.id,
+        universityName: universities.name,
+        country: universities.country,
+        total: dsql<number>`COUNT(${courses.id})::int`,
+        completed: dsql<number>`COUNT(*) FILTER (WHERE ${courses.thumbnailStatus} = 'completed')::int`,
+        missing: dsql<number>`COUNT(*) FILTER (WHERE ${courses.thumbnailUrl} IS NULL OR ${courses.thumbnailUrl} = '')::int`,
+        pending: dsql<number>`COUNT(*) FILTER (WHERE ${courses.thumbnailStatus} = 'pending')::int`,
+        generating: dsql<number>`COUNT(*) FILTER (WHERE ${courses.thumbnailStatus} = 'generating')::int`,
+        failed: dsql<number>`COUNT(*) FILTER (WHERE ${courses.thumbnailStatus} = 'failed')::int`,
+      })
+        .from(courses)
+        .innerJoin(universities, eq(courses.universityId, universities.id))
+        .where(eq(courses.isActive, true))
+        .groupBy(universities.id, universities.name, universities.country)
+        .orderBy(universities.country, universities.name);
+
+      res.json({
+        ...stats[0],
+        byUniversity,
+      });
+    } catch (error) {
+      console.error("Error fetching thumbnail stats:", error);
+      res.status(500).json({ message: "Failed to fetch thumbnail stats" });
+    }
+  });
+
   app.post("/api/admin/courses/bulk-generate-thumbnails", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
@@ -4625,19 +4672,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
       
-      const { courseIds, filter } = req.body;
-      
-      const { isRedisAvailable } = await import('./scraping-queue');
-      if (!isRedisAvailable()) {
-        return res.status(503).json({ 
-          message: "Bulk thumbnail generation requires Redis. Generate thumbnails individually instead." 
-        });
-      }
+      const { courseIds, filter, universityId, limit: batchLimit } = req.body;
+      const maxBatch = Math.min(batchLimit || 10, 50);
       
       let coursesToProcess: any[] = [];
       
       if (courseIds && Array.isArray(courseIds)) {
-        for (const id of courseIds) {
+        for (const id of courseIds.slice(0, maxBatch)) {
           const course = await storage.getCourseById(id);
           if (course) {
             const university = await storage.getUniversity(course.universityId);
@@ -4651,17 +4692,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       } else if (filter === "missing") {
+        const conditions = [
+          eq(courses.isActive, true),
+          or(
+            isNull(courses.thumbnailUrl),
+            eq(courses.thumbnailUrl, "")
+          ),
+        ];
+        if (universityId) {
+          conditions.push(eq(courses.universityId, universityId));
+        }
         const allCourses = await db
           .select()
           .from(courses)
-          .where(and(
-            eq(courses.isActive, true),
-            or(
-              isNull(courses.thumbnailUrl),
-              eq(courses.thumbnailUrl, "")
-            )
-          ))
-          .limit(100);
+          .where(and(...conditions))
+          .limit(maxBatch);
         
         for (const course of allCourses) {
           const university = await storage.getUniversity(course.universityId);
@@ -4676,17 +4721,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (coursesToProcess.length === 0) {
-        return res.json({ success: true, queued: 0, message: "No courses to process" });
+        return res.json({ success: true, queued: 0, completed: 0, failed: 0, message: "No courses to process" });
       }
+      
+      const { isRedisAvailable } = await import('./scraping-queue');
+      
+      if (isRedisAvailable()) {
+        for (const course of coursesToProcess) {
+          await db.update(courses).set({ thumbnailStatus: "pending" }).where(eq(courses.id, course.courseId));
+        }
+        const { addBulkThumbnailJobs } = await import('./thumbnail-queue');
+        const queued = await addBulkThumbnailJobs(coursesToProcess);
+        return res.json({ success: true, queued, total: coursesToProcess.length, mode: "async" });
+      }
+      
+      const { generateCourseThumbnail } = await import('./ai');
+      let completed = 0;
+      let failed = 0;
       
       for (const course of coursesToProcess) {
-        await db.update(courses).set({ thumbnailStatus: "pending" }).where(eq(courses.id, course.courseId));
+        try {
+          await db.update(courses).set({ thumbnailStatus: "generating" }).where(eq(courses.id, course.courseId));
+          const result = await generateCourseThumbnail(
+            course.courseTitle,
+            course.discipline,
+            course.level,
+            course.universityName
+          );
+          if (result.success && result.url) {
+            await db.update(courses).set({
+              thumbnailUrl: result.url,
+              thumbnailStatus: "completed",
+              thumbnailGeneratedAt: new Date(),
+            }).where(eq(courses.id, course.courseId));
+            completed++;
+          } else {
+            await db.update(courses).set({ thumbnailStatus: "failed" }).where(eq(courses.id, course.courseId));
+            failed++;
+          }
+        } catch (err) {
+          await db.update(courses).set({ thumbnailStatus: "failed" }).where(eq(courses.id, course.courseId));
+          failed++;
+        }
       }
       
-      const { addBulkThumbnailJobs } = await import('./thumbnail-queue');
-      const queued = await addBulkThumbnailJobs(coursesToProcess);
-      
-      res.json({ success: true, queued, total: coursesToProcess.length });
+      res.json({ success: true, completed, failed, total: coursesToProcess.length, mode: "sync" });
     } catch (error) {
       console.error("Error bulk generating thumbnails:", error);
       res.status(500).json({ message: "Failed to queue bulk thumbnail generation" });

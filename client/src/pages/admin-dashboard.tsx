@@ -85,6 +85,7 @@ import { AdminQualificationTypesPanel } from "@/components/admin-qualification-t
 import { AdminCourseLevelRequirementsPanel } from "@/components/admin-course-level-requirements";
 import { ListPagination } from "@/components/list-pagination";
 import { AdminApiKeysPanel } from "@/components/admin-api-keys-panel";
+import { AdminThumbnailManager } from "@/components/admin-thumbnail-manager";
 import { AdminNotificationSettingsPanel } from "@/components/admin-notification-settings-panel";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
 import { AdminMailTab } from "@/components/admin-mail-tab";
@@ -572,6 +573,7 @@ export default function AdminDashboard() {
     'tags': 'Tag Manager',
     'qualification-types': 'Qualification Types',
     'entry-requirement-templates': 'Entry Requirements',
+    'thumbnails': 'Thumbnails',
   };
   
   const getCurrentBreadcrumbName = () => tabDisplayNames[activeTab] || 'Dashboard';
@@ -3434,6 +3436,10 @@ export default function AdminDashboard() {
           </div>
         )}
 
+
+        {activeTab === "thumbnails" && hasFullAdminAccess && (
+          <AdminThumbnailManager />
+        )}
 
         {/* Partner API Keys Tab - Platform Admin/CTO Only */}
         {activeTab === "api-keys" && hasFullAdminAccess && (
