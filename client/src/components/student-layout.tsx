@@ -58,7 +58,7 @@ const getBreadcrumbTitle = (pathname: string): string => {
 function StudentLayoutContent({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [location, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { user, isStaff } = useAuth();
   const { signOut } = useSupabaseAuth();
 
   const { data: studentProfile } = useQuery<StudentProfile>({
@@ -231,7 +231,7 @@ function StudentLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {user?.userType && ["admin", "platform_admin", "cto", "super_admin"].includes(user.userType) ? (
+      {isStaff ? (
         <Suspense fallback={null}><AdminChatWidget /></Suspense>
       ) : (
         <ChatWidget />
