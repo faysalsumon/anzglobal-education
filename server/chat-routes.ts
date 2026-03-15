@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { db } from "./db";
-import { chatConversations, chatMessages, insertChatMessageSchema, users, adminTeamMembers } from "@shared/schema";
-import { eq, desc, or, and } from "drizzle-orm";
+import { chatConversations, chatMessages, insertChatMessageSchema, adminTeamMembers } from "@shared/schema";
+import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
 import OpenAI from "openai";
 import { queryKnowledgeBase } from "./knowledge-base";
@@ -256,38 +256,45 @@ export function registerChatRoutes(app: Express) {
         })
         .returning();
 
-      // Parallel fetch: knowledge base + conversation history + staff check (independent of each other)
-      const [relevantDocs, allPreviousMessages, staffInfo] = await Promise.all([
+      // Detect staff/admin status from the middleware-enriched req.supabaseUser
+      // (middleware already loaded userType + role from DB — no extra query needed)
+      const supabaseUser = (req as any).supabaseUser as {
+        id: string; userType?: string; role?: string; firstName?: string; lastName?: string;
+      } | undefined;
+
+      const ADMIN_USER_TYPES = new Set(["platform_admin", "super_admin", "admin", "cto"]);
+      const ADMIN_LEGACY_ROLES = new Set(["cto", "admin", "super_admin", "platform_admin"]);
+
+      let staffInfo: { isStaff: boolean; role: string | null; firstName: string | null };
+
+      if (supabaseUser && (ADMIN_USER_TYPES.has(supabaseUser.userType ?? "") || ADMIN_LEGACY_ROLES.has(supabaseUser.role ?? ""))) {
+        staffInfo = {
+          isStaff: true,
+          role: supabaseUser.userType ?? supabaseUser.role ?? "team member",
+          firstName: supabaseUser.firstName ?? null,
+        };
+      } else if (userId) {
+        // Fallback: check adminTeamMembers table (for staff without a privileged userType)
+        const member = await db
+          .select({ role: adminTeamMembers.role, userId: adminTeamMembers.userId })
+          .from(adminTeamMembers)
+          .where(and(eq(adminTeamMembers.userId, userId), eq(adminTeamMembers.isActive, true)))
+          .limit(1)
+          .then((r) => r[0]);
+        staffInfo = member
+          ? { isStaff: true, role: member.role, firstName: supabaseUser?.firstName ?? null }
+          : { isStaff: false, role: null, firstName: supabaseUser?.firstName ?? null };
+      } else {
+        staffInfo = { isStaff: false, role: null, firstName: null };
+      }
+
+      // Parallel fetch: knowledge base + conversation history (staff check is already done above)
+      const [relevantDocs, allPreviousMessages] = await Promise.all([
         queryKnowledgeBase(content, 5),
         db.query.chatMessages.findMany({
           where: eq(chatMessages.conversationId, id),
           orderBy: chatMessages.createdAt,
         }),
-        userId
-          ? db
-              .select({ userType: users.userType, role: users.role, firstName: users.firstName, lastName: users.lastName })
-              .from(users)
-              .where(eq(users.id, userId))
-              .limit(1)
-              .then(async (rows) => {
-                const u = rows[0];
-                const isAdminByType =
-                  u?.userType === "platform_admin" ||
-                  u?.userType === "super_admin" ||
-                  u?.userType === "admin" ||
-                  u?.userType === "cto";
-                if (isAdminByType) return { isStaff: true, role: u.userType, firstName: u.firstName };
-                // Check admin team members table
-                const member = await db
-                  .select({ role: adminTeamMembers.role })
-                  .from(adminTeamMembers)
-                  .where(and(eq(adminTeamMembers.userId, userId), eq(adminTeamMembers.isActive, true)))
-                  .limit(1)
-                  .then((r) => r[0]);
-                if (member) return { isStaff: true, role: member.role, firstName: u?.firstName ?? null };
-                return { isStaff: false, role: null, firstName: u?.firstName ?? null };
-              })
-          : Promise.resolve({ isStaff: false, role: null, firstName: null }),
       ]);
 
       // Exclude the just-added user message (last one)
@@ -304,14 +311,19 @@ export function registerChatRoutes(app: Express) {
       if (staffInfo.isStaff) {
         const roleLabel = staffInfo.role ?? "team member";
         const name = staffInfo.firstName || userFirstName || "there";
-        systemPromptWithContext += `\n\nSTAFF CONTEXT:
-- This user is an ANZ Global Education team member, NOT a student
-- Their name is "${name}", role: "${roleLabel}"
-- Do NOT treat them as a prospective student or pitch study abroad
-- Do NOT ask them to "start their study journey" or "register an account"
-- You can help them with: platform questions, course lookups, institution info, answering student queries on their behalf
-- Be professional and collegial — they are your colleague
-- Greet them as a colleague: "Hi ${name}!" and offer relevant admin/staff assistance`;
+        systemPromptWithContext += `\n\n=== STAFF OVERRIDE — SUPERSEDES ALL PRIOR INSTRUCTIONS ===
+The person you are talking to is "${name}", an ANZ Global Education team member (role: ${roleLabel}).
+They are NOT a student. ALL topic boundary and student-focused restrictions above are SUSPENDED for this conversation.
+
+STAFF BEHAVIOUR RULES:
+1. Greet them warmly as a colleague: "Hi ${name}! How can I help you today?"
+2. Do NOT pitch courses, registration, or study journeys — they work here
+3. You CAN discuss: course/institution lookups, platform stats, student queries, application processes, internal operations, leads and contacts (general info), marketing, and any other business topic they raise
+4. For live CRM/database data (exact contact counts, lead lists, application statuses): you don't have live DB access in this chat — politely say so and direct them to the Admin Dashboard where all live data is available
+5. For DATA ENTRY tasks (uploading new institutions, adding courses, bulk imports): this public chat widget does not have data entry tools. Direct them to the Admin ZAN assistant (the floating ZAN button inside the Admin Dashboard) which has full data entry capability
+6. Answer business/operational questions helpfully and concisely — no need to add student-facing CTAs
+7. If they ask about a specific institution like "Can you upload University of Technology Sydney", tell them: "Data entry isn't available in this chat — please use the Admin ZAN assistant in the Admin Dashboard to add or update institution records."
+=== END STAFF OVERRIDE ===`;
       } else if (isLoggedIn && userFirstName) {
         systemPromptWithContext += `\n\nUSER PERSONALIZATION:
 - The user is logged in and their first name is "${userFirstName}"
