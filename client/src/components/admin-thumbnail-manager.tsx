@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Image, CheckCircle2, XCircle, Clock, Loader2, RefreshCw, Play, AlertTriangle } from "lucide-react";
+import { Image, CheckCircle2, XCircle, Clock, Loader2, RefreshCw, Play, AlertTriangle, ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
+
+interface CourseThumbnailInfo {
+  id: string;
+  title: string;
+  discipline: string | null;
+  level: string | null;
+  thumbnailUrl: string | null;
+  thumbnailStatus: string | null;
+  universityName: string;
+}
 
 interface UniversityStat {
   universityId: string;
@@ -54,21 +64,68 @@ export function AdminThumbnailManager() {
   const [confirmTarget, setConfirmTarget] = useState<{ universityId?: string; universityName?: string } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState({ completed: 0, failed: 0, total: 0 });
+  const [expandedUnis, setExpandedUnis] = useState<Set<string>>(new Set());
+  const [retryingCourses, setRetryingCourses] = useState<Set<string>>(new Set());
 
   const { data: stats, isLoading, refetch } = useQuery<ThumbnailStats>({
     queryKey: ["/api/admin/courses/thumbnail-stats"],
-    refetchInterval: isGenerating ? 5000 : false,
+    refetchInterval: (query) => {
+      const data = query.state.data as ThumbnailStats | undefined;
+      const pendingOrGenerating = (data?.pending || 0) + (data?.generating || 0);
+      if (isGenerating || pendingOrGenerating > 0) return 10000;
+      return false;
+    },
   });
 
-  useEffect(() => {
-    if (stats && isGenerating) {
-      const inProgress = (stats.pending || 0) + (stats.generating || 0);
-      if (inProgress === 0) {
-        setIsGenerating(false);
-        toast({ title: "Generation complete", description: `Thumbnails have been processed.` });
+  const fetchUniversityCourses = useCallback(async (universityId: string): Promise<CourseThumbnailInfo[]> => {
+    const res = await apiRequest("GET", `/api/admin/courses/thumbnail-courses?universityId=${universityId}`);
+    return res.json();
+  }, []);
+
+  const [coursesByUni, setCoursesByUni] = useState<Record<string, CourseThumbnailInfo[]>>({});
+  const [loadingCourses, setLoadingCourses] = useState<Set<string>>(new Set());
+
+  const toggleExpand = useCallback(async (universityId: string) => {
+    setExpandedUnis(prev => {
+      const next = new Set(prev);
+      if (next.has(universityId)) {
+        next.delete(universityId);
+      } else {
+        next.add(universityId);
+        if (!coursesByUni[universityId]) {
+          setLoadingCourses(lc => new Set(lc).add(universityId));
+          fetchUniversityCourses(universityId).then(courses => {
+            setCoursesByUni(prev => ({ ...prev, [universityId]: courses }));
+            setLoadingCourses(lc => { const n = new Set(lc); n.delete(universityId); return n; });
+          });
+        }
+      }
+      return next;
+    });
+  }, [coursesByUni, fetchUniversityCourses]);
+
+  const retrySingleCourse = useCallback(async (courseId: string) => {
+    setRetryingCourses(prev => new Set(prev).add(courseId));
+    try {
+      const res = await apiRequest("POST", `/api/courses/${courseId}/generate-thumbnail`);
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Thumbnail generated", description: data.thumbnailUrl ? "Thumbnail created successfully." : "Queued for generation." });
+      } else {
+        toast({ title: "Failed", description: data.message || "Thumbnail generation failed.", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to generate thumbnail", variant: "destructive" });
+    } finally {
+      setRetryingCourses(prev => { const n = new Set(prev); n.delete(courseId); return n; });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/courses/thumbnail-stats"] });
+      for (const uid of expandedUnis) {
+        fetchUniversityCourses(uid).then(courses => {
+          setCoursesByUni(prev => ({ ...prev, [uid]: courses }));
+        });
       }
     }
-  }, [stats, isGenerating]);
+  }, [expandedUnis, fetchUniversityCourses, toast]);
 
   const generateBatch = useCallback(async (universityId?: string) => {
     setIsGenerating(true);
@@ -76,12 +133,11 @@ export function AdminThumbnailManager() {
 
     let totalCompleted = 0;
     let totalFailed = 0;
-    let batchNumber = 0;
-    const batchSize = 5;
+    let totalQueued = 0;
+    const batchSize = 100;
 
     try {
       while (true) {
-        batchNumber++;
         const body: any = { filter: "missing", limit: batchSize };
         if (universityId) body.universityId = universityId;
 
@@ -89,8 +145,13 @@ export function AdminThumbnailManager() {
         const data = await res.json();
 
         if (data.mode === "async") {
-          toast({ title: "Queued for generation", description: `${data.queued} thumbnails queued via background worker.` });
-          break;
+          totalQueued += data.queued || 0;
+          if ((data.queued || 0) < batchSize) {
+            toast({ title: "Queued for generation", description: `${totalQueued} thumbnails queued via background worker.` });
+            break;
+          }
+          await new Promise(r => setTimeout(r, 500));
+          continue;
         }
 
         totalCompleted += data.completed || 0;
@@ -110,6 +171,11 @@ export function AdminThumbnailManager() {
     } finally {
       setIsGenerating(false);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/courses/thumbnail-stats"] });
+      for (const uid of expandedUnis) {
+        fetchUniversityCourses(uid).then(courses => {
+          setCoursesByUni(prev => ({ ...prev, [uid]: courses }));
+        });
+      }
       if (totalCompleted > 0 || totalFailed > 0) {
         toast({
           title: "Generation complete",
@@ -117,7 +183,7 @@ export function AdminThumbnailManager() {
         });
       }
     }
-  }, [toast]);
+  }, [toast, expandedUnis, fetchUniversityCourses]);
 
   const handleGenerateClick = (universityId?: string, universityName?: string) => {
     setConfirmTarget(universityId ? { universityId, universityName } : null);
@@ -138,6 +204,21 @@ export function AdminThumbnailManager() {
 
   const totalMissing = stats?.missing || 0;
   const totalInProgress = (stats?.pending || 0) + (stats?.generating || 0);
+
+  const getStatusBadge = (status: string | null) => {
+    switch (status) {
+      case "completed":
+        return <Badge variant="secondary" className="text-xs text-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />Done</Badge>;
+      case "generating":
+        return <Badge variant="secondary" className="text-xs text-blue-600"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Generating</Badge>;
+      case "pending":
+        return <Badge variant="secondary" className="text-xs text-amber-600"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+      case "failed":
+        return <Badge variant="destructive" className="text-xs"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
+      default:
+        return <Badge variant="outline" className="text-xs text-muted-foreground">No thumbnail</Badge>;
+    }
+  };
 
   if (isLoading) {
     return (
@@ -192,7 +273,7 @@ export function AdminThumbnailManager() {
             <div className="flex items-center gap-3">
               <Loader2 className="h-4 w-4 animate-spin text-primary flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between gap-2 mb-1">
                   <span className="text-sm font-medium">Generating thumbnails...</span>
                   <span className="text-xs text-muted-foreground">
                     {generationProgress.completed} done, {generationProgress.failed} failed
@@ -271,72 +352,103 @@ export function AdminThumbnailManager() {
               </div>
             </CardHeader>
             <CardContent className="px-0 py-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="pl-4">Institution</TableHead>
-                    <TableHead className="text-center w-20">Total</TableHead>
-                    <TableHead className="text-center w-20">Done</TableHead>
-                    <TableHead className="text-center w-20">Missing</TableHead>
-                    <TableHead className="text-center w-20">Status</TableHead>
-                    <TableHead className="text-right pr-4 w-32">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {unis.map((uni) => {
-                    const pct = uni.total > 0 ? Math.round((uni.completed / uni.total) * 100) : 0;
-                    const uniInProgress = uni.pending + uni.generating;
-                    return (
-                      <TableRow key={uni.universityId} data-testid={`row-university-${uni.universityId}`}>
-                        <TableCell className="pl-4 font-medium text-sm">{uni.universityName}</TableCell>
-                        <TableCell className="text-center text-sm">{uni.total}</TableCell>
-                        <TableCell className="text-center text-sm text-green-600">{uni.completed}</TableCell>
-                        <TableCell className="text-center text-sm">
-                          {uni.missing > 0 ? <span className="text-amber-600">{uni.missing}</span> : <span className="text-muted-foreground">0</span>}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {uniInProgress > 0 ? (
-                            <Badge variant="secondary" className="text-xs"><Loader2 className="h-3 w-3 mr-1 animate-spin" />{uniInProgress}</Badge>
-                          ) : uni.failed > 0 ? (
-                            <Badge variant="destructive" className="text-xs">{uni.failed} failed</Badge>
-                          ) : uni.missing === 0 ? (
-                            <Badge variant="secondary" className="text-xs text-green-600">{pct}%</Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">{pct}%</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right pr-4">
-                          {uni.missing > 0 ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleGenerateClick(uni.universityId, uni.universityName)}
-                              disabled={isGenerating}
-                              data-testid={`button-generate-${uni.universityId}`}
-                            >
-                              <Play className="h-3 w-3 mr-1" />
-                              Generate ({uni.missing})
-                            </Button>
-                          ) : uni.failed > 0 ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleGenerateClick(uni.universityId, uni.universityName)}
-                              disabled={isGenerating}
-                              data-testid={`button-retry-${uni.universityId}`}
-                            >
-                              <RefreshCw className="h-3 w-3 mr-1" />
-                              Retry
-                            </Button>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">All done</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              {unis.map((uni) => {
+                const pct = uni.total > 0 ? Math.round((uni.completed / uni.total) * 100) : 0;
+                const uniInProgress = uni.pending + uni.generating;
+                const isExpanded = expandedUnis.has(uni.universityId);
+                const uniCourses = coursesByUni[uni.universityId] || [];
+                const isLoadingCourses = loadingCourses.has(uni.universityId);
+
+                return (
+                  <div key={uni.universityId} className="border-t" data-testid={`row-university-${uni.universityId}`}>
+                    <div className="flex items-center justify-between gap-2 px-4 py-2 flex-wrap">
+                      <button
+                        className="flex items-center gap-2 text-left hover-elevate rounded-md px-1 py-0.5"
+                        onClick={() => toggleExpand(uni.universityId)}
+                        data-testid={`button-expand-${uni.universityId}`}
+                      >
+                        {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                        <span className="font-medium text-sm">{uni.universityName}</span>
+                      </button>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="text-xs text-muted-foreground">{uni.completed}/{uni.total}</span>
+                        {uniInProgress > 0 ? (
+                          <Badge variant="secondary" className="text-xs"><Loader2 className="h-3 w-3 mr-1 animate-spin" />{uniInProgress}</Badge>
+                        ) : uni.failed > 0 ? (
+                          <Badge variant="destructive" className="text-xs">{uni.failed} failed</Badge>
+                        ) : uni.missing === 0 ? (
+                          <Badge variant="secondary" className="text-xs text-green-600">{pct}%</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">{pct}%</span>
+                        )}
+                        {(uni.missing > 0 || uni.failed > 0) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGenerateClick(uni.universityId, uni.universityName)}
+                            disabled={isGenerating}
+                            data-testid={`button-generate-${uni.universityId}`}
+                          >
+                            <Play className="h-3 w-3 mr-1" />
+                            {uni.missing > 0 ? `Generate (${uni.missing})` : "Retry"}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="px-4 pb-3">
+                        {isLoadingCourses ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : uniCourses.length === 0 ? (
+                          <p className="text-xs text-muted-foreground py-2">No courses found</p>
+                        ) : (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="text-xs">Course</TableHead>
+                                <TableHead className="text-xs w-28">Discipline</TableHead>
+                                <TableHead className="text-xs w-24">Level</TableHead>
+                                <TableHead className="text-xs text-center w-24">Status</TableHead>
+                                <TableHead className="text-xs text-right w-24">Action</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {uniCourses.map((course) => (
+                                <TableRow key={course.id} data-testid={`row-course-${course.id}`}>
+                                  <TableCell className="text-xs font-medium max-w-[300px] truncate" title={course.title}>{course.title}</TableCell>
+                                  <TableCell className="text-xs text-muted-foreground">{course.discipline || "-"}</TableCell>
+                                  <TableCell className="text-xs text-muted-foreground">{course.level || "-"}</TableCell>
+                                  <TableCell className="text-center">{getStatusBadge(course.thumbnailStatus)}</TableCell>
+                                  <TableCell className="text-right">
+                                    {(course.thumbnailStatus === "failed" || !course.thumbnailUrl) && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => retrySingleCourse(course.id)}
+                                        disabled={retryingCourses.has(course.id) || isGenerating}
+                                        data-testid={`button-retry-course-${course.id}`}
+                                      >
+                                        {retryingCourses.has(course.id) ? (
+                                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                        ) : (
+                                          <RotateCcw className="h-3.5 w-3.5" />
+                                        )}
+                                      </Button>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
         );

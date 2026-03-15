@@ -4660,6 +4660,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/courses/thumbnail-courses", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user || !['platform_admin', 'admin', 'super_admin'].includes(user.userType)) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const universityId = req.query.universityId as string;
+      if (!universityId) {
+        return res.status(400).json({ message: "universityId is required" });
+      }
+
+      const university = await storage.getUniversity(universityId);
+      const uniName = university?.name || "";
+
+      const courseList = await db.select({
+        id: courses.id,
+        title: courses.title,
+        discipline: courses.discipline,
+        level: courses.level,
+        thumbnailUrl: courses.thumbnailUrl,
+        thumbnailStatus: courses.thumbnailStatus,
+      })
+        .from(courses)
+        .where(and(eq(courses.universityId, universityId), eq(courses.isActive, true)))
+        .orderBy(courses.title);
+
+      res.json(courseList.map(c => ({ ...c, universityName: uniName })));
+    } catch (error) {
+      console.error("Error fetching thumbnail courses:", error);
+      res.status(500).json({ message: "Failed to fetch courses" });
+    }
+  });
+
   app.post("/api/admin/courses/bulk-generate-thumbnails", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
@@ -4673,7 +4711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { courseIds, filter, universityId, limit: batchLimit } = req.body;
-      const maxBatch = Math.min(batchLimit || 10, 50);
+      const maxBatch = Math.min(batchLimit || 100, 100);
       
       let coursesToProcess: any[] = [];
       
