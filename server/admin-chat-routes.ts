@@ -83,6 +83,7 @@ async function hasDataEntryPermission(user: any, userId: string): Promise<boolea
   if (user.userType === "super_admin") return true;
   if (user.roleId === "role_super_admin") return true;
   if (user.roleId === "role_marketing_executive") return true;
+  if (user.userType === "cto") return true;
   if ((user as any).role === "cto") return true;
 
   const member = await db
@@ -676,6 +677,7 @@ async function executeToolCall(
         if (args.internshipAvailable != null) insertData.internshipAvailable = args.internshipAvailable;
         if (args.sourceUrl) insertData.sourceUrl = args.sourceUrl;
         if (args.courseCode) insertData.courseCode = args.courseCode;
+        if (args.qualificationFramework) insertData.qualificationFramework = args.qualificationFramework;
 
         const [created] = await db.insert(courses).values(insertData).returning();
         return JSON.stringify({
