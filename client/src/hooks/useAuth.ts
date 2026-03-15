@@ -92,7 +92,7 @@ export function useAuth() {
   const isAuthenticated = !!supabaseUser && !!session;
 
   const STAFF_USER_TYPES = ["admin", "platform_admin", "cto", "super_admin"];
-  const isStaff = STAFF_USER_TYPES.includes(user?.userType ?? "") || !!adminRole;
+  const isStaff = STAFF_USER_TYPES.includes(user?.userType ?? "") || !!user?.adminRole;
 
   return {
     user,
