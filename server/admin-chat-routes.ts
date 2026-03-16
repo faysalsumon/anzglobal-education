@@ -713,7 +713,9 @@ async function executeToolCall(
       }
 
       case "lookup_rto_cricos": {
-        if (args.country && args.country.toLowerCase() !== "australia") {
+        const normalizedCountry = (args.country || "").trim().toLowerCase();
+        const isAustralia = normalizedCountry === "australia" || normalizedCountry === "au";
+        if (args.country && !isAustralia) {
           return wrapExternalData("rto_cricos_lookup", JSON.stringify({
             success: false,
             error: "RTO/CRICOS lookup is only available for Australian institutions",

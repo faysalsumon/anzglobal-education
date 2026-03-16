@@ -255,7 +255,7 @@ export interface DeepScrapeResult {
 }
 
 const SUBPAGE_PATTERNS = [
-  { pattern: /\/(about|about-us|about-ikon|our-story|who-we-are|our-history)(\/|$)/i, label: "about" },
+  { pattern: /\/(about|about-us|our-story|who-we-are|our-history)(\/|$)/i, label: "about" },
   { pattern: /\/(contact|contact-us|get-in-touch|enquire|enquiry)(\/|$)/i, label: "contact" },
   { pattern: /\/(campuses|campus|locations|our-campuses|our-locations|centres|centers)(\/|$)/i, label: "campuses" },
   { pattern: /\/(team|our-team|staff|leadership|people|faculty)(\/|$)/i, label: "team" },
@@ -338,7 +338,7 @@ function extractTextContent(html: string): string {
   $("script, style, noscript, svg, path, iframe").remove();
   const blocks: string[] = [];
   $("body *").each((_, el) => {
-    const tag = (el as cheerio.TagElement).tagName;
+    const tag = (el as any).tagName as string;
     if (["p", "h1", "h2", "h3", "h4", "h5", "h6", "li", "td", "th", "address", "span", "a", "div"].includes(tag)) {
       const text = $(el).clone().children().remove().end().text().trim();
       if (text.length > 2) blocks.push(text);
