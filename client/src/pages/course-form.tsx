@@ -78,6 +78,8 @@ export default function CourseForm() {
       prerequisites: "",
       thumbnailUrl: "",
       courseCode: "",
+      cricosCode: "",
+      isCricosRegistered: false,
       prPathway: false,
       scholarshipPercentageMin: undefined,
       scholarshipPercentageMax: undefined,
@@ -127,6 +129,8 @@ export default function CourseForm() {
         prerequisites: course.prerequisites ?? "",
         thumbnailUrl: course.thumbnailUrl ?? "",
         courseCode: course.courseCode ?? "",
+        cricosCode: course.cricosCode ?? "",
+        isCricosRegistered: course.isCricosRegistered ?? false,
         prPathway: course.prPathway ?? false,
         scholarshipPercentageMin: course.scholarshipPercentageMin ?? undefined,
         scholarshipPercentageMax: course.scholarshipPercentageMax ?? undefined,
@@ -168,6 +172,7 @@ export default function CourseForm() {
 
   // Watch discipline to fetch sub-disciplines
   const selectedDiscipline = form.watch("discipline");
+  const isCricosRegistered = form.watch("isCricosRegistered");
   
   const { data: subDisciplines = [] } = useQuery<SubDiscipline[]>({
     queryKey: ["/api/sub-disciplines", selectedDiscipline],
@@ -493,22 +498,55 @@ export default function CourseForm() {
                 )}
               </div>
 
-              <FormField
-                control={form.control}
-                name="courseCode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Course Code</FormLabel>
-                    <FormDescription>
-                      Unique identifier for this course (e.g., CS101, MBA2024)
-                    </FormDescription>
-                    <FormControl>
-                      <Input {...field} value={field.value ?? ""} placeholder="CS101" data-testid="input-course-code" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              <div className="space-y-2">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => form.setValue('isCricosRegistered', false)}
+                    className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${!isCricosRegistered ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-muted-foreground border-border hover-elevate'}`}
+                    data-testid="toggle-course-code"
+                  >
+                    Course Code
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => form.setValue('isCricosRegistered', true)}
+                    className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${isCricosRegistered ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-muted-foreground border-border hover-elevate'}`}
+                    data-testid="toggle-cricos-code"
+                  >
+                    CRICOS Code
+                  </button>
+                </div>
+                {!isCricosRegistered ? (
+                  <FormField
+                    control={form.control}
+                    name="courseCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input {...field} value={field.value ?? ""} placeholder="e.g. BSB51415" data-testid="input-course-code" />
+                        </FormControl>
+                        <FormDescription>RTO or national course code</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="cricosCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input {...field} value={field.value ?? ""} placeholder="e.g. 116694A" data-testid="input-course-cricos-code" />
+                        </FormControl>
+                        <FormDescription>CRICOS registered course code (AU)</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
-              />
+              </div>
             </CardContent>
           </Card>
 

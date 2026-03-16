@@ -13,7 +13,7 @@ import {
   Download, LogIn, Award, Globe, BookOpen, Home, Sparkles,
   Users, TrendingUp, CheckCircle, Building2, Briefcase, FileText,
   Target, MonitorPlay, Plane, Star, Info, ExternalLink, ArrowUpRight, Layers, Tag, Heart, Minus,
-  Share2, MoreHorizontal, MessageCircle, HelpCircle
+  Share2, MoreHorizontal, MessageCircle, HelpCircle, Shield
 } from "lucide-react";
 import type { Course, University, Application, Favorite, CourseIntakeTemplate } from "@shared/schema";
 import { 
@@ -772,10 +772,16 @@ export default function PublicCourseDetail() {
                   </h1>
                   {/* Course Code with Level */}
                   <div className="flex flex-wrap items-center gap-3">
-                    {course.courseCode && (
+                    {course.courseCode && !course.isCricosRegistered && (
                       <Badge className="bg-accent/15 text-accent border border-accent/30 px-3 py-1" data-testid="badge-course-code">
                         <FileText className="h-3.5 w-3.5 mr-1.5" />
                         Code: {course.courseCode}
+                      </Badge>
+                    )}
+                    {course.isCricosRegistered && course.cricosCode && (
+                      <Badge className="bg-primary/10 text-primary border border-primary/30 px-3 py-1" data-testid="badge-cricos-code">
+                        <Shield className="h-3.5 w-3.5 mr-1.5" />
+                        CRICOS: {course.cricosCode}
                       </Badge>
                     )}
                     {course.level && (

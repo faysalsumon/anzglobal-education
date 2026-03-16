@@ -386,6 +386,7 @@ const courseSchema = z.object({
   englishRequirements: z.string().optional(),
   courseCode: z.string().optional(),
   cricosCode: z.string().optional(),
+  isCricosRegistered: z.boolean().optional(),
   admissionFee: optionalNonNegativeNumber,
   sourceUrl: z.string().url().optional().or(z.literal("")),
   pathways: z.string().optional(),
@@ -437,6 +438,7 @@ interface Course {
   englishRequirements?: string | null;
   courseCode?: string | null;
   cricosCode?: string | null;
+  isCricosRegistered?: boolean | null;
   admissionFee?: number | null;
   sourceUrl?: string | null;
   pathways?: string[] | null;
@@ -659,7 +661,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
   const [thumbnailStatus, setThumbnailStatus] = useState<string>(course?.thumbnailStatus || "none");
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(course?.thumbnailUrl || null);
-  const [codeMode, setCodeMode] = useState<'courseCode' | 'cricosCode'>('courseCode');
 
   // Intake Templates state
   const [intakeTemplates, setIntakeTemplates] = useState<LocalIntakeTemplate[]>([]);
@@ -1064,6 +1065,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       englishRequirements: course?.englishRequirements || "",
       courseCode: course?.courseCode || "",
       cricosCode: course?.cricosCode || "",
+      isCricosRegistered: course?.isCricosRegistered ?? false,
       admissionFee: course?.admissionFee || ("" as any),
       sourceUrl: course?.sourceUrl || "",
       pathways: Array.isArray(course?.pathways) ? course.pathways.join(", ") : "",
@@ -1075,6 +1077,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
 
   // Get current course level to determine entry requirement templates (must be after form definition)
   const currentCourseLevel = form.watch("level");
+  const isCricosRegistered = form.watch("isCricosRegistered");
 
   // Entry requirement templates query (based on course level and institution country)
   // Get country from first campus address - normalize by trimming whitespace
@@ -2032,22 +2035,22 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
-                            onClick={() => setCodeMode('courseCode')}
-                            className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${codeMode === 'courseCode' ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-muted-foreground border-border hover-elevate'}`}
+                            onClick={() => form.setValue('isCricosRegistered', false)}
+                            className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${!isCricosRegistered ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-muted-foreground border-border hover-elevate'}`}
                             data-testid="toggle-course-code"
                           >
                             Course Code
                           </button>
                           <button
                             type="button"
-                            onClick={() => setCodeMode('cricosCode')}
-                            className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${codeMode === 'cricosCode' ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-muted-foreground border-border hover-elevate'}`}
+                            onClick={() => form.setValue('isCricosRegistered', true)}
+                            className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${isCricosRegistered ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-muted-foreground border-border hover-elevate'}`}
                             data-testid="toggle-cricos-code"
                           >
                             CRICOS Code
                           </button>
                         </div>
-                        {codeMode === 'courseCode' ? (
+                        {!isCricosRegistered ? (
                           <FormField
                             control={form.control}
                             name="courseCode"
@@ -2068,7 +2071,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Input {...field} placeholder="e.g. 116694A" data-testid="input-cricos-code" />
+                                  <Input {...field} placeholder="e.g. 116694A" data-testid="input-course-cricos-code" />
                                 </FormControl>
                                 <FormDescription>CRICOS registered course code (AU)</FormDescription>
                                 <FormMessage />

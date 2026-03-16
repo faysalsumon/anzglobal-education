@@ -11667,7 +11667,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enum and other fields that can't accept empty strings
       const nullableStringFields = [
         'discipline', 'subDiscipline', 'level', 'approvalStatus',
-        'subDisciplineId', 'specialization', 'qualificationFramework'
+        'subDisciplineId', 'specialization', 'qualificationFramework',
+        'cricosCode'
       ];
       
       const updateData: Record<string, any> = { ...rawData };
@@ -11696,6 +11697,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const field of nullableStringFields) {
         if (field in updateData && updateData[field] === '') {
           updateData[field] = null;
+        }
+      }
+      
+      // Handle boolean fields - normalize to proper boolean
+      const booleanFields = ['isCricosRegistered', 'prPathway', 'isActive'];
+      for (const field of booleanFields) {
+        if (field in updateData) {
+          if (updateData[field] === '' || updateData[field] === null || updateData[field] === undefined) {
+            updateData[field] = false;
+          } else if (typeof updateData[field] === 'string') {
+            updateData[field] = updateData[field] === 'true' || updateData[field] === '1';
+          }
         }
       }
       

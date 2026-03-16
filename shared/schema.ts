@@ -1012,6 +1012,7 @@ export const courses = pgTable("courses", {
   // Additional course details
   courseCode: text("course_code"),
   cricosCode: text("cricos_code"), // CRICOS course code for Australian RTO/CRICOS registered courses
+  isCricosRegistered: boolean("is_cricos_registered").notNull().default(false), // True when this course is registered on the CRICOS register
   prPathway: boolean("pr_pathway").default(false),
   eligibilityRequirements: text("eligibility_requirements"),
   englishRequirements: text("english_requirements"),
