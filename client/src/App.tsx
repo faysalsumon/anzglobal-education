@@ -202,11 +202,6 @@ function AppContent() {
           <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />
         </main>
         <Footer />
-        {!isLoading && (
-          <Suspense fallback={null}>
-            {isStaff ? <AdminChatWidget /> : (!user || user.userType === 'student') && <ChatWidget />}
-          </Suspense>
-        )}
       </div>
     );
   }
