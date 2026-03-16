@@ -74,6 +74,7 @@ interface NavSection {
   label: string;
   icon: LucideIcon;
   colorClass: string;
+  showSection: boolean;
   items: NavItem[];
 }
 
@@ -88,7 +89,7 @@ export function AdminMobileBottomNav({
   onLogout,
 }: AdminMobileBottomNavProps) {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, allowedNavSections } = useAuth();
 
   const adminRegionCode = user?.regionCode || null;
   const isGlobalScope = user?.defaultScope === "global" || !adminRegionCode;
@@ -142,12 +143,15 @@ export function AdminMobileBottomNav({
     return roleMap[user.adminRole] || user.adminRole;
   };
 
+  const canSeeNav = (sectionId: string) => allowedNavSections.has(sectionId);
+
   const secondarySections: NavSection[] = [
     {
       id: "crm-more",
       label: "CRM",
       icon: Briefcase,
       colorClass: "text-blue-600 bg-blue-50 dark:bg-blue-950/60 dark:text-blue-400",
+      showSection: canSeeNav("crm"),
       items: [
         { icon: Mail, label: "Email", value: "email", show: true },
         { icon: ListTodo, label: "My Tasks", value: "my-tasks", show: true },
@@ -159,6 +163,7 @@ export function AdminMobileBottomNav({
       label: "CMS",
       icon: Layers,
       colorClass: "text-purple-600 bg-purple-50 dark:bg-purple-950/60 dark:text-purple-400",
+      showSection: canSeeNav("cms"),
       items: [
         { icon: Building2, label: "Institutions", value: "institutions", show: hasFullAdminAccess || isMarketingExecutive },
         { icon: BookOpen, label: "Courses", value: "courses", show: true },
@@ -175,6 +180,7 @@ export function AdminMobileBottomNav({
       label: "Management",
       icon: Settings,
       colorClass: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-400",
+      showSection: canSeeNav("management"),
       items: [
         { icon: Users, label: "Users", value: "users", show: hasFullAdminAccess },
         { icon: Shield, label: "Role Management", value: "role-management", show: isCTO },
@@ -190,9 +196,9 @@ export function AdminMobileBottomNav({
       label: "People",
       icon: UsersRound,
       colorClass: "text-teal-600 bg-teal-50 dark:bg-teal-950/60 dark:text-teal-400",
+      showSection: canSeeNav("people"),
       items: [
         { icon: UserCheck, label: "Attendance", value: "attendance", show: hasFullAdminAccess },
-        // Future: Leave, KPI Tracking, Performance Reviews
       ],
     },
     {
@@ -200,6 +206,7 @@ export function AdminMobileBottomNav({
       label: "Tools",
       icon: Wrench,
       colorClass: "text-orange-600 bg-orange-50 dark:bg-orange-950/60 dark:text-orange-400",
+      showSection: canSeeNav("tools"),
       items: [
         { icon: Upload, label: "Data Import", value: "data-import", show: hasFullAdminAccess && canSeeFeature("dataImport") },
         { icon: Globe, label: "Web Scraping", value: "web-scraping", show: hasFullAdminAccess && canSeeFeature("webScraping") },
@@ -385,6 +392,7 @@ export function AdminMobileBottomNav({
           {/* Scrollable nav sections */}
           <div className="flex-1 overflow-y-auto px-4 space-y-4 pb-4">
             {secondarySections.map((section) => {
+              if (!section.showSection) return null;
               const visibleItems = section.items.filter((item) => item.show);
               if (visibleItems.length === 0) return null;
               const SectionIcon = section.icon;

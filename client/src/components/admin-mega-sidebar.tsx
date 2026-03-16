@@ -61,6 +61,7 @@ interface NavDomain {
   label: string;
   icon: LucideIcon;
   color: string;
+  showSection: boolean;
   routes: NavRoute[];
 }
 
@@ -88,19 +89,22 @@ export function AdminMegaSidebar({
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
   const isOnProfilePage = location === "/admin/profile";
 
-  const { user, isBranchManager } = useAuth();
+  const { user, allowedNavSections, isBranchManager } = useAuth();
   const adminRegionCode = user?.regionCode || null;
   const isGlobalScope = user?.defaultScope === 'global' || !adminRegionCode;
 
   const canSeeFeature = (feature: Parameters<typeof isAdminFeatureVisible>[0]) =>
     isAdminFeatureVisible(feature, adminRegionCode, isGlobalScope);
   
+  const canSeeNav = (sectionId: string) => allowedNavSections.has(sectionId);
+
   const navConfig: NavDomain[] = [
     {
       id: "crm",
       label: "CRM",
       icon: Briefcase,
       color: "text-blue-600 bg-blue-50 dark:bg-blue-950 dark:text-blue-400",
+      showSection: canSeeNav("crm"),
       routes: [
         { icon: ListTodo, label: "My Tasks", value: "my-tasks", show: true },
         { icon: BarChart3, label: "Team Workload", value: "team-workload", show: isCTO },
@@ -114,15 +118,16 @@ export function AdminMegaSidebar({
       label: "CMS",
       icon: Layers,
       color: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
+      showSection: canSeeNav("cms"),
       routes: [
-        { icon: Building2, label: "Institutions", value: "institutions", show: isCTO || isMarketingExecutive },
-        { icon: BookOpen, label: "Courses", value: "courses", show: !isBranchManager },
-        { icon: GraduationCap, label: "Qualification Types", value: "qualification-types", show: isCTO && canSeeFeature('qualificationTypes') },
-        { icon: FileCheck, label: "Entry Requirement Templates", value: "entry-requirement-templates", show: isCTO && canSeeFeature('entryRequirements') },
-        { icon: Newspaper, label: "Blogs", value: "blogs", show: !isBranchManager },
-        { icon: FileText, label: "Website Content", value: "website-content", show: !isBranchManager },
-        { icon: Search, label: "SEO Management", value: "seo-metadata", show: (isCTO || isMarketingExecutive) && canSeeFeature('seoManagement') },
-        { icon: Tag, label: "Tag Manager", value: "tags", show: (isCTO || isMarketingExecutive) && canSeeFeature('tagManager') },
+        { icon: Building2, label: "Institutions", value: "institutions", show: hasFullAdminAccess || isMarketingExecutive },
+        { icon: BookOpen, label: "Courses", value: "courses", show: true },
+        { icon: GraduationCap, label: "Qualification Types", value: "qualification-types", show: hasFullAdminAccess && canSeeFeature('qualificationTypes') },
+        { icon: FileCheck, label: "Entry Requirement Templates", value: "entry-requirement-templates", show: hasFullAdminAccess && canSeeFeature('entryRequirements') },
+        { icon: Newspaper, label: "Blogs", value: "blogs", show: true },
+        { icon: FileText, label: "Website Content", value: "website-content", show: true },
+        { icon: Search, label: "SEO Management", value: "seo-metadata", show: (hasFullAdminAccess || isMarketingExecutive) && canSeeFeature('seoManagement') },
+        { icon: Tag, label: "Tag Manager", value: "tags", show: (hasFullAdminAccess || isMarketingExecutive) && canSeeFeature('tagManager') },
       ],
     },
     {
@@ -130,14 +135,15 @@ export function AdminMegaSidebar({
       label: "Management",
       icon: Settings,
       color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400",
+      showSection: canSeeNav("management"),
       routes: [
-        { icon: Users, label: "Users", value: "users", show: isCTO },
+        { icon: Users, label: "Users", value: "users", show: hasFullAdminAccess },
         { icon: Shield, label: "Role Management", value: "role-management", show: isCTO },
         { icon: UserCog, label: "Profiles", value: "profile-management", show: isCTO },
-        { icon: UsersRound, label: "Team", value: "team", show: isCTO },
-        { icon: MapPin, label: "Branches", value: "branches", show: isCTO && canSeeFeature('branches') },
-        { icon: Globe, label: "Regions", value: "regions", show: isCTO && canSeeFeature('regions') },
-        { icon: Link2, label: "Affiliates", value: "affiliates", show: isCTO },
+        { icon: UsersRound, label: "Team", value: "team", show: hasFullAdminAccess },
+        { icon: MapPin, label: "Branches", value: "branches", show: hasFullAdminAccess && canSeeFeature('branches') },
+        { icon: Globe, label: "Regions", value: "regions", show: hasFullAdminAccess && canSeeFeature('regions') },
+        { icon: Link2, label: "Affiliates", value: "affiliates", show: hasFullAdminAccess },
       ],
     },
     {
@@ -145,13 +151,14 @@ export function AdminMegaSidebar({
       label: "Finance",
       icon: DollarSign,
       color: "text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-400",
+      showSection: canSeeNav("finance"),
       routes: [
-        { icon: BarChart3, label: "Dashboard", value: "finance-dashboard", show: isCTO },
-        { icon: FileText, label: "Invoices", value: "finance-invoices", show: isCTO },
-        { icon: Users, label: "Customers", value: "finance-customers", show: isCTO },
-        { icon: Package, label: "Items", value: "finance-items", show: isCTO },
-        { icon: BookOpen, label: "Chart of Accounts", value: "finance-accounts", show: isCTO },
-        { icon: DollarSign, label: "Accounting", value: "accounting", show: isCTO },
+        { icon: BarChart3, label: "Dashboard", value: "finance-dashboard", show: hasFullAdminAccess },
+        { icon: FileText, label: "Invoices", value: "finance-invoices", show: hasFullAdminAccess },
+        { icon: Users, label: "Customers", value: "finance-customers", show: hasFullAdminAccess },
+        { icon: Package, label: "Items", value: "finance-items", show: hasFullAdminAccess },
+        { icon: BookOpen, label: "Chart of Accounts", value: "finance-accounts", show: hasFullAdminAccess },
+        { icon: DollarSign, label: "Accounting", value: "accounting", show: hasFullAdminAccess },
       ],
     },
     {
@@ -159,6 +166,7 @@ export function AdminMegaSidebar({
       label: "People",
       icon: UsersRound,
       color: "text-teal-600 bg-teal-50 dark:bg-teal-950 dark:text-teal-400",
+      showSection: canSeeNav("people"),
       routes: [
         { icon: UserCheck, label: "Attendance", value: "attendance", show: hasFullAdminAccess },
       ],
@@ -168,20 +176,21 @@ export function AdminMegaSidebar({
       label: "Tools",
       icon: Wrench,
       color: "text-orange-600 bg-orange-50 dark:bg-orange-950 dark:text-orange-400",
+      showSection: canSeeNav("tools"),
       routes: [
-        { icon: Upload, label: "Data Import", value: "data-import", show: isCTO && canSeeFeature('dataImport') },
-        { icon: Globe, label: "Web Scraping", value: "web-scraping", show: isCTO && canSeeFeature('webScraping') },
-        { icon: ImageIcon, label: "Thumbnails", value: "thumbnails", show: isCTO },
-        { icon: Activity, label: "Activity Logs", value: "activity-logs", show: isCTO },
+        { icon: Upload, label: "Data Import", value: "data-import", show: hasFullAdminAccess && canSeeFeature('dataImport') },
+        { icon: Globe, label: "Web Scraping", value: "web-scraping", show: hasFullAdminAccess && canSeeFeature('webScraping') },
+        { icon: ImageIcon, label: "Thumbnails", value: "thumbnails", show: hasFullAdminAccess },
+        { icon: Activity, label: "Activity Logs", value: "activity-logs", show: hasFullAdminAccess },
         { icon: Bot, label: "AI Settings", value: "ai-settings", show: isCTO && canSeeFeature('aiSettings') },
-        { icon: Key, label: "Partner API", value: "api-keys", show: isCTO && canSeeFeature('partnerApi') },
-        { icon: Bell, label: "Notifications", value: "notification-settings", show: isCTO },
+        { icon: Key, label: "Partner API", value: "api-keys", show: (hasFullAdminAccess || isCTO) && canSeeFeature('partnerApi') },
+        { icon: Bell, label: "Notifications", value: "notification-settings", show: hasFullAdminAccess },
       ],
     },
   ];
 
   const visibleDomains = navConfig.filter(domain => 
-    domain.routes.some(route => route.show)
+    domain.showSection && domain.routes.some(route => route.show)
   );
 
   const findDomainForTab = (tab: string) => {

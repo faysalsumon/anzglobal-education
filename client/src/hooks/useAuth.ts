@@ -12,6 +12,20 @@ interface UserWithAdminRole extends User {
   defaultScope?: string | null;
 }
 
+const ALL_NAV_SECTIONS = ['crm', 'cms', 'management', 'finance', 'people', 'tools'] as const;
+
+const ROLE_NAV_SECTIONS: Record<string, readonly string[]> = {
+  cto: ALL_NAV_SECTIONS,
+  ceo: ALL_NAV_SECTIONS,
+  cfo: ['crm', 'finance', 'people'],
+  branch_manager: ['crm', 'people'],
+  marketing_executive: ['crm', 'cms'],
+  senior_consultant: ['crm'],
+  junior_consultant: ['crm'],
+  support_staff: ['crm'],
+  operations_staff: ['crm', 'finance'],
+};
+
 export function useAuth() {
   const { user: supabaseUser, session, isLoading: supabaseLoading, isConfigured } = useSupabaseAuth();
 
@@ -84,6 +98,12 @@ export function useAuth() {
   
   const hasFullAdminAccess = isCTO || isBranchManager;
 
+  const allowedNavSections = useMemo(() => {
+    if (user?.userType === 'platform_admin') return new Set(ALL_NAV_SECTIONS);
+    const sections = ROLE_NAV_SECTIONS[adminRole ?? ''] ?? ['crm'];
+    return new Set(sections);
+  }, [user?.userType, adminRole]);
+
   // Auth is resolved when Supabase has finished loading
   // If there's a session, also wait for the DB user to be fetched
   const isAuthResolved = !supabaseLoading && isConfigured && (!session || isFetched);
@@ -118,5 +138,6 @@ export function useAuth() {
     branchName: user?.branchName || null,
     defaultScope: user?.defaultScope || null,
     isGlobalScope: user?.defaultScope === 'global' || isCTO,
+    allowedNavSections,
   };
 }
