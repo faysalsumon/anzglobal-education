@@ -311,6 +311,7 @@ export function AdminChatWidget() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const openWidgetRef = useRef<() => void>(() => {});
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -360,12 +361,6 @@ export function AdminChatWidget() {
       setHasGreeting(true);
     },
   });
-
-  useEffect(() => {
-    if (!hasGreeting && !initMutation.isPending) {
-      initMutation.mutate();
-    }
-  }, []);
 
   const sendMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -442,6 +437,9 @@ export function AdminChatWidget() {
     setIsOpen(true);
     setIsMinimized(false);
     setBriefingReady(false);
+    if (!hasGreeting && !initMutation.isPending) {
+      initMutation.mutate();
+    }
     setTimeout(() => inputRef.current?.focus(), 150);
   };
 
@@ -450,7 +448,11 @@ export function AdminChatWidget() {
   };
 
   useEffect(() => {
-    const handleOpenEvent = () => openWidget();
+    openWidgetRef.current = openWidget;
+  });
+
+  useEffect(() => {
+    const handleOpenEvent = () => openWidgetRef.current();
     window.addEventListener("open-admin-chat-widget", handleOpenEvent);
     return () => window.removeEventListener("open-admin-chat-widget", handleOpenEvent);
   }, []);
@@ -519,7 +521,7 @@ export function AdminChatWidget() {
 
   return (
     <div
-      className="fixed bottom-10 right-3 md:right-4 z-40 flex flex-col bg-card border border-border rounded-xl shadow-2xl w-80"
+      className="fixed bottom-10 right-3 md:right-4 z-[55] flex flex-col bg-card border border-border rounded-xl shadow-2xl w-80"
       style={{ height: isMinimized ? "56px" : "min(460px, calc(100vh - 6rem))" }}
       data-testid="admin-chat-widget"
     >
