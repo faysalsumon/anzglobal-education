@@ -181,8 +181,9 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
     queryKey: ["/api/admin/attendance/stats", { dateFrom, dateTo, ...(filterUserId ? { userId: filterUserId } : {}), ...(filterBranchId ? { branchId: filterBranchId } : {}) }],
   });
 
+  const usersQueryParams = !isCTO && userBranchId ? { branchId: userBranchId } : {};
   const { data: usersResponse } = useQuery<{ users: { id: string; firstName: string | null; lastName: string | null; email: string | null }[] }>({
-    queryKey: ["/api/admin/users"],
+    queryKey: ["/api/admin/users", usersQueryParams],
     enabled: hasFullAdminAccess || !!userBranchId,
   });
   const usersData = usersResponse?.users ?? [];
@@ -191,6 +192,10 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
     queryKey: ["/api/admin/branches"],
     enabled: hasFullAdminAccess,
   });
+
+  const userBranchName = !isCTO && userBranchId && branchesData
+    ? branchesData.find(b => b.id === userBranchId)?.name ?? null
+    : null;
 
   const cleanupMutation = useMutation({
     mutationFn: async () => {
@@ -344,7 +349,7 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
             </Select>
           </div>
         )}
-        {hasFullAdminAccess && branchesData && branchesData.length > 0 && (
+        {isCTO && branchesData && branchesData.length > 0 && (
           <div className="flex flex-col gap-1">
             <label className="text-xs text-muted-foreground">Branch</label>
             <Select value={filterBranchId} onValueChange={(v) => { setFilterBranchId(v === "all" ? "" : v); setPage(1); }}>
@@ -358,6 +363,15 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        )}
+        {!isCTO && userBranchId && (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted-foreground">Branch</label>
+            <Badge variant="secondary" className="h-8 px-3 text-sm font-normal" data-testid="badge-branch-scope">
+              <MapPin className="h-3 w-3 mr-1.5" />
+              {userBranchName ?? "Your Branch"}
+            </Badge>
           </div>
         )}
         <Button
