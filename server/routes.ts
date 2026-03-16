@@ -5069,7 +5069,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Course English Requirements routes (admin only)
   app.get("/api/courses/:courseId/english-requirements", async (req, res) => {
     try {
-      const requirements = await storage.getEnglishRequirementsByCourseId(req.params.courseId);
+      const course = await storage.getCourseByIdOrSlug(req.params.courseId);
+      if (!course) return res.json([]);
+      const requirements = await storage.getEnglishRequirementsByCourseId(course.id);
       res.json(requirements);
     } catch (error) {
       console.error("Error fetching English requirements:", error);
@@ -20827,7 +20829,9 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Get entry requirements for a specific course
   app.get("/api/courses/:courseId/entry-requirements", async (req, res) => {
     try {
-      const { courseId } = req.params;
+      const course = await storage.getCourseByIdOrSlug(req.params.courseId);
+      if (!course) return res.json([]);
+      const resolvedCourseId = course.id;
       
       const requirements = await db
         .select({
@@ -20844,7 +20848,7 @@ Sitemap: ${baseUrl}/sitemap.xml
           academicQualificationTypes,
           eq(courseEntryRequirements.qualificationTypeId, academicQualificationTypes.id)
         )
-        .where(eq(courseEntryRequirements.courseId, courseId))
+        .where(eq(courseEntryRequirements.courseId, resolvedCourseId))
         .orderBy(courseEntryRequirements.displayOrder);
       
       res.json(requirements);
@@ -21050,12 +21054,14 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Get intake templates for a course
   app.get("/api/courses/:courseId/intake-templates", async (req, res) => {
     try {
-      const { courseId } = req.params;
+      const course = await storage.getCourseByIdOrSlug(req.params.courseId);
+      if (!course) return res.json([]);
+      const resolvedCourseId = course.id;
       
       const templates = await db
         .select()
         .from(courseIntakeTemplates)
-        .where(eq(courseIntakeTemplates.courseId, courseId))
+        .where(eq(courseIntakeTemplates.courseId, resolvedCourseId))
         .orderBy(courseIntakeTemplates.month);
       
       res.json(templates);
@@ -21194,13 +21200,15 @@ Sitemap: ${baseUrl}/sitemap.xml
   // GET - public: list all active specific intake dates for a course
   app.get("/api/courses/:courseId/intake-dates", async (req, res) => {
     try {
-      const { courseId } = req.params;
+      const course = await storage.getCourseByIdOrSlug(req.params.courseId);
+      if (!course) return res.json([]);
+      const resolvedCourseId = course.id;
       const dates = await db
         .select()
         .from(courseIntakeDates)
         .where(
           and(
-            eq(courseIntakeDates.courseId, courseId),
+            eq(courseIntakeDates.courseId, resolvedCourseId),
             eq(courseIntakeDates.isActive, true)
           )
         )

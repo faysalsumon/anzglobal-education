@@ -727,6 +727,17 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     enabled: !!selectedInstitutionId,
   });
 
+  // When institution data loads, filter out any stale campus IDs (e.g. old bare city names)
+  // that don't match the current institution's campus address format
+  useEffect(() => {
+    if (selectedInstitution?.campusAddresses && selectedInstitution.campusAddresses.length > 0) {
+      const validKeys = selectedInstitution.campusAddresses.map(
+        campus => `${campus.address}, ${campus.city}, ${campus.state} ${campus.postcode}`
+      );
+      setSelectedCampusIds(prev => prev.filter(id => validKeys.includes(id)));
+    }
+  }, [selectedInstitution?.id]);
+
   const { data: groupedTags } = useQuery<Record<string, TagType[]>>({
     queryKey: ["/api/admin/tags/grouped"],
   });
