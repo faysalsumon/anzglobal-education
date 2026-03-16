@@ -2189,6 +2189,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/seed-specializations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager']);
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const SPECIALIZATIONS_BY_SUB_DISCIPLINE: Record<string, string[]> = {
+        "Accounting": ["Financial Accounting", "Management Accounting", "Tax Accounting", "Forensic Accounting", "Auditing", "Cost Accounting"],
+        "Business Management": ["Strategic Management", "Operations Management", "Change Management", "SME Management", "Supply Chain Management", "Business Analytics"],
+        "Economics": ["Microeconomics", "Macroeconomics", "Econometrics", "Development Economics", "International Economics", "Behavioural Economics"],
+        "Finance": ["Investment Banking", "Corporate Finance", "Financial Planning", "Risk Management", "Wealth Management", "Fintech"],
+        "Human Resources": ["Talent Acquisition", "Organisational Development", "Employee Relations", "Compensation & Benefits", "HR Analytics", "Workplace Health & Safety"],
+        "International Business": ["Global Trade", "Cross-Cultural Management", "Export Management", "International Marketing", "Foreign Direct Investment", "Global Supply Chains"],
+        "Marketing": ["Digital Marketing", "Brand Management", "Market Research", "Content Marketing", "Social Media Marketing", "Marketing Analytics"],
+        "Project Management": ["Agile Project Management", "Construction Project Management", "IT Project Management", "Risk & Stakeholder Management", "Program Management", "Lean Six Sigma"],
+        "Architecture": ["Sustainable Architecture", "Urban Design", "Landscape Architecture", "Interior Architecture", "Computational Design", "Heritage Conservation"],
+        "Fashion Design": ["Fashion Illustration", "Textile Design", "Fashion Merchandising", "Sustainable Fashion", "Fashion Technology", "Haute Couture"],
+        "Fine Arts": ["Painting", "Sculpture", "Printmaking", "Ceramics", "Photography", "Mixed Media"],
+        "Graphic Design": ["UI/UX Design", "Motion Graphics", "Brand Identity", "Publication Design", "Packaging Design", "Web Design"],
+        "Interior Design": ["Residential Design", "Commercial Design", "Sustainable Interiors", "Lighting Design", "Furniture Design", "Exhibition Design"],
+        "Artificial Intelligence": ["Machine Learning", "Natural Language Processing", "Computer Vision", "Deep Learning", "Reinforcement Learning", "Robotics AI"],
+        "Computer Science": ["Algorithms", "Computer Graphics", "Operating Systems", "Distributed Systems", "Theoretical Computing", "Quantum Computing"],
+        "Cybersecurity": ["Ethical Hacking", "Network Security", "Digital Forensics", "Security Architecture", "Cloud Security", "Incident Response"],
+        "Data Science": ["Business Analytics", "Predictive Modelling", "Big Data", "Data Visualisation", "Statistical Analysis", "Data Engineering"],
+        "Information Technology": ["Cloud Computing", "IT Infrastructure", "Systems Administration", "Database Management", "IT Service Management", "Network Engineering"],
+        "Software Development": ["Full Stack Development", "Mobile Development", "DevOps", "Microservices", "Agile Development", "Game Development"],
+        "Early Childhood Education": ["Child Development", "Play-Based Learning", "Inclusive Education", "Early Literacy", "Montessori Education", "Child Psychology"],
+        "Primary Education": ["Literacy Education", "Numeracy Education", "STEM Education", "Inclusive Classrooms", "Curriculum Design", "Pastoral Care"],
+        "Secondary Education": ["Subject Specialisation", "Adolescent Development", "STEM Teaching", "Assessment & Evaluation", "Behaviour Management", "Educational Leadership"],
+        "TESOL": ["Academic English", "Business English", "Young Learners TESOL", "Online Language Teaching", "Curriculum Development", "Language Assessment"],
+        "Aerospace Engineering": ["Aerodynamics", "Aircraft Structures", "Propulsion Systems", "Avionics", "Space Systems", "Flight Mechanics"],
+        "Chemical Engineering": ["Process Engineering", "Biochemical Engineering", "Petrochemical Engineering", "Environmental Chemical Engineering", "Polymer Engineering", "Pharmaceutical Engineering"],
+        "Civil Engineering": ["Structural Engineering", "Geotechnical Engineering", "Water Resources", "Transportation Engineering", "Construction Management", "Environmental Engineering"],
+        "Electrical Engineering": ["Power Systems", "Electronics", "Control Systems", "Telecommunications", "Embedded Systems", "Renewable Energy Systems"],
+        "Mechanical Engineering": ["Thermodynamics", "Robotics", "Manufacturing Engineering", "Automotive Engineering", "HVAC Engineering", "Materials Engineering"],
+        "Software Engineering": ["Systems Architecture", "Quality Assurance", "Requirements Engineering", "Cloud Architecture", "Embedded Software", "Real-Time Systems"],
+        "Culinary Arts": ["Pastry & Baking", "International Cuisine", "Food Science", "Menu Development", "Restaurant Management", "Food Styling"],
+        "Event Management": ["Corporate Events", "Wedding Planning", "Festival Management", "Conference Management", "Sports Events", "Exhibition Management"],
+        "Hospitality Management": ["Hotel Management", "Resort Management", "Food & Beverage Management", "Revenue Management", "Guest Experience", "Hospitality Marketing"],
+        "Sports Management": ["Sports Marketing", "Athletic Administration", "Sports Analytics", "Facility Management", "Sports Psychology", "Coaching Science"],
+        "Tourism": ["Sustainable Tourism", "Adventure Tourism", "Cultural Tourism", "Tourism Marketing", "Destination Management", "Ecotourism"],
+        "Commercial Law": ["Contract Law", "Corporate Governance", "Intellectual Property", "Competition Law", "Banking & Finance Law", "International Trade Law"],
+        "Criminal Law": ["Criminal Justice", "Forensic Science", "Criminology", "Juvenile Justice", "White Collar Crime", "Cyber Crime Law"],
+        "International Law": ["Human Rights Law", "International Trade Law", "Diplomatic Law", "Environmental Law", "Maritime Law", "International Criminal Law"],
+        "Aged Care": ["Dementia Care", "Palliative Care", "Geriatric Nursing", "Community Aged Care", "Aged Care Management", "Rehabilitation"],
+        "Allied Health": ["Physiotherapy", "Occupational Therapy", "Speech Pathology", "Podiatry", "Dietetics", "Exercise Physiology"],
+        "Medicine": ["General Practice", "Surgery", "Paediatrics", "Psychiatry", "Emergency Medicine", "Oncology"],
+        "Nursing": ["Critical Care Nursing", "Mental Health Nursing", "Community Nursing", "Perioperative Nursing", "Paediatric Nursing", "Midwifery"],
+        "Pharmacy": ["Clinical Pharmacy", "Pharmaceutical Sciences", "Hospital Pharmacy", "Community Pharmacy", "Pharmacology", "Pharmaceutical Chemistry"],
+        "Public Health": ["Epidemiology", "Health Policy", "Global Health", "Biostatistics", "Environmental Health", "Health Promotion"],
+        "Automotive": ["Automotive Mechanics", "Auto Electrical", "Panel Beating", "Automotive Diagnostics", "Heavy Vehicle Mechanics", "Automotive Management"],
+        "Carpentry": ["Residential Carpentry", "Commercial Carpentry", "Cabinetmaking", "Joinery", "Formwork", "Timber Framing"],
+        "Electrical Trade": ["Domestic Wiring", "Industrial Electrical", "Instrumentation", "Solar Installation", "Electrical Maintenance", "PLC Programming"],
+        "Plumbing": ["Gas Fitting", "Drainage Systems", "Roofing & Guttering", "Fire Protection Systems", "Water Treatment", "Irrigation Systems"],
+      };
+
+      const allSubDisciplines = await storage.getSubDisciplines();
+      let created = 0;
+      let skipped = 0;
+
+      for (const subDisc of allSubDisciplines) {
+        const specializations = SPECIALIZATIONS_BY_SUB_DISCIPLINE[subDisc.name];
+        if (!specializations) continue;
+
+        for (const specName of specializations) {
+          try {
+            await storage.createOrGetSpecialization(specName, subDisc.id);
+            created++;
+          } catch (e) {
+            skipped++;
+          }
+        }
+      }
+
+      res.json({
+        message: `Seeded specializations: ${created} created/verified, ${skipped} errors`,
+        created,
+        skipped,
+      });
+    } catch (error) {
+      console.error("Error seeding specializations:", error);
+      res.status(500).json({ message: "Failed to seed specializations" });
+    }
+  });
+
   // Get all main disciplines (master list for admin selection)
   app.get("/api/disciplines/all", async (_req, res) => {
     try {
@@ -3264,6 +3351,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (course.subDisciplineId) {
         await storage.incrementSubDisciplineUsage(course.subDisciplineId);
       }
+
+      if (course.specialization && course.subDisciplineId) {
+        try {
+          await storage.createOrGetSpecialization(course.specialization, course.subDisciplineId);
+        } catch (e) {}
+      }
       
       res.json(course);
     } catch (error: any) {
@@ -3306,6 +3399,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Increment sub-discipline usage count if a new sub-discipline was assigned
       if (updated.subDisciplineId && updated.subDisciplineId !== course.subDisciplineId) {
         await storage.incrementSubDisciplineUsage(updated.subDisciplineId);
+      }
+
+      if (updated.specialization && updated.subDisciplineId) {
+        try {
+          await storage.createOrGetSpecialization(updated.specialization, updated.subDisciplineId);
+        } catch (e) {}
       }
       
       // Trigger async knowledge base rebuild
@@ -11428,6 +11527,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdByUserId: userId,
         assignedToUserId: userId, // Initially assign to creator
       });
+
+      if (newCourse.specialization && newCourse.subDisciplineId) {
+        try {
+          await storage.createOrGetSpecialization(newCourse.specialization, newCourse.subDisciplineId);
+        } catch (e) {}
+      }
+
       res.status(201).json(newCourse);
     } catch (error) {
       console.error("Error creating course:", error);
@@ -11517,6 +11623,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       updateData.updatedAt = new Date();
 
       const updatedCourse = await storage.updateCourse(courseId, updateData);
+
+      if (updatedCourse.specialization && updatedCourse.subDisciplineId) {
+        try {
+          await storage.createOrGetSpecialization(updatedCourse.specialization, updatedCourse.subDisciplineId);
+        } catch (e) {}
+      }
       
       // Trigger async knowledge base rebuild
       triggerKnowledgeBaseRebuild('super-admin course update');
