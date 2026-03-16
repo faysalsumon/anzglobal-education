@@ -482,18 +482,31 @@ router.get('/user', async (req: Request, res: Response) => {
     }
 
     // Return platform user data directly (expected format by useAuth hook and admin-login)
-    // Include adminRole for platform admins
-    let adminRole = platformUser.role || null;
-    if (platformUser.userType === 'platform_admin') {
+    // Determine adminRole — priority: legacy adminMember > RBAC roleId > legacy user.role (non-default)
+    let adminRole: string | null = null;
+
+    // 1. Check legacy admin_team_members table for both admin and platform_admin users
+    if (platformUser.userType === 'platform_admin' || platformUser.userType === 'admin') {
       const adminMember = await storage.getAdminTeamMemberByUserId(platformUser.id);
-      adminRole = adminMember?.role || platformUser.role || null;
+      if (adminMember?.role) {
+        adminRole = adminMember.role;
+      }
     }
 
-    // Get role name if roleId exists
-    let roleName = null;
+    // Get role name if roleId exists (RBAC system)
+    let roleName: string | null = null;
     if (platformUser.roleId) {
       const [role] = await db.select().from(roles).where(eq(roles.id, platformUser.roleId)).limit(1);
       roleName = role?.displayName || role?.name || null;
+      // 2. If no adminRole from legacy system, use the RBAC role's internal name
+      if (!adminRole && role?.name) {
+        adminRole = role.name;
+      }
+    }
+
+    // 3. Final fallback: legacy user.role column — but only if it's an actual admin role (not "user")
+    if (!adminRole && platformUser.role && platformUser.role !== 'user') {
+      adminRole = platformUser.role;
     }
 
     // Get region name if regionId exists

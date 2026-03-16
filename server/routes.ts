@@ -1036,13 +1036,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If admin user, include their role info
       if (user.userType === 'admin' || user.userType === 'platform_admin') {
         const adminMember = await storage.getAdminTeamMemberByUserId(userId);
+        // Determine adminRole — priority: legacy adminMember > RBAC roleId > legacy user.role (non-default)
+        const rbacAdminRole = user.roleId ? (roleDetails?.name || null) : null;
+        const legacyUserRole = (user.role && user.role !== 'user') ? user.role : null;
+        const resolvedAdminRole = adminMember?.role || rbacAdminRole || legacyUserRole || null;
         res.json({
           ...user,
           // New role system
           roleDetails: roleDetails || null,
           permissions: permissions,
-          // Legacy: Prefer adminTeamMember role, fallback to user.role for compatibility
-          adminRole: adminMember?.role || user.role || roleDetails?.name || null,
+          adminRole: resolvedAdminRole,
         });
       } else {
         res.json({
