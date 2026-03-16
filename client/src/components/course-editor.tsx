@@ -29,6 +29,7 @@ import {
   getCountryIntakeRecommendations,
   computeIntakesFromTemplates,
 } from "@shared/intake-utils";
+import type { CourseIntakeDate } from "@shared/schema";
 
 // Local simplified type for intake template state (without required nullable fields for new templates)
 interface LocalIntakeTemplate {
@@ -670,6 +671,12 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const [newIntakeDeadlineWeeks, setNewIntakeDeadlineWeeks] = useState<number>(8);
   const [isSavingIntakes, setIsSavingIntakes] = useState(false);
 
+  // Specific Intake Dates state
+  const [specificDates, setSpecificDates] = useState<CourseIntakeDate[]>([]);
+  const [newSpecificDate, setNewSpecificDate] = useState("");
+  const [newSpecificLabel, setNewSpecificLabel] = useState("");
+  const [isSavingSpecificDates, setIsSavingSpecificDates] = useState(false);
+
   // Pricing configuration state
   const [pricingConfig, setPricingConfig] = useState<{
     pricingModel: 'fixed' | 'dynamic';
@@ -751,6 +758,18 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       setIntakeTemplates(fetchedIntakeTemplates);
     }
   }, [fetchedIntakeTemplates]);
+
+  // Specific intake dates query
+  const { data: fetchedSpecificDates = [] } = useQuery<CourseIntakeDate[]>({
+    queryKey: ["/api/courses", course?.id, "intake-dates"],
+    enabled: !!course?.id,
+  });
+
+  useEffect(() => {
+    if (fetchedSpecificDates) {
+      setSpecificDates(fetchedSpecificDates);
+    }
+  }, [fetchedSpecificDates]);
 
   // Pricing config query
   const { data: fetchedPricingConfig } = useQuery<{
@@ -3068,6 +3087,110 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                             </Button>
                           )}
                         </div>
+                      )}
+                    </div>
+
+                    {/* ——— Specific Intake Dates ——— */}
+                    <div className="pt-4 border-t">
+                      <div className="flex items-center gap-2 mb-3">
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium text-sm">Specific Intake Dates</span>
+                        <span className="text-xs text-muted-foreground">(exact calendar dates, e.g. 19 Jan 2026)</span>
+                      </div>
+
+                      {/* Add new specific date */}
+                      {course?.id && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          <Input
+                            type="date"
+                            value={newSpecificDate}
+                            onChange={(e) => setNewSpecificDate(e.target.value)}
+                            className="w-40"
+                            data-testid="input-specific-intake-date"
+                          />
+                          <Input
+                            placeholder="Label (optional)"
+                            value={newSpecificLabel}
+                            onChange={(e) => setNewSpecificLabel(e.target.value)}
+                            className="w-44"
+                            data-testid="input-specific-intake-label"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={!newSpecificDate}
+                            onClick={async () => {
+                              if (!newSpecificDate) return;
+                              try {
+                                const resp = await apiRequest("POST", `/api/admin/courses/${course.id}/intake-dates`, {
+                                  intakeDate: newSpecificDate,
+                                  label: newSpecificLabel || null,
+                                });
+                                const added: CourseIntakeDate = resp;
+                                setSpecificDates(prev => [...prev, added].sort((a, b) => a.intakeDate.localeCompare(b.intakeDate)));
+                                setNewSpecificDate("");
+                                setNewSpecificLabel("");
+                                queryClient.invalidateQueries({ queryKey: ["/api/courses", course.id, "intake-dates"] });
+                                toast({ title: "Intake date added" });
+                              } catch {
+                                toast({ title: "Failed to add intake date", variant: "destructive" });
+                              }
+                            }}
+                            data-testid="button-add-specific-intake-date"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add Date
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* List of specific dates */}
+                      {specificDates.length > 0 ? (
+                        <div className="space-y-1">
+                          {specificDates
+                            .slice()
+                            .sort((a, b) => a.intakeDate.localeCompare(b.intakeDate))
+                            .map((d) => {
+                              const parsed = new Date(`${d.intakeDate}T00:00:00`);
+                              const formatted = parsed.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
+                              return (
+                                <div
+                                  key={d.id}
+                                  className="flex items-center justify-between px-3 py-2 bg-muted/30 rounded-md border"
+                                  data-testid={`item-specific-date-${d.id}`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <span className="text-sm font-medium">{formatted}</span>
+                                    {d.label && (
+                                      <span className="text-xs text-muted-foreground">— {d.label}</span>
+                                    )}
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={async () => {
+                                      try {
+                                        await apiRequest("DELETE", `/api/admin/courses/${course?.id}/intake-dates/${d.id}`);
+                                        setSpecificDates(prev => prev.filter(x => x.id !== d.id));
+                                        queryClient.invalidateQueries({ queryKey: ["/api/courses", course?.id, "intake-dates"] });
+                                        toast({ title: "Intake date removed" });
+                                      } catch {
+                                        toast({ title: "Failed to remove date", variant: "destructive" });
+                                      }
+                                    }}
+                                    data-testid={`button-remove-specific-date-${d.id}`}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic">No specific intake dates added yet.</p>
                       )}
                     </div>
                   </CardContent>

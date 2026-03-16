@@ -1118,6 +1118,32 @@ export type InsertCourseIntakeTemplate = z.infer<typeof insertCourseIntakeTempla
 export type CourseIntakeTemplate = typeof courseIntakeTemplates.$inferSelect;
 
 // ============================================
+// COURSE INTAKE DATES
+// Specific fixed calendar dates for course intakes (not recurring templates)
+// Designed for courses with precisely-scheduled intake dates per year
+// ============================================
+
+export const courseIntakeDates = pgTable("course_intake_dates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  intakeDate: date("intake_date").notNull(), // ISO date string e.g. "2026-01-19"
+  label: text("label"), // Optional custom label e.g. "Semester 1 2026"
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  courseIdx: index("course_intake_dates_course_idx").on(table.courseId),
+  dateIdx: index("course_intake_dates_date_idx").on(table.courseId, table.intakeDate),
+}));
+
+export const insertCourseIntakeDateSchema = createInsertSchema(courseIntakeDates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCourseIntakeDate = z.infer<typeof insertCourseIntakeDateSchema>;
+export type CourseIntakeDate = typeof courseIntakeDates.$inferSelect;
+
+// ============================================
 // COURSE TAGS SYSTEM
 // E-commerce style tagging for course categorization and filtering
 // ============================================
@@ -2985,11 +3011,19 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
   courseComparisons: many(courseComparisons),
   englishRequirements: many(courseEnglishRequirements),
   intakeTemplates: many(courseIntakeTemplates),
+  intakeDates: many(courseIntakeDates),
 }));
 
 export const courseIntakeTemplatesRelations = relations(courseIntakeTemplates, ({ one }) => ({
   course: one(courses, {
     fields: [courseIntakeTemplates.courseId],
+    references: [courses.id],
+  }),
+}));
+
+export const courseIntakeDatesRelations = relations(courseIntakeDates, ({ one }) => ({
+  course: one(courses, {
+    fields: [courseIntakeDates.courseId],
     references: [courses.id],
   }),
 }));

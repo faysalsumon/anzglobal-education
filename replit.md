@@ -38,6 +38,7 @@ The platform adheres to ANZ Global Education's brand identity, using a specific 
 - **AI Qualification Equivalency System**: AI-powered academic qualification matching with admin approval.
 - **Multi-Country Qualification Framework System**: Supports 8 international frameworks with country-based auto-suggestion.
 - **Flexible Pricing System**: Dynamic course pricing supporting fixed and tiered models with multiple dimensions.
+- **Specific Intake Dates**: Courses can have exact fixed calendar dates (e.g. "19 Jan 2026") stored in `course_intake_dates` table (migration 0010), alongside recurring monthly intake templates. Admin editor has a "Specific Intake Dates" sub-section under Intake Schedule (date picker + optional label + per-row delete). Public course detail shows specific dates as colour-coded badges (future = primary blue, past = muted grey) in both the hero sidebar and the detail sidebar cards. API routes: `GET /api/courses/:id/intake-dates` (public), `POST/DELETE /api/admin/courses/:id/intake-dates` (auth), `PUT /api/admin/courses/:id/intake-dates` (bulk replace, auth).
 
 ### Feature Specifications
 - **Institution Portal**: Course, application, and team management with AI-powered content generation.

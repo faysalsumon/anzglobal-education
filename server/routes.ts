@@ -104,6 +104,7 @@ import {
   courseLevelRequirementTemplates,
   courseEntryRequirements,
   courseIntakeTemplates,
+  courseIntakeDates,
   insertAcademicQualificationTypeSchema,
   insertCourseLevelRequirementTemplateSchema,
   insertCourseEntryRequirementSchema,
@@ -21183,6 +21184,107 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // ============================================
   // END COURSE INTAKE TEMPLATES API ENDPOINTS
+  // ============================================
+
+  // ============================================
+  // COURSE INTAKE DATES API ENDPOINTS
+  // Specific fixed calendar dates (e.g. "19 Jan 2026") per course
+  // ============================================
+
+  // GET - public: list all active specific intake dates for a course
+  app.get("/api/courses/:courseId/intake-dates", async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const dates = await db
+        .select()
+        .from(courseIntakeDates)
+        .where(
+          and(
+            eq(courseIntakeDates.courseId, courseId),
+            eq(courseIntakeDates.isActive, true)
+          )
+        )
+        .orderBy(courseIntakeDates.intakeDate);
+      res.json(dates);
+    } catch (error: any) {
+      console.error("Error fetching intake dates:", error);
+      res.status(500).json({ message: "Failed to fetch intake dates" });
+    }
+  });
+
+  // PUT - admin: bulk replace all specific intake dates for a course
+  app.put("/api/admin/courses/:courseId/intake-dates", isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const { dates } = req.body; // Array of { intakeDate: "YYYY-MM-DD", label?: string }
+
+      // Delete existing
+      await db.delete(courseIntakeDates).where(eq(courseIntakeDates.courseId, courseId));
+
+      // Insert new
+      if (dates && dates.length > 0) {
+        const toInsert = dates
+          .filter((d: any) => d.intakeDate)
+          .map((d: any) => ({
+            courseId,
+            intakeDate: d.intakeDate,
+            label: d.label || null,
+            isActive: true,
+          }));
+        if (toInsert.length > 0) {
+          await db.insert(courseIntakeDates).values(toInsert);
+        }
+      }
+
+      const updated = await db
+        .select()
+        .from(courseIntakeDates)
+        .where(eq(courseIntakeDates.courseId, courseId))
+        .orderBy(courseIntakeDates.intakeDate);
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating intake dates:", error);
+      res.status(500).json({ message: "Failed to update intake dates" });
+    }
+  });
+
+  // POST - admin: add a single specific intake date
+  app.post("/api/admin/courses/:courseId/intake-dates", isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const { intakeDate, label } = req.body;
+
+      if (!intakeDate) {
+        return res.status(400).json({ message: "intakeDate is required (YYYY-MM-DD)" });
+      }
+
+      const [inserted] = await db
+        .insert(courseIntakeDates)
+        .values({ courseId, intakeDate, label: label || null, isActive: true })
+        .returning();
+
+      res.json(inserted);
+    } catch (error: any) {
+      console.error("Error adding intake date:", error);
+      res.status(500).json({ message: "Failed to add intake date" });
+    }
+  });
+
+  // DELETE - admin: remove a single specific intake date
+  app.delete("/api/admin/courses/:courseId/intake-dates/:dateId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { dateId } = req.params;
+      await db.delete(courseIntakeDates).where(eq(courseIntakeDates.id, dateId));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting intake date:", error);
+      res.status(500).json({ message: "Failed to delete intake date" });
+    }
+  });
+
+  // ============================================
+  // END COURSE INTAKE DATES API ENDPOINTS
   // ============================================
 
   // ============================================

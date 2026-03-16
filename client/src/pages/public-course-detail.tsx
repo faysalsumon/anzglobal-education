@@ -15,7 +15,7 @@ import {
   Target, MonitorPlay, Plane, Star, Info, ExternalLink, ArrowUpRight, Layers, Tag, Heart, Minus,
   Share2, MoreHorizontal, MessageCircle, HelpCircle, Shield
 } from "lucide-react";
-import type { Course, University, Application, Favorite, CourseIntakeTemplate } from "@shared/schema";
+import type { Course, University, Application, Favorite, CourseIntakeTemplate, CourseIntakeDate } from "@shared/schema";
 import { 
   computeIntakesFromTemplates,
   getNextIntake,
@@ -125,6 +125,12 @@ export default function PublicCourseDetail() {
   // Fetch intake templates for the course
   const { data: intakeTemplates = [] } = useQuery<CourseIntakeTemplate[]>({
     queryKey: ["/api/courses", courseId, "intake-templates"],
+    enabled: !!courseId,
+  });
+
+  // Fetch specific fixed intake dates for the course
+  const { data: specificIntakeDates = [] } = useQuery<CourseIntakeDate[]>({
+    queryKey: ["/api/courses", courseId, "intake-dates"],
     enabled: !!courseId,
   });
 
@@ -736,6 +742,32 @@ export default function PublicCourseDetail() {
                         </span>
                       );
                     })}
+                  </div>
+                </div>
+              )}
+              {specificIntakeDates.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-border/40">
+                  <p className="text-[9px] uppercase tracking-wide text-muted-foreground mb-2">Intake Dates</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {specificIntakeDates
+                      .slice()
+                      .sort((a, b) => a.intakeDate.localeCompare(b.intakeDate))
+                      .map((d, index) => {
+                        const parsed = new Date(`${d.intakeDate}T00:00:00`);
+                        const isPast = parsed < new Date();
+                        const formatted = parsed.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
+                        return (
+                          <span
+                            key={d.id}
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                              isPast ? "text-muted-foreground bg-muted/60" : "text-primary bg-primary/10"
+                            }`}
+                            data-testid={`mobile-badge-specific-intake-${index}`}
+                          >
+                            {d.label ? `${d.label} — ${formatted}` : formatted}
+                          </span>
+                        );
+                      })}
                   </div>
                 </div>
               )}
@@ -1851,6 +1883,42 @@ export default function PublicCourseDetail() {
                             </Badge>
                           );
                         })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Specific Intake Dates - exact calendar dates */}
+                {specificIntakeDates.length > 0 && (
+                  <div className="flex items-start gap-3" data-testid="specific-intake-dates-section">
+                    <div className="p-1.5 bg-primary/10 rounded-md mt-0.5">
+                      <Calendar className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground mb-1" data-testid="specific-intakes-label">Intake Dates</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {specificIntakeDates
+                          .slice()
+                          .sort((a, b) => a.intakeDate.localeCompare(b.intakeDate))
+                          .map((d, index) => {
+                            const parsed = new Date(`${d.intakeDate}T00:00:00`);
+                            const now = new Date();
+                            const isPast = parsed < now;
+                            const formatted = parsed.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
+                            return (
+                              <Badge
+                                key={d.id}
+                                className={`text-xs px-2 py-0.5 bg-background/80 border font-semibold ${
+                                  isPast
+                                    ? "border-muted/30 text-muted-foreground"
+                                    : "border-primary/30 text-primary"
+                                }`}
+                                data-testid={`badge-specific-intake-${index}`}
+                              >
+                                {d.label ? `${d.label} — ${formatted}` : formatted}
+                              </Badge>
+                            );
+                          })}
                       </div>
                     </div>
                   </div>
