@@ -1199,7 +1199,8 @@ export function registerAdminChatRoutes(app: Express) {
                   usedExtractionTool = true;
                   lastExtractedType = fnName.includes("institution") ? "institution" : "course";
                   try {
-                    const parsed = JSON.parse(result);
+                    const jsonBody = result.replace(/^<EXTERNAL_DATA[^>]*>/, "").replace(/<\/EXTERNAL_DATA>$/, "");
+                    const parsed = JSON.parse(jsonBody);
                     if (parsed.success) lastExtractedData = parsed.data;
                   } catch {}
                 }
