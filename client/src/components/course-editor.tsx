@@ -3127,8 +3127,8 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                   intakeDate: newSpecificDate,
                                   label: newSpecificLabel || null,
                                 });
-                                const added: CourseIntakeDate = resp;
-                                setSpecificDates(prev => [...prev, added].sort((a, b) => a.intakeDate.localeCompare(b.intakeDate)));
+                                const added: CourseIntakeDate = await resp.json();
+                                setSpecificDates(prev => [...prev, added].sort((a, b) => (a.intakeDate ?? '').localeCompare(b.intakeDate ?? '')));
                                 setNewSpecificDate("");
                                 setNewSpecificLabel("");
                                 queryClient.invalidateQueries({ queryKey: ["/api/courses", course.id, "intake-dates"] });
@@ -3150,7 +3150,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         <div className="space-y-1">
                           {specificDates
                             .slice()
-                            .sort((a, b) => a.intakeDate.localeCompare(b.intakeDate))
+                            .sort((a, b) => (a.intakeDate ?? '').localeCompare(b.intakeDate ?? ''))
                             .map((d) => {
                               const parsed = new Date(`${d.intakeDate}T00:00:00`);
                               const formatted = parsed.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
