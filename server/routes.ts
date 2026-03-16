@@ -21733,11 +21733,11 @@ Sitemap: ${baseUrl}/sitemap.xml
   // PATCH /api/partner/institutions/:id - Update an existing institution
   app.patch("/api/partner/institutions/:id", authenticatePartnerApi, async (req: any, res) => {
     try {
-      if (!hasPermission(req.apiKey, 'institutions:update') && !hasPermission(req.apiKey, 'institutions:create')) {
+      if (!hasPermission(req.apiKey, 'institutions:update')) {
         await logPartnerUsage(req, 403);
         return res.status(403).json({
           error: 'Permission denied',
-          message: 'This API key does not have permission to update institutions',
+          message: 'This API key does not have the institutions:update permission',
         });
       }
 
@@ -21872,7 +21872,7 @@ Sitemap: ${baseUrl}/sitemap.xml
 
       res.json({
         success: true,
-        message: 'Institution updated successfully.',
+        message: 'Institution updated.',
         data: {
           id: updated.id,
           name: updated.name,

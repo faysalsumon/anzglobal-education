@@ -848,7 +848,7 @@ export function AdminApiKeysPanel() {
                 method="PATCH"
                 path="/api/partner/institutions/:id"
                 description="Update an existing institution. Send only the fields you want to change. Particularly useful for adding campus addresses after initial creation."
-                permission="institutions:update or institutions:create"
+                permission="institutions:update"
                 bodyFields={[
                   { name: "campusAddresses", required: false, description: "Array of campus objects (see format below)" },
                   { name: "numberOfCampuses", required: false, description: "Number of campuses" },
@@ -1149,7 +1149,7 @@ Optional fields:
 
 ### 5. Update Institution
 \`PATCH /api/partner/institutions/:id\`
-Permission: institutions:update or institutions:create
+Permission: institutions:update
 Content-Type: application/json
 
 Send only the fields you want to update. All fields are optional.
