@@ -1239,9 +1239,9 @@ Returns all valid disciplines and sub-disciplines for course creation.
 ### 8. Course Creation Workflow
 
 Always follow this sequence when adding a course:
-1. Create or find the institution → note the returned `id`
-2. Call `GET /api/partner/disciplines` → pick exact discipline & subDiscipline strings
-3. POST the course using the institution `id` as `universityId`
+1. Create or find the institution - note the returned id field
+2. Call GET /api/partner/disciplines - pick exact discipline & subDiscipline strings
+3. POST the course using the institution id as universityId
 
 ---
 
