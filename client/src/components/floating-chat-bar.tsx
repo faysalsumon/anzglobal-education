@@ -28,6 +28,7 @@ import {
   ArrowLeft,
   UserPlus,
   UserMinus,
+  Sparkles,
 } from "lucide-react";
 
 type Message = {
@@ -505,13 +506,215 @@ function MiniChannelWindow({
   );
 }
 
+type ZanMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  data_entry_preview?: any;
+};
+
+function MiniZanWindow({
+  conversationId,
+  initialMessages,
+  isMinimized,
+  messageInput,
+  onMessageInputChange,
+  onClose,
+  onToggleMinimize,
+}: {
+  conversationId: string;
+  initialMessages: ZanMessage[];
+  isMinimized: boolean;
+  messageInput: string;
+  onMessageInputChange: (val: string) => void;
+  onClose: () => void;
+  onToggleMinimize: () => void;
+}) {
+  const [messages, setMessages] = useState<ZanMessage[]>(initialMessages);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isMinimized) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isMinimized]);
+
+  useEffect(() => {
+    if (!isMinimized) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isMinimized]);
+
+  const sendMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await apiRequest("POST", `/api/admin-chat/conversations/${conversationId}/messages`, { content });
+      return res.json();
+    },
+    onSuccess: (reply: any) => {
+      setMessages((prev) => [...prev, { id: reply.id, role: "assistant", content: reply.content, data_entry_preview: reply.data_entry_preview }]);
+    },
+    onError: () => {
+      setMessages((prev) => [...prev, { id: `err-${Date.now()}`, role: "assistant", content: "Sorry, something went wrong. Please try again." }]);
+    },
+  });
+
+  const handleSend = () => {
+    const content = messageInput.trim();
+    if (!content || sendMutation.isPending) return;
+    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: "user", content }]);
+    onMessageInputChange("");
+    sendMutation.mutate(content);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  if (isMinimized) {
+    return (
+      <div
+        className="flex items-center gap-2 bg-card border rounded-t-md px-3 py-2 cursor-pointer shadow-md"
+        style={{ width: 280 }}
+        onClick={onToggleMinimize}
+        data-testid="mini-zan-minimized"
+      >
+        <Sparkles className="h-4 w-4 text-primary shrink-0" />
+        <span className="text-sm font-medium truncate flex-1">Zan</span>
+        <Badge variant="secondary" className="text-[10px] px-1.5 shrink-0">AI</Badge>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="no-default-hover-elevate"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          data-testid="button-close-mini-zan"
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex flex-col bg-card border rounded-t-md shadow-lg overflow-hidden"
+      style={{ width: 320, height: "min(400px, calc(100vh - 6rem))" }}
+      data-testid="mini-zan-window"
+    >
+      <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30 shrink-0">
+        <Sparkles className="h-4 w-4 text-primary shrink-0" />
+        <span className="text-sm font-medium truncate flex-1">Zan</span>
+        <Badge variant="secondary" className="text-[10px] px-1.5 shrink-0">AI</Badge>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="no-default-hover-elevate"
+          onClick={onToggleMinimize}
+          data-testid="button-minimize-mini-zan"
+        >
+          <Minus className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="no-default-hover-elevate"
+          onClick={onClose}
+          data-testid="button-close-mini-zan-open"
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="p-3 space-y-3">
+          {messages.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Ask Zan anything about your CRM, tasks, or data.
+            </p>
+          )}
+          {messages.map((msg) => {
+            const isUser = msg.role === "user";
+            return (
+              <div
+                key={msg.id}
+                className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
+                data-testid={`zan-msg-${msg.id}`}
+              >
+                <div
+                  className={`px-3 py-1.5 rounded-md text-sm max-w-[85%] whitespace-pre-wrap ${
+                    isUser
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              </div>
+            );
+          })}
+          {sendMutation.isPending && (
+            <div className="flex items-start">
+              <div className="px-3 py-1.5 rounded-md text-sm bg-muted">
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      </ScrollArea>
+
+      <div className="flex items-center gap-1 p-2 border-t shrink-0">
+        <Input
+          ref={inputRef}
+          className="flex-1 text-sm"
+          placeholder="Ask Zan..."
+          value={messageInput}
+          onChange={(e) => onMessageInputChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          data-testid="input-mini-zan-message"
+        />
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          onClick={handleSend}
+          disabled={!messageInput.trim() || sendMutation.isPending}
+          data-testid="button-send-mini-zan"
+        >
+          {sendMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 const MAX_VISIBLE_WINDOWS = 3;
+
+type ZanWindow = {
+  conversationId: string;
+  messages: ZanMessage[];
+  isMinimized: boolean;
+};
 
 export function FloatingChatBar() {
   const { user } = useAuth();
   const { lastMessage, sendMessage } = useWebSocket();
   const [chatWindows, setChatWindows] = useState<ChatWindow[]>([]);
   const [channelWindows, setChannelWindows] = useState<ChannelWindow[]>([]);
+  const [zanWindow, setZanWindow] = useState<ZanWindow | null>(null);
   const [messageInputs, setMessageInputs] = useState<Record<string, string>>({});
 
   const userData = user as any;
@@ -713,18 +916,59 @@ export function FloatingChatBar() {
       });
     };
 
+    const handleOpenMiniZan = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.conversationId) return;
+      const msgs: ZanMessage[] = (detail.messages || []).map((m: any) => ({
+        id: m.id,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        data_entry_preview: m.data_entry_preview,
+      }));
+      setZanWindow({
+        conversationId: detail.conversationId,
+        messages: msgs,
+        isMinimized: false,
+      });
+    };
+
     window.addEventListener("open-mini-chat", handleOpenMiniChat);
     window.addEventListener("open-mini-chat-new", handleOpenMiniChatNew);
     window.addEventListener("open-mini-channel", handleOpenMiniChannel);
+    window.addEventListener("open-mini-zan", handleOpenMiniZan);
     return () => {
       window.removeEventListener("open-mini-chat", handleOpenMiniChat);
       window.removeEventListener("open-mini-chat-new", handleOpenMiniChatNew);
       window.removeEventListener("open-mini-channel", handleOpenMiniChannel);
+      window.removeEventListener("open-mini-zan", handleOpenMiniZan);
     };
   }, [createConversationMutation, markAsReadMutation]);
 
   return (
     <div className="fixed bottom-10 left-0 lg:left-16 z-50 flex items-end gap-2" data-testid="floating-chat-bar">
+      {zanWindow && (
+        <MiniZanWindow
+          key="zan"
+          conversationId={zanWindow.conversationId}
+          initialMessages={zanWindow.messages}
+          isMinimized={zanWindow.isMinimized}
+          messageInput={messageInputs["zan"] || ""}
+          onMessageInputChange={(val) =>
+            setMessageInputs((prev) => ({ ...prev, zan: val }))
+          }
+          onClose={() => {
+            setZanWindow(null);
+            setMessageInputs((prev) => {
+              const next = { ...prev };
+              delete next["zan"];
+              return next;
+            });
+          }}
+          onToggleMinimize={() =>
+            setZanWindow((prev) => prev ? { ...prev, isMinimized: !prev.isMinimized } : null)
+          }
+        />
+      )}
       {channelWindows.slice(-MAX_VISIBLE_WINDOWS).map((win) => (
         <MiniChannelWindow
           key={`ch-${win.channelId}`}

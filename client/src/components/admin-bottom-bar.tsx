@@ -327,9 +327,17 @@ export function AdminBottomBar() {
                 <>
                   <div
                     className="flex items-center gap-2 p-2 rounded-md cursor-pointer hover-elevate"
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent("open-admin-chat-widget"));
+                    onClick={async () => {
                       setActivePanel(null);
+                      try {
+                        const res = await apiRequest("GET", "/api/admin-chat/conversations/current");
+                        const data = await res.json();
+                        window.dispatchEvent(new CustomEvent("open-mini-zan", {
+                          detail: { conversationId: data.id, messages: data.messages || [] }
+                        }));
+                      } catch (err) {
+                        console.error("[ZAN] Failed to open:", err);
+                      }
                     }}
                     data-testid="bottom-bar-zan-ai"
                   >

@@ -334,16 +334,26 @@ export function AdminChatWidget() {
 
   const initMutation = useMutation({
     mutationFn: async () => {
-      const convRes = await apiRequest("POST", "/api/admin-chat/conversations", {});
+      const convRes = await apiRequest("GET", "/api/admin-chat/conversations/current");
       const conv = await convRes.json();
       const ctxRes = await apiRequest("POST", "/api/admin-chat/context", {});
       const ctx: AdminContext = await ctxRes.json();
-      return { convId: conv.id as string, ctx };
+      return { convId: conv.id as string, existingMessages: conv.messages || [], ctx };
     },
-    onSuccess: ({ convId, ctx }) => {
+    onSuccess: ({ convId, existingMessages, ctx }) => {
       setConversationId(convId);
       setAdminCtx(ctx);
-      if (!hasGreeting) {
+      if (existingMessages.length > 0) {
+        const loaded: LocalMessage[] = existingMessages.map((m: any) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          data_entry_preview: m.data_entry_preview || null,
+        }));
+        setMessages(loaded);
+        setHasGreeting(true);
+        setBriefingReady(true);
+      } else if (!hasGreeting) {
         const greeting = buildGreeting(ctx);
         setMessages([{ id: "greeting", role: "assistant", content: greeting }]);
         setHasGreeting(true);

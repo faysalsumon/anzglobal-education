@@ -12,7 +12,7 @@ import {
   universities,
   courses,
 } from "@shared/schema";
-import { eq, and, lt, gte, lte, ne, sql, count, inArray, ilike } from "drizzle-orm";
+import { eq, and, lt, gte, lte, ne, sql, count, inArray, ilike, desc } from "drizzle-orm";
 import OpenAI from "openai";
 import { scrapeWebsite } from "./web-scraper-service";
 import { extractInstitutionData, extractCourseData } from "./ai-extractor-service";
@@ -923,6 +923,34 @@ BEHAVIOUR:
 }
 
 export function registerAdminChatRoutes(app: Express) {
+  app.get("/api/admin-chat/conversations/current", requireAdmin, async (req: any, res: Response) => {
+    try {
+      const userId = getUserId(req)!;
+      const existing = await db
+        .select()
+        .from(chatConversations)
+        .where(eq(chatConversations.userId, userId))
+        .orderBy(desc(chatConversations.createdAt))
+        .limit(1);
+      if (existing.length > 0) {
+        const msgs = await db
+          .select()
+          .from(chatMessages)
+          .where(eq(chatMessages.conversationId, existing[0].id))
+          .orderBy(chatMessages.createdAt);
+        return res.json({ id: existing[0].id, messages: msgs });
+      }
+      const [conv] = await db
+        .insert(chatConversations)
+        .values({ userId })
+        .returning();
+      return res.json({ id: conv.id, messages: [] });
+    } catch (err) {
+      console.error("[AdminChat] get-or-create conversation error:", err);
+      res.status(500).json({ message: "Failed to get conversation" });
+    }
+  });
+
   app.post("/api/admin-chat/conversations", requireAdmin, async (req: any, res: Response) => {
     try {
       const userId = getUserId(req)!;
