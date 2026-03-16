@@ -438,11 +438,15 @@ function escapeXmlAttr(str: string): string {
   return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function escapeExternalBody(body: string): string {
+  return body.replace(/<\/?EXTERNAL_DATA/gi, "[SANITIZED-TAG]");
+}
+
 function wrapExternalData(source: string, content: string, attrs?: Record<string, string>): string {
   const attrStr = attrs
     ? " " + Object.entries(attrs).map(([k, v]) => `${k}="${escapeXmlAttr(v)}"`).join(" ")
     : "";
-  return `<EXTERNAL_DATA source="${escapeXmlAttr(source)}"${attrStr}>${content}</EXTERNAL_DATA>`;
+  return `<EXTERNAL_DATA source="${escapeXmlAttr(source)}"${attrStr}>${escapeExternalBody(content)}</EXTERNAL_DATA>`;
 }
 
 function sanitizeExternalContent(text: string): string {
@@ -545,10 +549,10 @@ async function executeToolCall(
         try {
           const url = new URL(args.url);
           if (!["http:", "https:"].includes(url.protocol)) {
-            return wrapExternalData("scraped_institution", JSON.stringify({ success: false, error: "Only http/https URLs are allowed" }), { url: args.url });
+            return wrapExternalData("scraped_url", JSON.stringify({ success: false, error: "Only http/https URLs are allowed" }), { url: args.url, type: "institution" });
           }
           if (isPrivateUrl(args.url)) {
-            return wrapExternalData("scraped_institution", JSON.stringify({ success: false, error: "Cannot scrape private/internal URLs" }), { url: args.url });
+            return wrapExternalData("scraped_url", JSON.stringify({ success: false, error: "Cannot scrape private/internal URLs" }), { url: args.url, type: "institution" });
           }
           const scraped = await scrapeWebsite({ url: args.url, timeout: 20000 });
           const extracted = await extractInstitutionData(scraped.html, args.url);
@@ -560,13 +564,13 @@ async function executeToolCall(
             warnings: [...(extracted.warnings || []), ...sanitizedData.warnings],
             sourceUrl: args.url,
           });
-          return wrapExternalData("scraped_institution", result, { url: args.url });
+          return wrapExternalData("scraped_url", result, { url: args.url, type: "institution" });
         } catch (err: any) {
-          return wrapExternalData("scraped_institution", JSON.stringify({
+          return wrapExternalData("scraped_url", JSON.stringify({
             success: false,
             error: err.message || "Failed to scrape/extract institution data",
             suggestion: "Try providing data manually or use a different URL",
-          }), { url: args.url });
+          }), { url: args.url, type: "institution" });
         }
       }
 
@@ -649,10 +653,10 @@ async function executeToolCall(
         try {
           const url = new URL(args.url);
           if (!["http:", "https:"].includes(url.protocol)) {
-            return wrapExternalData("scraped_course", JSON.stringify({ success: false, error: "Only http/https URLs are allowed" }), { url: args.url });
+            return wrapExternalData("scraped_url", JSON.stringify({ success: false, error: "Only http/https URLs are allowed" }), { url: args.url, type: "course" });
           }
           if (isPrivateUrl(args.url)) {
-            return wrapExternalData("scraped_course", JSON.stringify({ success: false, error: "Cannot scrape private/internal URLs" }), { url: args.url });
+            return wrapExternalData("scraped_url", JSON.stringify({ success: false, error: "Cannot scrape private/internal URLs" }), { url: args.url, type: "course" });
           }
           const scraped = await scrapeWebsite({ url: args.url, timeout: 20000 });
           const extracted = await extractCourseData(scraped.html, args.url, args.institutionName);
@@ -664,13 +668,13 @@ async function executeToolCall(
             warnings: [...(extracted.warnings || []), ...sanitizedData.warnings],
             sourceUrl: args.url,
           });
-          return wrapExternalData("scraped_course", result, { url: args.url });
+          return wrapExternalData("scraped_url", result, { url: args.url, type: "course" });
         } catch (err: any) {
-          return wrapExternalData("scraped_course", JSON.stringify({
+          return wrapExternalData("scraped_url", JSON.stringify({
             success: false,
             error: err.message || "Failed to scrape/extract course data",
             suggestion: "Try providing course data manually or use a different URL",
-          }), { url: args.url });
+          }), { url: args.url, type: "course" });
         }
       }
 
