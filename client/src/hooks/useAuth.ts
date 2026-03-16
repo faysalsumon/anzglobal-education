@@ -16,7 +16,7 @@ const ALL_NAV_SECTIONS = ['crm', 'cms', 'management', 'finance', 'people', 'tool
 
 const ROLE_NAV_SECTIONS: Record<string, readonly string[]> = {
   cto: ALL_NAV_SECTIONS,
-  ceo: ALL_NAV_SECTIONS,
+  ceo: ['crm', 'cms', 'finance', 'people'],
   cfo: ['crm', 'finance'],
   branch_manager: ['crm', 'people'],
   marketing_executive: ['crm', 'cms'],
