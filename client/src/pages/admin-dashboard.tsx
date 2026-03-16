@@ -405,7 +405,6 @@ const courseSchema = z.object({
   durationWeeks: optionalPositiveInt,
   fees: optionalPositiveNumber,
   applicationFees: optionalNonNegativeNumber,
-  costOfLiving: optionalPositiveNumber,
   currency: z.string().optional(),
   
   // Location & Dates
@@ -718,7 +717,6 @@ export default function AdminDashboard() {
       durationWeeks: "" as any,
       fees: "" as any,
       applicationFees: "" as any,
-      costOfLiving: "" as any,
       currency: "AUD",
       location: "",
       country: "",

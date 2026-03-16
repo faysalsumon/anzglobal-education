@@ -87,7 +87,6 @@ export default function CourseForm() {
       eligibilityRequirements: "",
       englishRequirements: "",
       curriculumUrl: "",
-      costOfLiving: undefined,
       applicationFees: undefined,
       isActive: true,
       intakes: [],
@@ -138,7 +137,6 @@ export default function CourseForm() {
         eligibilityRequirements: course.eligibilityRequirements ?? "",
         englishRequirements: course.englishRequirements ?? "",
         curriculumUrl: course.curriculumUrl ?? "",
-        costOfLiving: course.costOfLiving ?? undefined,
         applicationFees: course.applicationFees ?? undefined,
         isActive: course.isActive ?? true,
         intakes: course.intakes ?? [],
@@ -952,29 +950,6 @@ export default function CourseForm() {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="costOfLiving"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cost of Living (Annual)</FormLabel>
-                      <FormDescription>Estimated yearly living expenses</FormDescription>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="18000.00"
-                          value={field.value ?? ""}
-                          onChange={(e) => {
-                            field.onChange(e.target.value || undefined);
-                          }}
-                          data-testid="input-cost-of-living"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">

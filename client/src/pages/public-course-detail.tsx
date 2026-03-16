@@ -278,7 +278,7 @@ export default function PublicCourseDetail() {
     sections.push("about");
     
     // Fees section - include dynamic pricing tiers
-    if (pricingTiers.length > 0 || course.fees || course.costOfLiving || course.applicationFees || course.admissionFee) {
+    if (pricingTiers.length > 0 || course.fees || course.applicationFees || course.admissionFee) {
       sections.push("fees");
     }
     
@@ -998,7 +998,7 @@ export default function PublicCourseDetail() {
             </ResponsiveSection>
 
             {/* Modern Financial Breakdown - Show if pricing tiers exist OR static fees exist */}
-            {(pricingTiers.length > 0 || course.fees || course.costOfLiving || course.applicationFees || course.admissionFee) && (
+            {(pricingTiers.length > 0 || course.fees || course.applicationFees || course.admissionFee) && (
               <ResponsiveSection
                 id="fees"
                 icon={<DollarSign className="h-5 w-5 text-primary" />}
@@ -1176,21 +1176,6 @@ export default function PublicCourseDetail() {
                     </div>
                   )}
 
-                  {/* Living Costs - show below fees if available */}
-                  {course.costOfLiving && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-secondary/5 to-transparent p-6" data-testid="card-living-costs">
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                          <span className="text-sm text-muted-foreground">Living Costs</span>
-                          <div className="p-2 bg-secondary/10 rounded-lg">
-                            <Home className="h-4 w-4 text-secondary" />
-                          </div>
-                        </div>
-                        <p className="text-3xl font-bold" data-testid="text-living-cost-amount">{course.currency} {Number(course.costOfLiving).toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Estimated yearly</p>
-                      </div>
-                    </div>
-                  )}
               </ResponsiveSection>
             )}
 

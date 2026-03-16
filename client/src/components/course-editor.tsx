@@ -375,7 +375,6 @@ const courseSchema = z.object({
   durationWeeks: optionalPositiveInt,
   fees: optionalPositiveNumber,
   applicationFees: optionalNonNegativeNumber,
-  costOfLiving: optionalPositiveNumber,
   currency: z.string().optional(),
   location: z.string().optional(),
   country: z.string().optional(),
@@ -394,6 +393,11 @@ const courseSchema = z.object({
   studyAreas: z.string().optional(),
   careerOutcomes: z.string().optional(),
   careerPath: z.string().optional(),
+  deliveryMode: z.string().optional(),
+  internshipAvailable: z.boolean().optional(),
+  internshipDetails: z.string().optional(),
+  minimumAge: optionalPositiveInt,
+  prPathway: z.boolean().optional(),
 });
 
 interface Institution {
@@ -427,7 +431,6 @@ interface Course {
   durationMonths?: number | null;
   durationWeeks?: number | null;
   applicationFees?: number | null;
-  costOfLiving?: number | null;
   currency?: string | null;
   location?: string | null;
   country?: string | null;
@@ -446,6 +449,11 @@ interface Course {
   studyAreas?: string[] | null;
   careerOutcomes?: string[] | null;
   careerPath?: string | null;
+  deliveryMode?: string | null;
+  internshipAvailable?: boolean | null;
+  internshipDetails?: string | null;
+  minimumAge?: number | null;
+  prPathway?: boolean | null;
   campusLocations?: string[] | null;
   thumbnailUrl?: string | null;
   thumbnailStatus?: string | null;
@@ -1072,7 +1080,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       durationWeeks: course?.durationWeeks || ("" as any),
       fees: course?.fees || ("" as any),
       applicationFees: course?.applicationFees || ("" as any),
-      costOfLiving: course?.costOfLiving || ("" as any),
       currency: course?.currency || getCurrencyForCountry(initialInstitutionCountry),
       location: course?.location || "",
       country: course?.country || "",
@@ -1091,6 +1098,11 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       studyAreas: Array.isArray(course?.studyAreas) ? course.studyAreas.join(", ") : "",
       careerOutcomes: Array.isArray(course?.careerOutcomes) ? course.careerOutcomes.join(", ") : "",
       careerPath: course?.careerPath || "",
+      deliveryMode: course?.deliveryMode || "",
+      internshipAvailable: course?.internshipAvailable ?? false,
+      internshipDetails: course?.internshipDetails || "",
+      minimumAge: course?.minimumAge || ("" as any),
+      prPathway: course?.prPathway ?? false,
     },
   });
 
@@ -1499,6 +1511,9 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     if (data.englishRequirements) form.setValue("englishRequirements", data.englishRequirements);
     if (data.careerOutcomes && data.careerOutcomes.length > 0) form.setValue("careerOutcomes", data.careerOutcomes.join(", "));
     if (data.careerPath) form.setValue("careerPath", data.careerPath);
+    if (data.deliveryMode) form.setValue("deliveryMode", data.deliveryMode);
+    if (data.internshipDetails) form.setValue("internshipDetails", data.internshipDetails);
+    if (data.minimumAge) form.setValue("minimumAge", data.minimumAge);
     if (data.studyAreas && data.studyAreas.length > 0) form.setValue("studyAreas", data.studyAreas.join(", "));
     
     // Apply structured English requirements if available
@@ -2833,6 +2848,31 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                       )}
                     </div>
 
+                    {/* Delivery Mode */}
+                    <FormField
+                      control={form.control}
+                      name="deliveryMode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Delivery Mode</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-course-deliveryMode">
+                                <SelectValue placeholder="Select delivery mode" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="on-campus">On Campus</SelectItem>
+                              <SelectItem value="online">Online</SelectItem>
+                              <SelectItem value="hybrid">Hybrid</SelectItem>
+                              <SelectItem value="blended">Blended</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     {/* Intake Templates Manager */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
@@ -3309,6 +3349,41 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         </FormItem>
                       )}
                     />
+
+                    <FormField
+                      control={form.control}
+                      name="eligibilityRequirements"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            Eligibility Requirements
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="text-sm">
+                                  General eligibility criteria such as minimum age, work experience, or other conditions not covered by academic qualifications.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="e.g., Applicants must be at least 18 years old with a minimum of 2 years of relevant work experience..."
+                              rows={4}
+                              data-testid="input-course-eligibilityRequirements"
+                            />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            General eligibility criteria (age, work experience, residency status, etc.)
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     {/* Discipline-Specific Regulatory Warnings */}
                     {detectedDisciplineRules.length > 0 && (
                       <div className="space-y-3">
@@ -3980,6 +4055,156 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         </div>
                       )}
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Career & Outcomes */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      Career &amp; Outcomes
+                    </CardTitle>
+                    <CardDescription>Career paths, outcomes, and internship opportunities</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <FormField
+                      control={form.control}
+                      name="careerOutcomes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            Career Outcomes
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="text-sm">Enter job titles graduates can pursue, separated by commas.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="e.g., Civil Engineer, Project Manager, Construction Manager, Structural Designer"
+                              rows={3}
+                              data-testid="input-course-careerOutcomes"
+                            />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Comma-separated list of roles graduates typically pursue
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="careerPath"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Career Path Description</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Describe the typical career progression and opportunities for graduates..."
+                              rows={3}
+                              data-testid="input-course-careerPath"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="minimumAge"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Minimum Age</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="number"
+                                placeholder="18"
+                                onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")}
+                                data-testid="input-course-minimumAge"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="prPathway"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel>PR Pathway</FormLabel>
+                              <p className="text-xs text-muted-foreground">
+                                This course can lead to permanent residency
+                              </p>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value ?? false}
+                                onCheckedChange={field.onChange}
+                                data-testid="switch-course-prPathway"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="internshipAvailable"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <FormLabel>Internship Available</FormLabel>
+                            <p className="text-xs text-muted-foreground">
+                              This course includes an internship or work placement component
+                            </p>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value ?? false}
+                              onCheckedChange={field.onChange}
+                              data-testid="switch-course-internshipAvailable"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {form.watch("internshipAvailable") && (
+                      <FormField
+                        control={form.control}
+                        name="internshipDetails"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Internship Details</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                {...field}
+                                placeholder="Describe the internship: duration, industry, placement process, host organisations..."
+                                rows={3}
+                                data-testid="input-course-internshipDetails"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </CardContent>
                 </Card>
 

@@ -11662,7 +11662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
       
       const decimalFields = [
-        'fees', 'costOfLiving', 'applicationFees', 'admissionFee'
+        'fees', 'applicationFees', 'admissionFee'
       ];
       
       // Enum and other fields that can't accept empty strings
@@ -11702,7 +11702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Handle boolean fields - normalize to proper boolean
-      const booleanFields = ['isCricosRegistered', 'prPathway', 'isActive'];
+      const booleanFields = ['isCricosRegistered', 'prPathway', 'isActive', 'internshipAvailable'];
       for (const field of booleanFields) {
         if (field in updateData) {
           if (updateData[field] === '' || updateData[field] === null || updateData[field] === undefined) {
