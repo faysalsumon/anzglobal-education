@@ -247,6 +247,111 @@ export async function batchScrape(
   return results;
 }
 
+export interface DeepScrapeResult {
+  combinedText: string;
+  pagesScraped: string[];
+  homepageHtml: string;
+  scrapedAt: string;
+}
+
+const SUBPAGE_PATTERNS = [
+  { pattern: /\/(about|about-us|about-ikon|our-story|who-we-are|our-history)(\/|$)/i, label: "about" },
+  { pattern: /\/(contact|contact-us|get-in-touch|enquire|enquiry)(\/|$)/i, label: "contact" },
+  { pattern: /\/(campuses|campus|locations|our-campuses|our-locations|centres|centers)(\/|$)/i, label: "campuses" },
+  { pattern: /\/(team|our-team|staff|leadership|people|faculty)(\/|$)/i, label: "team" },
+];
+
+const SUBPAGE_LINK_TEXT = [
+  { pattern: /^about(\s+us)?$/i, label: "about" },
+  { pattern: /^contact(\s+us)?$/i, label: "contact" },
+  { pattern: /^(our\s+)?campuses?$/i, label: "campuses" },
+  { pattern: /^(our\s+)?locations?$/i, label: "campuses" },
+  { pattern: /^(our\s+)?team$/i, label: "team" },
+];
+
+export async function deepScrapeInstitution(baseUrl: string, timeout: number = 15000): Promise<DeepScrapeResult> {
+  const homepage = await scrapeWebsite({ url: baseUrl, timeout });
+  const $ = cheerio.load(homepage.html);
+  const baseUrlObj = new URL(baseUrl);
+
+  const foundSubpages = new Map<string, string>();
+
+  $("a").each((_, el) => {
+    const href = $(el).attr("href");
+    const text = ($(el).text() || "").trim();
+    if (!href) return;
+
+    let absUrl: string;
+    try {
+      absUrl = new URL(href, baseUrl).toString();
+      const urlObj = new URL(absUrl);
+      if (urlObj.hostname !== baseUrlObj.hostname) return;
+    } catch { return; }
+
+    for (const { pattern, label } of SUBPAGE_PATTERNS) {
+      if (pattern.test(absUrl) && !foundSubpages.has(label)) {
+        foundSubpages.set(label, absUrl);
+        return;
+      }
+    }
+    for (const { pattern, label } of SUBPAGE_LINK_TEXT) {
+      if (pattern.test(text) && !foundSubpages.has(label)) {
+        foundSubpages.set(label, absUrl);
+        return;
+      }
+    }
+  });
+
+  const subpageEntries = Array.from(foundSubpages.entries()).slice(0, 4);
+  const pagesScraped = [baseUrl];
+  let combined = `[PAGE: /]\n${extractTextContent(homepage.html)}\n\n`;
+
+  for (const [label, subUrl] of subpageEntries) {
+    try {
+      await rateLimit(subUrl);
+      const allowed = await isAllowedByRobots(subUrl);
+      if (!allowed) continue;
+      const sub = await scrapeStatic(subUrl, timeout);
+      const path = new URL(subUrl).pathname;
+      combined += `[PAGE: ${path} (${label})]\n${extractTextContent(sub.html)}\n\n`;
+      pagesScraped.push(subUrl);
+      console.log(`[DeepScrape] Scraped subpage: ${path} (${label})`);
+    } catch (err: any) {
+      console.warn(`[DeepScrape] Failed subpage ${label} (${subUrl}): ${err.message}`);
+    }
+  }
+
+  if (combined.length > 40000) {
+    combined = combined.substring(0, 40000) + "\n[Content truncated at 40000 chars]";
+  }
+
+  return {
+    combinedText: combined,
+    pagesScraped,
+    homepageHtml: homepage.html,
+    scrapedAt: new Date().toISOString(),
+  };
+}
+
+function extractTextContent(html: string): string {
+  const $ = cheerio.load(html);
+  $("script, style, noscript, svg, path, iframe").remove();
+  const blocks: string[] = [];
+  $("body *").each((_, el) => {
+    const tag = (el as cheerio.TagElement).tagName;
+    if (["p", "h1", "h2", "h3", "h4", "h5", "h6", "li", "td", "th", "address", "span", "a", "div"].includes(tag)) {
+      const text = $(el).clone().children().remove().end().text().trim();
+      if (text.length > 2) blocks.push(text);
+    }
+  });
+  const footerEl = $("footer");
+  if (footerEl.length) {
+    blocks.push("[FOOTER]");
+    blocks.push(footerEl.text().replace(/\s+/g, " ").trim());
+  }
+  return [...new Set(blocks)].join("\n");
+}
+
 /**
  * Intelligent course page discovery result
  */

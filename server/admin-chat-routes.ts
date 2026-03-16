@@ -14,7 +14,7 @@ import {
 } from "@shared/schema";
 import { eq, and, lt, gte, lte, ne, sql, count, inArray, ilike, desc } from "drizzle-orm";
 import OpenAI from "openai";
-import { scrapeWebsite } from "./web-scraper-service";
+import { scrapeWebsite, deepScrapeInstitution } from "./web-scraper-service";
 import { extractInstitutionData, extractCourseData } from "./ai-extractor-service";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -153,11 +153,13 @@ WORKFLOW FOR INSTITUTIONS:
 1. First call check_institution_exists to see if it's already in the platform
 2. If it exists, inform the user and provide the existing record details
 3. If not found, call search_web to find the institution's official website and key information
-4. Once you have the URL, call scrape_and_extract_institution with the official website URL
+4. Once you have the URL, call scrape_and_extract_institution with the official website URL — this now performs a DEEP multi-page scrape (homepage + about/contact/campuses subpages automatically)
 5. If scraping fails, DO NOT stop or ask the user what to do — automatically fall back to search_web results and your own knowledge to populate as many fields as possible
-6. Call prepare_institution_draft with all assembled data — this presents a confirmation card to the user
-7. The user will click "Save as Draft" in the UI to save the record — you CANNOT save directly
-8. PROACTIVE NEXT STEP: After presenting the institution draft, immediately ask "Would you like me to search for and add courses for this institution?"
+6. For Australian institutions: call lookup_rto_cricos to get the RTO number and CRICOS provider code from official government registers (training.gov.au and cricos.education.gov.au)
+7. Merge all data: scraped data + RTO/CRICOS lookup + any web search results + your knowledge
+8. Call prepare_institution_draft with all assembled data — this presents a confirmation card to the user
+9. The user will click "Save as Draft" in the UI to save the record — you CANNOT save directly
+10. PROACTIVE NEXT STEP: After presenting the institution draft, immediately ask "Would you like me to search for and add courses for this institution?"
 
 WORKFLOW FOR COURSES:
 1. First call find_institution_by_name to locate the parent institution
@@ -181,7 +183,7 @@ INSTITUTION REQUIRED FIELDS:
 - country: Country name (e.g., "Australia")
 
 INSTITUTION IMPORTANT OPTIONAL FIELDS (always try to fill):
-- website, logo, description, smallDescription (max 100 words), fullDescription
+- website, description, smallDescription (max 100 words), fullDescription
 - contactEmail, contactPhone, establishedYear, numberOfCampuses
 - campusAddresses (array of {name, address, city, state, postcode, country})
 - scholarshipPercentageMin/Max, tuitionFeesMin/Max, tuitionCurrency
@@ -190,8 +192,24 @@ INSTITUTION IMPORTANT OPTIONAL FIELDS (always try to fill):
 - topDisciplines, accreditationStatus, rankingBand
 - facilities (array: "Library", "Sports Center", etc.)
 - internationalStudentSupport (boolean), tags (array)
-- rtoNumber, cricosProviderCode, institutionGallery (up to 3 image URLs)
+- rtoNumber, cricosProviderCode (use lookup_rto_cricos for Australian providers — NEVER guess these)
 - availableMarkets: default ["AU", "BD"]
+
+UPLOAD QUALITY GUIDELINES — FIELD-BY-FIELD RULES:
+These rules ensure every institution draft is high quality. Follow them strictly.
+
+- **name**: Use the FULL OFFICIAL LEGAL NAME exactly as printed in the website header, footer, or ABN lookup. Never shorten or abbreviate. Example: "Ikon Institute of Australia" NOT "Ikon Institution". "Swinburne University of Technology" NOT "Swinburne University".
+- **providerType**: University = publicly chartered university with "University" in its official name; Tafe = TAFE institution with "TAFE" in its name; School = secondary or primary education provider; Institution = everything else (private colleges, RTOs, VET providers, institutes)
+- **contactEmail / contactPhone**: ALWAYS check the Contact page content from the deep scrape. Phone numbers in the local format as found on the website (e.g. "+61 3 9001 2345" or "(03) 9001 2345"). If not found in scraped data, try web search.
+- **establishedYear**: 4-digit year ONLY. Look for "established", "founded", "since YYYY" in the About page content. NEVER guess or invent a year.
+- **campusAddresses**: MUST include the full street address (street number + name), suburb/city, state, postcode, and country for EVERY campus. NEVER return just a city name like "Sydney" — find the actual address from the Contact or Campuses page. Each entry: {name: "Sydney Campus", address: "123 George St", city: "Sydney", state: "NSW", postcode: "2000", country: "Australia"}
+- **rtoNumber / cricosProviderCode**: For Australian providers, ALWAYS call lookup_rto_cricos AFTER scraping. Never guess, invent, or hallucinate these numbers. They must come from the official government registers (training.gov.au and cricos.education.gov.au).
+- **accreditationStatus**: If CRICOS and/or RTO numbers are confirmed → "Fully Accredited (CRICOS/RTO Registered)". Otherwise use whatever accreditation status is stated on the institution's website.
+- **topDisciplines**: Must be picked from the EXACT discipline list defined above (e.g. "Education & Training", "Arts, Design & Architecture"). No free-form text.
+- **deliveryModes**: Only use the exact values: "on-campus", "online", "hybrid", "blended"
+- **availableMarkets**: Default to ["AU", "BD"] unless the user specifies otherwise
+- **description / smallDescription / fullDescription**: Extract from the website. smallDescription max 100 words summarizing key strengths. fullDescription can be longer and comprehensive from the About page.
+- **Do NOT upload logo** — logo handling is separate and not part of Zan's workflow
 
 COURSE REQUIRED FIELDS:
 - title: Full course name
@@ -283,7 +301,7 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "scrape_and_extract_institution",
-      description: "Scrape an institution's website and extract structured data using AI. Provide the official institution website URL.",
+      description: "Deep-scrape an institution's website (homepage + about/contact/campuses subpages) and extract structured data using AI. Automatically follows internal links to gather comprehensive data.",
       parameters: {
         type: "object",
         properties: {
@@ -305,7 +323,6 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
           providerType: { type: "string", enum: ["University", "Institution", "Tafe", "School"] },
           country: { type: "string" },
           website: { type: "string" },
-          logo: { type: "string" },
           description: { type: "string" },
           smallDescription: { type: "string" },
           fullDescription: { type: "string" },
@@ -414,6 +431,21 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
           courseCode: { type: "string" },
         },
         required: ["universityId", "title", "subject", "level", "discipline"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "lookup_rto_cricos",
+      description: "Look up an Australian institution's RTO number (from training.gov.au) and CRICOS provider code (from cricos.education.gov.au). Only use for Australian education providers.",
+      parameters: {
+        type: "object",
+        properties: {
+          institutionName: { type: "string", description: "Full name of the institution to look up" },
+          country: { type: "string", description: "Country of the institution (should be 'Australia')" },
+        },
+        required: ["institutionName", "country"],
       },
     },
   },
@@ -554,14 +586,17 @@ async function executeToolCall(
           if (isPrivateUrl(args.url)) {
             return wrapExternalData("scraped_url", JSON.stringify({ success: false, error: "Cannot scrape private/internal URLs" }), { url: args.url, type: "institution" });
           }
-          const scraped = await scrapeWebsite({ url: args.url, timeout: 20000 });
-          const extracted = await extractInstitutionData(scraped.html, args.url);
+          console.log(`[ZAN] Deep-scraping institution: ${args.url}`);
+          const deepResult = await deepScrapeInstitution(args.url, 15000);
+          console.log(`[ZAN] Deep scrape complete: ${deepResult.pagesScraped.length} pages scraped`);
+          const extracted = await extractInstitutionData(deepResult.combinedText, args.url);
           const sanitizedData = sanitizeExtractedFields(extracted.data);
           const result = JSON.stringify({
             success: true,
             data: sanitizedData.data,
             confidence: extracted.confidence,
             warnings: [...(extracted.warnings || []), ...sanitizedData.warnings],
+            pagesScraped: deepResult.pagesScraped,
             sourceUrl: args.url,
           });
           return wrapExternalData("scraped_url", result, { url: args.url, type: "institution" });
@@ -601,7 +636,6 @@ async function executeToolCall(
         };
 
         if (args.website) insertData.website = args.website;
-        if (args.logo) insertData.logo = args.logo;
         if (args.description) insertData.description = args.description;
         if (args.smallDescription) insertData.smallDescription = args.smallDescription;
         if (args.fullDescription) insertData.fullDescription = args.fullDescription;
@@ -675,6 +709,104 @@ async function executeToolCall(
             error: err.message || "Failed to scrape/extract course data",
             suggestion: "Try providing course data manually or use a different URL",
           }), { url: args.url, type: "course" });
+        }
+      }
+
+      case "lookup_rto_cricos": {
+        if (args.country && args.country.toLowerCase() !== "australia") {
+          return wrapExternalData("rto_cricos_lookup", JSON.stringify({
+            success: false,
+            error: "RTO/CRICOS lookup is only available for Australian institutions",
+          }), { institutionName: args.institutionName });
+        }
+        try {
+          const rtoQuery = `"${args.institutionName}" site:training.gov.au RTO`;
+          const cricosQuery = `"${args.institutionName}" site:cricos.education.gov.au CRICOS provider code`;
+
+          let rtoText = "";
+          let cricosText = "";
+
+          try {
+            const rtoResponse = await openai.responses.create({
+              model: "gpt-4o-mini",
+              tools: [{ type: "web_search_preview" }],
+              input: rtoQuery,
+            });
+            for (const item of rtoResponse.output) {
+              if (item.type === "message") {
+                for (const c of item.content) {
+                  if (c.type === "output_text") rtoText += c.text;
+                }
+              }
+            }
+          } catch (e: any) {
+            rtoText = `RTO search failed: ${e.message}`;
+          }
+
+          try {
+            const cricosResponse = await openai.responses.create({
+              model: "gpt-4o-mini",
+              tools: [{ type: "web_search_preview" }],
+              input: cricosQuery,
+            });
+            for (const item of cricosResponse.output) {
+              if (item.type === "message") {
+                for (const c of item.content) {
+                  if (c.type === "output_text") cricosText += c.text;
+                }
+              }
+            }
+          } catch (e: any) {
+            cricosText = `CRICOS search failed: ${e.message}`;
+          }
+
+          const extractionPrompt = `Extract the RTO number and CRICOS provider code for "${args.institutionName}" from these search results.
+
+RTO Search Results:
+${rtoText.substring(0, 3000)}
+
+CRICOS Search Results:
+${cricosText.substring(0, 3000)}
+
+Return JSON with: rtoNumber (string or null), cricosProviderCode (string or null), confidence (0-1), notes (string with any caveats).
+Only return numbers you are confident are correct for this specific institution. If unsure, return null.`;
+
+          const extraction = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: extractionPrompt }],
+            response_format: {
+              type: "json_schema",
+              json_schema: {
+                name: "rto_cricos_extraction",
+                strict: true,
+                schema: {
+                  type: "object",
+                  properties: {
+                    rtoNumber: { anyOf: [{ type: "string" }, { type: "null" }] },
+                    cricosProviderCode: { anyOf: [{ type: "string" }, { type: "null" }] },
+                    confidence: { type: "number" },
+                    notes: { type: "string" },
+                  },
+                  required: ["rtoNumber", "cricosProviderCode", "confidence", "notes"],
+                  additionalProperties: false,
+                },
+              },
+            },
+            temperature: 0.1,
+          });
+
+          const parsed = JSON.parse(extraction.choices[0].message.content || "{}");
+          const sanitizedResult = sanitizeExtractedFields(parsed);
+          return wrapExternalData("rto_cricos_lookup", JSON.stringify({
+            success: true,
+            ...sanitizedResult.data,
+            source: "training.gov.au / cricos.education.gov.au",
+          }), { institutionName: args.institutionName });
+        } catch (err: any) {
+          return wrapExternalData("rto_cricos_lookup", JSON.stringify({
+            success: false,
+            error: err.message || "RTO/CRICOS lookup failed",
+          }), { institutionName: args.institutionName });
         }
       }
 

@@ -251,17 +251,27 @@ EXTRACTION RULES:
 4. For arrays, extract all relevant items found
 5. For enums, use EXACTLY one of the provided values
 
+MULTI-PAGE INPUT FORMAT:
+The input contains text from MULTIPLE pages of the institution's website, separated by [PAGE: /path (label)] markers. Use all pages to extract the most complete data:
+- [PAGE: /] — Homepage: institution name, tagline, featured courses, overview
+- [PAGE: /about ...] or [PAGE: /about-us ...] — About page: established year, history, full description, mission
+- [PAGE: /contact ...] or [PAGE: /contact-us ...] — Contact page: email, phone, office addresses
+- [PAGE: /campuses ...] or [PAGE: /locations ...] — Campuses page: full street addresses per campus
+- [PAGE: /team ...] — Team page: leadership info
+- [FOOTER] — Footer sections often contain phone, email, ABN, addresses
+
 FIELD-SPECIFIC EXTRACTION GUIDANCE:
-- name, description: Extract institution name and overview/description accurately
-- contact details (contactEmail, contactPhone, website): Extract from contact/footer sections
+- name: Extract the FULL OFFICIAL legal name of the institution exactly as it appears in the website header, footer, or ABN registration. Use the complete name (e.g. "Ikon Institute of Australia", NOT "Ikon Institution"). Look in the page title, header, and footer for the canonical name.
+- description: Extract institution overview/description accurately
+- contactEmail, contactPhone: Look FIRST in [PAGE: /contact] sections, THEN in [FOOTER] sections. Extract actual email addresses and phone numbers.
+- website: The source URL provided
 - location, country: Extract from address, location, or "About" sections
-- providerType: Determine from institution description (University, Institution, Tafe, School)
-- establishedYear: Look for founding/established year, history sections
+- providerType: University = publicly chartered with "University" in name; Tafe = has "TAFE" in name; School = secondary/primary education; Institution = everything else (private colleges, RTOs, VET providers)
+- establishedYear: Look for "established", "founded", "since YYYY" in [PAGE: /about] sections. Must be a 4-digit year. Never guess.
 - numberOfCampuses: Count distinct campus locations mentioned
-- campusAddresses: Structure as array of JSON objects [{address, city, state, postcode, country}]
+- campusAddresses: MUST include full street address, suburb/city, state, postcode, and country for each campus. Structure as [{name, address, city, state, postcode, country}]. Never return just city names — find full addresses from [PAGE: /contact], [PAGE: /campuses], or [FOOTER].
 - smallDescription: Extract or synthesize a brief 100-word description highlighting key strengths
 - fullDescription: Extract comprehensive description from About/Overview pages
-- institutionGallery: Extract image URLs from galleries, photo sections (limit to 3-5 best images)
 - topCourses: Extract featured/popular course names mentioned prominently
 - topDisciplines: Extract main academic disciplines/fields of study offered
 - scholarshipPercentageMin/Max: Extract scholarship range if mentioned (numeric values)
@@ -289,12 +299,12 @@ CONFIDENCE SCORING:
 
 OUTPUT FORMAT: Return a JSON object matching the schema exactly.`;
 
-  const userPrompt = `Extract institution information from this HTML:
+  const userPrompt = `Extract institution information from this multi-page website content:
 
 Source URL: ${sourceUrl}
 
-HTML Content:
-${htmlContent.substring(0, 15000)} ${htmlContent.length > 15000 ? "\n\n[Content truncated for length]" : ""}
+Website Content (multiple pages):
+${htmlContent.substring(0, 35000)} ${htmlContent.length > 35000 ? "\n\n[Content truncated for length]" : ""}
 
 Return the extracted institution data as JSON.`;
 
