@@ -948,7 +948,7 @@ export function FloatingChatBar() {
     <div className="fixed bottom-10 left-0 lg:left-16 z-50 flex items-end gap-2" data-testid="floating-chat-bar">
       {zanWindow && (
         <MiniZanWindow
-          key="zan"
+          key={`zan-${zanWindow.conversationId}`}
           conversationId={zanWindow.conversationId}
           initialMessages={zanWindow.messages}
           isMinimized={zanWindow.isMinimized}
