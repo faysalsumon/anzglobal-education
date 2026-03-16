@@ -2031,24 +2031,18 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                     />
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => form.setValue('isCricosRegistered', false)}
-                            className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${!isCricosRegistered ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-muted-foreground border-border hover-elevate'}`}
-                            data-testid="toggle-course-code"
-                          >
-                            Course Code
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => form.setValue('isCricosRegistered', true)}
-                            className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${isCricosRegistered ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-muted-foreground border-border hover-elevate'}`}
-                            data-testid="toggle-cricos-code"
-                          >
-                            CRICOS Code
-                          </button>
+                      <div className="space-y-3">
+                        {/* CRICOS toggle switch */}
+                        <div className="flex items-center gap-3">
+                          <Switch
+                            checked={!!isCricosRegistered}
+                            onCheckedChange={(checked) => form.setValue('isCricosRegistered', checked)}
+                            data-testid="switch-cricos-registered"
+                          />
+                          <div>
+                            <p className="text-sm font-medium leading-none">CRICOS Registered Course</p>
+                            <p className="text-xs text-muted-foreground mt-1">This course appears on the CRICOS register (AU)</p>
+                          </div>
                         </div>
                         {!isCricosRegistered ? (
                           <FormField
@@ -2056,10 +2050,10 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                             name="courseCode"
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel className="text-sm text-muted-foreground">Course Code / RTO Code</FormLabel>
                                 <FormControl>
                                   <Input {...field} placeholder="e.g. BSB51415" data-testid="input-course-code" />
                                 </FormControl>
-                                <FormDescription>RTO or national course code</FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -2070,10 +2064,10 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                             name="cricosCode"
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel className="text-sm text-muted-foreground">CRICOS Code</FormLabel>
                                 <FormControl>
                                   <Input {...field} placeholder="e.g. 116694A" data-testid="input-course-cricos-code" />
                                 </FormControl>
-                                <FormDescription>CRICOS registered course code (AU)</FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}

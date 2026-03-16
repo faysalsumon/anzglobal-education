@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -498,24 +499,18 @@ export default function CourseForm() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => form.setValue('isCricosRegistered', false)}
-                    className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${!isCricosRegistered ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-muted-foreground border-border hover-elevate'}`}
-                    data-testid="toggle-course-code"
-                  >
-                    Course Code
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => form.setValue('isCricosRegistered', true)}
-                    className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${isCricosRegistered ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-muted-foreground border-border hover-elevate'}`}
-                    data-testid="toggle-cricos-code"
-                  >
-                    CRICOS Code
-                  </button>
+              <div className="space-y-3">
+                {/* CRICOS toggle switch */}
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={!!isCricosRegistered}
+                    onCheckedChange={(checked) => form.setValue('isCricosRegistered', checked)}
+                    data-testid="switch-cricos-registered"
+                  />
+                  <div>
+                    <p className="text-sm font-medium leading-none">CRICOS Registered Course</p>
+                    <p className="text-xs text-muted-foreground mt-1">This course appears on the CRICOS register (AU)</p>
+                  </div>
                 </div>
                 {!isCricosRegistered ? (
                   <FormField
@@ -523,10 +518,10 @@ export default function CourseForm() {
                     name="courseCode"
                     render={({ field }) => (
                       <FormItem>
+                        <FormLabel className="text-sm text-muted-foreground">Course Code / RTO Code</FormLabel>
                         <FormControl>
                           <Input {...field} value={field.value ?? ""} placeholder="e.g. BSB51415" data-testid="input-course-code" />
                         </FormControl>
-                        <FormDescription>RTO or national course code</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -537,10 +532,10 @@ export default function CourseForm() {
                     name="cricosCode"
                     render={({ field }) => (
                       <FormItem>
+                        <FormLabel className="text-sm text-muted-foreground">CRICOS Code</FormLabel>
                         <FormControl>
                           <Input {...field} value={field.value ?? ""} placeholder="e.g. 116694A" data-testid="input-course-cricos-code" />
                         </FormControl>
-                        <FormDescription>CRICOS registered course code (AU)</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
