@@ -877,33 +877,101 @@ export function AdminApiKeysPanel() {
               <EndpointDoc
                 method="GET"
                 path="/api/partner/disciplines"
-                description="List all valid disciplines and their sub-disciplines for course creation."
-                responseExample={`{ "disciplines": [{ "name": "Computer Science & IT", "subDisciplines": [...] }] }`}
+                description="List all valid disciplines and their sub-disciplines for course creation. Always call this first to get the exact discipline and subDiscipline strings required when creating a course."
+                responseExample={`{ "disciplines": ["Computer Science & IT", "Engineering & Technology", ...], "hierarchy": { "Computer Science & IT": { "subDisciplines": [{ "name": "Software Engineering", "slug": "software-engineering" }] } } }`}
               />
+
+              <div className="rounded-md border bg-muted/30 p-4 space-y-3">
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-primary" />
+                  Course Creation Workflow
+                </p>
+                <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
+                  <li>Create or find the institution — note the returned <code className="bg-muted px-1 py-0.5 rounded text-xs text-foreground">id</code></li>
+                  <li>Call <code className="bg-muted px-1 py-0.5 rounded text-xs text-foreground">GET /api/partner/disciplines</code> — pick the exact discipline &amp; subDiscipline strings</li>
+                  <li>POST the course using the institution <code className="bg-muted px-1 py-0.5 rounded text-xs text-foreground">id</code> as <code className="bg-muted px-1 py-0.5 rounded text-xs text-foreground">universityId</code></li>
+                </ol>
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Valid courseLevel values (must be exact)</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      'VCE (11-12)', 'Certificate I', 'Certificate II', 'Certificate III', 'Certificate IV',
+                      'Diploma', 'Advanced Diploma', 'Associate Degree', 'Graduate Certificate', 'Graduate Diploma',
+                      'Bachelor Degree', 'Bachelor Honours', 'Masters Degree', 'Doctoral Degree', 'Higher Doctoral Degree',
+                      'ELICOS - General English', 'ELICOS - EAP', 'ELICOS - Exam Prep',
+                      'Professional Year - Accounting', 'Professional Year - IT', 'Professional Year - Engineering',
+                      'Foundation', 'Pathway Program', 'Short Course',
+                    ].map(level => (
+                      <code key={level} className="bg-muted px-1.5 py-0.5 rounded text-xs text-foreground">{level}</code>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Valid discipline values (must be exact)</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      'Accounting, Business & Finance', 'Agriculture & Forestry', 'Applied Sciences & Professions',
+                      'Arts, Design & Architecture', 'Computer Science & IT', 'Education & Training',
+                      'Engineering & Technology', 'Environmental Studies & Earth Sciences',
+                      'Hospitality, Leisure & Sports', 'Humanities', 'Journalism & Media', 'Law',
+                      'Medicine & Health', 'Short Courses', 'Trade',
+                    ].map(disc => (
+                      <code key={disc} className="bg-muted px-1.5 py-0.5 rounded text-xs text-foreground">{disc}</code>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
               <EndpointDoc
                 method="POST"
                 path="/api/partner/courses"
-                description="Create a new course linked to an institution (saved as draft, pending approval)."
+                description="Create a new course linked to an institution. Saved as draft pending admin approval. Returns 409 if a course with the same title already exists at the institution."
                 permission="courses:create"
                 bodyFields={[
-                  { name: "universityId", required: true, description: "ID of the parent institution" },
-                  { name: "title", required: true, description: "Course title (min 5 chars)" },
-                  { name: "description", required: true, description: "Course description (min 50 chars)" },
-                  { name: "discipline", required: true, description: "Must match valid discipline from /api/partner/disciplines" },
-                  { name: "courseLevel", required: true, description: "e.g. Bachelor Degree, Masters Degree, Diploma" },
-                  { name: "fees", required: true, description: "Annual tuition fee (number)" },
-                  { name: "durationMonths", required: true, description: "Course duration in months" },
-                  { name: "englishRequirements", required: true, description: 'e.g. "IELTS 6.5 overall"' },
-                  { name: "eligibilityRequirements", required: true, description: "Entry qualifications" },
-                  { name: "intakes", required: true, description: 'Array: ["February", "July"]' },
-                  { name: "deliveryMode", required: true, description: "online, on-campus, hybrid, or blended" },
-                  { name: "careerOutcomes", required: true, description: "Array of career paths" },
-                  { name: "campusLocations", required: false, description: "Array of campus location strings" },
-                  { name: "sourceUrl", required: false, description: "URL of the original course page" },
-                  { name: "prPathway", required: false, description: "PR pathway available (true/false)" },
+                  { name: "universityId", required: true, description: "ID of the parent institution (from GET /api/partner/institutions)" },
+                  { name: "title", required: true, description: "Course title (min 5 chars). Must be unique per institution." },
+                  { name: "description", required: true, description: "Course overview (min 50 chars)" },
+                  { name: "discipline", required: true, description: "Must be one of the 15 exact discipline strings — get from GET /api/partner/disciplines" },
+                  { name: "courseLevel", required: true, description: "Must be one of the 23 exact courseLevel strings listed above" },
+                  { name: "fees", required: true, description: "Annual tuition fee as a positive number (e.g. 32000)" },
+                  { name: "durationMonths", required: true, description: "Course duration in months (e.g. 36). Use durationWeeks instead if sub-monthly precision is needed." },
+                  { name: "englishRequirements", required: true, description: 'Minimum 10 chars. e.g. "IELTS 6.5 overall, no band below 6.0"' },
+                  { name: "eligibilityRequirements", required: true, description: "Entry qualifications and academic requirements" },
+                  { name: "intakes", required: true, description: 'Non-empty array of intake months: ["February", "July"]' },
+                  { name: "deliveryMode", required: true, description: "Exactly one of: online, on-campus, hybrid, blended" },
+                  { name: "careerOutcomes", required: true, description: 'Non-empty array of job titles: ["Software Engineer", "Data Scientist"]' },
+                  { name: "subDiscipline", required: false, description: "Sub-discipline name from GET /api/partner/disciplines (e.g. Software Engineering)" },
+                  { name: "subject", required: false, description: "Display subject name (defaults to title if omitted)" },
+                  { name: "currency", required: false, description: "Fee currency code (default: AUD)" },
+                  { name: "country", required: false, description: "Country override (defaults to institution's country)" },
+                  { name: "location", required: false, description: "Campus or city text (e.g. Sydney CBD)" },
+                  { name: "durationWeeks", required: false, description: "Duration in weeks — use instead of durationMonths for short courses" },
+                  { name: "applicationDeadline", required: false, description: 'Text deadline: "31 October 2025"' },
+                  { name: "prerequisites", required: false, description: "Academic prerequisites text" },
+                  { name: "thumbnailUrl", required: false, description: "URL of the course thumbnail image" },
+                  { name: "courseCode", required: false, description: "Internal course code (e.g. CS-301)" },
+                  { name: "campusLocations", required: false, description: 'Array of campus name strings: ["Sydney Campus", "Online"]' },
+                  { name: "internshipAvailable", required: false, description: "true or false" },
+                  { name: "internshipDetails", required: false, description: "Text description of the internship component" },
+                  { name: "studyAreas", required: false, description: 'Array of specific study topics: ["Machine Learning", "Databases"]' },
+                  { name: "careerPath", required: false, description: "Text description of the career progression" },
+                  { name: "scholarshipPercentageMin", required: false, description: "Minimum scholarship % available (0–100)" },
+                  { name: "scholarshipPercentageMax", required: false, description: "Maximum scholarship % available (0–100)" },
+                  { name: "costOfLiving", required: false, description: "Estimated monthly cost of living as a number" },
+                  { name: "applicationFees", required: false, description: "Application fee amount as a number" },
+                  { name: "curriculumUrl", required: false, description: "URL to the curriculum or course outline page" },
+                  { name: "minimumAge", required: false, description: "Minimum applicant age as a number" },
+                  { name: "pathways", required: false, description: 'Articulation pathways array: ["Diploma to Bachelor", "Certificate IV to Diploma"]' },
+                  { name: "prPathway", required: false, description: "true if this course qualifies for a PR/visa pathway" },
+                  { name: "sourceUrl", required: false, description: "URL of the original course page on the institution website" },
                 ]}
+                responseExample={`{\n  "success": true,\n  "data": {\n    "id": "course-uuid",\n    "title": "Bachelor of Computer Science",\n    "discipline": "Computer Science & IT",\n    "courseLevel": "Bachelor Degree",\n    "publishStatus": "draft"\n  }\n}`}
               />
+
+              <div className="rounded-md border bg-muted/30 p-4 space-y-2">
+                <p className="text-sm font-semibold">Complete course creation example</p>
+                <CodeBlock code={`POST /api/partner/courses\nContent-Type: application/json\nX-API-Key: your-api-key\n\n{\n  "universityId": "institution-id-from-create-step",\n  "title": "Bachelor of Computer Science",\n  "description": "A comprehensive 3-year program covering algorithms, systems, and software engineering with real-world project experience across all year levels.",\n  "discipline": "Computer Science & IT",\n  "subDiscipline": "Software Engineering",\n  "courseLevel": "Bachelor Degree",\n  "durationMonths": 36,\n  "fees": 32000,\n  "currency": "AUD",\n  "intakes": ["February", "July"],\n  "deliveryMode": "on-campus",\n  "englishRequirements": "IELTS 6.5 overall, no band below 6.0",\n  "eligibilityRequirements": "Australian Year 12 or equivalent with ATAR 70+. International students need equivalent qualifications.",\n  "careerOutcomes": ["Software Engineer", "Data Scientist", "Systems Analyst", "Web Developer"],\n  "campusLocations": ["Sydney Campus", "Melbourne Campus"],\n  "prPathway": true,\n  "internshipAvailable": true,\n  "internshipDetails": "12-week industry placement in semester 5",\n  "sourceUrl": "https://institution.edu.au/courses/bachelor-cs"\n}`} />
+              </div>
             </CardContent>
           </Card>
 
@@ -1168,32 +1236,101 @@ Accepted: JPEG, PNG, GIF, WebP. Max 5MB.
 \`GET /api/partner/disciplines\`
 Returns all valid disciplines and sub-disciplines for course creation.
 
-### 8. Create Course
+### 8. Course Creation Workflow
+
+Always follow this sequence when adding a course:
+1. Create or find the institution → note the returned `id`
+2. Call `GET /api/partner/disciplines` → pick exact discipline & subDiscipline strings
+3. POST the course using the institution `id` as `universityId`
+
+---
+
+### Valid courseLevel values (must match exactly — case-sensitive)
+VCE (11-12), Certificate I, Certificate II, Certificate III, Certificate IV,
+Diploma, Advanced Diploma, Associate Degree, Graduate Certificate, Graduate Diploma,
+Bachelor Degree, Bachelor Honours, Masters Degree, Doctoral Degree, Higher Doctoral Degree,
+ELICOS - General English, ELICOS - EAP, ELICOS - Exam Prep,
+Professional Year - Accounting, Professional Year - IT, Professional Year - Engineering,
+Foundation, Pathway Program, Short Course
+
+### Valid discipline values (must match exactly — case-sensitive)
+Accounting, Business & Finance | Agriculture & Forestry | Applied Sciences & Professions |
+Arts, Design & Architecture | Computer Science & IT | Education & Training |
+Engineering & Technology | Environmental Studies & Earth Sciences |
+Hospitality, Leisure & Sports | Humanities | Journalism & Media | Law |
+Medicine & Health | Short Courses | Trade
+
+---
+
+### 9. Create Course
 \`POST /api/partner/courses\`
 Permission: courses:create
 Content-Type: application/json
 
 Required fields:
-- universityId (institution ID)
-- title (string, min 5 chars)
+- universityId (institution ID from create/list step)
+- title (string, min 5 chars — must be unique per institution)
 - description (string, min 50 chars)
-- discipline (must match /api/partner/disciplines)
-- courseLevel (e.g. "Bachelor Degree", "Masters Degree", "Diploma")
-- fees (number, annual tuition)
-- durationMonths (number)
-- englishRequirements (string, e.g. "IELTS 6.5 overall")
-- eligibilityRequirements (string)
-- intakes (array, e.g. ["February", "July"])
-- deliveryMode (online, on-campus, hybrid, or blended)
-- careerOutcomes (array of career titles)
+- discipline (must be one of the 15 exact discipline strings above)
+- courseLevel (must be one of the 23 exact courseLevel strings above)
+- fees (positive number — annual tuition)
+- durationMonths (number, e.g. 36) — OR use durationWeeks for short courses
+- englishRequirements (min 10 chars, e.g. "IELTS 6.5 overall, no band below 6.0")
+- eligibilityRequirements (entry qualifications text)
+- intakes (non-empty array, e.g. ["February", "July"])
+- deliveryMode (exactly: online | on-campus | hybrid | blended)
+- careerOutcomes (non-empty array of job titles)
 
 Optional fields:
-- campusLocations (array of strings)
-- sourceUrl (URL)
-- prPathway (boolean)
+- subDiscipline (string — from GET /api/partner/disciplines)
+- subject (display subject name, defaults to title)
 - currency (default: AUD)
-- subDiscipline (string)
-- courseCode (string)
+- country (defaults to institution's country)
+- location (campus or city text)
+- durationWeeks (weeks, alternative to durationMonths)
+- applicationDeadline (text, e.g. "31 October 2025")
+- prerequisites (academic prerequisites text)
+- thumbnailUrl (URL)
+- courseCode (internal code, e.g. CS-301)
+- campusLocations (array of campus name strings)
+- internshipAvailable (boolean)
+- internshipDetails (text description)
+- studyAreas (array of topic strings)
+- careerPath (career progression text)
+- scholarshipPercentageMin (number 0–100)
+- scholarshipPercentageMax (number 0–100)
+- costOfLiving (estimated monthly cost, number)
+- applicationFees (application fee, number)
+- curriculumUrl (URL to curriculum page)
+- minimumAge (number)
+- pathways (array of articulation pathways)
+- prPathway (boolean — qualifies for PR/visa pathway)
+- sourceUrl (URL of original course page)
+
+Example request:
+\`\`\`json
+{
+  "universityId": "institution-id-from-create-step",
+  "title": "Bachelor of Computer Science",
+  "description": "A comprehensive 3-year program covering algorithms, systems, and software engineering with real-world project experience across all year levels.",
+  "discipline": "Computer Science & IT",
+  "subDiscipline": "Software Engineering",
+  "courseLevel": "Bachelor Degree",
+  "durationMonths": 36,
+  "fees": 32000,
+  "currency": "AUD",
+  "intakes": ["February", "July"],
+  "deliveryMode": "on-campus",
+  "englishRequirements": "IELTS 6.5 overall, no band below 6.0",
+  "eligibilityRequirements": "Australian Year 12 or equivalent with ATAR 70+. International students need equivalent qualifications.",
+  "careerOutcomes": ["Software Engineer", "Data Scientist", "Systems Analyst", "Web Developer"],
+  "campusLocations": ["Sydney Campus", "Melbourne Campus"],
+  "prPathway": true,
+  "internshipAvailable": true,
+  "internshipDetails": "12-week industry placement in semester 5",
+  "sourceUrl": "https://institution.edu.au/courses/bachelor-cs"
+}
+\`\`\`
 
 ---
 
