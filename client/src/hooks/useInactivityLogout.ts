@@ -24,7 +24,7 @@ const ACTIVITY_EVENTS = [
 ] as const;
 
 export function useInactivityLogout({
-  timeoutMs = 30 * 60 * 1000,
+  timeoutMs = 3 * 60 * 60 * 1000,
   warningMs = 2 * 60 * 1000,
   enabled = true,
 }: UseInactivityLogoutOptions = {}): UseInactivityLogoutResult {
