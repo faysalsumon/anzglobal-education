@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/lib/supabase";
+import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.webp";
 import {
   MessageCircle,
   Hash,
@@ -582,7 +583,10 @@ function MiniZanWindow({
         onClick={onToggleMinimize}
         data-testid="mini-zan-minimized"
       >
-        <Sparkles className="h-4 w-4 text-primary shrink-0" />
+        <Avatar className="h-5 w-5 shrink-0">
+          <AvatarImage src={chatAvatarImage} alt="Zan" />
+          <AvatarFallback className="text-[8px] bg-primary/10 text-primary">Z</AvatarFallback>
+        </Avatar>
         <span className="text-sm font-medium truncate flex-1">Zan</span>
         <Badge variant="secondary" className="text-[10px] px-1.5 shrink-0">AI</Badge>
         <Button
@@ -609,7 +613,10 @@ function MiniZanWindow({
       data-testid="mini-zan-window"
     >
       <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30 shrink-0">
-        <Sparkles className="h-4 w-4 text-primary shrink-0" />
+        <Avatar className="h-5 w-5 shrink-0">
+          <AvatarImage src={chatAvatarImage} alt="Zan" />
+          <AvatarFallback className="text-[8px] bg-primary/10 text-primary">Z</AvatarFallback>
+        </Avatar>
         <span className="text-sm font-medium truncate flex-1">Zan</span>
         <Badge variant="secondary" className="text-[10px] px-1.5 shrink-0">AI</Badge>
         <Button
