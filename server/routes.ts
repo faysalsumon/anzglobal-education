@@ -11562,7 +11562,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Enum and other fields that can't accept empty strings
       const nullableStringFields = [
-        'discipline', 'subDiscipline', 'level', 'approvalStatus'
+        'discipline', 'subDiscipline', 'level', 'approvalStatus',
+        'subDisciplineId', 'specialization', 'qualificationFramework'
       ];
       
       const updateData: Record<string, any> = { ...rawData };
