@@ -434,6 +434,17 @@ const INJECTION_PATTERNS = [
   /drop\s+table/i,
 ];
 
+function escapeXmlAttr(str: string): string {
+  return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function wrapExternalData(source: string, content: string, attrs?: Record<string, string>): string {
+  const attrStr = attrs
+    ? " " + Object.entries(attrs).map(([k, v]) => `${k}="${escapeXmlAttr(v)}"`).join(" ")
+    : "";
+  return `<EXTERNAL_DATA source="${escapeXmlAttr(source)}"${attrStr}>${content}</EXTERNAL_DATA>`;
+}
+
 function sanitizeExternalContent(text: string): string {
   let sanitized = text;
   for (const pattern of INJECTION_PATTERNS) {
@@ -445,42 +456,47 @@ function sanitizeExternalContent(text: string): string {
   return sanitized;
 }
 
+function sanitizeStringValue(val: string, path: string, warnings: string[], maxLen: number): string {
+  if (val.length > maxLen) {
+    warnings.push(`"${path}" truncated from ${val.length} to ${maxLen} chars`);
+    val = val.substring(0, maxLen);
+  }
+  let wasRedacted = false;
+  for (const pattern of INJECTION_PATTERNS) {
+    if (pattern.test(val)) {
+      val = val.replace(pattern, "[REDACTED]");
+      wasRedacted = true;
+    }
+  }
+  if (wasRedacted) {
+    warnings.push(`"${path}" contained suspicious instruction-like content — redacted`);
+  }
+  return val;
+}
+
+function sanitizeValue(val: any, path: string, warnings: string[], maxLen: number): any {
+  if (typeof val === "string") {
+    return sanitizeStringValue(val, path, warnings, maxLen);
+  }
+  if (Array.isArray(val)) {
+    return val.map((item, i) => sanitizeValue(item, `${path}[${i}]`, warnings, maxLen));
+  }
+  if (val !== null && typeof val === "object") {
+    const cleaned: Record<string, any> = {};
+    for (const [k, v] of Object.entries(val)) {
+      cleaned[k] = sanitizeValue(v, `${path}.${k}`, warnings, maxLen);
+    }
+    return cleaned;
+  }
+  return val;
+}
+
 function sanitizeExtractedFields(data: Record<string, any>): { data: Record<string, any>; warnings: string[] } {
   const warnings: string[] = [];
   const cleaned: Record<string, any> = {};
-
   for (const [key, value] of Object.entries(data)) {
-    if (typeof value === "string") {
-      if (value.length > 2000) {
-        cleaned[key] = value.substring(0, 2000);
-        warnings.push(`Field "${key}" truncated from ${value.length} to 2000 chars`);
-        continue;
-      }
-      let fieldVal = value;
-      let wasRedacted = false;
-      for (const pattern of INJECTION_PATTERNS) {
-        if (pattern.test(fieldVal)) {
-          fieldVal = fieldVal.replace(pattern, "[REDACTED]");
-          wasRedacted = true;
-        }
-      }
-      if (wasRedacted) {
-        warnings.push(`Field "${key}" contained suspicious instruction-like content — redacted`);
-      }
-      cleaned[key] = fieldVal;
-    } else if (Array.isArray(value)) {
-      cleaned[key] = value.map((item) => {
-        if (typeof item === "string" && item.length > 500) {
-          warnings.push(`Array item in "${key}" truncated`);
-          return item.substring(0, 500);
-        }
-        return item;
-      });
-    } else {
-      cleaned[key] = value;
-    }
+    cleaned[key] = sanitizeValue(value, key, warnings, 2000);
   }
-
   return { data: cleaned, warnings };
 }
 
@@ -519,9 +535,9 @@ async function executeToolCall(
             }
           }
           const sanitized = sanitizeExternalContent(textContent || "No results found.");
-          return `<EXTERNAL_DATA source="web_search" query="${args.query}">${sanitized}</EXTERNAL_DATA>`;
+          return wrapExternalData("web_search", sanitized, { query: args.query });
         } catch (err: any) {
-          return JSON.stringify({ success: false, error: err.message || "Web search failed" });
+          return wrapExternalData("web_search", JSON.stringify({ success: false, error: err.message || "Web search failed" }), { query: args.query });
         }
       }
 
@@ -529,10 +545,10 @@ async function executeToolCall(
         try {
           const url = new URL(args.url);
           if (!["http:", "https:"].includes(url.protocol)) {
-            return JSON.stringify({ success: false, error: "Only http/https URLs are allowed" });
+            return wrapExternalData("scraped_institution", JSON.stringify({ success: false, error: "Only http/https URLs are allowed" }), { url: args.url });
           }
           if (isPrivateUrl(args.url)) {
-            return JSON.stringify({ success: false, error: "Cannot scrape private/internal URLs" });
+            return wrapExternalData("scraped_institution", JSON.stringify({ success: false, error: "Cannot scrape private/internal URLs" }), { url: args.url });
           }
           const scraped = await scrapeWebsite({ url: args.url, timeout: 20000 });
           const extracted = await extractInstitutionData(scraped.html, args.url);
@@ -544,13 +560,13 @@ async function executeToolCall(
             warnings: [...(extracted.warnings || []), ...sanitizedData.warnings],
             sourceUrl: args.url,
           });
-          return `<EXTERNAL_DATA source="scraped_institution" url="${args.url}">${result}</EXTERNAL_DATA>`;
+          return wrapExternalData("scraped_institution", result, { url: args.url });
         } catch (err: any) {
-          return JSON.stringify({
+          return wrapExternalData("scraped_institution", JSON.stringify({
             success: false,
             error: err.message || "Failed to scrape/extract institution data",
             suggestion: "Try providing data manually or use a different URL",
-          });
+          }), { url: args.url });
         }
       }
 
@@ -633,10 +649,10 @@ async function executeToolCall(
         try {
           const url = new URL(args.url);
           if (!["http:", "https:"].includes(url.protocol)) {
-            return JSON.stringify({ success: false, error: "Only http/https URLs are allowed" });
+            return wrapExternalData("scraped_course", JSON.stringify({ success: false, error: "Only http/https URLs are allowed" }), { url: args.url });
           }
           if (isPrivateUrl(args.url)) {
-            return JSON.stringify({ success: false, error: "Cannot scrape private/internal URLs" });
+            return wrapExternalData("scraped_course", JSON.stringify({ success: false, error: "Cannot scrape private/internal URLs" }), { url: args.url });
           }
           const scraped = await scrapeWebsite({ url: args.url, timeout: 20000 });
           const extracted = await extractCourseData(scraped.html, args.url, args.institutionName);
@@ -648,13 +664,13 @@ async function executeToolCall(
             warnings: [...(extracted.warnings || []), ...sanitizedData.warnings],
             sourceUrl: args.url,
           });
-          return `<EXTERNAL_DATA source="scraped_course" url="${args.url}">${result}</EXTERNAL_DATA>`;
+          return wrapExternalData("scraped_course", result, { url: args.url });
         } catch (err: any) {
-          return JSON.stringify({
+          return wrapExternalData("scraped_course", JSON.stringify({
             success: false,
             error: err.message || "Failed to scrape/extract course data",
             suggestion: "Try providing course data manually or use a different URL",
-          });
+          }), { url: args.url });
         }
       }
 
