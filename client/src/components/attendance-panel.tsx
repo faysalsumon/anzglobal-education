@@ -186,7 +186,7 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
   const usersQueryParams = !isCTO && userBranchId ? { branchId: userBranchId } : {};
   const { data: usersResponse } = useQuery<{ users: { id: string; firstName: string | null; lastName: string | null; email: string | null }[] }>({
     queryKey: ["/api/admin/users", usersQueryParams],
-    enabled: hasFullAdminAccess || !!userBranchId,
+    enabled: isCTO || !!userBranchId,
   });
   const usersData = usersResponse?.users ?? [];
 
