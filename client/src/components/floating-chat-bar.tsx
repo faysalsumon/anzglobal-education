@@ -29,7 +29,6 @@ import {
   ArrowLeft,
   UserPlus,
   UserMinus,
-  Sparkles,
 } from "lucide-react";
 
 type Message = {
