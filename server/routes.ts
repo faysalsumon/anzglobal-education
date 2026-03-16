@@ -3644,18 +3644,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // Resize to 200x200 with cover
-      const sharp = (await import('sharp')).default;
-      const resizedBuffer = await sharp(req.file.buffer)
-        .resize(200, 200, { fit: 'cover' })
-        .jpeg({ quality: 85 })
-        .toBuffer();
+      const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!allowedMimeTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: "Invalid file type. Please upload a JPEG, PNG, or GIF image." });
+      }
 
-      // Save to public directory
-      const filename = `student-profile-${profile.id}-${Date.now()}.jpg`;
+      const maxSize = 5 * 1024 * 1024;
+      if (req.file.size > maxSize) {
+        return res.status(400).json({ message: "File too large. Maximum size is 5MB." });
+      }
+
+      const extMap: Record<string, string> = { 'image/jpeg': '.jpg', 'image/jpg': '.jpg', 'image/png': '.png', 'image/gif': '.gif' };
+      const ext = extMap[req.file.mimetype] || '.jpg';
+
+      // Save original buffer to public directory (no sharp resizing — sharp is unavailable in this environment)
+      const filename = `student-profile-${profile.id}-${Date.now()}${ext}`;
       const localPath = path.join(process.cwd(), 'public', 'students');
       await fs.mkdir(localPath, { recursive: true });
-      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+      await fs.writeFile(path.join(localPath, filename), req.file.buffer);
       
       const photoPath = `/students/${filename}`;
 
@@ -3892,29 +3898,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "File too large. Maximum size is 5MB." });
       }
 
-      let resizedBuffer: Buffer;
-      try {
-        const sharp = (await import('sharp')).default;
-        // Validate that the buffer is actually a valid image by trying to get metadata
-        await sharp(req.file.buffer).metadata();
-        
-        // Resize to 200x200 with cover
-        resizedBuffer = await sharp(req.file.buffer)
-          .resize(200, 200, { fit: 'cover' })
-          .jpeg({ quality: 85 })
-          .toBuffer();
-      } catch (sharpError: any) {
-        console.error("Sharp processing error:", sharpError);
-        return res.status(400).json({ 
-          message: "Invalid or corrupted image file. Please try a different image." 
-        });
-      }
+      const extMap: Record<string, string> = { 'image/jpeg': '.jpg', 'image/jpg': '.jpg', 'image/png': '.png', 'image/gif': '.gif' };
+      const ext = extMap[req.file.mimetype] || '.jpg';
 
-      // Save to public directory
-      const filename = `admin-profile-${user.id}-${Date.now()}.jpg`;
+      // Save original buffer to public directory (no sharp resizing — sharp is unavailable in this environment)
+      const filename = `admin-profile-${user.id}-${Date.now()}${ext}`;
       const localPath = path.join(process.cwd(), 'public', 'admins');
       await fs.mkdir(localPath, { recursive: true });
-      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+      await fs.writeFile(path.join(localPath, filename), req.file.buffer);
       
       const photoPath = `/admins/${filename}`;
 
