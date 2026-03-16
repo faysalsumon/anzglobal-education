@@ -1193,6 +1193,21 @@ SECURITY RULES — HIGHEST PRIORITY:
 }
 
 export function registerAdminChatRoutes(app: Express) {
+  function hydrateDataEntryPreview(msgs: any[]) {
+    return msgs.map((m) => {
+      let data_entry_preview = null;
+      if (m.role === "assistant" && m.sources) {
+        try {
+          const parsed = typeof m.sources === "string" ? JSON.parse(m.sources) : m.sources;
+          if (parsed && parsed.type && parsed.action && parsed.data) {
+            data_entry_preview = parsed;
+          }
+        } catch {}
+      }
+      return { ...m, data_entry_preview };
+    });
+  }
+
   app.get("/api/admin-chat/conversations/current", requireAdmin, async (req: any, res: Response) => {
     try {
       const userId = getUserId(req)!;
@@ -1208,7 +1223,7 @@ export function registerAdminChatRoutes(app: Express) {
           .from(chatMessages)
           .where(eq(chatMessages.conversationId, existing[0].id))
           .orderBy(chatMessages.createdAt);
-        return res.json({ id: existing[0].id, messages: msgs });
+        return res.json({ id: existing[0].id, messages: hydrateDataEntryPreview(msgs) });
       }
       const [conv] = await db
         .insert(chatConversations)
@@ -1246,7 +1261,7 @@ export function registerAdminChatRoutes(app: Express) {
           .from(chatMessages)
           .where(eq(chatMessages.conversationId, req.params.id))
           .orderBy(chatMessages.createdAt);
-        res.json(msgs);
+        res.json(hydrateDataEntryPreview(msgs));
       } catch (err) {
         console.error("[AdminChat] get messages error:", err);
         res.status(500).json({ message: "Failed to fetch messages" });
