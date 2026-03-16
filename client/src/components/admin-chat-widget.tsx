@@ -519,8 +519,8 @@ export function AdminChatWidget() {
 
   return (
     <div
-      className="fixed bottom-36 right-3 md:bottom-32 md:right-4 z-40 flex flex-col bg-card border border-border rounded-xl shadow-2xl w-80"
-      style={{ height: isMinimized ? "56px" : "460px" }}
+      className="fixed bottom-10 right-3 md:right-4 z-40 flex flex-col bg-card border border-border rounded-xl shadow-2xl w-80"
+      style={{ height: isMinimized ? "56px" : "min(460px, calc(100vh - 6rem))" }}
       data-testid="admin-chat-widget"
     >
       {/* Header */}

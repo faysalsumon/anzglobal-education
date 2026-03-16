@@ -282,10 +282,10 @@ function MiniChannelWindow({
   return (
     <div
       className="flex flex-col bg-card border rounded-t-md shadow-lg overflow-hidden"
-      style={{ width: 320, height: 400 }}
+      style={{ width: 320, height: "min(400px, calc(100vh - 6rem))" }}
       data-testid={`mini-channel-window-${channelId}`}
     >
-      <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30">
+      <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30 shrink-0">
         {showMembers ? (
           <Button
             type="button"
@@ -724,7 +724,7 @@ export function FloatingChatBar() {
   }, [createConversationMutation, markAsReadMutation]);
 
   return (
-    <div className="fixed bottom-10 left-0 lg:left-[244px] z-50 flex items-end gap-2" data-testid="floating-chat-bar">
+    <div className="fixed bottom-10 left-0 lg:left-16 z-50 flex items-end gap-2" data-testid="floating-chat-bar">
       {channelWindows.slice(-MAX_VISIBLE_WINDOWS).map((win) => (
         <MiniChannelWindow
           key={`ch-${win.channelId}`}
@@ -977,12 +977,13 @@ function MiniChatWindow({
   return (
     <div
       className={`w-80 bg-card border border-border shadow-lg rounded-t-lg overflow-hidden flex flex-col ${
-        chatWindow.isMinimized ? "" : "h-[400px]"
+        chatWindow.isMinimized ? "" : "max-h-[min(400px,calc(100vh-6rem))]"
       }`}
+      style={chatWindow.isMinimized ? {} : { height: "min(400px, calc(100vh - 6rem))" }}
       data-testid={`chat-window-${chatWindow.conversationId}`}
     >
       <div
-        className="flex items-center gap-2 px-3 py-2 border-b cursor-pointer select-none"
+        className="flex items-center gap-2 px-3 py-2 border-b cursor-pointer select-none shrink-0"
         onClick={onToggleMinimize}
         data-testid={`chat-window-header-${chatWindow.conversationId}`}
       >
@@ -1031,7 +1032,7 @@ function MiniChatWindow({
         <>
           <div
             ref={dropZoneRef}
-            className={`flex-1 relative ${isDragging ? '' : ''}`}
+            className={`flex-1 min-h-0 relative ${isDragging ? '' : ''}`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
