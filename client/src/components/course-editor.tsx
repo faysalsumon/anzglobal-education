@@ -385,6 +385,8 @@ const courseSchema = z.object({
   eligibilityRequirements: z.string().optional(),
   englishRequirements: z.string().optional(),
   courseCode: z.string().optional(),
+  cricosCode: z.string().optional(),
+  admissionFee: optionalNonNegativeNumber,
   sourceUrl: z.string().url().optional().or(z.literal("")),
   pathways: z.string().optional(),
   studyAreas: z.string().optional(),
@@ -434,6 +436,8 @@ interface Course {
   eligibilityRequirements?: string | null;
   englishRequirements?: string | null;
   courseCode?: string | null;
+  cricosCode?: string | null;
+  admissionFee?: number | null;
   sourceUrl?: string | null;
   pathways?: string[] | null;
   studyAreas?: string[] | null;
@@ -655,6 +659,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
   const [thumbnailStatus, setThumbnailStatus] = useState<string>(course?.thumbnailStatus || "none");
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(course?.thumbnailUrl || null);
+  const [codeMode, setCodeMode] = useState<'courseCode' | 'cricosCode'>('courseCode');
 
   // Intake Templates state
   const [intakeTemplates, setIntakeTemplates] = useState<LocalIntakeTemplate[]>([]);
@@ -1058,6 +1063,8 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       eligibilityRequirements: course?.eligibilityRequirements || "",
       englishRequirements: course?.englishRequirements || "",
       courseCode: course?.courseCode || "",
+      cricosCode: course?.cricosCode || "",
+      admissionFee: course?.admissionFee || ("" as any),
       sourceUrl: course?.sourceUrl || "",
       pathways: Array.isArray(course?.pathways) ? course.pathways.join(", ") : "",
       studyAreas: Array.isArray(course?.studyAreas) ? course.studyAreas.join(", ") : "",
@@ -2021,19 +2028,55 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                     />
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="courseCode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Course Code</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="CS101" data-testid="input-course-code" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setCodeMode('courseCode')}
+                            className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${codeMode === 'courseCode' ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-muted-foreground border-border hover-elevate'}`}
+                            data-testid="toggle-course-code"
+                          >
+                            Course Code
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCodeMode('cricosCode')}
+                            className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${codeMode === 'cricosCode' ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-muted-foreground border-border hover-elevate'}`}
+                            data-testid="toggle-cricos-code"
+                          >
+                            CRICOS Code
+                          </button>
+                        </div>
+                        {codeMode === 'courseCode' ? (
+                          <FormField
+                            control={form.control}
+                            name="courseCode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input {...field} placeholder="e.g. BSB51415" data-testid="input-course-code" />
+                                </FormControl>
+                                <FormDescription>RTO or national course code</FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        ) : (
+                          <FormField
+                            control={form.control}
+                            name="cricosCode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input {...field} placeholder="e.g. 116694A" data-testid="input-cricos-code" />
+                                </FormControl>
+                                <FormDescription>CRICOS registered course code (AU)</FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         )}
-                      />
+                      </div>
                       <FormField
                         control={form.control}
                         name="qualificationFramework"
@@ -2364,11 +2407,25 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         name="applicationFees"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Application / Admission Fee</FormLabel>
+                            <FormLabel>Application Fee</FormLabel>
                             <FormControl>
                               <Input {...field} type="number" placeholder="100" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-course-applicationFees" />
                             </FormControl>
-                            <FormDescription>One-time fee charged at application or admission</FormDescription>
+                            <FormDescription>Fee charged when submitting the application</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="admissionFee"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Admission / Enrolment Fee</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" placeholder="250" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-course-admissionFee" />
+                            </FormControl>
+                            <FormDescription>One-time fee paid on enrolment / offer acceptance</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}

@@ -1011,6 +1011,7 @@ export const courses = pgTable("courses", {
   
   // Additional course details
   courseCode: text("course_code"),
+  cricosCode: text("cricos_code"), // CRICOS course code for Australian RTO/CRICOS registered courses
   prPathway: boolean("pr_pathway").default(false),
   eligibilityRequirements: text("eligibility_requirements"),
   englishRequirements: text("english_requirements"),
@@ -1018,6 +1019,7 @@ export const courses = pgTable("courses", {
   sourceUrl: text("source_url"), // Direct link to course page on institution website
   costOfLiving: decimal("cost_of_living", { precision: 10, scale: 2 }),
   applicationFees: decimal("application_fees", { precision: 10, scale: 2 }),
+  admissionFee: decimal("admission_fee", { precision: 10, scale: 2 }), // One-time admission/enrolment fee (distinct from application fee)
   images: text("images").array(),
   
   // Rich structured data for AI-powered recommendations
@@ -3454,6 +3456,7 @@ const baseCourseSchema = createInsertSchema(courses).omit({
   durationWeeks: optionalInteger,
   costOfLiving: optionalNumber,
   applicationFees: optionalNumber,
+  admissionFee: optionalNumber,
   minimumAge: optionalInteger,
   
   // Validate English requirements structure

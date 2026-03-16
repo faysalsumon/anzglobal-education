@@ -2167,6 +2167,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Seed sub-disciplines for all main disciplines (admin only, idempotent)
+  app.post("/api/admin/seed-sub-disciplines", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager']);
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const SUB_DISCIPLINES_BY_DISCIPLINE: Record<string, string[]> = {
+        'Accounting, Business & Finance': [
+          'Accounting', 'Finance', 'Business Management', 'Economics', 'Human Resources',
+          'International Business', 'Marketing', 'Project Management', 'Entrepreneurship',
+          'Business Analytics', 'Supply Chain & Logistics', 'Taxation',
+        ],
+        'Agriculture & Forestry': [
+          'Agronomy', 'Horticulture', 'Animal Science', 'Forestry', 'Aquaculture',
+          'Agricultural Business', 'Viticulture & Oenology', 'Sustainable Agriculture',
+        ],
+        'Applied Sciences & Professions': [
+          'Psychology', 'Nutrition & Dietetics', 'Social Work', 'Sport Science',
+          'Optometry', 'Veterinary Science', 'Laboratory Science', 'Forensic Science',
+        ],
+        'Arts, Design & Architecture': [
+          'Architecture', 'Fine Arts', 'Graphic Design', 'Interior Design', 'Fashion Design',
+          'Photography', 'Animation & Visual Effects', 'Industrial Design', 'Urban Design',
+        ],
+        'Computer Science & IT': [
+          'Software Development', 'Data Science', 'Cybersecurity', 'Artificial Intelligence',
+          'Information Technology', 'Computer Science', 'Networking', 'Cloud Computing',
+          'Game Development', 'Web Development',
+        ],
+        'Education & Training': [
+          'Early Childhood Education', 'Primary Education', 'Secondary Education',
+          'TESOL', 'Training & Assessment', 'Special Education', 'Educational Leadership',
+        ],
+        'Engineering & Technology': [
+          'Civil Engineering', 'Mechanical Engineering', 'Electrical Engineering',
+          'Chemical Engineering', 'Aerospace Engineering', 'Software Engineering',
+          'Environmental Engineering', 'Biomedical Engineering', 'Mining Engineering',
+          'Telecommunications Engineering',
+        ],
+        'Environmental Studies & Earth Sciences': [
+          'Environmental Science', 'Climate Science & Sustainability', 'Geography',
+          'Geology', 'Marine Science', 'Ecology', 'Environmental Management',
+        ],
+        'Hospitality, Leisure & Sports': [
+          'Hospitality Management', 'Tourism', 'Event Management', 'Culinary Arts',
+          'Sports Management', 'Recreation Management', 'Hotel Management',
+        ],
+        'Humanities': [
+          'History', 'Philosophy', 'Linguistics', 'Cultural Studies', 'Sociology',
+          'Anthropology', 'Political Science', 'International Relations',
+        ],
+        'Journalism & Media': [
+          'Journalism', 'Broadcasting', 'Digital Media', 'Public Relations',
+          'Advertising', 'Film & Television', 'Media Studies',
+        ],
+        'Law': [
+          'Commercial Law', 'Criminal Law', 'International Law', 'Family Law',
+          'Environmental Law', 'Intellectual Property Law', 'Employment Law',
+        ],
+        'Medicine & Health': [
+          'Medicine', 'Nursing', 'Pharmacy', 'Public Health', 'Allied Health',
+          'Dentistry', 'Aged Care', 'Paramedicine', 'Mental Health',
+          'Health Administration',
+        ],
+        'Short Courses': [
+          'Professional Development', 'Language Skills', 'Digital Skills',
+          'Business Skills', 'Leadership Skills', 'Industry Certification',
+        ],
+        'Trade': [
+          'Plumbing', 'Electrical Trade', 'Carpentry', 'Automotive',
+          'Welding & Fabrication', 'Tiling & Plastering', 'Refrigeration & Air Conditioning',
+          'Bricklaying & Concreting', 'Hairdressing & Beauty',
+        ],
+      };
+
+      let created = 0;
+      let skipped = 0;
+
+      for (const [discipline, subDisciplineNames] of Object.entries(SUB_DISCIPLINES_BY_DISCIPLINE)) {
+        for (const name of subDisciplineNames) {
+          const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '').replace(/-+/g, '-');
+          try {
+            await storage.createSubDiscipline({ discipline: discipline as any, name, slug });
+            created++;
+          } catch (e) {
+            skipped++;
+          }
+        }
+      }
+
+      res.json({
+        message: `Seeded sub-disciplines: ${created} created/verified, ${skipped} skipped (already exist or error)`,
+        created,
+        skipped,
+      });
+    } catch (error) {
+      console.error("Error seeding sub-disciplines:", error);
+      res.status(500).json({ message: "Failed to seed sub-disciplines" });
+    }
+  });
+
   // Course specialization routes (Tier 3)
   app.get("/api/sub-disciplines/:subDisciplineId/specializations", async (req, res) => {
     try {
@@ -11557,7 +11661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
       
       const decimalFields = [
-        'fees', 'costOfLiving', 'applicationFees'
+        'fees', 'costOfLiving', 'applicationFees', 'admissionFee'
       ];
       
       // Enum and other fields that can't accept empty strings

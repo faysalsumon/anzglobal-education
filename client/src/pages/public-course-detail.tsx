@@ -272,7 +272,7 @@ export default function PublicCourseDetail() {
     sections.push("about");
     
     // Fees section - include dynamic pricing tiers
-    if (pricingTiers.length > 0 || course.fees || course.costOfLiving || course.applicationFees) {
+    if (pricingTiers.length > 0 || course.fees || course.costOfLiving || course.applicationFees || course.admissionFee) {
       sections.push("fees");
     }
     
@@ -960,7 +960,7 @@ export default function PublicCourseDetail() {
             </ResponsiveSection>
 
             {/* Modern Financial Breakdown - Show if pricing tiers exist OR static fees exist */}
-            {(pricingTiers.length > 0 || course.fees || course.costOfLiving || course.applicationFees) && (
+            {(pricingTiers.length > 0 || course.fees || course.costOfLiving || course.applicationFees || course.admissionFee) && (
               <ResponsiveSection
                 id="fees"
                 icon={<DollarSign className="h-5 w-5 text-primary" />}
@@ -1068,7 +1068,7 @@ export default function PublicCourseDetail() {
                       {course.applicationFees !== null && course.applicationFees !== undefined && (
                         <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-accent/5 to-transparent p-6" data-testid="card-application-fee">
                           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                            <span className="text-sm text-muted-foreground">Application / Admission Fee</span>
+                            <span className="text-sm text-muted-foreground">Application Fee</span>
                             <div className="p-2 bg-accent/10 rounded-lg">
                               <CheckCircle className="h-4 w-4 text-accent" />
                             </div>
@@ -1081,26 +1081,60 @@ export default function PublicCourseDetail() {
                           <p className="text-xs text-muted-foreground mt-1">One-time fee</p>
                         </div>
                       )}
+                      {course.admissionFee !== null && course.admissionFee !== undefined && (
+                        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-accent/5 to-transparent p-6" data-testid="card-admission-fee">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <span className="text-sm text-muted-foreground">Admission / Enrolment Fee</span>
+                            <div className="p-2 bg-accent/10 rounded-lg">
+                              <CheckCircle className="h-4 w-4 text-accent" />
+                            </div>
+                          </div>
+                          <p className="text-3xl font-bold" data-testid="text-admission-fee-amount">
+                            {Number(course.admissionFee) > 0
+                              ? `${course.currency} ${Number(course.admissionFee).toLocaleString()}`
+                              : "Waived"}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">Paid on enrolment / offer acceptance</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {/* Application Fee alongside dynamic pricing tiers */}
-                  {pricingTiers.length > 0 && course.applicationFees !== null && course.applicationFees !== undefined && (
+                  {/* Application / Admission Fees alongside dynamic pricing tiers */}
+                  {pricingTiers.length > 0 && (course.applicationFees !== null && course.applicationFees !== undefined || course.admissionFee !== null && course.admissionFee !== undefined) && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-accent/5 to-transparent p-6" data-testid="card-application-fee-dynamic">
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                          <span className="text-sm text-muted-foreground">Application / Admission Fee</span>
-                          <div className="p-2 bg-accent/10 rounded-lg">
-                            <CheckCircle className="h-4 w-4 text-accent" />
+                      {course.applicationFees !== null && course.applicationFees !== undefined && (
+                        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-accent/5 to-transparent p-6" data-testid="card-application-fee-dynamic">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <span className="text-sm text-muted-foreground">Application Fee</span>
+                            <div className="p-2 bg-accent/10 rounded-lg">
+                              <CheckCircle className="h-4 w-4 text-accent" />
+                            </div>
                           </div>
+                          <p className="text-3xl font-bold" data-testid="text-application-fee-dynamic-amount">
+                            {Number(course.applicationFees) > 0
+                              ? `${course.currency} ${Number(course.applicationFees).toLocaleString()}`
+                              : "Waived"}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">One-time fee</p>
                         </div>
-                        <p className="text-3xl font-bold" data-testid="text-application-fee-dynamic-amount">
-                          {Number(course.applicationFees) > 0
-                            ? `${course.currency} ${Number(course.applicationFees).toLocaleString()}`
-                            : "Waived"}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">One-time fee</p>
-                      </div>
+                      )}
+                      {course.admissionFee !== null && course.admissionFee !== undefined && (
+                        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-accent/5 to-transparent p-6" data-testid="card-admission-fee-dynamic">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <span className="text-sm text-muted-foreground">Admission / Enrolment Fee</span>
+                            <div className="p-2 bg-accent/10 rounded-lg">
+                              <CheckCircle className="h-4 w-4 text-accent" />
+                            </div>
+                          </div>
+                          <p className="text-3xl font-bold" data-testid="text-admission-fee-dynamic-amount">
+                            {Number(course.admissionFee) > 0
+                              ? `${course.currency} ${Number(course.admissionFee).toLocaleString()}`
+                              : "Waived"}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">Paid on enrolment / offer acceptance</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
