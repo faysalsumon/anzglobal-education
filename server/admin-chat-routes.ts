@@ -140,17 +140,10 @@ const VALID_QUALIFICATION_FRAMEWORKS = ['AQF', 'Non-AQF', 'RQF', 'EQF', 'NZQF', 
 
 const VALID_PROVIDER_TYPES = ['University', 'Institution', 'Tafe', 'School'];
 
-const DATA_ENTRY_INTENT_KEYWORDS = [
-  "upload", "add institution", "add university", "create institution", "create university",
-  "find and upload", "find and add", "add course", "create course", "upload course",
-  "add a course", "add bachelor", "add master", "add diploma", "add certificate",
-  "data entry", "add tafe", "add school", "register institution", "register university",
-];
 
-function detectsDataEntryIntent(message: string): boolean {
-  const lower = message.toLowerCase();
-  return DATA_ENTRY_INTENT_KEYWORDS.some((kw) => lower.includes(kw));
-}
+const DATA_ENTRY_DENIED_PROMPT = `
+IMPORTANT: You do NOT have data entry tools or permissions. If the user asks you to add, upload, create, find and add, or register an institution, university, course, or similar data entry task, you MUST respond with exactly: "You don't have permission for data entry — contact your CTO or Marketing Executive to add institutions and courses." Do not attempt to guide them through manual steps either.
+`;
 
 const DATA_ENTRY_SYSTEM_PROMPT = `
 DATA ENTRY CAPABILITY:
@@ -998,7 +991,6 @@ export function registerAdminChatRoutes(app: Express) {
         const ctx = await getAdminContext(userId);
         let systemPrompt = buildSystemPrompt(ctx);
 
-        const isDataEntry = detectsDataEntryIntent(content);
         const canDoDataEntry = await hasDataEntryPermission(user, userId);
 
         await db.insert(chatMessages).values({
@@ -1008,20 +1000,6 @@ export function registerAdminChatRoutes(app: Express) {
           sources: null,
         });
 
-        if (isDataEntry && !canDoDataEntry) {
-          const deniedMsg = "You don't have permission for data entry — contact your CTO or Marketing Executive to add institutions and courses.";
-          const [saved] = await db
-            .insert(chatMessages)
-            .values({
-              conversationId: req.params.id,
-              role: "assistant",
-              content: deniedMsg,
-              sources: null,
-            })
-            .returning();
-          return res.json(saved);
-        }
-
         const history = await db
           .select()
           .from(chatMessages)
@@ -1030,7 +1008,7 @@ export function registerAdminChatRoutes(app: Express) {
           .limit(20);
 
         const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-          { role: "system", content: systemPrompt + (isDataEntry ? DATA_ENTRY_SYSTEM_PROMPT : "") },
+          { role: "system", content: systemPrompt + (canDoDataEntry ? DATA_ENTRY_SYSTEM_PROMPT : DATA_ENTRY_DENIED_PROMPT) },
           ...history.slice(0, -1).map((m) => ({
             role: m.role as "user" | "assistant",
             content: m.content,
@@ -1038,7 +1016,7 @@ export function registerAdminChatRoutes(app: Express) {
           { role: "user", content },
         ];
 
-        if (isDataEntry) {
+        if (canDoDataEntry) {
           let assistantContent = "";
           let dataEntryPreview: any = null;
           const MAX_TOOL_ITERATIONS = 8;
