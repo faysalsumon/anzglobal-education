@@ -21730,6 +21730,167 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
+  // PATCH /api/partner/institutions/:id - Update an existing institution
+  app.patch("/api/partner/institutions/:id", authenticatePartnerApi, async (req: any, res) => {
+    try {
+      if (!hasPermission(req.apiKey, 'institutions:update') && !hasPermission(req.apiKey, 'institutions:create')) {
+        await logPartnerUsage(req, 403);
+        return res.status(403).json({
+          error: 'Permission denied',
+          message: 'This API key does not have permission to update institutions',
+        });
+      }
+
+      const institutionId = req.params.id;
+      if (!institutionId || typeof institutionId !== 'string' || institutionId.trim().length === 0) {
+        await logPartnerUsage(req, 400);
+        return res.status(400).json({
+          error: 'Invalid ID',
+          message: 'A valid institution ID is required',
+        });
+      }
+
+      const institution = await storage.getUniversity(institutionId);
+      if (!institution) {
+        await logPartnerUsage(req, 404);
+        return res.status(404).json({
+          error: 'Not found',
+          message: 'Institution not found',
+        });
+      }
+
+      const {
+        description,
+        smallDescription,
+        fullDescription,
+        website,
+        city,
+        address,
+        contactEmail,
+        contactPhone,
+        providerType,
+        establishedYear,
+        cricosProviderCode,
+        rtoNumber,
+        logo,
+        institutionGallery,
+        campusAddresses,
+        topDisciplines,
+        scholarshipPercentageMin,
+        scholarshipPercentageMax,
+        numberOfCampuses,
+        tuitionFeesMin,
+        tuitionFeesMax,
+        tuitionCurrency,
+        intakePeriods,
+        deliveryModes,
+        accreditationStatus,
+        rankingBand,
+        facilities,
+        internationalStudentSupport,
+        tags,
+      } = req.body;
+
+      const errors: Array<{field: string, message: string}> = [];
+
+      if (website !== undefined && typeof website === 'string' && !isValidUrl(website)) {
+        errors.push({ field: 'website', message: 'Website must be a valid URL' });
+      }
+      if (contactEmail !== undefined && typeof contactEmail === 'string' && !contactEmail.includes('@')) {
+        errors.push({ field: 'contactEmail', message: 'Contact email must be valid' });
+      }
+      if (providerType !== undefined && !VALID_PROVIDER_TYPES.includes(providerType)) {
+        errors.push({ field: 'providerType', message: `Invalid providerType. Must be one of: ${VALID_PROVIDER_TYPES.join(', ')}` });
+      }
+      if (logo !== undefined && typeof logo === 'string' && logo.length > 0 && !isValidUrl(logo)) {
+        errors.push({ field: 'logo', message: 'Logo must be a valid URL' });
+      }
+      if (campusAddresses !== undefined && !Array.isArray(campusAddresses)) {
+        errors.push({ field: 'campusAddresses', message: 'campusAddresses must be an array of objects with: name, address, city, state, postcode, country' });
+      }
+      if (campusAddresses && Array.isArray(campusAddresses)) {
+        for (let i = 0; i < campusAddresses.length; i++) {
+          const campus = campusAddresses[i];
+          if (!campus.address && !campus.street) {
+            errors.push({ field: `campusAddresses[${i}].address`, message: `Campus at index ${i} requires an address field` });
+          }
+        }
+      }
+
+      if (errors.length > 0) {
+        await logPartnerUsage(req, 400);
+        return res.status(400).json({
+          error: 'Validation error',
+          message: 'One or more fields are invalid',
+          details: errors,
+        });
+      }
+
+      const updateData: Record<string, any> = {};
+
+      if (description !== undefined) updateData.description = description?.trim();
+      if (smallDescription !== undefined) updateData.smallDescription = smallDescription?.trim();
+      if (fullDescription !== undefined) updateData.fullDescription = fullDescription?.trim();
+      if (website !== undefined) updateData.website = website?.trim();
+      if (city !== undefined) updateData.city = city?.trim();
+      if (address !== undefined) updateData.address = address?.trim();
+      if (contactEmail !== undefined) updateData.contactEmail = contactEmail?.trim();
+      if (contactPhone !== undefined) updateData.contactPhone = contactPhone?.trim();
+      if (providerType !== undefined) updateData.providerType = providerType;
+      if (establishedYear !== undefined) updateData.establishedYear = establishedYear ? parseInt(establishedYear) : null;
+      if (cricosProviderCode !== undefined) updateData.cricosProviderCode = cricosProviderCode?.trim();
+      if (rtoNumber !== undefined) updateData.rtoNumber = rtoNumber?.trim();
+      if (logo !== undefined) updateData.logo = logo?.trim();
+      if (institutionGallery !== undefined) updateData.institutionGallery = institutionGallery || [];
+      if (campusAddresses !== undefined) updateData.campusAddresses = campusAddresses || [];
+      if (topDisciplines !== undefined) updateData.topDisciplines = topDisciplines || [];
+      if (scholarshipPercentageMin !== undefined) updateData.scholarshipPercentageMin = scholarshipPercentageMin ? parseInt(scholarshipPercentageMin) : null;
+      if (scholarshipPercentageMax !== undefined) updateData.scholarshipPercentageMax = scholarshipPercentageMax ? parseInt(scholarshipPercentageMax) : null;
+      if (numberOfCampuses !== undefined) updateData.numberOfCampuses = numberOfCampuses ? parseInt(numberOfCampuses) : null;
+      if (tuitionFeesMin !== undefined) updateData.tuitionFeesMin = tuitionFeesMin ? String(parseFloat(tuitionFeesMin)) : null;
+      if (tuitionFeesMax !== undefined) updateData.tuitionFeesMax = tuitionFeesMax ? String(parseFloat(tuitionFeesMax)) : null;
+      if (tuitionCurrency !== undefined) updateData.tuitionCurrency = tuitionCurrency;
+      if (intakePeriods !== undefined) updateData.intakePeriods = Array.isArray(intakePeriods) ? intakePeriods : null;
+      if (deliveryModes !== undefined) updateData.deliveryModes = Array.isArray(deliveryModes) ? deliveryModes : null;
+      if (accreditationStatus !== undefined) updateData.accreditationStatus = accreditationStatus?.trim() || null;
+      if (rankingBand !== undefined) updateData.rankingBand = rankingBand?.trim() || null;
+      if (facilities !== undefined) updateData.facilities = Array.isArray(facilities) ? facilities : null;
+      if (internationalStudentSupport !== undefined) updateData.internationalStudentSupport = internationalStudentSupport === true || internationalStudentSupport === 'true';
+      if (tags !== undefined) updateData.tags = Array.isArray(tags) ? tags : null;
+
+      if (Object.keys(updateData).length === 0) {
+        await logPartnerUsage(req, 400);
+        return res.status(400).json({
+          error: 'No fields to update',
+          message: 'Provide at least one field to update',
+        });
+      }
+
+      const updated = await storage.updateUniversity(institutionId, updateData as any);
+
+      await logPartnerUsage(req, 200, 'institution', institutionId);
+
+      res.json({
+        success: true,
+        message: 'Institution updated successfully.',
+        data: {
+          id: updated.id,
+          name: updated.name,
+          country: updated.country,
+          campusAddresses: updated.campusAddresses,
+          updatedFields: Object.keys(updateData),
+        },
+      });
+    } catch (error: any) {
+      console.error("Partner API update institution error:", error);
+      await logPartnerUsage(req, 500);
+      res.status(500).json({
+        error: 'Server error',
+        message: 'Failed to update institution',
+      });
+    }
+  });
+
   // POST /api/partner/courses - Create course as draft
   app.post("/api/partner/courses", authenticatePartnerApi, async (req: any, res) => {
     try {

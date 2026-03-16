@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +57,10 @@ import {
   RefreshCw,
   Shield,
   Server,
+  BookOpen,
+  FileText,
+  Lock,
+  Globe,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -97,6 +102,7 @@ interface UsageLog {
 
 const PERMISSION_OPTIONS = [
   { value: 'institutions:create', label: 'Create Institutions' },
+  { value: 'institutions:update', label: 'Update Institutions' },
   { value: 'institutions:read', label: 'Read Institutions' },
   { value: 'courses:create', label: 'Create Courses' },
   { value: 'courses:read', label: 'Read Courses' },
@@ -241,31 +247,57 @@ export function AdminApiKeysPanel() {
     return <Badge variant="default" className="bg-green-600" data-testid={`badge-status-active-${key.id}`}>Active</Badge>;
   };
 
+  const [copiedGuidelines, setCopiedGuidelines] = useState(false);
+
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  const handleCopyGuidelines = async () => {
+    const guidelinesText = generateGuidelinesMarkdown(baseUrl);
+    await navigator.clipboard.writeText(guidelinesText);
+    setCopiedGuidelines(true);
+    setTimeout(() => setCopiedGuidelines(false), 2000);
+    toast({ title: "Copied", description: "API guidelines copied to clipboard" });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight" data-testid="text-api-keys-title">Partner API Keys</h2>
+          <h2 className="text-2xl font-bold tracking-tight" data-testid="text-api-keys-title">Partner API</h2>
           <p className="text-muted-foreground" data-testid="text-api-keys-description">
-            Manage API keys for external partners and AI bots to submit institutions and courses
+            Manage API keys and view documentation for external partners and AI bots
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            data-testid="button-refresh-api-keys"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button onClick={openCreateDialog} data-testid="button-create-api-key">
-            <Plus className="h-4 w-4 mr-2" />
-            Create API Key
-          </Button>
-        </div>
       </div>
+
+      <Tabs defaultValue="keys" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="keys" className="flex items-center gap-1.5" data-testid="tab-api-keys">
+            <Key className="h-4 w-4" />
+            API Keys
+          </TabsTrigger>
+          <TabsTrigger value="guidelines" className="flex items-center gap-1.5" data-testid="tab-api-guidelines">
+            <BookOpen className="h-4 w-4" />
+            API Guidelines
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="keys" className="space-y-4">
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              data-testid="button-refresh-api-keys"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button onClick={openCreateDialog} data-testid="button-create-api-key">
+              <Plus className="h-4 w-4 mr-2" />
+              Create API Key
+            </Button>
+          </div>
 
       <Card>
         <CardHeader>
@@ -722,6 +754,481 @@ export function AdminApiKeysPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+        </TabsContent>
+
+        <TabsContent value="guidelines" className="space-y-4">
+          <div className="flex items-center justify-end">
+            <Button onClick={handleCopyGuidelines} variant="outline" data-testid="button-copy-guidelines">
+              {copiedGuidelines ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+              {copiedGuidelines ? 'Copied' : 'Copy Full Guidelines'}
+            </Button>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Authentication
+              </CardTitle>
+              <CardDescription>
+                All Partner API requests require an API key sent via header
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm">Include your API key in the <code className="bg-muted px-1.5 py-0.5 rounded text-xs">X-API-Key</code> request header:</p>
+              <CodeBlock code={`curl -X GET "${baseUrl}/api/partner/health" \\\n  -H "X-API-Key: anz_live_YOUR_KEY_HERE"`} />
+              <p className="text-sm text-muted-foreground">API keys are created in the API Keys tab. Each key has scoped permissions and rate limits.</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                Endpoints
+              </CardTitle>
+              <CardDescription>
+                All endpoints use base URL: <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{baseUrl}</code>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <EndpointDoc
+                method="GET"
+                path="/api/partner/health"
+                description="Health check. No authentication required."
+                responseExample={`{ "status": "ok", "timestamp": "2026-03-16T..." }`}
+              />
+
+              <EndpointDoc
+                method="GET"
+                path="/api/partner/institutions"
+                description="List all institutions. Supports search query parameter."
+                permission="institutions:read"
+                queryParams={[{ name: "search", description: "Filter by institution name (optional)" }, { name: "limit", description: "Max results (default: 50)" }]}
+                responseExample={`{ "data": [{ "id": "...", "name": "...", "country": "..." }], "total": 42 }`}
+              />
+
+              <EndpointDoc
+                method="GET"
+                path="/api/partner/institutions/:id"
+                description="Get full details of a specific institution by ID."
+                permission="institutions:read"
+                responseExample={`{ "id": "...", "name": "...", "country": "...", "campusAddresses": [...] }`}
+              />
+
+              <EndpointDoc
+                method="POST"
+                path="/api/partner/institutions"
+                description="Create a new institution (saved as draft, pending admin approval)."
+                permission="institutions:create"
+                bodyFields={[
+                  { name: "name", required: true, description: "Institution name (min 2 chars)" },
+                  { name: "country", required: true, description: "Country name" },
+                  { name: "description", required: true, description: "Full description (min 50 chars)" },
+                  { name: "smallDescription", required: true, description: "Short description for cards (min 30 chars)" },
+                  { name: "website", required: true, description: "Institution website URL" },
+                  { name: "contactEmail", required: true, description: "Contact email" },
+                  { name: "contactPhone", required: true, description: "Contact phone (min 8 chars)" },
+                  { name: "establishedYear", required: true, description: "Year founded (1800-current)" },
+                  { name: "tuitionFeesMin", required: true, description: "Minimum annual tuition" },
+                  { name: "tuitionFeesMax", required: true, description: "Maximum annual tuition" },
+                  { name: "intakePeriods", required: true, description: 'Array: ["February", "July"]' },
+                  { name: "deliveryModes", required: true, description: 'Array: ["On Campus", "Online"]' },
+                  { name: "internationalStudentSupport", required: true, description: "true/false" },
+                  { name: "campusAddresses", required: false, description: "Array of campus objects (see format below)" },
+                  { name: "numberOfCampuses", required: false, description: "Number of campuses" },
+                  { name: "providerType", required: false, description: "University, Institution, Tafe, or School" },
+                  { name: "logo", required: false, description: "Logo image URL" },
+                  { name: "tags", required: false, description: "Array of tag strings" },
+                  { name: "facilities", required: false, description: "Array of facility names" },
+                ]}
+              />
+
+              <EndpointDoc
+                method="PATCH"
+                path="/api/partner/institutions/:id"
+                description="Update an existing institution. Send only the fields you want to change. Particularly useful for adding campus addresses after initial creation."
+                permission="institutions:update or institutions:create"
+                bodyFields={[
+                  { name: "campusAddresses", required: false, description: "Array of campus objects (see format below)" },
+                  { name: "numberOfCampuses", required: false, description: "Number of campuses" },
+                  { name: "description", required: false, description: "Updated description" },
+                  { name: "smallDescription", required: false, description: "Updated short description" },
+                  { name: "website", required: false, description: "Updated website URL" },
+                  { name: "contactEmail", required: false, description: "Updated contact email" },
+                  { name: "contactPhone", required: false, description: "Updated contact phone" },
+                  { name: "tuitionFeesMin", required: false, description: "Updated min tuition" },
+                  { name: "tuitionFeesMax", required: false, description: "Updated max tuition" },
+                  { name: "intakePeriods", required: false, description: "Updated intake periods array" },
+                  { name: "deliveryModes", required: false, description: "Updated delivery modes array" },
+                  { name: "facilities", required: false, description: "Updated facilities array" },
+                  { name: "tags", required: false, description: "Updated tags array" },
+                ]}
+                responseExample={`{\n  "success": true,\n  "message": "Institution updated successfully.",\n  "data": {\n    "id": "...",\n    "name": "...",\n    "updatedFields": ["campusAddresses", "numberOfCampuses"]\n  }\n}`}
+              />
+
+              <EndpointDoc
+                method="POST"
+                path="/api/partner/institutions/:id/logo"
+                description="Upload institution logo. Send as multipart/form-data with field name 'logo'. Accepted: JPEG, PNG, GIF, WebP. Max 5MB."
+                permission="institutions:create"
+              />
+
+              <EndpointDoc
+                method="GET"
+                path="/api/partner/disciplines"
+                description="List all valid disciplines and their sub-disciplines for course creation."
+                responseExample={`{ "disciplines": [{ "name": "Computer Science & IT", "subDisciplines": [...] }] }`}
+              />
+
+              <EndpointDoc
+                method="POST"
+                path="/api/partner/courses"
+                description="Create a new course linked to an institution (saved as draft, pending approval)."
+                permission="courses:create"
+                bodyFields={[
+                  { name: "universityId", required: true, description: "ID of the parent institution" },
+                  { name: "title", required: true, description: "Course title (min 5 chars)" },
+                  { name: "description", required: true, description: "Course description (min 50 chars)" },
+                  { name: "discipline", required: true, description: "Must match valid discipline from /api/partner/disciplines" },
+                  { name: "courseLevel", required: true, description: "e.g. Bachelor Degree, Masters Degree, Diploma" },
+                  { name: "fees", required: true, description: "Annual tuition fee (number)" },
+                  { name: "durationMonths", required: true, description: "Course duration in months" },
+                  { name: "englishRequirements", required: true, description: 'e.g. "IELTS 6.5 overall"' },
+                  { name: "eligibilityRequirements", required: true, description: "Entry qualifications" },
+                  { name: "intakes", required: true, description: 'Array: ["February", "July"]' },
+                  { name: "deliveryMode", required: true, description: "online, on-campus, hybrid, or blended" },
+                  { name: "careerOutcomes", required: true, description: "Array of career paths" },
+                  { name: "campusLocations", required: false, description: "Array of campus location strings" },
+                  { name: "sourceUrl", required: false, description: "URL of the original course page" },
+                  { name: "prPathway", required: false, description: "PR pathway available (true/false)" },
+                ]}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Campus Address Format
+              </CardTitle>
+              <CardDescription>
+                Structure for the campusAddresses field when creating or updating institutions
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <CodeBlock code={`"campusAddresses": [\n  {\n    "name": "Sydney Campus",\n    "address": "123 George Street",\n    "city": "Sydney",\n    "state": "NSW",\n    "postcode": "2000",\n    "country": "Australia"\n  },\n  {\n    "name": "Melbourne Campus",\n    "address": "456 Collins Street",\n    "city": "Melbourne",\n    "state": "VIC",\n    "postcode": "3000",\n    "country": "Australia"\n  }\n]`} />
+              <div className="text-sm space-y-1.5 text-muted-foreground">
+                <p><strong className="text-foreground">name</strong> (optional) — Campus display name</p>
+                <p><strong className="text-foreground">address</strong> (required) — Street address</p>
+                <p><strong className="text-foreground">city</strong> (optional) — City name</p>
+                <p><strong className="text-foreground">state</strong> (optional) — State or province</p>
+                <p><strong className="text-foreground">postcode</strong> (optional) — Postal/zip code</p>
+                <p><strong className="text-foreground">country</strong> (optional) — Country name</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Permissions
+              </CardTitle>
+              <CardDescription>
+                Each API key has scoped permissions controlling what actions it can perform
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Permission</TableHead>
+                    <TableHead>Grants Access To</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell><code className="bg-muted px-1.5 py-0.5 rounded text-xs">institutions:create</code></TableCell>
+                    <TableCell className="text-sm">Create new institutions, upload logos</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell><code className="bg-muted px-1.5 py-0.5 rounded text-xs">institutions:update</code></TableCell>
+                    <TableCell className="text-sm">Update existing institutions (campus addresses, details, etc.)</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell><code className="bg-muted px-1.5 py-0.5 rounded text-xs">institutions:read</code></TableCell>
+                    <TableCell className="text-sm">List and view institution details</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell><code className="bg-muted px-1.5 py-0.5 rounded text-xs">courses:create</code></TableCell>
+                    <TableCell className="text-sm">Create new courses</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell><code className="bg-muted px-1.5 py-0.5 rounded text-xs">courses:read</code></TableCell>
+                    <TableCell className="text-sm">List and view course details</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Rate Limits &amp; Notes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <p>Each API key has configurable rate limits (default: 100/min, 1000/hr).</p>
+              <p>Newly created institutions and courses are saved as <Badge variant="secondary">draft</Badge> and require admin approval before they appear publicly.</p>
+              <p>Duplicate detection is enforced: institution name+country and course title+institution must be unique.</p>
+              <p>All API responses include descriptive error messages with field-level validation details when applicable.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
+}
+
+function CodeBlock({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="relative">
+      <pre className="bg-muted p-3 pr-10 rounded-md text-xs overflow-x-auto font-mono whitespace-pre-wrap break-all">
+        {code}
+      </pre>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-1.5 right-1.5 h-7 w-7"
+        onClick={handleCopy}
+        data-testid="button-copy-code"
+      >
+        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+      </Button>
+    </div>
+  );
+}
+
+interface EndpointDocProps {
+  method: string;
+  path: string;
+  description: string;
+  permission?: string;
+  queryParams?: Array<{ name: string; description: string }>;
+  bodyFields?: Array<{ name: string; required: boolean; description: string }>;
+  responseExample?: string;
+}
+
+function EndpointDoc({ method, path, description, permission, queryParams, bodyFields, responseExample }: EndpointDocProps) {
+  const methodColor = {
+    GET: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+    POST: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300',
+    PATCH: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+    DELETE: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
+  }[method] || 'bg-muted';
+
+  return (
+    <div className="border rounded-md p-4 space-y-3" data-testid={`endpoint-${method.toLowerCase()}-${path.replace(/[/:]/g, '-')}`}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className={`px-2 py-0.5 rounded text-xs font-bold ${methodColor}`}>{method}</span>
+        <code className="text-sm font-mono font-medium">{path}</code>
+        {permission && (
+          <Badge variant="secondary" className="text-[10px] ml-auto">
+            <Shield className="h-3 w-3 mr-1" />
+            {permission}
+          </Badge>
+        )}
+      </div>
+      <p className="text-sm text-muted-foreground">{description}</p>
+
+      {queryParams && queryParams.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">Query Parameters</p>
+          {queryParams.map(p => (
+            <p key={p.name} className="text-xs ml-2">
+              <code className="bg-muted px-1 py-0.5 rounded">{p.name}</code> — {p.description}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {bodyFields && bodyFields.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">Request Body (JSON)</p>
+          <div className="grid gap-0.5">
+            {bodyFields.map(f => (
+              <p key={f.name} className="text-xs ml-2">
+                <code className="bg-muted px-1 py-0.5 rounded">{f.name}</code>
+                {f.required && <span className="text-destructive ml-1">*</span>}
+                {' '} — {f.description}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {responseExample && (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">Response Example</p>
+          <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">{responseExample}</pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function generateGuidelinesMarkdown(baseUrl: string): string {
+  return `# ANZ Global Education — Partner API Guidelines
+
+## Base URL
+${baseUrl}
+
+## Authentication
+Include your API key in the X-API-Key header:
+\`\`\`
+X-API-Key: anz_live_YOUR_KEY_HERE
+\`\`\`
+
+---
+
+## Endpoints
+
+### 1. Health Check
+\`GET /api/partner/health\`
+No authentication required.
+
+### 2. List Institutions
+\`GET /api/partner/institutions?search=name&limit=50\`
+Permission: institutions:read
+
+### 3. Get Institution Details
+\`GET /api/partner/institutions/:id\`
+Permission: institutions:read
+
+### 4. Create Institution
+\`POST /api/partner/institutions\`
+Permission: institutions:create
+Content-Type: application/json
+
+Required fields:
+- name (string, min 2 chars)
+- country (string)
+- description (string, min 50 chars)
+- smallDescription (string, min 30 chars)
+- website (valid URL)
+- contactEmail (valid email)
+- contactPhone (string, min 8 chars)
+- establishedYear (number, 1800-current year)
+- tuitionFeesMin (number)
+- tuitionFeesMax (number)
+- intakePeriods (array of strings, e.g. ["February", "July"])
+- deliveryModes (array of strings, e.g. ["On Campus", "Online"])
+- internationalStudentSupport (boolean)
+
+Optional fields:
+- campusAddresses (array of campus objects)
+- numberOfCampuses (number)
+- providerType (University, Institution, Tafe, or School)
+- logo (URL)
+- tags (array of strings)
+- facilities (array of strings)
+- accreditationStatus (string)
+- rankingBand (string)
+- scholarshipPercentageMin (number 0-100)
+- scholarshipPercentageMax (number 0-100)
+
+### 5. Update Institution
+\`PATCH /api/partner/institutions/:id\`
+Permission: institutions:update or institutions:create
+Content-Type: application/json
+
+Send only the fields you want to update. All fields are optional.
+Especially useful for adding campus addresses after initial creation.
+
+Updatable fields: campusAddresses, numberOfCampuses, description, smallDescription, fullDescription, website, city, address, contactEmail, contactPhone, tuitionFeesMin, tuitionFeesMax, intakePeriods, deliveryModes, facilities, tags, accreditationStatus, rankingBand, internationalStudentSupport, scholarshipPercentageMin, scholarshipPercentageMax, logo, institutionGallery
+
+### 6. Upload Institution Logo
+\`POST /api/partner/institutions/:id/logo\`
+Permission: institutions:create
+Content-Type: multipart/form-data
+Field name: "logo"
+Accepted: JPEG, PNG, GIF, WebP. Max 5MB.
+
+### 7. List Disciplines
+\`GET /api/partner/disciplines\`
+Returns all valid disciplines and sub-disciplines for course creation.
+
+### 8. Create Course
+\`POST /api/partner/courses\`
+Permission: courses:create
+Content-Type: application/json
+
+Required fields:
+- universityId (institution ID)
+- title (string, min 5 chars)
+- description (string, min 50 chars)
+- discipline (must match /api/partner/disciplines)
+- courseLevel (e.g. "Bachelor Degree", "Masters Degree", "Diploma")
+- fees (number, annual tuition)
+- durationMonths (number)
+- englishRequirements (string, e.g. "IELTS 6.5 overall")
+- eligibilityRequirements (string)
+- intakes (array, e.g. ["February", "July"])
+- deliveryMode (online, on-campus, hybrid, or blended)
+- careerOutcomes (array of career titles)
+
+Optional fields:
+- campusLocations (array of strings)
+- sourceUrl (URL)
+- prPathway (boolean)
+- currency (default: AUD)
+- subDiscipline (string)
+- courseCode (string)
+
+---
+
+## Campus Address Format
+\`\`\`json
+"campusAddresses": [
+  {
+    "name": "Sydney Campus",
+    "address": "123 George Street",
+    "city": "Sydney",
+    "state": "NSW",
+    "postcode": "2000",
+    "country": "Australia"
+  }
+]
+\`\`\`
+- address is required, all other fields are optional
+
+---
+
+## Permissions
+| Permission | Access |
+|---|---|
+| institutions:create | Create institutions, upload logos |
+| institutions:update | Update existing institutions |
+| institutions:read | List and view institutions |
+| courses:create | Create courses |
+| courses:read | List and view courses |
+
+---
+
+## Notes
+- Rate limits: default 100 requests/min, 1000/hr per key
+- New institutions/courses are saved as draft (pending admin approval)
+- Duplicate detection: institution name+country and course title+institution must be unique
+- All errors include field-level validation details
+`;
 }
