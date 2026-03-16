@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -134,6 +135,7 @@ function getDefaultDateTo(): string {
 
 export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: AttendancePanelProps) {
   const { toast } = useToast();
+  const { branchName: sessionBranchName } = useAuth();
   const [dateFrom, setDateFrom] = useState(getDefaultDateFrom());
   const [dateTo, setDateTo] = useState(getDefaultDateTo());
   const [filterUserId, setFilterUserId] = useState<string>("");
@@ -190,11 +192,11 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
 
   const { data: branchesData } = useQuery<{ id: string; name: string }[]>({
     queryKey: ["/api/admin/branches"],
-    enabled: hasFullAdminAccess,
+    enabled: isCTO,
   });
 
-  const userBranchName = !isCTO && userBranchId && branchesData
-    ? branchesData.find(b => b.id === userBranchId)?.name ?? null
+  const userBranchName = !isCTO && userBranchId
+    ? (sessionBranchName ?? null)
     : null;
 
   const cleanupMutation = useMutation({
