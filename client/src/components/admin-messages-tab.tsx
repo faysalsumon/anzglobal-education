@@ -339,7 +339,7 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
       ? ["/api/conversations", activeView.id, "messages"]
       : activeView?.type === "channel"
       ? ["/api/channels", activeView.id, "messages"]
-      : ["/api/chat/conversations", activeView?.id, "messages"],
+      : ["/api/admin-chat/conversations", activeView?.id, "messages"],
     enabled: !!activeView,
   });
 
@@ -356,9 +356,7 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
 
   const createZanSessionMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/chat/conversations", { 
-        sessionId: `admin-zan-${currentUserId}` 
-      });
+      const res = await apiRequest("GET", "/api/admin-chat/conversations/current");
       return res.json();
     },
     onSuccess: (data) => {
@@ -369,10 +367,10 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
   const sendZanMessageMutation = useMutation({
     mutationFn: async ({ id, content }: { id: string, content: string }) => {
       setIsTyping(true);
-      return apiRequest("POST", `/api/chat/conversations/${id}/messages`, { content });
+      return apiRequest("POST", `/api/admin-chat/conversations/${id}/messages`, { content });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations", activeView?.id, "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin-chat/conversations", activeView?.id, "messages"] });
       setIsTyping(false);
     },
     onError: () => {
