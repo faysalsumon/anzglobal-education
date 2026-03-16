@@ -1065,40 +1065,58 @@ export default function PublicCourseDetail() {
                           <p className="text-xs text-muted-foreground mt-1">{getFeePeriodFullLabel(pricingConfig?.feePeriod)}</p>
                         </div>
                       )}
-                    </div>
-                  )}
-
-                  {/* Living Costs and Application Fee - Only show if at least one is available */}
-                  {(course.costOfLiving || (course.applicationFees !== null && course.applicationFees !== undefined)) && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      {course.costOfLiving && (
-                        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-secondary/5 to-transparent p-6" data-testid="card-living-costs">
-                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                            <span className="text-sm text-muted-foreground">Living Costs</span>
-                            <div className="p-2 bg-secondary/10 rounded-lg">
-                              <Home className="h-4 w-4 text-secondary" />
-                            </div>
-                          </div>
-                          <p className="text-3xl font-bold" data-testid="text-living-cost-amount">{course.currency} {Number(course.costOfLiving).toLocaleString()}</p>
-                          <p className="text-xs text-muted-foreground mt-1">Estimated yearly</p>
-                        </div>
-                      )}
                       {course.applicationFees !== null && course.applicationFees !== undefined && (
                         <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-accent/5 to-transparent p-6" data-testid="card-application-fee">
                           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                            <span className="text-sm text-muted-foreground">Application Fee</span>
+                            <span className="text-sm text-muted-foreground">Application / Admission Fee</span>
                             <div className="p-2 bg-accent/10 rounded-lg">
                               <CheckCircle className="h-4 w-4 text-accent" />
                             </div>
                           </div>
                           <p className="text-3xl font-bold" data-testid="text-application-fee-amount">
-                            {Number(course.applicationFees) > 0 
+                            {Number(course.applicationFees) > 0
                               ? `${course.currency} ${Number(course.applicationFees).toLocaleString()}`
                               : "Waived"}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">One-time</p>
+                          <p className="text-xs text-muted-foreground mt-1">One-time fee</p>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Application Fee alongside dynamic pricing tiers */}
+                  {pricingTiers.length > 0 && course.applicationFees !== null && course.applicationFees !== undefined && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-accent/5 to-transparent p-6" data-testid="card-application-fee-dynamic">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                          <span className="text-sm text-muted-foreground">Application / Admission Fee</span>
+                          <div className="p-2 bg-accent/10 rounded-lg">
+                            <CheckCircle className="h-4 w-4 text-accent" />
+                          </div>
+                        </div>
+                        <p className="text-3xl font-bold" data-testid="text-application-fee-dynamic-amount">
+                          {Number(course.applicationFees) > 0
+                            ? `${course.currency} ${Number(course.applicationFees).toLocaleString()}`
+                            : "Waived"}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">One-time fee</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Living Costs - show below fees if available */}
+                  {course.costOfLiving && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-secondary/5 to-transparent p-6" data-testid="card-living-costs">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                          <span className="text-sm text-muted-foreground">Living Costs</span>
+                          <div className="p-2 bg-secondary/10 rounded-lg">
+                            <Home className="h-4 w-4 text-secondary" />
+                          </div>
+                        </div>
+                        <p className="text-3xl font-bold" data-testid="text-living-cost-amount">{course.currency} {Number(course.costOfLiving).toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Estimated yearly</p>
+                      </div>
                     </div>
                   )}
               </ResponsiveSection>

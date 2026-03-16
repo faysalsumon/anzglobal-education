@@ -900,8 +900,8 @@ export default function CourseForm() {
                   name="applicationFees"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Application Fees</FormLabel>
-                      <FormDescription>One-time application processing fee</FormDescription>
+                      <FormLabel>Application / Admission Fee</FormLabel>
+                      <FormDescription>One-time fee charged at application or admission</FormDescription>
                       <FormControl>
                         <Input
                           type="number"

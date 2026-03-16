@@ -2364,11 +2364,11 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         name="applicationFees"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Application Fee</FormLabel>
+                            <FormLabel>Application / Admission Fee</FormLabel>
                             <FormControl>
                               <Input {...field} type="number" placeholder="100" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-course-applicationFees" />
                             </FormControl>
-                            <FormDescription>One-time application processing fee</FormDescription>
+                            <FormDescription>One-time fee charged at application or admission</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
