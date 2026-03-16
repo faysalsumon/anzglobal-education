@@ -92,7 +92,10 @@ export function useAuth() {
   const isAuthenticated = !!supabaseUser && !!session;
 
   const STAFF_USER_TYPES = ["admin", "platform_admin", "cto", "super_admin"];
-  const isStaff = STAFF_USER_TYPES.includes(user?.userType ?? "") || !!user?.adminRole;
+  // adminRole = user?.adminRole || user?.role || null.
+  // We exclude "user" because that is the default role for students/non-staff.
+  const isStaff = STAFF_USER_TYPES.includes(user?.userType ?? "") ||
+    (!!adminRole && adminRole !== "user");
 
   return {
     user,
