@@ -52,6 +52,20 @@ export function DetailPageFooter({ updatedAt, entityType }: DetailPageFooterProp
             </p>
           </div>
 
+          {entityType === "course" && (
+            <div className="flex items-start gap-2">
+              <Shield className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <p className="text-xs text-muted-foreground leading-relaxed" data-testid="text-course-accuracy-disclaimer">
+                The course information published on this platform is sourced from the respective institution and maintained
+                to the best of our knowledge. However, course details — including fees, entry requirements, intake dates,
+                and programme structure — are subject to change by the institution at any time and without prior notification
+                to ANZ Global Education. We strongly encourage all prospective students to independently verify current
+                information directly with the institution or with our team before making any enrolment decision.
+                ANZ Global Education accepts no liability for any inaccuracies, omissions, or changes to course information,
+                nor for any decisions made in reliance upon the information presented on this platform.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
