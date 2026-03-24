@@ -5686,65 +5686,35 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                     const courseDiscipline = form.watch("discipline");
                     const courseCountry = institutionCountry;
 
-                    // Build parallel tasks for all selected fields
-                    const tasks: Promise<{ field: string; data: unknown }>[] = [];
+                    // Call the unified endpoint with all selected fields
+                    const unifiedResponse = await apiRequest("POST", "/api/ai/generate-all-course-content", {
+                      title: courseTitle,
+                      discipline: courseDiscipline,
+                      level: courseLevel,
+                      specialization: form.watch("specialization"),
+                      institutionName: selectedInstitution?.name,
+                      institutionCountry: courseCountry,
+                      duration: form.watch("duration"),
+                      fees: form.watch("fees"),
+                      currency: form.watch("currency"),
+                      deliveryMode: form.watch("deliveryMode"),
+                      intakes: intakesArr,
+                      prerequisites: form.watch("prerequisites"),
+                      existingDescription: form.watch("description"),
+                      fields: selectedFieldsList,
+                    });
+                    const bulkData: Record<string, unknown> = await unifiedResponse.json();
 
-                    const nonEntryFields = selectedFieldsList.filter(f => f !== 'entryRequirements');
-                    if (nonEntryFields.length > 0) {
-                      tasks.push(
-                        apiRequest("POST", "/api/ai/generate-all-course-content", {
-                          title: courseTitle,
-                          discipline: courseDiscipline,
-                          level: courseLevel,
-                          specialization: form.watch("specialization"),
-                          institutionName: selectedInstitution?.name,
-                          institutionCountry: courseCountry,
-                          duration: form.watch("duration"),
-                          fees: form.watch("fees"),
-                          currency: form.watch("currency"),
-                          deliveryMode: form.watch("deliveryMode"),
-                          intakes: intakesArr,
-                          prerequisites: form.watch("prerequisites"),
-                          existingDescription: form.watch("description"),
-                          fields: nonEntryFields,
-                        }).then(r => r.json()).then(d => ({ field: 'bulk', data: d }))
-                      );
+                    if (!unifiedResponse.ok) {
+                      toast({ title: "Generation failed", description: (bulkData.message as string) || "Please try again", variant: "destructive" });
+                      return;
                     }
 
-                    if (selectedFieldsList.includes('entryRequirements') && courseLevel) {
-                      tasks.push(
-                        apiRequest("POST", "/api/ai/generate-entry-requirements", {
-                          courseLevel,
-                          institutionCountry: courseCountry,
-                          courseName: courseTitle,
-                          discipline: courseDiscipline,
-                        }).then(async r => {
-                          const d = await r.json();
-                          if (!r.ok) throw new Error(d.message || 'Entry requirements generation failed');
-                          return { field: 'entryRequirements', data: d };
-                        })
-                      );
-                    }
-
-                    const settled = await Promise.allSettled(tasks);
-
-                    const previews: GeneratedPreviewItem[] = [];
-                    let bulkData: Record<string, unknown> = {};
-                    let entryReqData: EntryReqSuggestion[] = [];
-                    const genErrors: string[] = [];
-
-                    for (const outcome of settled) {
-                      if (outcome.status === 'fulfilled') {
-                        const { field, data: taskData } = outcome.value as { field: string; data: Record<string, unknown> };
-                        if (field === 'bulk') {
-                          bulkData = taskData;
-                        } else if (field === 'entryRequirements') {
-                          entryReqData = ((taskData as Record<string, unknown>).requirements || []) as EntryReqSuggestion[];
-                        }
-                      } else {
-                        genErrors.push(outcome.reason?.message || 'A field failed to generate');
-                      }
-                    }
+                    const entryReqData: EntryReqSuggestion[] = Array.isArray(bulkData.entryRequirements)
+                      ? (bulkData.entryRequirements as EntryReqSuggestion[])
+                      : [];
+                    const fieldErrors = (bulkData.errors || {}) as Record<string, string>;
+                    const genErrors: string[] = Object.values(fieldErrors);
 
                     if (bulkData.description && selectedFieldsList.includes('description')) {
                       previews.push({

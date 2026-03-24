@@ -8072,28 +8072,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const selectedFields: string[] = Array.isArray(fields) ? fields : ['description', 'careerOutcomes', 'careerPath', 'entryRequirements'];
 
+      // Helper to tag rejected promises with a field name for per-field error reporting
+      function taggedTask<T>(field: string, promise: Promise<T>): Promise<{ field: string; result: T }> {
+        return promise
+          .then(result => ({ field, result }))
+          .catch(err => {
+            const tagged = new Error(err?.message || 'Generation failed');
+            (tagged as Error & { field: string }).field = field;
+            throw tagged;
+          });
+      }
+
       // Run all selected generations in parallel using Promise.allSettled
       const tasks: Array<Promise<{ field: string; result: unknown }>> = [];
 
       if (selectedFields.includes('description')) {
-        tasks.push(
+        tasks.push(taggedTask('description',
           generateCourseDescription({ title, discipline, level, institutionName, duration, fees, currency, deliveryMode, intakes, prerequisites, existingDescription })
-            .then(result => ({ field: 'description', result }))
-        );
+        ));
       }
 
       if (selectedFields.includes('careerOutcomes') || selectedFields.includes('careerPath')) {
-        tasks.push(
+        tasks.push(taggedTask('career',
           generateCareerContent({ title, discipline, level, specialization, institutionName })
-            .then(result => ({ field: 'career', result }))
-        );
+        ));
       }
 
       if (selectedFields.includes('entryRequirements') && level && institutionCountry) {
-        tasks.push(
+        tasks.push(taggedTask('entryRequirements',
           generateEntryRequirements(level, institutionCountry, title, discipline)
-            .then(result => ({ field: 'entryRequirements', result }))
-        );
+        ));
       }
 
       const settled = await Promise.allSettled(tasks);
@@ -8118,9 +8126,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             response.entryRequirements = result;
           }
         } else {
-          // Capture per-field error — other fields still succeed
-          const fieldName = (outcome as PromiseRejectedResult).reason?.field || 'unknown';
-          errors[fieldName] = (outcome as PromiseRejectedResult).reason?.message || 'Generation failed';
+          // Capture per-field error with field tag — other fields still succeed
+          const err = (outcome as PromiseRejectedResult).reason as Error & { field?: string };
+          const fieldName = err?.field || 'unknown';
+          errors[fieldName] = err?.message || 'Generation failed';
         }
       }
 
