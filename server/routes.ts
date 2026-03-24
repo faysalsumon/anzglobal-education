@@ -2188,34 +2188,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Agriculture & Forestry': [
           'Agronomy', 'Horticulture', 'Animal Science', 'Forestry', 'Aquaculture',
           'Agricultural Business', 'Viticulture & Oenology', 'Sustainable Agriculture',
-          'Crop Science', 'Animal Husbandry', 'Agribusiness',
-          'Pest Management', 'Rural Business Management', 'Veterinary Nursing',
+          // Task-spec exact names
+          'Agricultural Science', 'Crop Science', 'Animal Husbandry', 'Agribusiness',
+          'Viticulture & Winemaking', 'Pest Management', 'Rural Business Management', 'Veterinary Nursing',
         ],
         'Applied Sciences & Professions': [
           'Psychology', 'Nutrition & Dietetics', 'Social Work', 'Sport Science',
           'Optometry', 'Veterinary Science', 'Laboratory Science', 'Forensic Science',
           'Biotechnology', 'Chemistry', 'Environmental Science', 'Food Science',
-          'Marine Science', 'Mathematics', 'Physics', 'Statistics', 'Spatial Science',
+          'Laboratory Technology', 'Marine Science', 'Mathematics', 'Physics', 'Statistics', 'Spatial Science',
         ],
         'Arts, Design & Architecture': [
           'Architecture', 'Fine Arts', 'Graphic Design', 'Interior Design', 'Fashion Design',
           'Photography', 'Animation & Visual Effects', 'Industrial Design', 'Urban Design',
-          'Digital Media', 'Film & Television', 'Illustration', 'Music',
-          'Performing Arts', 'Visual Communication',
+          // Task-spec exact names
+          'Animation', 'Digital Media', 'Film & Television', 'Illustration', 'Music',
+          'Performing Arts', 'Urban Design & Planning', 'Visual Communication',
         ],
         'Computer Science & IT': [
           'Software Development', 'Data Science', 'Cybersecurity', 'Artificial Intelligence',
           'Information Technology', 'Computer Science', 'Networking', 'Cloud Computing',
           'Game Development', 'Web Development',
-          'Mobile App Development', 'Database Administration', 'IT Project Management',
-          'Computer Hardware',
+          'Mobile App Development', 'Networking & Systems Administration',
+          'Database Administration', 'IT Project Management', 'Computer Hardware',
         ],
         'Education & Training': [
           'Early Childhood Education', 'Primary Education', 'Secondary Education',
           'TESOL', 'Training & Assessment', 'Special Education', 'Educational Leadership',
           'Adult & Community Education', 'Education Management',
-          'Library & Information Science', 'Vocational Education & Training',
-          'Music Education', 'Physical Education',
+          'Library & Information Science', 'School Leadership',
+          'Vocational Education & Training', 'Music Education', 'Physical Education',
         ],
         'Engineering & Technology': [
           'Civil Engineering', 'Mechanical Engineering', 'Electrical Engineering',
@@ -2228,26 +2230,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Environmental Studies & Earth Sciences': [
           'Environmental Science', 'Climate Science & Sustainability', 'Geography',
           'Geology', 'Marine Science', 'Ecology', 'Environmental Management',
-          'Conservation & Biodiversity', 'Environmental Policy',
-          'Natural Resource Management', 'Remote Sensing & GIS',
-          'Oceanography', 'Urban Environment',
+          // Task-spec exact names
+          'Climate Science', 'Conservation & Biodiversity', 'Environmental Policy',
+          'Marine & Coastal Science', 'Natural Resource Management', 'Remote Sensing & GIS',
+          'Sustainability', 'Oceanography', 'Urban Environment',
         ],
         'Hospitality, Leisure & Sports': [
           'Hospitality Management', 'Tourism', 'Event Management', 'Culinary Arts',
           'Sports Management', 'Recreation Management', 'Hotel Management',
-          'Fitness & Recreation', 'Sports Coaching', 'Casino Management', 'Brewing',
-          'Travel & Tourism Management',
+          'Fitness & Recreation', 'Parks & Recreation', 'Sports Coaching',
+          'Travel & Tourism Management', 'Casino Management', 'Brewing',
         ],
         'Humanities': [
           'History', 'Philosophy', 'Linguistics', 'Cultural Studies', 'Sociology',
           'Anthropology', 'Political Science', 'International Relations',
-          'Archaeology', 'Indigenous Studies', 'Literature',
-          'Religious Studies', 'Gender Studies',
+          // Task-spec exact names
+          'Archaeology', 'Ethics & Philosophy', 'Indigenous Studies', 'International Studies',
+          'Languages & Linguistics', 'Literature', 'Religious Studies', 'Gender Studies',
         ],
         'Journalism & Media': [
           'Journalism', 'Broadcasting', 'Digital Media', 'Public Relations',
           'Advertising', 'Film & Television', 'Media Studies',
-          'Communication Studies', 'Creative Writing',
+          // Task-spec exact names
+          'Communication Studies', 'Creative Writing', 'Film Production', 'Photography',
           'Radio & Podcasting', 'Social Media & Digital Marketing',
         ],
         'Law': [
@@ -2258,18 +2263,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ],
         'Medicine & Health': [
           'Medicine', 'Nursing', 'Pharmacy', 'Public Health', 'Allied Health',
-          'Dentistry', 'Aged Care', 'Paramedicine', 'Mental Health',
-          'Health Administration',
-          'Exercise Science', 'Medical Imaging', 'Midwifery',
-          'Occupational Therapy', 'Physiotherapy', 'Psychology',
-          'Radiation Therapy', 'Speech Pathology',
+          'Dentistry', 'Aged Care', 'Paramedicine', 'Mental Health', 'Health Administration',
+          // Task-spec additions
+          'Exercise Science', 'Medical Imaging', 'Midwifery', 'Nutrition & Dietetics',
+          'Occupational Therapy', 'Paramedic Science', 'Physiotherapy', 'Psychology',
+          'Radiation Therapy', 'Social Work', 'Speech Pathology', 'Veterinary Science',
         ],
         'Short Courses': [
           'Professional Development', 'Language Skills', 'Digital Skills',
           'Business Skills', 'Leadership Skills', 'Industry Certification',
-          'First Aid & Safety', 'Personal Development', 'Safety & Compliance',
-          'Technical Training', 'Certificate of Attainment',
-          'Project Management Short Courses',
+          // Task-spec exact names
+          'Business & Professional Development', 'First Aid & Safety', 'Language Courses',
+          'Leadership & Management', 'Personal Development', 'Safety & Compliance',
+          'Technical Training', 'Certificate of Attainment', 'Project Management Short Courses',
         ],
         'Trade': [
           // Existing 9 (kept for idempotency)
