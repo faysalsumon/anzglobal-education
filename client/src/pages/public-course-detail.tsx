@@ -278,7 +278,7 @@ export default function PublicCourseDetail() {
     sections.push("about");
     
     // Fees section - include dynamic pricing tiers
-    if (pricingTiers.length > 0 || course.fees || course.applicationFees || course.admissionFee) {
+    if (pricingTiers.length > 0 || course.fees || course.applicationFees || course.admissionFee || course.materialsFee) {
       sections.push("fees");
     }
     
@@ -1135,11 +1135,27 @@ export default function PublicCourseDetail() {
                           <p className="text-xs text-muted-foreground mt-1">Paid on enrolment / offer acceptance</p>
                         </div>
                       )}
+                      {course.materialsFee !== null && course.materialsFee !== undefined && (
+                        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-accent/5 to-transparent p-6" data-testid="card-materials-fee">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <span className="text-sm text-muted-foreground">Materials Fee</span>
+                            <div className="p-2 bg-accent/10 rounded-lg">
+                              <CheckCircle className="h-4 w-4 text-accent" />
+                            </div>
+                          </div>
+                          <p className="text-3xl font-bold" data-testid="text-materials-fee-amount">
+                            {Number(course.materialsFee) > 0
+                              ? `${course.currency} ${Number(course.materialsFee).toLocaleString()}`
+                              : "Included"}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">Course materials, textbooks &amp; resources</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {/* Application / Admission Fees alongside dynamic pricing tiers */}
-                  {pricingTiers.length > 0 && (course.applicationFees !== null && course.applicationFees !== undefined || course.admissionFee !== null && course.admissionFee !== undefined) && (
+                  {/* Application / Admission / Materials Fees alongside dynamic pricing tiers */}
+                  {pricingTiers.length > 0 && (course.applicationFees !== null && course.applicationFees !== undefined || course.admissionFee !== null && course.admissionFee !== undefined || course.materialsFee !== null && course.materialsFee !== undefined) && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                       {course.applicationFees !== null && course.applicationFees !== undefined && (
                         <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-accent/5 to-transparent p-6" data-testid="card-application-fee-dynamic">
@@ -1171,6 +1187,22 @@ export default function PublicCourseDetail() {
                               : "Waived"}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">Paid on enrolment / offer acceptance</p>
+                        </div>
+                      )}
+                      {course.materialsFee !== null && course.materialsFee !== undefined && (
+                        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-accent/5 to-transparent p-6" data-testid="card-materials-fee-dynamic">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <span className="text-sm text-muted-foreground">Materials Fee</span>
+                            <div className="p-2 bg-accent/10 rounded-lg">
+                              <CheckCircle className="h-4 w-4 text-accent" />
+                            </div>
+                          </div>
+                          <p className="text-3xl font-bold" data-testid="text-materials-fee-dynamic-amount">
+                            {Number(course.materialsFee) > 0
+                              ? `${course.currency} ${Number(course.materialsFee).toLocaleString()}`
+                              : "Included"}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">Course materials, textbooks &amp; resources</p>
                         </div>
                       )}
                     </div>

@@ -61,6 +61,8 @@ FEES & COSTS:
 - Look for "tuition fees", "course fees", "annual fees"
 - fees: Total tuition amount
 - applicationFees: Application/enrollment fees
+- admissionFee: One-time admission or enrolment fee paid on acceptance (distinct from application fee)
+- materialsFee: Fee for course materials, textbooks, or resources (if listed separately)
 - costOfLiving: Estimated living expenses if mentioned
 
 DURATION:

@@ -675,6 +675,20 @@ export default function CourseDetail() {
                             : "Waived"}
                         </p>
                       )}
+                      {course.admissionFee !== null && course.admissionFee !== undefined && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Admission / Enrolment Fee: {Number(course.admissionFee) > 0
+                            ? `${course.currency} ${Number(course.admissionFee).toLocaleString()}`
+                            : "Waived"}
+                        </p>
+                      )}
+                      {course.materialsFee !== null && course.materialsFee !== undefined && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Materials Fee: {Number(course.materialsFee) > 0
+                            ? `${course.currency} ${Number(course.materialsFee).toLocaleString()}`
+                            : "Included"}
+                        </p>
+                      )}
                     </div>
                   )}
 

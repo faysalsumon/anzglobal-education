@@ -388,6 +388,7 @@ const courseSchema = z.object({
   cricosCode: z.string().optional(),
   isCricosRegistered: z.boolean().optional(),
   admissionFee: optionalNonNegativeNumber,
+  materialsFee: optionalNonNegativeNumber,
   sourceUrl: z.string().url().optional().or(z.literal("")),
   pathways: z.string().optional(),
   studyAreas: z.string().optional(),
@@ -444,6 +445,7 @@ interface Course {
   cricosCode?: string | null;
   isCricosRegistered?: boolean | null;
   admissionFee?: number | null;
+  materialsFee?: number | null;
   sourceUrl?: string | null;
   pathways?: string[] | null;
   studyAreas?: string[] | null;
@@ -1104,6 +1106,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       cricosCode: course?.cricosCode || "",
       isCricosRegistered: course?.isCricosRegistered ?? false,
       admissionFee: course?.admissionFee || ("" as any),
+      materialsFee: course?.materialsFee || ("" as any),
       sourceUrl: course?.sourceUrl || "",
       pathways: Array.isArray(course?.pathways) ? course.pathways.join(", ") : "",
       studyAreas: Array.isArray(course?.studyAreas) ? course.studyAreas.join(", ") : "",
@@ -2468,6 +2471,23 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                               <Input {...field} type="number" placeholder="250" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-course-admissionFee" />
                             </FormControl>
                             <FormDescription>One-time fee paid on enrolment / offer acceptance</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="materialsFee"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Materials Fee</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" placeholder="0" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-course-materialsFee" />
+                            </FormControl>
+                            <FormDescription>Fee for course materials, textbooks, or resources</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}

@@ -11664,7 +11664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
       
       const decimalFields = [
-        'fees', 'applicationFees', 'admissionFee'
+        'fees', 'applicationFees', 'admissionFee', 'materialsFee'
       ];
       
       // Enum and other fields that can't accept empty strings

@@ -1021,6 +1021,7 @@ export const courses = pgTable("courses", {
   costOfLiving: decimal("cost_of_living", { precision: 10, scale: 2 }),
   applicationFees: decimal("application_fees", { precision: 10, scale: 2 }),
   admissionFee: decimal("admission_fee", { precision: 10, scale: 2 }), // One-time admission/enrolment fee (distinct from application fee)
+  materialsFee: decimal("materials_fee", { precision: 10, scale: 2 }), // Separate fee for course materials/resources
   images: text("images").array(),
   
   // Rich structured data for AI-powered recommendations
@@ -3492,6 +3493,7 @@ const baseCourseSchema = createInsertSchema(courses).omit({
   costOfLiving: optionalNumber,
   applicationFees: optionalNumber,
   admissionFee: optionalNumber,
+  materialsFee: optionalNumber,
   minimumAge: optionalInteger,
   
   // Validate English requirements structure
