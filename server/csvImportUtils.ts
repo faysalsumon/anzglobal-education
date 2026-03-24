@@ -476,9 +476,6 @@ export function transformCourseRow(row: any, universityId: string): Partial<Inse
   if (row.applicationFees) {
     course.applicationFees = parseFloat(row.applicationFees);
   }
-  if (row.costOfLiving) {
-    course.costOfLiving = parseFloat(row.costOfLiving);
-  }
 
   // Parse boolean fields
   if (row.prPathway !== undefined) {

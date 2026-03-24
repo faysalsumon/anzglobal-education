@@ -22271,7 +22271,6 @@ Sitemap: ${baseUrl}/sitemap.xml
         scholarshipPercentageMin,
         scholarshipPercentageMax,
         // Gold standard fields for 95% completeness
-        costOfLiving,
         applicationFees,
         curriculumUrl,
         minimumAge,
@@ -22437,7 +22436,6 @@ Sitemap: ${baseUrl}/sitemap.xml
         scholarshipPercentageMin: scholarshipPercentageMin ? parseInt(scholarshipPercentageMin) : null,
         scholarshipPercentageMax: scholarshipPercentageMax ? parseInt(scholarshipPercentageMax) : null,
         // Gold standard fields for 95% completeness
-        costOfLiving: costOfLiving ? parseFloat(costOfLiving) : null,
         applicationFees: applicationFees ? parseFloat(applicationFees) : null,
         curriculumUrl: curriculumUrl?.trim(),
         minimumAge: minimumAge ? parseInt(minimumAge) : null,

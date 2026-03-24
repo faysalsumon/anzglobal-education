@@ -3056,7 +3056,6 @@ export class DatabaseStorage implements IStorage {
       tuitionFee: variant?.tuitionFee?.toString() || course.fees?.toString() || null,
       currency: variant?.tuitionCurrency || region.defaultCurrency || 'AUD',
       applicationFee: variant?.applicationFee?.toString() || course.applicationFees?.toString() || null,
-      costOfLiving: variant?.costOfLiving?.toString() || course.costOfLiving?.toString() || null,
       scholarshipMin: variant?.scholarshipMin ?? course.scholarshipPercentageMin ?? null,
       scholarshipMax: variant?.scholarshipMax ?? course.scholarshipPercentageMax ?? null,
       

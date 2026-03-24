@@ -957,7 +957,6 @@ export function AdminApiKeysPanel() {
                   { name: "careerPath", required: false, description: "Text description of the career progression" },
                   { name: "scholarshipPercentageMin", required: false, description: "Minimum scholarship % available (0–100)" },
                   { name: "scholarshipPercentageMax", required: false, description: "Maximum scholarship % available (0–100)" },
-                  { name: "costOfLiving", required: false, description: "Estimated monthly cost of living as a number" },
                   { name: "applicationFees", required: false, description: "Application fee amount as a number" },
                   { name: "curriculumUrl", required: false, description: "URL to the curriculum or course outline page" },
                   { name: "minimumAge", required: false, description: "Minimum applicant age as a number" },
@@ -1299,7 +1298,6 @@ Optional fields:
 - careerPath (career progression text)
 - scholarshipPercentageMin (number 0–100)
 - scholarshipPercentageMax (number 0–100)
-- costOfLiving (estimated monthly cost, number)
 - applicationFees (application fee, number)
 - curriculumUrl (URL to curriculum page)
 - minimumAge (number)

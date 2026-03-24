@@ -63,7 +63,6 @@ FEES & COSTS:
 - applicationFees: Application/enrollment fees
 - admissionFee: One-time admission or enrolment fee paid on acceptance (distinct from application fee)
 - materialsFee: Fee for course materials, textbooks, or resources (if listed separately)
-- costOfLiving: Estimated living expenses if mentioned
 
 DURATION:
 - duration: Text format (e.g., "3 years full-time", "2 years")

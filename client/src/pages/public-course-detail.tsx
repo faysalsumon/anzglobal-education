@@ -870,12 +870,6 @@ export default function PublicCourseDetail() {
                       Internship Available
                     </Badge>
                   )}
-                  {course.workRights && (
-                    <Badge className="bg-gradient-to-r from-green-600 to-green-500 border-0 text-white px-4 py-1.5" data-testid="badge-work-rights">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Work Rights Eligible
-                    </Badge>
-                  )}
                   {/* Location Badge */}
                   {(course.location || course.country) && (
                     <Badge variant="outline" className="px-3 py-1" data-testid="badge-location">

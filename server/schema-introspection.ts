@@ -110,7 +110,6 @@ function getFieldDescription(tableName: string, fieldName: string): string {
       eligibilityRequirements: "Detailed eligibility criteria",
       englishRequirements: "English language requirements as text",
       curriculumUrl: "URL to detailed curriculum/syllabus",
-      costOfLiving: "Estimated living costs",
       applicationFees: "Application fee amount",
       images: "Array of course image URLs",
       intakes: "Available intake periods (January, February, July, etc.)",

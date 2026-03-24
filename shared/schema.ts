@@ -3490,7 +3490,6 @@ const baseCourseSchema = createInsertSchema(courses).omit({
   fees: optionalNumber,
   durationMonths: optionalInteger,
   durationWeeks: optionalInteger,
-  costOfLiving: optionalNumber,
   applicationFees: optionalNumber,
   admissionFee: optionalNumber,
   materialsFee: optionalNumber,

@@ -39,7 +39,6 @@ interface ExtractedData {
   fees: number | null;
   currency: string | null;
   applicationFees: number | null;
-  costOfLiving: number | null;
   scholarshipPercentageMin: number | null;
   scholarshipPercentageMax: number | null;
   
@@ -527,7 +526,6 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
                   {renderField("Duration (Weeks)", "durationWeeks", extractedData.durationWeeks, "number")}
                   {renderField("Annual Tuition", "fees", extractedData.fees, "number")}
                   {renderField("Application Fees", "applicationFees", extractedData.applicationFees, "number")}
-                  {renderField("Cost of Living", "costOfLiving", extractedData.costOfLiving, "number")}
                   {renderField("Currency", "currency", extractedData.currency)}
                 </div>
               )}
