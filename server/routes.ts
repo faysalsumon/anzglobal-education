@@ -22610,12 +22610,24 @@ Sitemap: ${baseUrl}/sitemap.xml
         });
       }
 
-      // Only allow updating draft or pending courses, not published ones
-      if (course.publishStatus === 'published' && course.approvalStatus === 'approved') {
+      // Verify the institution actually exists (same check as POST /api/partner/courses)
+      const institution = await storage.getUniversityById(claimedUniversityId);
+      if (!institution) {
+        await logPartnerUsage(req, 404);
+        return res.status(404).json({
+          error: 'Institution not found',
+          message: 'The specified universityId does not exist',
+        });
+      }
+
+      // Only allow updating courses that are draft (publishStatus) OR pending (approvalStatus)
+      // Explicitly whitelist updatable states — reject all other combinations
+      const isUpdatable = course.publishStatus === 'draft' || course.approvalStatus === 'pending';
+      if (!isUpdatable) {
         await logPartnerUsage(req, 403);
         return res.status(403).json({
-          error: 'Cannot update published course',
-          message: 'Only draft or pending courses can be updated via the API. Contact an admin to modify published courses.',
+          error: 'Cannot update course',
+          message: 'Only courses with publishStatus "draft" or approvalStatus "pending" can be updated via the API.',
         });
       }
 
