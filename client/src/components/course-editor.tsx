@@ -677,12 +677,20 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     careerPath: true,
     entryRequirements: true,
   });
+  type EntryReqSuggestion = {
+    qualificationName: string;
+    qualificationCountry: string;
+    minGrade: string;
+    isSelected: boolean;
+  };
   type GeneratedPreviewItem = {
     field: string;
     label: string;
     currentValue: string;
     generatedValue: string;
     accepted: boolean | null;
+    // For entry requirements — list of selectable suggestions
+    entryReqSuggestions?: EntryReqSuggestion[];
   };
   const [generateAllPreviews, setGenerateAllPreviews] = useState<GeneratedPreviewItem[]>([]);
   
@@ -5525,21 +5533,42 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                             type="button"
                             size="sm"
                             variant="default"
+                            disabled={preview.field === 'entryRequirements' && (preview.entryReqSuggestions?.filter(r => r.isSelected).length === 0)}
                             onClick={() => {
-                              // Apply the value to the form
                               if (preview.field === 'description') {
                                 form.setValue('description', preview.generatedValue);
                               } else if (preview.field === 'careerOutcomes') {
                                 form.setValue('careerOutcomes', preview.generatedValue);
                               } else if (preview.field === 'careerPath') {
                                 form.setValue('careerPath', preview.generatedValue);
+                              } else if (preview.field === 'entryRequirements' && preview.entryReqSuggestions) {
+                                // Apply selected suggestions to selectedEntryRequirements
+                                const selectedSuggestions = preview.entryReqSuggestions.filter(r => r.isSelected);
+                                for (const req of selectedSuggestions) {
+                                  const matchingTemplate = entryRequirementTemplates.find(
+                                    t => t.qualification?.name?.toLowerCase().includes(req.qualificationName.toLowerCase())
+                                  );
+                                  if (matchingTemplate) {
+                                    const alreadySelected = selectedEntryRequirements.some(
+                                      r => r.qualificationTypeId === matchingTemplate.qualificationTypeId
+                                    );
+                                    if (!alreadySelected) {
+                                      setSelectedEntryRequirements(prev => [
+                                        ...prev,
+                                        { qualificationTypeId: matchingTemplate.qualificationTypeId, minGrade: req.minGrade }
+                                      ]);
+                                    }
+                                  }
+                                }
                               }
                               setGenerateAllPreviews(prev => prev.map((p, i) => i === idx ? { ...p, accepted: true } : p));
                             }}
                             data-testid={`button-accept-${preview.field}`}
                           >
                             <Check className="h-3.5 w-3.5 mr-1" />
-                            Accept
+                            {preview.field === 'entryRequirements'
+                              ? `Apply ${preview.entryReqSuggestions?.filter(r => r.isSelected).length ?? 0} Selected`
+                              : 'Accept'}
                           </Button>
                           <Button
                             type="button"
@@ -5567,21 +5596,58 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                       )}
                     </div>
 
-                    {/* Side-by-side current vs generated */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Current value</p>
-                        <div className="text-xs bg-muted/50 rounded p-2 min-h-[60px] whitespace-pre-wrap break-words max-h-48 overflow-y-auto">
-                          {preview.currentValue || <span className="italic text-muted-foreground">Empty</span>}
+                    {/* Entry requirements: selectable checklist */}
+                    {preview.field === 'entryRequirements' && preview.entryReqSuggestions && preview.accepted === null && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground">Select which requirements to apply:</p>
+                        <div className="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                          {preview.entryReqSuggestions.map((req, reqIdx) => (
+                            <div
+                              key={reqIdx}
+                              className={`flex items-start gap-2 p-2 rounded border cursor-pointer text-xs ${req.isSelected ? 'border-primary/40 bg-primary/5' : 'border-border hover-elevate'}`}
+                              onClick={() => {
+                                setGenerateAllPreviews(prev => prev.map((p, i) => {
+                                  if (i !== idx) return p;
+                                  const updated = [...(p.entryReqSuggestions || [])];
+                                  updated[reqIdx] = { ...updated[reqIdx], isSelected: !updated[reqIdx].isSelected };
+                                  return { ...p, entryReqSuggestions: updated };
+                                }));
+                              }}
+                              data-testid={`entry-req-suggestion-${reqIdx}`}
+                            >
+                              <div className={`mt-0.5 h-3.5 w-3.5 rounded border flex-shrink-0 flex items-center justify-center ${req.isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/40'}`}>
+                                {req.isSelected && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+                              </div>
+                              <div className="flex-1">
+                                <span className="font-medium">{req.qualificationName}</span>
+                                <span className="text-muted-foreground"> — {req.qualificationCountry} | Min: {req.minGrade}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {preview.currentValue && (
+                          <p className="text-xs text-muted-foreground">Current: {preview.currentValue}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Text fields: side-by-side current vs generated */}
+                    {preview.field !== 'entryRequirements' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Current value</p>
+                          <div className="text-xs bg-muted/50 rounded p-2 min-h-[60px] whitespace-pre-wrap break-words max-h-48 overflow-y-auto">
+                            {preview.currentValue || <span className="italic text-muted-foreground">Empty</span>}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">AI generated</p>
+                          <div className="text-xs bg-background rounded p-2 min-h-[60px] whitespace-pre-wrap break-words max-h-48 overflow-y-auto border">
+                            {preview.generatedValue}
+                          </div>
                         </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">AI generated</p>
-                        <div className="text-xs bg-background rounded p-2 min-h-[60px] whitespace-pre-wrap break-words max-h-48 overflow-y-auto border">
-                          {preview.generatedValue}
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -5615,76 +5681,127 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                     const intakesStr = form.watch("intakes") || "";
                     const intakesArr = intakesStr ? intakesStr.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
 
-                    const response = await apiRequest("POST", "/api/ai/generate-all-course-content", {
-                      title: form.watch("title"),
-                      discipline: form.watch("discipline"),
-                      level: form.watch("level"),
-                      specialization: form.watch("specialization"),
-                      institutionName: selectedInstitution?.name,
-                      institutionCountry: selectedInstitution?.country,
-                      duration: form.watch("duration"),
-                      fees: form.watch("fees"),
-                      currency: form.watch("currency"),
-                      deliveryMode: form.watch("deliveryMode"),
-                      intakes: intakesArr,
-                      prerequisites: form.watch("prerequisites"),
-                      existingDescription: form.watch("description"),
-                      fields: selectedFieldsList,
-                    });
-                    const data = await response.json();
+                    const courseLevel = form.watch("level");
+                    const courseTitle = form.watch("title");
+                    const courseDiscipline = form.watch("discipline");
+                    const courseCountry = institutionCountry;
 
-                    if (!response.ok) {
-                      toast({ title: "Generation failed", description: data.message || "Please try again", variant: "destructive" });
-                      return;
+                    // Build parallel tasks for all selected fields
+                    const tasks: Promise<{ field: string; data: unknown }>[] = [];
+
+                    const nonEntryFields = selectedFieldsList.filter(f => f !== 'entryRequirements');
+                    if (nonEntryFields.length > 0) {
+                      tasks.push(
+                        apiRequest("POST", "/api/ai/generate-all-course-content", {
+                          title: courseTitle,
+                          discipline: courseDiscipline,
+                          level: courseLevel,
+                          specialization: form.watch("specialization"),
+                          institutionName: selectedInstitution?.name,
+                          institutionCountry: courseCountry,
+                          duration: form.watch("duration"),
+                          fees: form.watch("fees"),
+                          currency: form.watch("currency"),
+                          deliveryMode: form.watch("deliveryMode"),
+                          intakes: intakesArr,
+                          prerequisites: form.watch("prerequisites"),
+                          existingDescription: form.watch("description"),
+                          fields: nonEntryFields,
+                        }).then(r => r.json()).then(d => ({ field: 'bulk', data: d }))
+                      );
                     }
 
-                    const previews: GeneratedPreviewItem[] = [];
+                    if (selectedFieldsList.includes('entryRequirements') && courseLevel) {
+                      tasks.push(
+                        apiRequest("POST", "/api/ai/generate-entry-requirements", {
+                          courseLevel,
+                          institutionCountry: courseCountry,
+                          courseName: courseTitle,
+                          discipline: courseDiscipline,
+                        }).then(async r => {
+                          const d = await r.json();
+                          if (!r.ok) throw new Error(d.message || 'Entry requirements generation failed');
+                          return { field: 'entryRequirements', data: d };
+                        })
+                      );
+                    }
 
-                    if (data.description && selectedFieldsList.includes('description')) {
+                    const settled = await Promise.allSettled(tasks);
+
+                    const previews: GeneratedPreviewItem[] = [];
+                    let bulkData: Record<string, unknown> = {};
+                    let entryReqData: EntryReqSuggestion[] = [];
+                    const genErrors: string[] = [];
+
+                    for (const outcome of settled) {
+                      if (outcome.status === 'fulfilled') {
+                        const { field, data: taskData } = outcome.value as { field: string; data: Record<string, unknown> };
+                        if (field === 'bulk') {
+                          bulkData = taskData;
+                        } else if (field === 'entryRequirements') {
+                          entryReqData = ((taskData as Record<string, unknown>).requirements || []) as EntryReqSuggestion[];
+                        }
+                      } else {
+                        genErrors.push(outcome.reason?.message || 'A field failed to generate');
+                      }
+                    }
+
+                    if (bulkData.description && selectedFieldsList.includes('description')) {
                       previews.push({
                         field: 'description',
                         label: 'Course Description',
                         currentValue: form.watch("description") || '',
-                        generatedValue: data.description,
+                        generatedValue: bulkData.description as string,
                         accepted: null,
                       });
                     }
 
-                    if (data.careerOutcomes && selectedFieldsList.includes('careerOutcomes')) {
-                      const careerOutcomesStr = Array.isArray(data.careerOutcomes) ? data.careerOutcomes.join(', ') : data.careerOutcomes;
+                    if (bulkData.careerOutcomes && selectedFieldsList.includes('careerOutcomes')) {
+                      const arr = bulkData.careerOutcomes as string[];
                       previews.push({
                         field: 'careerOutcomes',
                         label: 'Career Outcomes',
                         currentValue: form.watch("careerOutcomes") || '',
-                        generatedValue: careerOutcomesStr,
+                        generatedValue: Array.isArray(arr) ? arr.join(', ') : (arr as unknown as string),
                         accepted: null,
                       });
                     }
 
-                    if (data.careerPath && selectedFieldsList.includes('careerPath')) {
+                    if (bulkData.careerPath && selectedFieldsList.includes('careerPath')) {
                       previews.push({
                         field: 'careerPath',
                         label: 'Career Path',
                         currentValue: form.watch("careerPath") || '',
-                        generatedValue: data.careerPath,
+                        generatedValue: bulkData.careerPath as string,
                         accepted: null,
                       });
                     }
 
-                    // Handle entry requirements — open the existing AI entry req dialog
-                    if (selectedFieldsList.includes('entryRequirements') && form.watch('level')) {
-                      setGenerateAllDialogOpen(false);
-                      setAiEntryReqDialogOpen(true);
+                    if (entryReqData.length > 0) {
+                      const currentReqsStr = selectedEntryRequirements.length > 0
+                        ? `${selectedEntryRequirements.length} qualification(s) already selected`
+                        : '';
+                      previews.push({
+                        field: 'entryRequirements',
+                        label: 'Academic Entry Requirements',
+                        currentValue: currentReqsStr,
+                        generatedValue: '',
+                        accepted: null,
+                        entryReqSuggestions: entryReqData.map(r => ({ ...r, isSelected: true })),
+                      });
                     }
 
-                    if (previews.length === 0 && !selectedFieldsList.includes('entryRequirements')) {
-                      toast({ title: "No content generated", description: "No selected fields returned content. Try a different selection.", variant: "destructive" });
+                    if (previews.length === 0) {
+                      const errMsg = genErrors.length > 0 ? genErrors.join('; ') : "No selected fields returned content. Try a different selection.";
+                      toast({ title: "No content generated", description: errMsg, variant: "destructive" });
                       return;
                     }
 
-                    if (previews.length > 0) {
-                      setGenerateAllPreviews(previews);
+                    if (genErrors.length > 0) {
+                      toast({ title: "Some fields failed", description: genErrors.join('; '), variant: "destructive" });
                     }
+
+                    setGenerateAllPreviews(previews);
                   } catch (error: any) {
                     toast({ title: "Generation failed", description: error.message || "Please try again", variant: "destructive" });
                   } finally {
