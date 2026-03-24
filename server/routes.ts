@@ -37,6 +37,7 @@ import {
   users,
   universities,
   courses,
+  type Course,
   applications,
   applicationCourses,
   studentProfiles,
@@ -22677,53 +22678,58 @@ Sitemap: ${baseUrl}/sitemap.xml
         });
       }
 
-      // Build update object — only include explicitly provided fields
-      const updateData: Record<string, any> = {};
+      // Build typed update payload — only include explicitly provided fields
+      // Using Partial<Course> so storage.updateCourse receives a properly typed argument
+      const updateData: Partial<Course> = {};
+      // Helper to set a field by key without requiring unsafe any cast at each call site
+      const setCourseField = (key: keyof Course, value: unknown) => {
+        (updateData as Record<keyof Course, unknown>)[key] = value;
+      };
       const body = req.body;
 
-      const stringFields = ['title', 'subject', 'description', 'discipline', 'subDiscipline', 'specialization',
+      const stringFields: Array<keyof Course> = ['title', 'subject', 'description', 'discipline', 'subDiscipline', 'specialization',
         'customLevel', 'duration', 'location', 'country', 'startDate', 'applicationDeadline',
         'prerequisites', 'eligibilityRequirements', 'englishRequirements', 'sourceUrl', 'thumbnailUrl',
         'courseCode', 'cricosCode', 'deliveryMode', 'careerPath', 'curriculumUrl', 'internshipDetails',
         'visibility', 'qualificationFramework'];
-      const boolFields = ['prPathway', 'internshipAvailable', 'isCricosRegistered'];
-      const intFields = ['durationMonths', 'durationWeeks', 'scholarshipPercentageMin', 'scholarshipPercentageMax', 'minimumAge'];
-      const floatFields = ['fees', 'applicationFees', 'admissionFee', 'materialsFee'];
-      const arrayFields = ['intakes', 'campusLocations', 'studyAreas', 'careerOutcomes', 'pathways', 'images', 'availableMarkets'];
-      const jsonFields = ['englishRequirementsStructured'];
+      const boolFields: Array<keyof Course> = ['prPathway', 'internshipAvailable', 'isCricosRegistered'];
+      const intFields: Array<keyof Course> = ['durationMonths', 'durationWeeks', 'scholarshipPercentageMin', 'scholarshipPercentageMax', 'minimumAge'];
+      const floatFields: Array<keyof Course> = ['fees', 'applicationFees', 'admissionFee', 'materialsFee'];
+      const arrayFields: Array<keyof Course> = ['intakes', 'campusLocations', 'studyAreas', 'careerOutcomes', 'pathways', 'images', 'availableMarkets'];
+      const jsonFields: Array<keyof Course> = ['englishRequirementsStructured'];
 
       for (const field of stringFields) {
         if (field in body && body[field] !== undefined) {
-          updateData[field === 'subDiscipline' ? 'subDiscipline' : field] = body[field] !== null ? String(body[field]).trim() : null;
+          setCourseField(field, body[field] !== null ? String(body[field]).trim() : null);
         }
       }
-      // Map courseLevel → level
+      // courseLevel maps to the 'level' DB column (API uses 'courseLevel', DB column is 'level')
       if ('courseLevel' in body && body.courseLevel !== undefined) {
-        updateData.level = body.courseLevel;
+        setCourseField('level', body.courseLevel !== null ? String(body.courseLevel).trim() : null);
       }
       for (const field of boolFields) {
         if (field in body && body[field] !== undefined) {
-          updateData[field] = body[field] === true || body[field] === 'true';
+          setCourseField(field, body[field] === true || body[field] === 'true');
         }
       }
       for (const field of intFields) {
         if (field in body && body[field] !== undefined) {
-          updateData[field] = body[field] !== null ? parseInt(body[field]) : null;
+          setCourseField(field, body[field] !== null ? parseInt(body[field]) : null);
         }
       }
       for (const field of floatFields) {
         if (field in body && body[field] !== undefined) {
-          updateData[field] = body[field] !== null ? parseFloat(body[field]) : null;
+          setCourseField(field, body[field] !== null ? parseFloat(body[field]) : null);
         }
       }
       for (const field of arrayFields) {
         if (field in body && body[field] !== undefined) {
-          updateData[field] = Array.isArray(body[field]) ? body[field] : [];
+          setCourseField(field, Array.isArray(body[field]) ? body[field] : []);
         }
       }
       for (const field of jsonFields) {
         if (field in body && body[field] !== undefined) {
-          updateData[field] = body[field];
+          setCourseField(field, body[field]);
         }
       }
 
@@ -22735,7 +22741,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         });
       }
 
-      const updated = await storage.updateCourse(id, updateData as any);
+      const updated = await storage.updateCourse(id, updateData);
 
       await logPartnerUsage(req, 200, 'course', id);
 
