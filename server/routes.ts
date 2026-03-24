@@ -22462,6 +22462,19 @@ Sitemap: ${baseUrl}/sitemap.xml
           message: 'The specified universityId does not exist',
         });
       }
+
+      // Institution scope check: if the API key has an allowedInstitutions list,
+      // verify universityId is in that list
+      const allowedInstitutionsPOST = req.apiKey.allowedInstitutions as string[] | null | undefined;
+      if (allowedInstitutionsPOST && allowedInstitutionsPOST.length > 0) {
+        if (!allowedInstitutionsPOST.includes(universityId)) {
+          await logPartnerUsage(req, 403);
+          return res.status(403).json({
+            error: 'Institution not authorized',
+            message: 'This API key is not authorized to create courses for the specified institution',
+          });
+        }
+      }
       
       // Check for duplicate (by title and university)
       const existingCourses = await storage.getCoursesByUniversityId(universityId);
@@ -22621,6 +22634,19 @@ Sitemap: ${baseUrl}/sitemap.xml
         });
       }
 
+      // Institution scope check: if the API key has an allowedInstitutions list,
+      // verify claimedUniversityId is in that list. Same check is also enforced on POST.
+      const allowedInstitutions = req.apiKey.allowedInstitutions as string[] | null | undefined;
+      if (allowedInstitutions && allowedInstitutions.length > 0) {
+        if (!allowedInstitutions.includes(claimedUniversityId)) {
+          await logPartnerUsage(req, 403);
+          return res.status(403).json({
+            error: 'Institution not authorized',
+            message: 'This API key is not authorized to manage courses for the specified institution',
+          });
+        }
+      }
+
       // Only allow updating courses that are draft (publishStatus) OR pending (approvalStatus)
       // Explicitly whitelist updatable states — reject all other combinations
       const isUpdatable = course.publishStatus === 'draft' || course.approvalStatus === 'pending';
@@ -22691,7 +22717,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         'customLevel', 'duration', 'location', 'country', 'startDate', 'applicationDeadline',
         'prerequisites', 'eligibilityRequirements', 'englishRequirements', 'sourceUrl', 'thumbnailUrl',
         'courseCode', 'cricosCode', 'deliveryMode', 'careerPath', 'curriculumUrl', 'internshipDetails',
-        'visibility', 'qualificationFramework'];
+        'visibility', 'qualificationFramework', 'currency'];
       const boolFields: Array<keyof Course> = ['prPathway', 'internshipAvailable', 'isCricosRegistered'];
       const intFields: Array<keyof Course> = ['durationMonths', 'durationWeeks', 'scholarshipPercentageMin', 'scholarshipPercentageMax', 'minimumAge'];
       const floatFields: Array<keyof Course> = ['fees', 'applicationFees', 'admissionFee', 'materialsFee'];

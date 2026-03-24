@@ -1708,6 +1708,10 @@ export const apiKeys = pgTable("api_keys", {
   // Permissions
   permissions: text("permissions").array().default(sql`ARRAY['institutions:create', 'courses:create', 'institutions:read']::text[]`),
   
+  // Institution scope — if set, this key may only create/update data for these institution IDs.
+  // If null or empty, the key is unrestricted (can work with any institution).
+  allowedInstitutions: varchar("allowed_institutions").array(),
+  
   // Ownership and tracking
   createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   description: text("description"), // Optional description of what this key is used for

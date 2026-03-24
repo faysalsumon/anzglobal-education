@@ -1374,12 +1374,11 @@ Content-Type: application/json
 
 Update any field on an existing **draft or pending** course. Cannot update published/approved courses.
 
-**Required in body:**
-- universityId (must match the course's parent institution — prevents unauthorized updates)
+**Authorization:**
+- universityId (required in body — must match the course's parent institution)
+- If this API key has an \`allowedInstitutions\` scope, the universityId must also be in that list
 
-**Optional:** Send only the fields you want to change. Unmentioned fields are not modified.
-
-All the same fields from Create Course are updatable. Use \`courseLevel\` (not \`level\`) when updating the course level.
+**Optional:** Send only the fields you want to change. Unmentioned fields are not modified. All the same fields from Create Course are updatable. Use \`courseLevel\` (not \`level\`) when updating the course level. Adding \`currency\` alongside \`fees\` is supported.
 
 Returns the updated course summary with a list of fields that were changed.
 
@@ -1388,6 +1387,7 @@ Example request (update fees, add CRICOS info):
 {
   "universityId": "institution-id-the-course-belongs-to",
   "fees": 34500,
+  "currency": "AUD",
   "cricosCode": "0202M",
   "isCricosRegistered": true,
   "startDate": "July 2026",
