@@ -22592,6 +22592,24 @@ Sitemap: ${baseUrl}/sitemap.xml
         });
       }
 
+      // Authorization: require caller to supply universityId that matches course's institution
+      // This prevents IDOR — callers must know both the course ID and its parent institution ID
+      const { universityId: claimedUniversityId } = req.body;
+      if (!claimedUniversityId) {
+        await logPartnerUsage(req, 400);
+        return res.status(400).json({
+          error: 'Missing universityId',
+          message: 'universityId is required in the request body to confirm ownership of this course',
+        });
+      }
+      if (claimedUniversityId !== course.universityId) {
+        await logPartnerUsage(req, 403);
+        return res.status(403).json({
+          error: 'Unauthorized',
+          message: 'The provided universityId does not match the institution this course belongs to',
+        });
+      }
+
       // Only allow updating draft or pending courses, not published ones
       if (course.publishStatus === 'published' && course.approvalStatus === 'approved') {
         await logPartnerUsage(req, 403);
@@ -22740,7 +22758,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       const subDisciplines = await storage.getSubDisciplines();
       
       // Group sub-disciplines by parent discipline
-      const disciplineHierarchy: Record<string, { subDisciplines: Array<{ name: string; slug: string }> }> = {};
+      const disciplineHierarchy: Record<string, { subDisciplines: Array<{ name: string; apiValue: string; slug: string }> }> = {};
       
       // Initialize all valid disciplines
       for (const discipline of VALID_DISCIPLINES) {
@@ -22752,6 +22770,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         if (disciplineHierarchy[sub.discipline]) {
           disciplineHierarchy[sub.discipline].subDisciplines.push({
             name: sub.name,
+            apiValue: sub.name, // Pass this exact string as "subDiscipline" in course POST/PATCH
             slug: sub.slug,
           });
         }
@@ -22765,6 +22784,7 @@ Sitemap: ${baseUrl}/sitemap.xml
           disciplines: VALID_DISCIPLINES,
           hierarchy: disciplineHierarchy,
           description: "3-tier system: discipline (required) → subDiscipline (optional) → specialization (optional free text)",
+          usage: "Use 'discipline' string as the 'discipline' field in course requests. Use 'apiValue' from each sub-discipline as the 'subDiscipline' field.",
         },
       });
     } catch (error: any) {

@@ -1372,15 +1372,21 @@ Example request:
 Permission: courses:update
 Content-Type: application/json
 
-Update any field on an existing **draft or pending** course. Send only the fields you want to change — unmentioned fields are not modified. Cannot update published/approved courses via this endpoint.
+Update any field on an existing **draft or pending** course. Cannot update published/approved courses.
 
-All the same fields available in Create Course are updatable. Use \`courseLevel\` (not \`level\`) when updating the course level.
+**Required in body:**
+- universityId (must match the course's parent institution — prevents unauthorized updates)
 
-Returns the updated course summary with a list of the fields that were changed.
+**Optional:** Send only the fields you want to change. Unmentioned fields are not modified.
 
-Example request (update fees and add CRICOS info):
+All the same fields from Create Course are updatable. Use \`courseLevel\` (not \`level\`) when updating the course level.
+
+Returns the updated course summary with a list of fields that were changed.
+
+Example request (update fees, add CRICOS info):
 \`\`\`json
 {
+  "universityId": "institution-id-the-course-belongs-to",
   "fees": 34500,
   "cricosCode": "0202M",
   "isCricosRegistered": true,
