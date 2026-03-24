@@ -667,6 +667,24 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
 
   // AI Description generation state
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+
+  // Unified "Generate with AI" dialog state
+  const [generateAllDialogOpen, setGenerateAllDialogOpen] = useState(false);
+  const [isGeneratingAll, setIsGeneratingAll] = useState(false);
+  const [generateAllChecked, setGenerateAllChecked] = useState<Record<string, boolean>>({
+    description: true,
+    careerOutcomes: true,
+    careerPath: true,
+    entryRequirements: true,
+  });
+  type GeneratedPreviewItem = {
+    field: string;
+    label: string;
+    currentValue: string;
+    generatedValue: string;
+    accepted: boolean | null;
+  };
+  const [generateAllPreviews, setGenerateAllPreviews] = useState<GeneratedPreviewItem[]>([]);
   
   // Thumbnail state
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
@@ -1700,6 +1718,21 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isGeneratingAll || !form.watch("title")}
+              onClick={() => {
+                setGenerateAllPreviews([]);
+                setGenerateAllDialogOpen(true);
+              }}
+              data-testid="button-generate-all-ai"
+            >
+              <Sparkles className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Generate with AI</span>
+              <span className="sm:hidden">AI</span>
+            </Button>
             <Button 
               variant="outline" 
               size="sm"
@@ -1889,86 +1922,12 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                       name="description"
                       render={({ field }) => (
                         <FormItem>
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <FormLabel>Description</FormLabel>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              disabled={isGeneratingDescription || !form.watch("title")}
-                              onClick={async () => {
-                                const title = form.watch("title");
-                                if (!title) {
-                                  toast({
-                                    title: "Course title required",
-                                    description: "Please enter the course title first",
-                                    variant: "destructive",
-                                  });
-                                  return;
-                                }
-                                
-                                setIsGeneratingDescription(true);
-                                try {
-                                  // Parse careerOutcomes string into array (comma-separated)
-                                  const careerOutcomesStr = form.watch("careerOutcomes") || "";
-                                  const careerOutcomesArr = careerOutcomesStr ? careerOutcomesStr.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
-                                  
-                                  // Parse intakes string into array
-                                  const intakesStr = form.watch("intakes") || "";
-                                  const intakesArr = intakesStr ? intakesStr.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
-                                  
-                                  const response = await apiRequest("POST", "/api/ai/generate-course-description", {
-                                    title,
-                                    discipline: form.watch("discipline"),
-                                    level: form.watch("level"),
-                                    institutionName: selectedInstitution?.name,
-                                    duration: form.watch("duration"),
-                                    careerOutcomes: careerOutcomesArr,
-                                    fees: form.watch("fees"),
-                                    currency: form.watch("currency"),
-                                    intakes: intakesArr,
-                                    prerequisites: form.watch("prerequisites"),
-                                    existingDescription: field.value, // Use existing description as context
-                                  });
-                                  const data = await response.json();
-                                  if (data.description) {
-                                    form.setValue("description", data.description);
-                                    toast({
-                                      title: "Description generated",
-                                      description: "AI has created a marketing-quality course description",
-                                    });
-                                  }
-                                } catch (error: any) {
-                                  const errorMessage = error.message || "Failed to generate description";
-                                  toast({
-                                    title: "Generation failed",
-                                    description: errorMessage,
-                                    variant: "destructive",
-                                  });
-                                } finally {
-                                  setIsGeneratingDescription(false);
-                                }
-                              }}
-                              data-testid="button-ai-generate-description"
-                            >
-                              {isGeneratingDescription ? (
-                                <>
-                                  <Sparkles className="h-4 w-4 mr-1 animate-spin" />
-                                  Generating...
-                                </>
-                              ) : (
-                                <>
-                                  <Sparkles className="h-4 w-4 mr-1" />
-                                  AI Generate
-                                </>
-                              )}
-                            </Button>
-                          </div>
+                          <FormLabel>Description</FormLabel>
                           <FormControl>
                             <Textarea {...field} placeholder="Course description..." rows={6} data-testid="input-course-description" />
                           </FormControl>
                           <FormDescription className="text-xs">
-                            Click "AI Generate" to create a marketing-quality description based on course details
+                            Use "Generate with AI" in the header to auto-generate a marketing-quality description
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -3697,17 +3656,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                     <Target className="h-4 w-4 mr-1" />
                                   )}
                                   Recommendations
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="default"
-                                  onClick={() => setAiEntryReqDialogOpen(true)}
-                                  disabled={isGeneratingAiReqs}
-                                  data-testid="button-ai-generate-entry-reqs"
-                                >
-                                  <Sparkles className="h-4 w-4 mr-1" />
-                                  AI Generate
                                 </Button>
                               </>
                             )}
@@ -5498,6 +5446,285 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
           </div>
         </DialogContent>
       </Dialog>
+      {/* Unified Generate with AI Dialog */}
+      <Dialog open={generateAllDialogOpen} onOpenChange={(open) => {
+        if (!isGeneratingAll) setGenerateAllDialogOpen(open);
+      }}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Generate with AI
+            </DialogTitle>
+            <DialogDescription>
+              Select which fields to generate. AI will run all selected generations in parallel and show you a preview before applying.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto space-y-4 py-2">
+            {/* Checklist — shown when not yet generated */}
+            {generateAllPreviews.length === 0 && !isGeneratingAll && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-foreground">Select fields to generate:</p>
+                {[
+                  { key: 'description', label: 'Course Description', note: 'Marketing-quality description for the course' },
+                  { key: 'careerOutcomes', label: 'Career Outcomes', note: '6–10 job titles graduates typically pursue' },
+                  { key: 'careerPath', label: 'Career Path', note: '2–3 sentence career progression narrative' },
+                  { key: 'entryRequirements', label: 'Academic Entry Requirements', note: `Suggested qualifications for ${form.watch('level') || 'this course level'} — requires institution country`, disabled: !form.watch('level') },
+                ].map(({ key, label, note, disabled }) => (
+                  <div
+                    key={key}
+                    className={`flex items-start gap-3 p-3 rounded-md border ${disabled ? 'opacity-50' : 'hover-elevate cursor-pointer'}`}
+                    onClick={() => {
+                      if (!disabled) {
+                        setGenerateAllChecked(prev => ({ ...prev, [key]: !prev[key] }));
+                      }
+                    }}
+                    data-testid={`checkbox-generate-${key}`}
+                  >
+                    <Checkbox
+                      checked={generateAllChecked[key] && !disabled}
+                      disabled={disabled}
+                      onCheckedChange={(checked) => {
+                        if (!disabled) setGenerateAllChecked(prev => ({ ...prev, [key]: !!checked }));
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <div>
+                      <p className="text-sm font-medium">{label}</p>
+                      <p className="text-xs text-muted-foreground">{note}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Loading state */}
+            {isGeneratingAll && (
+              <div className="flex flex-col items-center justify-center py-10 gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                <p className="text-sm text-muted-foreground">Generating selected content in parallel...</p>
+              </div>
+            )}
+
+            {/* Preview panels — shown after generation */}
+            {generateAllPreviews.length > 0 && !isGeneratingAll && (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">Review each generated field. Accept to apply it to the form, or reject to discard.</p>
+                {generateAllPreviews.map((preview, idx) => (
+                  <div
+                    key={preview.field}
+                    className={`border rounded-md p-4 space-y-3 ${preview.accepted === true ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : preview.accepted === false ? 'border-red-300 bg-red-50 dark:bg-red-950/20 opacity-60' : 'border-border'}`}
+                    data-testid={`preview-panel-${preview.field}`}
+                  >
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <p className="text-sm font-semibold">{preview.label}</p>
+                      {preview.accepted === null && (
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="default"
+                            onClick={() => {
+                              // Apply the value to the form
+                              if (preview.field === 'description') {
+                                form.setValue('description', preview.generatedValue);
+                              } else if (preview.field === 'careerOutcomes') {
+                                form.setValue('careerOutcomes', preview.generatedValue);
+                              } else if (preview.field === 'careerPath') {
+                                form.setValue('careerPath', preview.generatedValue);
+                              }
+                              setGenerateAllPreviews(prev => prev.map((p, i) => i === idx ? { ...p, accepted: true } : p));
+                            }}
+                            data-testid={`button-accept-${preview.field}`}
+                          >
+                            <Check className="h-3.5 w-3.5 mr-1" />
+                            Accept
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setGenerateAllPreviews(prev => prev.map((p, i) => i === idx ? { ...p, accepted: false } : p))}
+                            data-testid={`button-reject-${preview.field}`}
+                          >
+                            <X className="h-3.5 w-3.5 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                      {preview.accepted === true && (
+                        <Badge className="text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300">
+                          <Check className="h-3 w-3 mr-1" />
+                          Accepted
+                        </Badge>
+                      )}
+                      {preview.accepted === false && (
+                        <Badge variant="outline" className="text-muted-foreground">
+                          <X className="h-3 w-3 mr-1" />
+                          Rejected
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Side-by-side current vs generated */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Current value</p>
+                        <div className="text-xs bg-muted/50 rounded p-2 min-h-[60px] whitespace-pre-wrap break-words max-h-48 overflow-y-auto">
+                          {preview.currentValue || <span className="italic text-muted-foreground">Empty</span>}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">AI generated</p>
+                        <div className="text-xs bg-background rounded p-2 min-h-[60px] whitespace-pre-wrap break-words max-h-48 overflow-y-auto border">
+                          {preview.generatedValue}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-2 pt-3 border-t flex-wrap">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setGenerateAllDialogOpen(false)}
+              disabled={isGeneratingAll}
+              data-testid="button-generate-all-cancel"
+            >
+              {generateAllPreviews.length > 0 ? 'Close' : 'Cancel'}
+            </Button>
+
+            {generateAllPreviews.length === 0 && (
+              <Button
+                type="button"
+                size="sm"
+                disabled={isGeneratingAll || !Object.values(generateAllChecked).some(Boolean)}
+                onClick={async () => {
+                  setIsGeneratingAll(true);
+                  try {
+                    const selectedFieldsList = Object.entries(generateAllChecked)
+                      .filter(([, checked]) => checked)
+                      .map(([key]) => key);
+
+                    const intakesStr = form.watch("intakes") || "";
+                    const intakesArr = intakesStr ? intakesStr.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+
+                    const response = await apiRequest("POST", "/api/ai/generate-all-course-content", {
+                      title: form.watch("title"),
+                      discipline: form.watch("discipline"),
+                      level: form.watch("level"),
+                      specialization: form.watch("specialization"),
+                      institutionName: selectedInstitution?.name,
+                      institutionCountry: selectedInstitution?.country,
+                      duration: form.watch("duration"),
+                      fees: form.watch("fees"),
+                      currency: form.watch("currency"),
+                      deliveryMode: form.watch("deliveryMode"),
+                      intakes: intakesArr,
+                      prerequisites: form.watch("prerequisites"),
+                      existingDescription: form.watch("description"),
+                      fields: selectedFieldsList,
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                      toast({ title: "Generation failed", description: data.message || "Please try again", variant: "destructive" });
+                      return;
+                    }
+
+                    const previews: GeneratedPreviewItem[] = [];
+
+                    if (data.description && selectedFieldsList.includes('description')) {
+                      previews.push({
+                        field: 'description',
+                        label: 'Course Description',
+                        currentValue: form.watch("description") || '',
+                        generatedValue: data.description,
+                        accepted: null,
+                      });
+                    }
+
+                    if (data.careerOutcomes && selectedFieldsList.includes('careerOutcomes')) {
+                      const careerOutcomesStr = Array.isArray(data.careerOutcomes) ? data.careerOutcomes.join(', ') : data.careerOutcomes;
+                      previews.push({
+                        field: 'careerOutcomes',
+                        label: 'Career Outcomes',
+                        currentValue: form.watch("careerOutcomes") || '',
+                        generatedValue: careerOutcomesStr,
+                        accepted: null,
+                      });
+                    }
+
+                    if (data.careerPath && selectedFieldsList.includes('careerPath')) {
+                      previews.push({
+                        field: 'careerPath',
+                        label: 'Career Path',
+                        currentValue: form.watch("careerPath") || '',
+                        generatedValue: data.careerPath,
+                        accepted: null,
+                      });
+                    }
+
+                    // Handle entry requirements — open the existing AI entry req dialog
+                    if (selectedFieldsList.includes('entryRequirements') && form.watch('level')) {
+                      setGenerateAllDialogOpen(false);
+                      setAiEntryReqDialogOpen(true);
+                    }
+
+                    if (previews.length === 0 && !selectedFieldsList.includes('entryRequirements')) {
+                      toast({ title: "No content generated", description: "No selected fields returned content. Try a different selection.", variant: "destructive" });
+                      return;
+                    }
+
+                    if (previews.length > 0) {
+                      setGenerateAllPreviews(previews);
+                    }
+                  } catch (error: any) {
+                    toast({ title: "Generation failed", description: error.message || "Please try again", variant: "destructive" });
+                  } finally {
+                    setIsGeneratingAll(false);
+                  }
+                }}
+                data-testid="button-generate-all-run"
+              >
+                {isGeneratingAll ? (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-1 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-1" />
+                    Generate Selected
+                  </>
+                )}
+              </Button>
+            )}
+
+            {generateAllPreviews.length > 0 && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setGenerateAllPreviews([]);
+                }}
+                data-testid="button-generate-all-retry"
+              >
+                <Sparkles className="h-4 w-4 mr-1" />
+                Re-generate
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

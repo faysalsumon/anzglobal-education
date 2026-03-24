@@ -2471,3 +2471,58 @@ Return ONLY a valid JSON object with these fields.`;
     };
   }
 }
+
+/**
+ * Generate career outcomes and career path for a course
+ * Returns a list of 6-10 relevant career outcome job titles and a 2-3 sentence career path narrative.
+ */
+export async function generateCareerContent(params: {
+  title: string;
+  discipline?: string;
+  level?: string;
+  specialization?: string;
+  institutionName?: string;
+}): Promise<{ careerOutcomes: string[]; careerPath: string }> {
+  checkAIConfigured();
+
+  const contextParts: string[] = [`Course Title: ${params.title}`];
+  if (params.discipline) contextParts.push(`Discipline: ${params.discipline}`);
+  if (params.level) contextParts.push(`Level: ${params.level}`);
+  if (params.specialization) contextParts.push(`Specialization: ${params.specialization}`);
+  if (params.institutionName) contextParts.push(`Institution: ${params.institutionName}`);
+
+  const prompt = `You are an expert career advisor and education consultant specializing in international student pathways.
+
+COURSE INFORMATION:
+${contextParts.join("\n")}
+
+TASK:
+1. Generate 6-10 specific, realistic job titles that graduates of this course typically pursue.
+2. Write a concise 2-3 sentence career path narrative describing the typical career progression for graduates.
+
+Return ONLY a JSON object with this exact structure:
+{
+  "careerOutcomes": ["Job Title 1", "Job Title 2", "..."],
+  "careerPath": "Concise 2-3 sentence description of career progression..."
+}
+
+Guidelines:
+- Job titles should be specific and industry-relevant (e.g., "Software Engineer", not "Tech Worker")
+- Include a mix of entry-level and mid-career titles
+- The career path narrative should mention typical progression and salary context where relevant
+- Both should be relevant to the specific course level and discipline`;
+
+  console.log(`[AI] Generating career content for: ${params.title}`);
+  const content = await createAiCompletion(prompt, { maxTokens: 600, json: true });
+
+  try {
+    const parsed = JSON.parse(content || "{}");
+    return {
+      careerOutcomes: Array.isArray(parsed.careerOutcomes) ? parsed.careerOutcomes : [],
+      careerPath: typeof parsed.careerPath === 'string' ? parsed.careerPath : "",
+    };
+  } catch (error) {
+    console.error("Failed to parse AI career content:", error);
+    return { careerOutcomes: [], careerPath: "" };
+  }
+}

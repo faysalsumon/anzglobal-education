@@ -154,6 +154,7 @@ import {
   generateQualificationEquivalencies,
   extractCourseDataFromUrl,
   extractPassportFromImage,
+  generateCareerContent,
 } from "./ai";
 import { buildKnowledgeBase } from "./knowledge-base";
 import multer from "multer";
@@ -8041,6 +8042,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ message: "Failed to generate description. Please try again." });
+    }
+  });
+
+  // POST /api/ai/generate-all-course-content
+  // Runs description, career outcomes, career path, and entry requirements generation in parallel
+  app.post("/api/ai/generate-all-course-content", isAuthenticated, async (req, res) => {
+    try {
+      const {
+        title,
+        discipline,
+        level,
+        specialization,
+        institutionName,
+        institutionCountry,
+        duration,
+        fees,
+        currency,
+        deliveryMode,
+        intakes,
+        prerequisites,
+        existingDescription,
+        fields = ['description', 'careerOutcomes', 'careerPath', 'entryRequirements'],
+      } = req.body;
+
+      if (!title || typeof title !== 'string') {
+        return res.status(400).json({ message: "Course title is required" });
+      }
+
+      const selectedFields: string[] = Array.isArray(fields) ? fields : ['description', 'careerOutcomes', 'careerPath', 'entryRequirements'];
+
+      // Run all selected generations in parallel using Promise.allSettled
+      const tasks: Array<Promise<{ field: string; result: unknown }>> = [];
+
+      if (selectedFields.includes('description')) {
+        tasks.push(
+          generateCourseDescription({ title, discipline, level, institutionName, duration, fees, currency, deliveryMode, intakes, prerequisites, existingDescription })
+            .then(result => ({ field: 'description', result }))
+        );
+      }
+
+      if (selectedFields.includes('careerOutcomes') || selectedFields.includes('careerPath')) {
+        tasks.push(
+          generateCareerContent({ title, discipline, level, specialization, institutionName })
+            .then(result => ({ field: 'career', result }))
+        );
+      }
+
+      if (selectedFields.includes('entryRequirements') && level && institutionCountry) {
+        tasks.push(
+          generateEntryRequirements(level, institutionCountry, title, discipline)
+            .then(result => ({ field: 'entryRequirements', result }))
+        );
+      }
+
+      const settled = await Promise.allSettled(tasks);
+
+      const response: Record<string, unknown> = {};
+      const errors: Record<string, string> = {};
+
+      for (const outcome of settled) {
+        if (outcome.status === 'fulfilled') {
+          const { field, result } = outcome.value;
+          if (field === 'description') {
+            response.description = result as string;
+          } else if (field === 'career') {
+            const careerResult = result as { careerOutcomes: string[]; careerPath: string };
+            if (selectedFields.includes('careerOutcomes')) {
+              response.careerOutcomes = careerResult.careerOutcomes;
+            }
+            if (selectedFields.includes('careerPath')) {
+              response.careerPath = careerResult.careerPath;
+            }
+          } else if (field === 'entryRequirements') {
+            response.entryRequirements = result;
+          }
+        } else {
+          // Capture per-field error — other fields still succeed
+          const fieldName = (outcome as PromiseRejectedResult).reason?.field || 'unknown';
+          errors[fieldName] = (outcome as PromiseRejectedResult).reason?.message || 'Generation failed';
+        }
+      }
+
+      res.json({ ...response, errors: Object.keys(errors).length > 0 ? errors : undefined });
+    } catch (error: any) {
+      console.error("Error generating all course content:", error);
+
+      if (error?.code === 'ai_not_configured' || error?.status === 503) {
+        return res.status(503).json({ message: "AI features are not yet configured." });
+      }
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({ message: "API quota exceeded. Please check your AI provider account." });
+      }
+      if (error?.error?.code === 'invalid_api_key') {
+        return res.status(401).json({ message: "Invalid AI API key." });
+      }
+
+      res.status(500).json({ message: "Failed to generate course content. Please try again." });
     }
   });
 
