@@ -105,6 +105,7 @@ const PERMISSION_OPTIONS = [
   { value: 'institutions:update', label: 'Update Institutions' },
   { value: 'institutions:read', label: 'Read Institutions' },
   { value: 'courses:create', label: 'Create Courses' },
+  { value: 'courses:update', label: 'Update Courses' },
   { value: 'courses:read', label: 'Read Courses' },
 ];
 
@@ -1266,7 +1267,7 @@ Medicine & Health | Short Courses | Trade
 Permission: courses:create
 Content-Type: application/json
 
-Required fields:
+**Required fields:**
 - universityId (institution ID from create/list step)
 - title (string, min 5 chars — must be unique per institution)
 - description (string, min 50 chars)
@@ -1280,30 +1281,54 @@ Required fields:
 - deliveryMode (exactly: online | on-campus | hybrid | blended)
 - careerOutcomes (non-empty array of job titles)
 
-Optional fields:
-- subDiscipline (string — from GET /api/partner/disciplines)
+**Optional — Basic fields:**
+- subDiscipline (string — Tier 2 category, from GET /api/partner/disciplines)
+- specialization (string — Tier 3 free-text, e.g. "Civil Engineering")
 - subject (display subject name, defaults to title)
+- courseCode (internal code, e.g. CS-301)
+- startDate (text, e.g. "February 2026")
 - currency (default: AUD)
 - country (defaults to institution's country)
 - location (campus or city text)
 - durationWeeks (weeks, alternative to durationMonths)
 - applicationDeadline (text, e.g. "31 October 2025")
-- prerequisites (academic prerequisites text)
+- sourceUrl (URL of original course page)
 - thumbnailUrl (URL)
-- courseCode (internal code, e.g. CS-301)
+- images (array of image URLs for course gallery)
+
+**Optional — Classification:**
+- qualificationFramework (default: AQF — one of: AQF | Non-AQF | RQF | NQF | EQF | NZQF | MQF | US | Canadian | Other)
+- customLevel (free-text level, only used when qualificationFramework = "Other")
+- availableMarkets (array — default: ["AU","BD"] — valid values: "AU", "BD")
+- visibility (default: "public" — one of: public | private)
+
+**Optional — Fees:**
+- applicationFees (number — application processing fee)
+- admissionFee (number — one-time enrolment/admission fee)
+- materialsFee (number — course materials/resources fee)
+
+**Optional — Compliance (Australian CRICOS):**
+- cricosCode (string — CRICOS course code, e.g. "0101M")
+- isCricosRegistered (boolean — whether this course is on the CRICOS register)
+
+**Optional — Entry requirements:**
+- prerequisites (academic prerequisites text)
+- minimumAge (number — minimum age requirement)
+- englishRequirementsStructured (object — structured English test requirements, see format below)
+
+**Optional — Delivery:**
 - campusLocations (array of campus name strings)
 - internshipAvailable (boolean)
-- internshipDetails (text description)
+- internshipDetails (text description of internship)
+- prPathway (boolean — qualifies for PR/visa pathway)
+
+**Optional — Career & study:**
 - studyAreas (array of topic strings)
-- careerPath (career progression text)
+- careerPath (career progression narrative)
 - scholarshipPercentageMin (number 0–100)
 - scholarshipPercentageMax (number 0–100)
-- applicationFees (application fee, number)
+- pathways (array of articulation pathway strings)
 - curriculumUrl (URL to curriculum page)
-- minimumAge (number)
-- pathways (array of articulation pathways)
-- prPathway (boolean — qualifies for PR/visa pathway)
-- sourceUrl (URL of original course page)
 
 Example request:
 \`\`\`json
@@ -1312,23 +1337,72 @@ Example request:
   "title": "Bachelor of Computer Science",
   "description": "A comprehensive 3-year program covering algorithms, systems, and software engineering with real-world project experience across all year levels.",
   "discipline": "Computer Science & IT",
-  "subDiscipline": "Software Engineering",
+  "subDiscipline": "Software Development",
+  "specialization": "Full-Stack Web Development",
   "courseLevel": "Bachelor Degree",
+  "qualificationFramework": "AQF",
   "durationMonths": 36,
   "fees": 32000,
   "currency": "AUD",
+  "startDate": "February 2026",
   "intakes": ["February", "July"],
   "deliveryMode": "on-campus",
   "englishRequirements": "IELTS 6.5 overall, no band below 6.0",
   "eligibilityRequirements": "Australian Year 12 or equivalent with ATAR 70+. International students need equivalent qualifications.",
   "careerOutcomes": ["Software Engineer", "Data Scientist", "Systems Analyst", "Web Developer"],
   "campusLocations": ["Sydney Campus", "Melbourne Campus"],
+  "admissionFee": 500,
+  "materialsFee": 200,
+  "cricosCode": "0101M",
+  "isCricosRegistered": true,
+  "availableMarkets": ["AU", "BD"],
+  "visibility": "public",
   "prPathway": true,
   "internshipAvailable": true,
   "internshipDetails": "12-week industry placement in semester 5",
+  "images": ["https://institution.edu.au/images/cs-lab.jpg"],
   "sourceUrl": "https://institution.edu.au/courses/bachelor-cs"
 }
 \`\`\`
+
+---
+
+### 10. Update Course
+\`PATCH /api/partner/courses/:id\`
+Permission: courses:update
+Content-Type: application/json
+
+Update any field on an existing **draft or pending** course. Send only the fields you want to change — unmentioned fields are not modified. Cannot update published/approved courses via this endpoint.
+
+All the same fields available in Create Course are updatable. Use \`courseLevel\` (not \`level\`) when updating the course level.
+
+Returns the updated course summary with a list of the fields that were changed.
+
+Example request (update fees and add CRICOS info):
+\`\`\`json
+{
+  "fees": 34500,
+  "cricosCode": "0202M",
+  "isCricosRegistered": true,
+  "startDate": "July 2026",
+  "images": ["https://institution.edu.au/images/updated.jpg"]
+}
+\`\`\`
+
+---
+
+### englishRequirementsStructured Format
+\`\`\`json
+{
+  "ielts": { "overall": 6.5, "reading": 6.0, "writing": 6.0, "speaking": 6.0, "listening": 6.0 },
+  "toefl": { "overall": 79, "reading": 20, "writing": 21, "speaking": 20, "listening": 20 },
+  "pte": { "overall": 58 },
+  "duolingo": { "overall": 110 },
+  "cambridge": { "overall": "C1" },
+  "notes": "No individual band below 6.0 for IELTS. Academic version required."
+}
+\`\`\`
+All sub-keys are optional — include only the tests the institution accepts.
 
 ---
 
@@ -1355,7 +1429,8 @@ Example request:
 | institutions:create | Create institutions, upload logos |
 | institutions:update | Update existing institutions |
 | institutions:read | List and view institutions |
-| courses:create | Create courses |
+| courses:create | Create new courses |
+| courses:update | Update existing draft/pending courses |
 | courses:read | List and view courses |
 
 ---

@@ -22296,7 +22296,10 @@ Sitemap: ${baseUrl}/sitemap.xml
         description,
         discipline,
         subDiscipline,
+        specialization,
         courseLevel,
+        qualificationFramework,
+        customLevel,
         duration,
         durationMonths,
         durationWeeks,
@@ -22304,14 +22307,18 @@ Sitemap: ${baseUrl}/sitemap.xml
         currency,
         country,
         location,
+        startDate,
         intakes,
         applicationDeadline,
         prerequisites,
         eligibilityRequirements,
         englishRequirements,
+        englishRequirementsStructured,
         sourceUrl,
         thumbnailUrl,
         courseCode,
+        cricosCode,
+        isCricosRegistered,
         prPathway,
         deliveryMode,
         campusLocations,
@@ -22322,6 +22329,11 @@ Sitemap: ${baseUrl}/sitemap.xml
         careerPath,
         scholarshipPercentageMin,
         scholarshipPercentageMax,
+        admissionFee,
+        materialsFee,
+        availableMarkets,
+        visibility,
+        images,
         // Gold standard fields for 95% completeness
         applicationFees,
         curriculumUrl,
@@ -22405,6 +22417,31 @@ Sitemap: ${baseUrl}/sitemap.xml
         errors.push({ field: 'deliveryMode', message: 'deliveryMode must be one of: online, on-campus, hybrid, blended' });
       }
       
+      const VALID_QUALIFICATION_FRAMEWORKS = ['AQF', 'Non-AQF', 'RQF', 'NQF', 'EQF', 'NZQF', 'MQF', 'US', 'Canadian', 'Other'];
+      if (qualificationFramework && !VALID_QUALIFICATION_FRAMEWORKS.includes(qualificationFramework)) {
+        errors.push({ field: 'qualificationFramework', message: `qualificationFramework must be one of: ${VALID_QUALIFICATION_FRAMEWORKS.join(', ')}` });
+      }
+      
+      if (visibility && !['public', 'private'].includes(visibility)) {
+        errors.push({ field: 'visibility', message: 'visibility must be one of: public, private' });
+      }
+      
+      if (availableMarkets && Array.isArray(availableMarkets)) {
+        const validMarkets = ['AU', 'BD'];
+        const invalidMarkets = availableMarkets.filter((m: string) => !validMarkets.includes(m));
+        if (invalidMarkets.length > 0) {
+          errors.push({ field: 'availableMarkets', message: `availableMarkets must only contain: AU, BD. Invalid values: ${invalidMarkets.join(', ')}` });
+        }
+      }
+      
+      if (images && !Array.isArray(images)) {
+        errors.push({ field: 'images', message: 'images must be an array of URL strings' });
+      }
+      
+      if (englishRequirementsStructured && typeof englishRequirementsStructured !== 'object') {
+        errors.push({ field: 'englishRequirementsStructured', message: 'englishRequirementsStructured must be an object' });
+      }
+      
       // Return all validation errors at once
       if (errors.length > 0) {
         await logPartnerUsage(req, 400);
@@ -22461,11 +22498,15 @@ Sitemap: ${baseUrl}/sitemap.xml
         description: description.trim(),
         discipline: discipline.trim(),
         subDiscipline: subDiscipline?.trim(),
+        specialization: specialization?.trim(),
+        qualificationFramework: qualificationFramework || 'AQF',
+        customLevel: customLevel?.trim(),
         country: country?.trim() || institution.country,
         location: location?.trim(),
         level: courseLevel,
         duration: durationStr,
         durationMonths: durationMonths ? parseInt(durationMonths) : null,
+        startDate: startDate?.trim(),
         durationWeeks: durationWeeks ? parseInt(durationWeeks) : null,
         fees: parseFloat(fees).toFixed(2),
         currency: currency || 'AUD',
@@ -22474,9 +22515,12 @@ Sitemap: ${baseUrl}/sitemap.xml
         prerequisites: prerequisites?.trim(),
         eligibilityRequirements: eligibilityRequirements?.trim(),
         englishRequirements: englishRequirements.trim(),
+        englishRequirementsStructured: englishRequirementsStructured || null,
         sourceUrl: sourceUrl?.trim(),
         thumbnailUrl: thumbnailUrl?.trim(),
         courseCode: courseCode?.trim(),
+        cricosCode: cricosCode?.trim(),
+        isCricosRegistered: isCricosRegistered === true || isCricosRegistered === 'true',
         prPathway: prPathway === true || prPathway === 'true',
         deliveryMode: deliveryMode?.trim(),
         campusLocations: campusLocations || [],
@@ -22487,6 +22531,11 @@ Sitemap: ${baseUrl}/sitemap.xml
         careerPath: careerPath?.trim(),
         scholarshipPercentageMin: scholarshipPercentageMin ? parseInt(scholarshipPercentageMin) : null,
         scholarshipPercentageMax: scholarshipPercentageMax ? parseInt(scholarshipPercentageMax) : null,
+        admissionFee: admissionFee ? parseFloat(admissionFee) : null,
+        materialsFee: materialsFee ? parseFloat(materialsFee) : null,
+        availableMarkets: Array.isArray(availableMarkets) && availableMarkets.length > 0 ? availableMarkets : ['AU', 'BD'],
+        visibility: visibility || 'public',
+        images: Array.isArray(images) ? images : [],
         // Gold standard fields for 95% completeness
         applicationFees: applicationFees ? parseFloat(applicationFees) : null,
         curriculumUrl: curriculumUrl?.trim(),
@@ -22520,7 +22569,170 @@ Sitemap: ${baseUrl}/sitemap.xml
       });
     }
   });
-  
+
+  // PATCH /api/partner/courses/:id - Update an existing course (draft or pending)
+  app.patch("/api/partner/courses/:id", authenticatePartnerApi, async (req: any, res) => {
+    try {
+      if (!hasPermission(req.apiKey, 'courses:update')) {
+        await logPartnerUsage(req, 403);
+        return res.status(403).json({
+          error: 'Permission denied',
+          message: 'This API key does not have permission to update courses',
+        });
+      }
+
+      const { id } = req.params;
+      const course = await storage.getCourseById(id);
+
+      if (!course) {
+        await logPartnerUsage(req, 404);
+        return res.status(404).json({
+          error: 'Course not found',
+          message: 'No course exists with the specified ID',
+        });
+      }
+
+      // Only allow updating draft or pending courses, not published ones
+      if (course.publishStatus === 'published' && course.approvalStatus === 'approved') {
+        await logPartnerUsage(req, 403);
+        return res.status(403).json({
+          error: 'Cannot update published course',
+          message: 'Only draft or pending courses can be updated via the API. Contact an admin to modify published courses.',
+        });
+      }
+
+      const VALID_QUALIFICATION_FRAMEWORKS_PATCH = ['AQF', 'Non-AQF', 'RQF', 'NQF', 'EQF', 'NZQF', 'MQF', 'US', 'Canadian', 'Other'];
+      const errors: Array<{field: string, message: string}> = [];
+
+      // Validate enum fields if provided
+      const { courseLevel, qualificationFramework, visibility, availableMarkets, deliveryMode, sourceUrl, thumbnailUrl, images, englishRequirementsStructured } = req.body;
+
+      if (courseLevel !== undefined && !VALID_COURSE_LEVELS.includes(courseLevel)) {
+        errors.push({ field: 'courseLevel', message: `Invalid courseLevel. Must be one of: ${VALID_COURSE_LEVELS.join(', ')}` });
+      }
+      if (qualificationFramework !== undefined && !VALID_QUALIFICATION_FRAMEWORKS_PATCH.includes(qualificationFramework)) {
+        errors.push({ field: 'qualificationFramework', message: `qualificationFramework must be one of: ${VALID_QUALIFICATION_FRAMEWORKS_PATCH.join(', ')}` });
+      }
+      if (visibility !== undefined && !['public', 'private'].includes(visibility)) {
+        errors.push({ field: 'visibility', message: 'visibility must be one of: public, private' });
+      }
+      if (availableMarkets !== undefined && Array.isArray(availableMarkets)) {
+        const invalidMarkets = availableMarkets.filter((m: string) => !['AU', 'BD'].includes(m));
+        if (invalidMarkets.length > 0) {
+          errors.push({ field: 'availableMarkets', message: `availableMarkets must only contain: AU, BD. Invalid values: ${invalidMarkets.join(', ')}` });
+        }
+      }
+      if (deliveryMode !== undefined && !['online', 'on-campus', 'hybrid', 'blended'].includes(deliveryMode)) {
+        errors.push({ field: 'deliveryMode', message: 'deliveryMode must be one of: online, on-campus, hybrid, blended' });
+      }
+      if (sourceUrl !== undefined && sourceUrl && !isValidUrl(sourceUrl)) {
+        errors.push({ field: 'sourceUrl', message: 'sourceUrl must be a valid URL' });
+      }
+      if (thumbnailUrl !== undefined && thumbnailUrl && !isValidUrl(thumbnailUrl)) {
+        errors.push({ field: 'thumbnailUrl', message: 'thumbnailUrl must be a valid URL' });
+      }
+      if (images !== undefined && !Array.isArray(images)) {
+        errors.push({ field: 'images', message: 'images must be an array of URL strings' });
+      }
+      if (englishRequirementsStructured !== undefined && englishRequirementsStructured !== null && typeof englishRequirementsStructured !== 'object') {
+        errors.push({ field: 'englishRequirementsStructured', message: 'englishRequirementsStructured must be an object' });
+      }
+
+      if (errors.length > 0) {
+        await logPartnerUsage(req, 400);
+        return res.status(400).json({
+          error: 'Validation error',
+          message: 'One or more fields are invalid',
+          details: errors,
+        });
+      }
+
+      // Build update object — only include explicitly provided fields
+      const updateData: Record<string, any> = {};
+      const body = req.body;
+
+      const stringFields = ['title', 'subject', 'description', 'discipline', 'subDiscipline', 'specialization',
+        'customLevel', 'duration', 'location', 'country', 'startDate', 'applicationDeadline',
+        'prerequisites', 'eligibilityRequirements', 'englishRequirements', 'sourceUrl', 'thumbnailUrl',
+        'courseCode', 'cricosCode', 'deliveryMode', 'careerPath', 'curriculumUrl', 'internshipDetails',
+        'visibility', 'qualificationFramework'];
+      const boolFields = ['prPathway', 'internshipAvailable', 'isCricosRegistered'];
+      const intFields = ['durationMonths', 'durationWeeks', 'scholarshipPercentageMin', 'scholarshipPercentageMax', 'minimumAge'];
+      const floatFields = ['fees', 'applicationFees', 'admissionFee', 'materialsFee'];
+      const arrayFields = ['intakes', 'campusLocations', 'studyAreas', 'careerOutcomes', 'pathways', 'images', 'availableMarkets'];
+      const jsonFields = ['englishRequirementsStructured'];
+
+      for (const field of stringFields) {
+        if (field in body && body[field] !== undefined) {
+          updateData[field === 'subDiscipline' ? 'subDiscipline' : field] = body[field] !== null ? String(body[field]).trim() : null;
+        }
+      }
+      // Map courseLevel → level
+      if ('courseLevel' in body && body.courseLevel !== undefined) {
+        updateData.level = body.courseLevel;
+      }
+      for (const field of boolFields) {
+        if (field in body && body[field] !== undefined) {
+          updateData[field] = body[field] === true || body[field] === 'true';
+        }
+      }
+      for (const field of intFields) {
+        if (field in body && body[field] !== undefined) {
+          updateData[field] = body[field] !== null ? parseInt(body[field]) : null;
+        }
+      }
+      for (const field of floatFields) {
+        if (field in body && body[field] !== undefined) {
+          updateData[field] = body[field] !== null ? parseFloat(body[field]) : null;
+        }
+      }
+      for (const field of arrayFields) {
+        if (field in body && body[field] !== undefined) {
+          updateData[field] = Array.isArray(body[field]) ? body[field] : [];
+        }
+      }
+      for (const field of jsonFields) {
+        if (field in body && body[field] !== undefined) {
+          updateData[field] = body[field];
+        }
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        await logPartnerUsage(req, 400);
+        return res.status(400).json({
+          error: 'No fields to update',
+          message: 'Provide at least one field to update',
+        });
+      }
+
+      const updated = await storage.updateCourse(id, updateData as any);
+
+      await logPartnerUsage(req, 200, 'course', id);
+
+      res.json({
+        success: true,
+        message: 'Course updated successfully.',
+        data: {
+          id: updated.id,
+          title: updated.title,
+          universityId: updated.universityId,
+          discipline: updated.discipline,
+          level: updated.level,
+          publishStatus: updated.publishStatus,
+          approvalStatus: updated.approvalStatus,
+          updatedFields: Object.keys(updateData),
+        },
+      });
+    } catch (error: any) {
+      console.error("Partner API update course error:", error);
+      await logPartnerUsage(req, 500);
+      res.status(500).json({
+        error: 'Server error',
+        message: 'Failed to update course',
+      });
+    }
+  });
+
   // GET /api/partner/disciplines - List all valid disciplines and sub-disciplines
   app.get("/api/partner/disciplines", authenticatePartnerApi, async (req: any, res) => {
     try {

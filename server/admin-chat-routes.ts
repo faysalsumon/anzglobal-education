@@ -244,12 +244,21 @@ COURSE IMPORTANT OPTIONAL FIELDS (always try to fill):
 - description, duration, durationMonths, durationWeeks
 - fees (decimal), currency (default "AUD")
 - location, country, startDate, applicationDeadline
-- deliveryMode ("online" | "on-campus" | "hybrid")
+- deliveryMode ("online" | "on-campus" | "hybrid" | "blended")
 - prPathway (boolean), intakes (array of month names)
-- careerOutcomes (array), prerequisites, eligibilityRequirements
-- englishRequirements, campusLocations (array)
-- internshipAvailable (boolean), sourceUrl
+- careerOutcomes (array), careerPath (narrative), prerequisites, eligibilityRequirements
+- englishRequirements (text), englishRequirementsStructured (object with ielts/toefl/pte/pte/duolingo/cambridge keys)
+- campusLocations (array), internshipAvailable (boolean), internshipDetails (text), sourceUrl
+- subDiscipline (Tier 2 — from GET /api/partner/disciplines), specialization (Tier 3 free-text)
+- qualificationFramework ("AQF" | "Non-AQF" | "RQF" | "NQF" | "EQF" | "NZQF" | "MQF" | "US" | "Canadian" | "Other") — default "AQF"
+- customLevel (free-text level when qualificationFramework = "Other")
+- cricosCode (CRICOS course code, Australian courses only), isCricosRegistered (boolean)
+- admissionFee (decimal — one-time enrolment fee), materialsFee (decimal — course materials fee), applicationFees (decimal)
+- images (array of image URLs), thumbnailUrl (URL), curriculumUrl (URL)
+- studyAreas (array), pathways (array), minimumAge (number)
+- scholarshipPercentageMin/Max (numbers 0-100)
 - availableMarkets: default ["AU", "BD"]
+- visibility: default "public" (can be "private")
 
 RULES:
 - All records are saved as publishStatus: 'draft', approvalStatus: 'pending'
@@ -407,7 +416,10 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
           subject: { type: "string" },
           level: { type: "string", description: "Must be an exact value from the COURSE LEVEL ENUM" },
           qualificationFramework: { type: "string", description: "Must match the level: AQF, Non-AQF, RQF, EQF, NZQF, MQF, US, Canadian, or Other" },
+          customLevel: { type: "string", description: "Free-text level when qualificationFramework is Other" },
           discipline: { type: "string", description: "Must be an exact value from the discipline list" },
+          subDiscipline: { type: "string", description: "Tier 2 sub-category (from GET /api/partner/disciplines)" },
+          specialization: { type: "string", description: "Tier 3 free-text specialization (e.g. Civil Engineering)" },
           description: { type: "string" },
           duration: { type: "string" },
           durationMonths: { type: "number" },
@@ -422,13 +434,42 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
           prPathway: { type: "boolean" },
           intakes: { type: "array", items: { type: "string" } },
           careerOutcomes: { type: "array", items: { type: "string" } },
+          careerPath: { type: "string", description: "Career progression narrative" },
           prerequisites: { type: "string" },
           eligibilityRequirements: { type: "string" },
           englishRequirements: { type: "string" },
+          englishRequirementsStructured: {
+            type: "object",
+            description: "Structured English test requirements",
+            properties: {
+              ielts: { type: "object", properties: { overall: { type: "number" }, reading: { type: "number" }, writing: { type: "number" }, speaking: { type: "number" }, listening: { type: "number" } } },
+              toefl: { type: "object", properties: { overall: { type: "number" }, reading: { type: "number" }, writing: { type: "number" }, speaking: { type: "number" }, listening: { type: "number" } } },
+              pte: { type: "object", properties: { overall: { type: "number" } } },
+              duolingo: { type: "object", properties: { overall: { type: "number" } } },
+              cambridge: { type: "object", properties: { overall: { type: "string" } } },
+              notes: { type: "string" },
+            },
+          },
           campusLocations: { type: "array", items: { type: "string" } },
           internshipAvailable: { type: "boolean" },
+          internshipDetails: { type: "string" },
           sourceUrl: { type: "string" },
           courseCode: { type: "string" },
+          cricosCode: { type: "string", description: "CRICOS course code for Australian courses" },
+          isCricosRegistered: { type: "boolean", description: "Whether this course is CRICOS registered" },
+          admissionFee: { type: "number", description: "One-time enrolment/admission fee" },
+          materialsFee: { type: "number", description: "Course materials/resources fee" },
+          applicationFees: { type: "number", description: "Application processing fee" },
+          studyAreas: { type: "array", items: { type: "string" } },
+          pathways: { type: "array", items: { type: "string" } },
+          minimumAge: { type: "number" },
+          scholarshipPercentageMin: { type: "number" },
+          scholarshipPercentageMax: { type: "number" },
+          availableMarkets: { type: "array", items: { type: "string" }, description: "Default [\"AU\",\"BD\"]. Valid values: AU, BD" },
+          visibility: { type: "string", description: "public or private — default public" },
+          images: { type: "array", items: { type: "string" }, description: "Array of course image URLs" },
+          thumbnailUrl: { type: "string" },
+          curriculumUrl: { type: "string" },
         },
         required: ["universityId", "title", "subject", "level", "discipline"],
       },
@@ -896,14 +937,35 @@ Only return numbers you are confident are correct for this specific institution.
         if (args.prPathway != null) insertData.prPathway = args.prPathway;
         if (args.intakes) insertData.intakes = args.intakes;
         if (args.careerOutcomes) insertData.careerOutcomes = args.careerOutcomes;
+        if (args.careerPath) insertData.careerPath = args.careerPath;
         if (args.prerequisites) insertData.prerequisites = args.prerequisites;
         if (args.eligibilityRequirements) insertData.eligibilityRequirements = args.eligibilityRequirements;
         if (args.englishRequirements) insertData.englishRequirements = args.englishRequirements;
+        if (args.englishRequirementsStructured) insertData.englishRequirementsStructured = args.englishRequirementsStructured;
         if (args.campusLocations) insertData.campusLocations = args.campusLocations;
         if (args.internshipAvailable != null) insertData.internshipAvailable = args.internshipAvailable;
+        if (args.internshipDetails) insertData.internshipDetails = args.internshipDetails;
         if (args.sourceUrl) insertData.sourceUrl = args.sourceUrl;
+        if (args.thumbnailUrl) insertData.thumbnailUrl = args.thumbnailUrl;
+        if (args.curriculumUrl) insertData.curriculumUrl = args.curriculumUrl;
         if (args.courseCode) insertData.courseCode = args.courseCode;
         if (args.qualificationFramework) insertData.qualificationFramework = args.qualificationFramework;
+        if (args.customLevel) insertData.customLevel = args.customLevel;
+        if (args.subDiscipline) insertData.subDiscipline = args.subDiscipline;
+        if (args.specialization) insertData.specialization = args.specialization;
+        if (args.cricosCode) insertData.cricosCode = args.cricosCode;
+        if (args.isCricosRegistered != null) insertData.isCricosRegistered = args.isCricosRegistered;
+        if (args.admissionFee != null) insertData.admissionFee = String(args.admissionFee);
+        if (args.materialsFee != null) insertData.materialsFee = String(args.materialsFee);
+        if (args.applicationFees != null) insertData.applicationFees = String(args.applicationFees);
+        if (args.studyAreas) insertData.studyAreas = args.studyAreas;
+        if (args.pathways) insertData.pathways = args.pathways;
+        if (args.minimumAge != null) insertData.minimumAge = args.minimumAge;
+        if (args.scholarshipPercentageMin != null) insertData.scholarshipPercentageMin = args.scholarshipPercentageMin;
+        if (args.scholarshipPercentageMax != null) insertData.scholarshipPercentageMax = args.scholarshipPercentageMax;
+        if (args.availableMarkets && args.availableMarkets.length > 0) insertData.availableMarkets = args.availableMarkets;
+        if (args.visibility) insertData.visibility = args.visibility;
+        if (args.images) insertData.images = args.images;
 
         const [created] = await db.insert(courses).values(insertData).returning();
         return JSON.stringify({
