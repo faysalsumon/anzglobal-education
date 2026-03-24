@@ -2904,6 +2904,70 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                       )}
                     />
 
+                    {/* Location & Country */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="location"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Location</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} placeholder="e.g. Sydney CBD" data-testid="input-course-location" />
+                            </FormControl>
+                            <FormDescription>City or campus area</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="country"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Country</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} placeholder="e.g. Australia" data-testid="input-course-country" />
+                            </FormControl>
+                            <FormDescription>Country where course is offered</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Start Date & Application Deadline */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="startDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Start Date</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} placeholder="e.g. February 2025" data-testid="input-course-startDate" />
+                            </FormControl>
+                            <FormDescription>Free-text start date description</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="applicationDeadline"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Application Deadline</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} placeholder="e.g. 30 November 2024" data-testid="input-course-applicationDeadline" />
+                            </FormControl>
+                            <FormDescription>Free-text deadline description</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
                     {/* Intake Templates Manager */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">

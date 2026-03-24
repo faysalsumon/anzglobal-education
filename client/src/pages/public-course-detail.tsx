@@ -1807,6 +1807,17 @@ export default function PublicCourseDetail() {
                     </div>
                   </div>
                 )}
+                {course.qualificationFramework && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-primary/10 rounded-md">
+                      <Award className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Qualification Framework</p>
+                      <p className="text-sm font-semibold truncate" data-testid="text-qualification-framework">{course.qualificationFramework}</p>
+                    </div>
+                  </div>
+                )}
                 {course.fees && (
                   <div className="flex items-center gap-3">
                     <div className="p-1.5 bg-primary/10 rounded-md">

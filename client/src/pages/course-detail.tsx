@@ -228,11 +228,45 @@ export default function CourseDetail() {
             <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2" data-testid="text-course-title">
               {course.title}
             </h1>
-            {course.courseCode && (
-              <p className="text-muted-foreground mb-4" data-testid="text-course-code">
-                Course Code: {course.courseCode}
-              </p>
-            )}
+            {/* Course identifiers row */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {course.courseCode && !course.isCricosRegistered && (
+                <Badge variant="outline" className="px-3 py-1" data-testid="text-course-code">
+                  <FileText className="h-3 w-3 mr-1" />
+                  Code: {course.courseCode}
+                </Badge>
+              )}
+              {course.isCricosRegistered && course.cricosCode && (
+                <Badge className="bg-primary/10 text-primary border border-primary/30 px-3 py-1" data-testid="badge-cricos-code">
+                  <Award className="h-3 w-3 mr-1" />
+                  CRICOS: {course.cricosCode}
+                </Badge>
+              )}
+              {course.isCricosRegistered && !course.cricosCode && (
+                <Badge className="bg-primary/10 text-primary border border-primary/30 px-3 py-1" data-testid="badge-cricos-registered">
+                  <Award className="h-3 w-3 mr-1" />
+                  CRICOS Registered
+                </Badge>
+              )}
+              {(course.discipline || course.subject) && (
+                <Badge variant="secondary" className="px-3 py-1" data-testid="badge-discipline">
+                  <BookOpen className="h-3 w-3 mr-1" />
+                  {course.discipline || course.subject}
+                </Badge>
+              )}
+              {course.specialization && (
+                <Badge variant="secondary" className="px-3 py-1" data-testid="badge-specialization">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  {course.specialization}
+                </Badge>
+              )}
+              {course.country && (
+                <Badge variant="outline" className="px-3 py-1" data-testid="badge-country">
+                  <Globe className="h-3 w-3 mr-1" />
+                  {course.country}
+                </Badge>
+              )}
+            </div>
 
             {/* Feature Badges - Compact Row */}
             <div className="flex flex-wrap gap-2 mb-6">
@@ -589,6 +623,23 @@ export default function CourseDetail() {
               </Card>
             )}
 
+            {/* Internship Details */}
+            {course.internshipDetails && (
+              <Card className="border-primary/10 hover-elevate transition-all duration-300" data-testid="card-internship-details">
+                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
+                  <CardTitle className="flex items-center gap-2">
+                    <Briefcase className="h-5 w-5 text-primary" />
+                    Internship Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-internship-details">
+                    {course.internshipDetails}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Course Details */}
             {(course.intakes?.length || course.studyAreas?.length || course.campusLocations?.length || course.deliveryMode) && (
               <Card className="border-primary/10 hover-elevate transition-all duration-300">
@@ -715,11 +766,18 @@ export default function CourseDetail() {
                         <p className="text-sm font-semibold" data-testid="text-location">{course.location}</p>
                       </div>
                     )}
-                    {course.subject && (
+                    {(course.subject || course.discipline) && (
                       <div className="text-center p-3 bg-muted/50 rounded-lg">
                         <BookOpen className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
                         <p className="text-xs text-muted-foreground">Discipline</p>
-                        <p className="text-sm font-semibold truncate" data-testid="text-discipline">{course.subject}</p>
+                        <p className="text-sm font-semibold truncate" data-testid="text-discipline">{course.subject || course.discipline}</p>
+                      </div>
+                    )}
+                    {course.qualificationFramework && (
+                      <div className="text-center p-3 bg-muted/50 rounded-lg col-span-2">
+                        <Award className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">Qualification Framework</p>
+                        <p className="text-sm font-semibold truncate" data-testid="text-qualification-framework">{course.qualificationFramework}</p>
                       </div>
                     )}
                   </div>
@@ -778,6 +836,16 @@ export default function CourseDetail() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Official Course Page Link */}
+              {course.sourceUrl && (
+                <Button variant="outline" size="sm" asChild className="w-full" data-testid="button-source-url">
+                  <a href={course.sourceUrl} target="_blank" rel="noopener noreferrer">
+                    <Globe className="mr-2 h-4 w-4" />
+                    View Official Course Page
+                  </a>
+                </Button>
+              )}
 
               {/* Institution Card */}
               {course.university && (
