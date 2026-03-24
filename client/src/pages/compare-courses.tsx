@@ -587,13 +587,13 @@ export default function CompareCourses() {
                     <td key={course.id} className={`px-3 py-2 ${index < courses.length - 1 ? 'border-r' : ''}`}>
                       <div className="flex flex-col gap-1.5">
                         <Button asChild size="sm" className="w-full text-xs">
-                          <Link href={`/courses/${course.id}`} data-testid={`button-view-${course.id}`}>
+                          <Link href={`/courses/${course.slug || course.id}`} data-testid={`button-view-${course.id}`}>
                             <GraduationCap className="mr-1.5 h-3.5 w-3.5" />
                             View Details
                           </Link>
                         </Button>
                         <Button asChild variant="outline" size="sm" className="w-full text-xs">
-                          <Link href={`/courses/${course.id}#apply`} data-testid={`button-apply-${course.id}`}>
+                          <Link href={`/courses/${course.slug || course.id}#apply`} data-testid={`button-apply-${course.id}`}>
                             <Mail className="mr-1.5 h-3.5 w-3.5" />
                             Request Info
                           </Link>

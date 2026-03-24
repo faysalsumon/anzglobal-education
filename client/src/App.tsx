@@ -97,7 +97,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
         <Route path="/study-abroad" component={StudyAbroad} />
         <Route path="/our-story" component={OurStory} />
         <Route path="/student-reviews" component={StudentReviews} />
-        <Route path="/courses/:id" component={PublicCourseDetail} />
+        <Route path="/courses/:slug" component={PublicCourseDetail} />
         <Route path="/courses" component={PublicCourses} />
         <Route path="/institutions/:id" component={PublicInstitutionDetail} />
         <Route path="/institutions" component={PublicInstitutions} />

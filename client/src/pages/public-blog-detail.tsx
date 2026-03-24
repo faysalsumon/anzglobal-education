@@ -685,7 +685,7 @@ export default function PublicBlogDetail() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {relatedCourses.map((course) => (
-                  <Link key={course.id} href={`/courses/${course.id}`} data-testid={`related-course-${course.id}`}>
+                  <Link key={course.id} href={`/courses/${course.slug || course.id}`} data-testid={`related-course-${course.id}`}>
                     <Card className="h-full hover-elevate">
                       <CardHeader className="pb-2">
                         <div className="flex items-start gap-3">

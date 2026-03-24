@@ -255,7 +255,7 @@ export default function PublicTagPage() {
               ) : taggedCourses && taggedCourses.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {taggedCourses.slice(0, 6).map(course => (
-                    <Link key={course.id} href={`/courses/${course.id}`}>
+                    <Link key={course.id} href={`/courses/${course.slug || course.id}`}>
                       <Card className="h-full hover-elevate cursor-pointer" data-testid={`card-course-${course.id}`}>
                         <CardHeader className="pb-2">
                           <div className="flex items-start gap-3">

@@ -58,8 +58,8 @@ interface EnglishRequirement {
 }
 
 export default function PublicCourseDetail() {
-  const [, params] = useRoute("/courses/:id");
-  const courseId = params?.id;
+  const [, params] = useRoute("/courses/:slug");
+  const courseId = params?.slug;
   const [selectedCampusLocation, setSelectedCampusLocation] = useState<string | null>(null);
   const [selectedEntryCountry, setSelectedEntryCountry] = useState<string | null>(null);
   const [mobileLeadFormOpen, setMobileLeadFormOpen] = useState(false);

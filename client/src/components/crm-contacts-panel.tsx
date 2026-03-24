@@ -2386,7 +2386,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
               <div className="flex justify-between items-center gap-3">
                 <span className="text-muted-foreground shrink-0">Course Interested In</span>
                 {contact.courseId ? (
-                  <a href={`/courses/${contact.courseId}`} className="text-sm font-medium text-primary hover:underline flex items-center gap-1 text-right" target="_blank" rel="noopener noreferrer" data-testid="link-inquiry-course">
+                  <a href={`/courses/${contact.courseSlug || contact.courseId}`} className="text-sm font-medium text-primary hover:underline flex items-center gap-1 text-right" target="_blank" rel="noopener noreferrer" data-testid="link-inquiry-course">
                     {contact.courseName}<ExternalLink className="h-3 w-3 shrink-0" />
                   </a>
                 ) : (

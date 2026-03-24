@@ -652,7 +652,7 @@ export function CrmLeadsPanel() {
                             <BookOpen className="h-3 w-3 shrink-0" />
                             {lead.courseId ? (
                               <a 
-                                href={`/courses/${lead.courseId}`}
+                                href={`/courses/${lead.courseSlug || lead.courseId}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="font-medium hover:underline truncate"
@@ -1087,7 +1087,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert, activeTab, 
               </div>
               {lead.courseId && (
                 <a 
-                  href={`/courses/${lead.courseId}`}
+                  href={`/courses/${lead.courseSlug || lead.courseId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full sm:w-auto"
