@@ -1375,8 +1375,9 @@ Content-Type: application/json
 Update any field on an existing **draft or pending** course. Cannot update published/approved courses.
 
 **Authorization:**
-- universityId (required in body — must match the course's parent institution)
-- If this API key has an \`allowedInstitutions\` scope, the universityId must also be in that list
+- Institution scope is enforced using the course's own institution (no need to include universityId in the body).
+- If you include \`universityId\` in the body it will be validated against the course's institution (optional safety check).
+- If this API key has an \`allowedInstitutions\` scope, the course must belong to one of those institutions.
 
 **Optional:** Send only the fields you want to change. Unmentioned fields are not modified. All the same fields from Create Course are updatable. Use \`courseLevel\` (not \`level\`) when updating the course level. Adding \`currency\` alongside \`fees\` is supported.
 

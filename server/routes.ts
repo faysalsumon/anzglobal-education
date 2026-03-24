@@ -22606,17 +22606,11 @@ Sitemap: ${baseUrl}/sitemap.xml
         });
       }
 
-      // Authorization: require caller to supply universityId that matches course's institution
-      // This prevents IDOR — callers must know both the course ID and its parent institution ID
+      // If caller supplies universityId, verify it matches the course's institution (extra safety).
+      // This is optional — the course already carries its universityId, so it is not required
+      // in the body for a partial update.
       const { universityId: claimedUniversityId } = req.body;
-      if (!claimedUniversityId) {
-        await logPartnerUsage(req, 400);
-        return res.status(400).json({
-          error: 'Missing universityId',
-          message: 'universityId is required in the request body to confirm ownership of this course',
-        });
-      }
-      if (claimedUniversityId !== course.universityId) {
+      if (claimedUniversityId && claimedUniversityId !== course.universityId) {
         await logPartnerUsage(req, 403);
         return res.status(403).json({
           error: 'Unauthorized',
@@ -22624,25 +22618,18 @@ Sitemap: ${baseUrl}/sitemap.xml
         });
       }
 
-      // Verify the institution actually exists (same check as POST /api/partner/courses)
-      const institution = await storage.getUniversityById(claimedUniversityId);
-      if (!institution) {
-        await logPartnerUsage(req, 404);
-        return res.status(404).json({
-          error: 'Institution not found',
-          message: 'The specified universityId does not exist',
-        });
-      }
+      // Use the course's own universityId for institution scope enforcement
+      const effectiveUniversityId = course.universityId;
 
       // Institution scope check: if the API key has an allowedInstitutions list,
-      // verify claimedUniversityId is in that list. Same check is also enforced on POST.
+      // verify the course's institution is in that list
       const allowedInstitutions = req.apiKey.allowedInstitutions as string[] | null | undefined;
       if (allowedInstitutions && allowedInstitutions.length > 0) {
-        if (!allowedInstitutions.includes(claimedUniversityId)) {
+        if (!allowedInstitutions.includes(effectiveUniversityId)) {
           await logPartnerUsage(req, 403);
           return res.status(403).json({
             error: 'Institution not authorized',
-            message: 'This API key is not authorized to manage courses for the specified institution',
+            message: 'This API key is not authorized to manage courses for this institution',
           });
         }
       }
