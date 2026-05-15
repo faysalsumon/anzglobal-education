@@ -2197,7 +2197,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
             <Badge variant="outline" className={`no-default-active-elevate ${contactTypeColors[contact.contactType]}`}>
               {contactTypeLabels[contact.contactType]}
             </Badge>
-            {contact.clientStatus && (
+            {contact.contactType === 'clients' && contact.clientStatus && (
               <Badge variant="outline" className={`no-default-active-elevate ${clientStatusColors[contact.clientStatus]}`} data-testid="badge-contact-status">
                 {clientStatusLabels[contact.clientStatus]}
               </Badge>
@@ -2215,7 +2215,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
       </Card>
 
       {/* ── Lead Stage Progress ────────────────────────────────── */}
-      {contact.clientStatus === 'lead' && contact.leadStage && (
+      {contact.contactType === 'clients' && contact.clientStatus === 'lead' && contact.leadStage && (
         <div className="my-1">
           <LeadStageProgressBar 
             currentStage={contact.leadStage as LeadStage} 
