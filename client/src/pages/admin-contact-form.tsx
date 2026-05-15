@@ -282,10 +282,11 @@ export default function AdminContactForm() {
       const response = await apiRequest("POST", "/api/crm/contacts", data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: { id?: string | number }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
       toast({ title: "Success", description: "Contact created successfully" });
-      navigate("/admin?tab=crm-contacts");
+      const newId = data?.id;
+      navigate(newId ? `/admin?tab=crm-contacts&contactId=${newId}` : "/admin?tab=crm-contacts");
     },
     onError: (error: any) => {
       const msg: string = error.message || "";
