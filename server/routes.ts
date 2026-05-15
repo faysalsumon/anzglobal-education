@@ -3149,7 +3149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'new_lead',
           title: 'New Student Inquiry',
           message: `${leadData.firstName} ${leadData.lastName} requested information about ${course.title}`,
-          link: '/admin#crm-contacts',
+          link: '/admin?tab=crm-contacts',
           metadata: { contactId: crmContact.id, courseId: course.id },
         });
       }
@@ -3160,7 +3160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'new_lead',
           title: 'New Student Inquiry',
           message: `${leadData.firstName} ${leadData.lastName} requested information about ${course.title}`,
-          link: '/admin#crm-contacts',
+          link: '/admin?tab=crm-contacts',
           metadata: { contactId: crmContact.id, courseId: course.id },
         });
       }
@@ -3303,7 +3303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'new_lead',
           title: 'New Quiz Lead',
           message: `${data.firstName} ${data.lastName} completed Course Match Quiz${data.discipline ? ` - interested in ${data.discipline}` : ''}`,
-          link: '/admin#crm-contacts',
+          link: '/admin?tab=crm-contacts',
           metadata: { contactId: crmContact.id },
         });
       }
@@ -3313,7 +3313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'new_lead',
           title: 'New Quiz Lead',
           message: `${data.firstName} ${data.lastName} completed Course Match Quiz${data.discipline ? ` - interested in ${data.discipline}` : ''}`,
-          link: '/admin#crm-contacts',
+          link: '/admin?tab=crm-contacts',
           metadata: { contactId: crmContact.id },
         });
       }
@@ -3440,7 +3440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'new_lead',
           title: 'New Course Search Lead',
           message: `${data.firstName} ${data.lastName} couldn't find a course and requested consultation${data.lookingFor ? ` - "${data.lookingFor}"` : ''}`,
-          link: '/admin#crm-contacts',
+          link: '/admin?tab=crm-contacts',
           metadata: { contactId: crmContact.id },
         });
       }
@@ -3450,7 +3450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'new_lead',
           title: 'New Course Search Lead',
           message: `${data.firstName} ${data.lastName} couldn't find a course and requested consultation${data.lookingFor ? ` - "${data.lookingFor}"` : ''}`,
-          link: '/admin#crm-contacts',
+          link: '/admin?tab=crm-contacts',
           metadata: { contactId: crmContact.id },
         });
       }
@@ -11481,7 +11481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'institution_assigned',
           title: 'Institution Assigned to You',
           message: `${institution.name} has been assigned to you by ${assignerName}`,
-          link: `/admin/dashboard#institutions`,
+          link: `/admin?tab=institutions`,
           metadata: {
             institutionId: institution.id,
             institutionName: institution.name,
@@ -11497,7 +11497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             type: 'course_assigned',
             title: 'Courses Also Transferred',
             message: `${transferredCoursesCount} course${transferredCoursesCount > 1 ? 's' : ''} from ${institution.name} have also been assigned to you`,
-            link: `/admin/dashboard#courses`,
+            link: `/admin?tab=courses`,
             metadata: {
               institutionId: institution.id,
               institutionName: institution.name,
@@ -12027,7 +12027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: 'course_assigned',
         title: 'Course Assigned to You',
         message: `${assignerName} has assigned the course "${course.title}" to you.`,
-        link: '/admin/dashboard#courses',
+        link: '/admin?tab=courses',
         metadata: {
           courseId,
           courseTitle: course.title,
@@ -17931,7 +17931,7 @@ Sitemap: ${baseUrl}/sitemap.xml
                 type: 'internal_note_mention',
                 title: 'You were mentioned in a note',
                 message: `${authorName} mentioned you in an internal note on an application`,
-                link: `/admin/dashboard#applications`,
+                link: `/admin?tab=applications`,
                 metadata: {
                   noteId: note.id,
                   applicationId: applicationId,
