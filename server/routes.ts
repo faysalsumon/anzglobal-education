@@ -17033,7 +17033,7 @@ Sitemap: ${baseUrl}/sitemap.xml
           const recipientUserType = recipientUser[0]?.userType;
           const isRecipientAdmin = recipientUserType === 'admin' || recipientUserType === 'platform_admin';
           const notificationLink = isRecipientAdmin 
-            ? '/admin/dashboard#messages' 
+            ? '/admin?tab=messages' 
             : `/chat?conversationId=${conversationId}`;
           
           await db.insert(notifications).values({
