@@ -206,10 +206,10 @@ export default function AdminContactForm() {
   });
 
   const { data: teamMembers = [] } = useQuery<{ id: string; firstName: string; lastName: string; userType: string }[]>({
-    queryKey: ["/api/admin/team-members"],
+    queryKey: ["/api/admin/users"],
     queryFn: async () => {
       const headers = await getAuthHeaders();
-      const response = await fetch("/api/admin/team-members", { credentials: 'include', headers });
+      const response = await fetch("/api/admin/users", { credentials: 'include', headers });
       if (!response.ok) return [];
       return response.json();
     },
