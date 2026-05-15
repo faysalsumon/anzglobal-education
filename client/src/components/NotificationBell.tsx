@@ -99,7 +99,20 @@ export function NotificationBell() {
     }
     
     if (notification.link) {
-      setLocation(notification.link);
+      let link = notification.link;
+      // For lead notifications: ensure contactId is in the URL for deep-linking.
+      // Handles legacy notifications whose link predates the contactId query param.
+      if (
+        notification.type === "new_lead" &&
+        notification.metadata &&
+        typeof notification.metadata === "object" &&
+        "contactId" in notification.metadata &&
+        !link.includes("contactId=")
+      ) {
+        const sep = link.includes("?") ? "&" : "?";
+        link = `${link}${sep}contactId=${(notification.metadata as Record<string, unknown>).contactId}`;
+      }
+      setLocation(link);
       setOpen(false);
     }
   };

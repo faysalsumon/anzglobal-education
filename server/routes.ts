@@ -3149,7 +3149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'new_lead',
           title: 'New Student Inquiry',
           message: `${leadData.firstName} ${leadData.lastName} requested information about ${course.title}`,
-          link: '/admin?tab=crm-contacts',
+          link: `/admin?tab=crm-contacts&contactId=${crmContact.id}`,
           metadata: { contactId: crmContact.id, courseId: course.id },
         });
       }
@@ -3160,7 +3160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'new_lead',
           title: 'New Student Inquiry',
           message: `${leadData.firstName} ${leadData.lastName} requested information about ${course.title}`,
-          link: '/admin?tab=crm-contacts',
+          link: `/admin?tab=crm-contacts&contactId=${crmContact.id}`,
           metadata: { contactId: crmContact.id, courseId: course.id },
         });
       }
@@ -3303,7 +3303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'new_lead',
           title: 'New Quiz Lead',
           message: `${data.firstName} ${data.lastName} completed Course Match Quiz${data.discipline ? ` - interested in ${data.discipline}` : ''}`,
-          link: '/admin?tab=crm-contacts',
+          link: `/admin?tab=crm-contacts&contactId=${crmContact.id}`,
           metadata: { contactId: crmContact.id },
         });
       }
@@ -3313,7 +3313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'new_lead',
           title: 'New Quiz Lead',
           message: `${data.firstName} ${data.lastName} completed Course Match Quiz${data.discipline ? ` - interested in ${data.discipline}` : ''}`,
-          link: '/admin?tab=crm-contacts',
+          link: `/admin?tab=crm-contacts&contactId=${crmContact.id}`,
           metadata: { contactId: crmContact.id },
         });
       }
@@ -3440,7 +3440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'new_lead',
           title: 'New Course Search Lead',
           message: `${data.firstName} ${data.lastName} couldn't find a course and requested consultation${data.lookingFor ? ` - "${data.lookingFor}"` : ''}`,
-          link: '/admin?tab=crm-contacts',
+          link: `/admin?tab=crm-contacts&contactId=${crmContact.id}`,
           metadata: { contactId: crmContact.id },
         });
       }
@@ -3450,7 +3450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'new_lead',
           title: 'New Course Search Lead',
           message: `${data.firstName} ${data.lastName} couldn't find a course and requested consultation${data.lookingFor ? ` - "${data.lookingFor}"` : ''}`,
-          link: '/admin?tab=crm-contacts',
+          link: `/admin?tab=crm-contacts&contactId=${crmContact.id}`,
           metadata: { contactId: crmContact.id },
         });
       }

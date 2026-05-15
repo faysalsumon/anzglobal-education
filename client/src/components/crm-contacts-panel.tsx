@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useState, useMemo, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
@@ -404,6 +404,7 @@ export function CrmContactsPanel() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const searchString = useSearch();
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [clientStatusFilter, setClientStatusFilter] = useState<string>("all");
@@ -419,6 +420,27 @@ export function CrmContactsPanel() {
   const [kanbanMode, setKanbanMode] = useState<'type' | 'status' | 'leadPipeline'>('status');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  // Deep-link: auto-open a contact when contactId is in the URL search params
+  const deepLinkContactId = useMemo(() => {
+    const params = new URLSearchParams(searchString);
+    return params.get("contactId");
+  }, [searchString]);
+
+  useEffect(() => {
+    if (deepLinkContactId && selectedContact?.id !== deepLinkContactId) {
+      setSelectedContact({ id: deepLinkContactId } as CrmContact);
+      // Remove contactId from URL to prevent re-triggering on refresh
+      const params = new URLSearchParams(searchString);
+      params.delete("contactId");
+      const newSearch = params.toString();
+      window.history.replaceState(
+        null,
+        "",
+        `/admin${newSearch ? `?${newSearch}` : ""}${window.location.hash}`
+      );
+    }
+  }, [deepLinkContactId, selectedContact, searchString]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
