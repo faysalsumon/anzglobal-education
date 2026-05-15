@@ -145,7 +145,6 @@ export default function AdminContactForm() {
 
   const [formData, setFormData] = useState<Partial<CrmContact>>({
     contactType: 'clients',
-    clientStatus: 'lead',
     entrySource: 'consultant',
   });
 

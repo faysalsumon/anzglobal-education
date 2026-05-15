@@ -866,13 +866,6 @@ router.post("/contacts", requireAdmin, async (req: any, res) => {
 
     const validated = insertCrmContactSchema.parse(body);
 
-    // Safety guard: lead/client fields only apply to 'clients' contact type
-    if (validated.contactType && validated.contactType !== 'clients') {
-      (validated as any).clientStatus = null;
-      (validated as any).leadRating = null;
-      (validated as any).leadStage = null;
-    }
-    
     // Check for duplicate email in CRM contacts
     if (validated.email) {
       const [existingContact] = await db
@@ -903,8 +896,14 @@ router.post("/contacts", requireAdmin, async (req: any, res) => {
       }
     }
     
+    // Safety guard: lead/client fields only apply to 'clients' contact type
+    const clientOnlyOverride = validated.contactType !== 'clients'
+      ? { clientStatus: null, leadRating: null, leadStage: null }
+      : {};
+
     const [newContact] = await db.insert(crmContacts).values({
       ...validated,
+      ...clientOnlyOverride,
       email: validated.email.toLowerCase().trim(),
       linkedUserId,
       contactOwner: validated.contactOwner || userId,
@@ -951,13 +950,6 @@ router.patch("/contacts/:id", requireAdmin, async (req: any, res) => {
     }
 
     const validated = updateCrmContactSchema.parse(body);
-
-    // Safety guard: lead/client fields only apply to 'clients' contact type
-    if (validated.contactType && validated.contactType !== 'clients') {
-      (validated as any).clientStatus = null;
-      (validated as any).leadRating = null;
-      (validated as any).leadStage = null;
-    }
 
     const [existingContact] = await db
       .select()
@@ -1021,6 +1013,14 @@ router.patch("/contacts/:id", requireAdmin, async (req: any, res) => {
     
     if (linkedUserId !== undefined) {
       updateData.linkedUserId = linkedUserId;
+    }
+
+    // Safety guard: lead/client fields only apply to 'clients' contact type
+    const effectiveContactType = validated.contactType ?? existingContact.contactType;
+    if (effectiveContactType !== 'clients') {
+      updateData.clientStatus = null;
+      updateData.leadRating = null;
+      updateData.leadStage = null;
     }
 
     // Handle lead stage transitions with auto client status changes
