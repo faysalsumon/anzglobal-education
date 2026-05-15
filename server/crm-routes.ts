@@ -1023,8 +1023,9 @@ router.patch("/contacts/:id", requireAdmin, async (req: any, res) => {
       updateData.leadStage = null;
     }
 
-    // Handle lead stage transitions with auto client status changes
-    const leadStageChanged = validated.leadStage && validated.leadStage !== existingContact.leadStage;
+    // Handle lead stage transitions with auto client status changes (clients only)
+    const leadStageChanged = effectiveContactType === 'clients' &&
+      validated.leadStage && validated.leadStage !== existingContact.leadStage;
     
     if (leadStageChanged) {
       // If moving to "converted", auto-set clientStatus to "applicant"
