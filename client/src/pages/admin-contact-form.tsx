@@ -660,7 +660,11 @@ export default function AdminContactForm() {
                   <Label htmlFor="contactType">Contact Type *</Label>
                   <Select
                     value={formData.contactType || "clients"}
-                    onValueChange={(value: ContactType) => setFormData({ ...formData, contactType: value })}
+                    onValueChange={(value: ContactType) => setFormData({
+                      ...formData,
+                      contactType: value,
+                      ...(value !== 'clients' ? { clientStatus: null, leadRating: null, leadStage: null } : {}),
+                    })}
                   >
                     <SelectTrigger id="contactType" data-testid="select-contact-type">
                       <SelectValue placeholder="Select contact type" />
@@ -783,22 +787,24 @@ export default function AdminContactForm() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="clientStatus">Client Status</Label>
-                  <Select
-                    value={formData.clientStatus || "lead"}
-                    onValueChange={(value: ClientStatus) => setFormData({ ...formData, clientStatus: value })}
-                  >
-                    <SelectTrigger id="clientStatus" data-testid="select-client-status">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientStatusOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {formData.contactType === 'clients' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="clientStatus">Client Status</Label>
+                    <Select
+                      value={formData.clientStatus || "lead"}
+                      onValueChange={(value: ClientStatus) => setFormData({ ...formData, clientStatus: value })}
+                    >
+                      <SelectTrigger id="clientStatus" data-testid="select-client-status">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clientStatusOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="entrySource">Entry Source</Label>
                   <Select
@@ -815,22 +821,24 @@ export default function AdminContactForm() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="leadRating">Lead Rating</Label>
-                  <Select
-                    value={formData.leadRating || ""}
-                    onValueChange={(value: LeadRating) => setFormData({ ...formData, leadRating: value })}
-                  >
-                    <SelectTrigger id="leadRating" data-testid="select-lead-rating">
-                      <SelectValue placeholder="Select rating" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {leadRatingOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {formData.contactType === 'clients' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="leadRating">Lead Rating</Label>
+                    <Select
+                      value={formData.leadRating || ""}
+                      onValueChange={(value: LeadRating) => setFormData({ ...formData, leadRating: value })}
+                    >
+                      <SelectTrigger id="leadRating" data-testid="select-lead-rating">
+                        <SelectValue placeholder="Select rating" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {leadRatingOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

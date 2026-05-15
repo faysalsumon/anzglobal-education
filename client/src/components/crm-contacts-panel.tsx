@@ -1153,17 +1153,17 @@ export function CrmContactsPanel() {
                   <Badge variant="outline" className={`text-xs no-default-active-elevate ${contactTypeColors[contact.contactType]}`}>
                     {contactTypeLabels[contact.contactType]}
                   </Badge>
-                  {contact.clientStatus && (
+                  {contact.contactType === 'clients' && contact.clientStatus && (
                     <Badge variant="outline" className={`text-xs no-default-active-elevate ${clientStatusColors[contact.clientStatus]}`} data-testid={`badge-status-${contact.id}`}>
                       {clientStatusLabels[contact.clientStatus]}
                     </Badge>
                   )}
-                  {contact.clientStatus === 'lead' && contact.leadStage && (
+                  {contact.contactType === 'clients' && contact.clientStatus === 'lead' && contact.leadStage && (
                     <Badge variant="outline" className={`text-xs no-default-active-elevate ${leadStageColors[contact.leadStage]}`} data-testid={`badge-lead-stage-${contact.id}`}>
                       {leadStageLabels[contact.leadStage]}
                     </Badge>
                   )}
-                  {contact.leadRating && (
+                  {contact.contactType === 'clients' && contact.leadRating && (
                     <Badge variant="secondary" className={`text-xs no-default-active-elevate ${leadRatingColors[contact.leadRating]}`}>
                       {leadRatingLabels[contact.leadRating]}
                     </Badge>
@@ -1499,7 +1499,7 @@ function DraggableContactCard({
           <div className="mt-2 flex flex-wrap gap-1">
             {showLeadStage ? (
               <>
-                {contact.leadRating && (
+                {contact.contactType === 'clients' && contact.leadRating && (
                   <Badge variant="secondary" className={`text-xs ${leadRatingColors[contact.leadRating]}`}>
                     {leadRatingLabels[contact.leadRating]}
                   </Badge>
@@ -1513,12 +1513,12 @@ function DraggableContactCard({
               </>
             ) : (
               <>
-                {contact.clientStatus && (
+                {contact.contactType === 'clients' && contact.clientStatus && (
                   <Badge variant="outline" className={`text-xs ${clientStatusColors[contact.clientStatus]}`}>
                     {clientStatusLabels[contact.clientStatus]}
                   </Badge>
                 )}
-                {contact.leadRating && (
+                {contact.contactType === 'clients' && contact.leadRating && (
                   <Badge variant="secondary" className={`text-xs ${leadRatingColors[contact.leadRating]}`}>
                     {leadRatingLabels[contact.leadRating]}
                   </Badge>
@@ -2436,7 +2436,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 </Badge>
               </div>
             )}
-            {contact.leadRating && (
+            {contact.contactType === 'clients' && contact.leadRating && (
               <div className="flex justify-between items-center gap-3">
                 <span className="text-muted-foreground shrink-0">Lead Rating</span>
                 <Badge variant={contact.leadRating === 'hot' ? 'destructive' : contact.leadRating === 'warm' ? 'default' : 'secondary'} data-testid="badge-lead-rating">

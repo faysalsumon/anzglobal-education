@@ -865,6 +865,13 @@ router.post("/contacts", requireAdmin, async (req: any, res) => {
     }
 
     const validated = insertCrmContactSchema.parse(body);
+
+    // Safety guard: lead/client fields only apply to 'clients' contact type
+    if (validated.contactType && validated.contactType !== 'clients') {
+      (validated as any).clientStatus = null;
+      (validated as any).leadRating = null;
+      (validated as any).leadStage = null;
+    }
     
     // Check for duplicate email in CRM contacts
     if (validated.email) {
@@ -944,6 +951,13 @@ router.patch("/contacts/:id", requireAdmin, async (req: any, res) => {
     }
 
     const validated = updateCrmContactSchema.parse(body);
+
+    // Safety guard: lead/client fields only apply to 'clients' contact type
+    if (validated.contactType && validated.contactType !== 'clients') {
+      (validated as any).clientStatus = null;
+      (validated as any).leadRating = null;
+      (validated as any).leadStage = null;
+    }
 
     const [existingContact] = await db
       .select()
