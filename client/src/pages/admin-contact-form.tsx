@@ -285,7 +285,7 @@ export default function AdminContactForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
       toast({ title: "Success", description: "Contact created successfully" });
-      navigate("/admin/dashboard");
+      navigate("/admin?tab=crm-contacts");
     },
     onError: (error: any) => {
       const msg: string = error.message || "";
@@ -320,7 +320,7 @@ export default function AdminContactForm() {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts", params.id] });
       toast({ title: "Success", description: "Contact updated successfully" });
-      navigate("/admin/dashboard");
+      navigate(`/admin?tab=crm-contacts&contactId=${params.id}`);
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to update contact", variant: "destructive" });
@@ -440,7 +440,7 @@ export default function AdminContactForm() {
     <div className="container mx-auto py-6 max-w-4xl">
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/dashboard")} data-testid="button-back">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/admin?tab=crm-contacts")} data-testid="button-back">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -453,7 +453,7 @@ export default function AdminContactForm() {
           </div>
         </div>
         <div className="flex gap-2 sm:ml-auto">
-          <Button variant="outline" onClick={() => navigate("/admin/dashboard")} data-testid="button-cancel">
+          <Button variant="outline" onClick={() => navigate("/admin?tab=crm-contacts")} data-testid="button-cancel">
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isLoading} data-testid="button-save-contact">
@@ -1341,7 +1341,7 @@ export default function AdminContactForm() {
       </Tabs>
 
       <div className="flex justify-end gap-2 mt-6 sm:hidden">
-        <Button variant="outline" onClick={() => navigate("/admin/dashboard")} data-testid="button-cancel-mobile">
+        <Button variant="outline" onClick={() => navigate("/admin?tab=crm-contacts")} data-testid="button-cancel-mobile">
           Cancel
         </Button>
         <Button onClick={handleSubmit} disabled={isLoading} data-testid="button-save-contact-mobile">
