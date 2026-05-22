@@ -260,9 +260,9 @@ export function ApplicationDetailsPanel({
     stage: application.currentStage,
     documentType: "",
     documentName: "",
-    documentUrl: "",
     isRequired: false,
   });
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   const [verifyNotes, setVerifyNotes] = useState("");
   const [rejectReason, setRejectReason] = useState("");
@@ -401,14 +401,23 @@ export function ApplicationDetailsPanel({
   });
 
   const uploadDocMutation = useMutation({
-    mutationFn: async (data: typeof newDocUpload) => {
-      return apiRequest("POST", `/api/admin/applications/${application.id}/documents`, data);
+    mutationFn: async () => {
+      if (!uploadFile) throw new Error("No file selected");
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+      formData.append("stage", newDocUpload.stage);
+      formData.append("documentType", newDocUpload.documentType);
+      formData.append("documentName", newDocUpload.documentName);
+      formData.append("isRequired", String(newDocUpload.isRequired));
+      return apiRequest("POST", `/api/admin/applications/${application.id}/upload-document`, formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/applications", application.id, "documents"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/students/${student.id}/documents`] });
       toast({ title: "Document Uploaded", description: "Document has been added successfully" });
       setUploadDocDialogOpen(false);
-      setNewDocUpload({ stage: application.currentStage, documentType: "", documentName: "", documentUrl: "", isRequired: false });
+      setNewDocUpload({ stage: application.currentStage, documentType: "", documentName: "", isRequired: false });
+      setUploadFile(null);
     },
     onError: (error: any) => {
       toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
@@ -1286,21 +1295,32 @@ export function ApplicationDetailsPanel({
               />
             </div>
             <div>
-              <Label htmlFor="upload-url">Document URL</Label>
+              <Label htmlFor="upload-file">File</Label>
               <Input
-                id="upload-url"
-                value={newDocUpload.documentUrl}
-                onChange={(e) => setNewDocUpload({ ...newDocUpload, documentUrl: e.target.value })}
-                placeholder="https://..."
-                data-testid="input-upload-doc-url"
+                id="upload-file"
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls,.csv"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  setUploadFile(file);
+                  if (file && !newDocUpload.documentName) {
+                    setNewDocUpload((prev) => ({ ...prev, documentName: file.name }));
+                  }
+                }}
+                data-testid="input-upload-file"
               />
+              {uploadFile && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {uploadFile.name} ({(uploadFile.size / 1024).toFixed(0)} KB)
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setUploadDocDialogOpen(false)}>Cancel</Button>
             <Button 
-              onClick={() => uploadDocMutation.mutate(newDocUpload)}
-              disabled={!newDocUpload.documentType || !newDocUpload.documentName || !newDocUpload.documentUrl || uploadDocMutation.isPending}
+              onClick={() => uploadDocMutation.mutate()}
+              disabled={!newDocUpload.documentType || !newDocUpload.documentName || !uploadFile || uploadDocMutation.isPending}
               data-testid="button-confirm-upload"
             >
               <Upload className="h-4 w-4 mr-1" />

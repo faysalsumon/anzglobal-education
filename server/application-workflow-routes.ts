@@ -5,6 +5,7 @@ import {
   applications,
   applicationStageHistory,
   applicationStageDocuments,
+  documents,
   insertApplicationStageHistorySchema,
   insertApplicationStageDocumentSchema,
   users,
@@ -21,6 +22,12 @@ import { logActivity } from "./activity-logger";
 import { sendStageTransitionNotification, sendDocumentRequestNotification, sendApplicationAssignedEmail } from "./email-service";
 import { notifyApplicationAssigned, notifyApplicationStageChange, notifyDocumentRequested } from "./notifications";
 import { getUserAccessContext, checkCrudPermission } from "./access-policy-service";
+import { storage as dbStorage } from "./storage";
+import multer from "multer";
+import fs from "fs/promises";
+import path from "path";
+
+const adminUpload = multer({ storage: multer.memoryStorage() });
 
 // Stage transition validation schema
 const stageTransitionSchema = z.object({
@@ -1102,6 +1109,108 @@ export function registerApplicationWorkflowRoutes(app: Express) {
     } catch (error: any) {
       console.error("Error uploading document:", error);
       res.status(400).json({ error: error.message || "Failed to upload document" });
+    }
+  });
+
+  // Admin file upload — stores file on disk AND inserts into `documents` table (same as student uploads)
+  app.post("/api/admin/applications/:id/upload-document", isAuthenticated, adminUpload.single('file'), async (req: any, res) => {
+    try {
+      const adminAccess = await checkAdminAccess(req);
+      if (!adminAccess) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { id: applicationId } = req.params;
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file provided" });
+      }
+
+      const { stage, documentType, documentName, isRequired } = req.body;
+
+      if (!stage || !documentType || !documentName) {
+        return res.status(400).json({ error: "stage, documentType, and documentName are required" });
+      }
+
+      // Verify application exists and get the student profile
+      const application = await db.query.applications.findFirst({
+        where: eq(applications.id, applicationId),
+        columns: { id: true, studentProfileId: true },
+      });
+
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Get student profile to find user id
+      const studentProfile = application.studentProfileId
+        ? await db.query.studentProfiles.findFirst({
+            where: eq(studentProfiles.id, application.studentProfileId),
+            columns: { id: true, userId: true },
+          })
+        : null;
+
+      // Resolve uploads base directory (same logic as student upload)
+      let uploadsBase = process.env.PRIVATE_OBJECT_DIR;
+      if (uploadsBase) {
+        try { await fs.access(uploadsBase); } catch { uploadsBase = undefined; }
+      }
+      if (!uploadsBase) {
+        uploadsBase = path.join(process.cwd(), 'uploads');
+      }
+
+      const profileDir = application.studentProfileId || 'admin';
+      const fileName = `${Date.now()}-${req.file.originalname}`;
+      const uploadsDir = path.join(uploadsBase, 'documents', profileDir);
+      const filePath = path.join(uploadsDir, fileName);
+
+      await fs.mkdir(uploadsDir, { recursive: true });
+      await fs.writeFile(filePath, req.file.buffer);
+
+      // Insert into the shared `documents` table (senderType = 'admin')
+      const docRecord = await dbStorage.createDocument({
+        type: documentType,
+        title: documentName,
+        filePath,
+        fileName: req.file.originalname,
+        senderId: adminAccess.userId,
+        senderType: 'admin',
+        studentProfileId: application.studentProfileId || null,
+        applicationId,
+        folderId: null,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype,
+        status: 'pending',
+        description: null,
+      });
+
+      // Also insert into applicationStageDocuments, linked to the document record
+      const [stageDoc] = await db.insert(applicationStageDocuments).values({
+        applicationId,
+        stage,
+        documentType,
+        documentName,
+        documentUrl: filePath,
+        documentId: docRecord.id,
+        isRequired: isRequired === 'true' || isRequired === true,
+        uploadedBy: adminAccess.userId,
+        uploadedByRole: 'admin',
+        uploadedAt: new Date(),
+      }).returning();
+
+      await logActivity({
+        userId: adminAccess.userId,
+        action: 'created',
+        entityType: 'document',
+        entityId: docRecord.id,
+        actionDescription: `Admin uploaded document "${documentName}" for ${stage} stage`,
+        metadata: { documentType, stage, applicationId },
+      });
+
+      res.json({ document: docRecord, stageDocument: stageDoc, message: "Document uploaded successfully" });
+    } catch (error: any) {
+      console.error("Error uploading admin document:", error);
+      res.status(500).json({ error: error.message || "Failed to upload document" });
     }
   });
 
