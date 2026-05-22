@@ -27,7 +27,27 @@ import multer from "multer";
 import fs from "fs/promises";
 import path from "path";
 
-const adminUpload = multer({ storage: multer.memoryStorage() });
+const adminAllowedMimeTypes = [
+  'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain', 'text/csv',
+];
+
+const adminUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (adminAllowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not allowed. Supported types: PDF, DOC, DOCX, XLS, XLSX, images (JPG, PNG, GIF, WebP), TXT, CSV'));
+    }
+  },
+});
 
 // Stage transition validation schema
 const stageTransitionSchema = z.object({
@@ -1132,23 +1152,15 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         return res.status(400).json({ error: "stage, documentType, and documentName are required" });
       }
 
-      // Verify application exists and get the student profile
+      // Verify application exists and get the student profile id (stored as studentId on applications)
       const application = await db.query.applications.findFirst({
         where: eq(applications.id, applicationId),
-        columns: { id: true, studentProfileId: true },
+        columns: { id: true, studentId: true },
       });
 
       if (!application) {
         return res.status(404).json({ error: "Application not found" });
       }
-
-      // Get student profile to find user id
-      const studentProfile = application.studentProfileId
-        ? await db.query.studentProfiles.findFirst({
-            where: eq(studentProfiles.id, application.studentProfileId),
-            columns: { id: true, userId: true },
-          })
-        : null;
 
       // Resolve uploads base directory (same logic as student upload)
       let uploadsBase = process.env.PRIVATE_OBJECT_DIR;
@@ -1159,7 +1171,8 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         uploadsBase = path.join(process.cwd(), 'uploads');
       }
 
-      const profileDir = application.studentProfileId || 'admin';
+      // application.studentId is the studentProfileId FK
+      const profileDir = application.studentId || 'admin';
       const fileName = `${Date.now()}-${req.file.originalname}`;
       const uploadsDir = path.join(uploadsBase, 'documents', profileDir);
       const filePath = path.join(uploadsDir, fileName);
@@ -1175,7 +1188,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         fileName: req.file.originalname,
         senderId: adminAccess.userId,
         senderType: 'admin',
-        studentProfileId: application.studentProfileId || null,
+        studentProfileId: application.studentId || null,
         applicationId,
         folderId: null,
         fileSize: req.file.size,
@@ -1184,13 +1197,14 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         description: null,
       });
 
-      // Also insert into applicationStageDocuments, linked to the document record
+      // Also insert into applicationStageDocuments, linked to the document record.
+      // documentUrl stores the raw file path so the existing download handler can serve it.
       const [stageDoc] = await db.insert(applicationStageDocuments).values({
         applicationId,
         stage,
         documentType,
         documentName,
-        documentUrl: `/api/admin/documents/${docRecord.id}/download`,
+        documentUrl: filePath,
         documentId: docRecord.id,
         isRequired: isRequired === 'true' || isRequired === true,
         uploadedBy: adminAccess.userId,
