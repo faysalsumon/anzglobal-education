@@ -1190,7 +1190,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         stage,
         documentType,
         documentName,
-        documentUrl: filePath,
+        documentUrl: `/api/admin/documents/${docRecord.id}/download`,
         documentId: docRecord.id,
         isRequired: isRequired === 'true' || isRequired === true,
         uploadedBy: adminAccess.userId,

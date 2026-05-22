@@ -963,6 +963,9 @@ export function ApplicationDetailsPanel({
                               <Badge className={`text-xs ${status.color}`}>
                                 {status.label}
                               </Badge>
+                              {doc.uploadedByRole === 'admin' && (
+                                <Badge variant="secondary" className="text-xs">Consultant upload</Badge>
+                              )}
                               {doc.isRequired && (
                                 <Badge variant="outline" className="text-xs">Required</Badge>
                               )}
