@@ -3290,11 +3290,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? `Budget: $${(data.budgetMin || 0).toLocaleString()} - $${(data.budgetMax || 0).toLocaleString()} AUD/year`
         : '';
 
-      // Check for an existing contact with the same email (case-insensitive)
+      // Check for an existing contact with the same email (case-insensitive at DB level)
+      // data.email is already lowercased; wrap the stored column in lower() to handle
+      // any mixed-case emails that may exist in historical data.
       const existingContact = await db
         .select()
         .from(crmContacts)
-        .where(eq(crmContacts.email, data.email))
+        .where(dsql`lower(${crmContacts.email}) = ${data.email}`)
         .limit(1)
         .then(rows => rows[0] || null);
 
