@@ -345,7 +345,7 @@ function AdminApplicationDetailContent() {
         </Card>
       </div>
 
-      {/* Main Content Tabs */}
+      {/* Supplementary Info Tabs */}
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="grid w-full grid-cols-4" data-testid="tabs-application-detail">
           <TabsTrigger value="overview" className="flex items-center gap-2" data-testid="tab-overview">
@@ -366,9 +366,8 @@ function AdminApplicationDetailContent() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4 mt-4">
-          {/* Document Progress Card */}
+        {/* Overview Tab — Document Progress only */}
+        <TabsContent value="overview" className="mt-4">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -399,33 +398,6 @@ function AdminApplicationDetailContent() {
                   <p className="text-xs text-muted-foreground">total docs</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Application Details Panel with all features */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Application Management
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Process application, manage documents, and communicate with the student
-              </p>
-            </CardHeader>
-            <CardContent>
-              <ApplicationDetailsPanel
-                application={application as any}
-                course={course}
-                university={university}
-                student={student}
-                consultant={consultant}
-                currentUserId={user?.id}
-                onClose={() => {}}
-                onDeleted={() => {
-                  window.location.href = "/admin";
-                }}
-              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -460,6 +432,33 @@ function AdminApplicationDetailContent() {
           />
         </TabsContent>
       </Tabs>
+
+      {/* Application Management — always visible, separate from tabs */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Application Management
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Process application, manage documents, and communicate with the student
+          </p>
+        </CardHeader>
+        <CardContent>
+          <ApplicationDetailsPanel
+            application={application as any}
+            course={course}
+            university={university}
+            student={student}
+            consultant={consultant}
+            currentUserId={user?.id}
+            onClose={() => {}}
+            onDeleted={() => {
+              window.location.href = "/admin";
+            }}
+          />
+        </CardContent>
+      </Card>
 
       <CreateReminderModal
         open={reminderDialogOpen}
