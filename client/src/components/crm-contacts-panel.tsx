@@ -1644,8 +1644,9 @@ function ContactFormDialog({
         </div>
 
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
+            <TabsTrigger value="crm">CRM Details</TabsTrigger>
             <TabsTrigger value="address">Address</TabsTrigger>
             <TabsTrigger value="emergency">Emergency</TabsTrigger>
           </TabsList>
@@ -1763,8 +1764,8 @@ function ContactFormDialog({
               </Select>
             </div>
 
-            <Separator />
-
+          </TabsContent>
+          <TabsContent value="crm" className="space-y-4 mt-4">
             <p className="text-sm font-medium">Study Preferences</p>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
