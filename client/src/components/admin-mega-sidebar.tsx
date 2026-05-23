@@ -45,6 +45,7 @@ import {
   DollarSign,
   Package,
   ImageIcon,
+  TrendingUp,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -89,7 +90,7 @@ export function AdminMegaSidebar({
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
   const isOnProfilePage = location === "/admin/profile";
 
-  const { user, allowedNavSections, isBranchManager } = useAuth();
+  const { user, allowedNavSections, isBranchManager, adminRole } = useAuth();
   const adminRegionCode = user?.regionCode || null;
   const isGlobalScope = user?.defaultScope === 'global' || !adminRegionCode;
 
@@ -109,7 +110,8 @@ export function AdminMegaSidebar({
         { icon: ListTodo, label: "My Tasks", value: "my-tasks", show: true },
         { icon: BarChart3, label: "Team Workload", value: "team-workload", show: isCTO },
         { icon: Mail, label: "Email", value: "email", show: true },
-        { icon: Contact, label: "Contacts", value: "crm-contacts", show: true },
+        { icon: TrendingUp, label: "Leads", value: "crm-leads", show: true },
+        { icon: Contact, label: "Contacts", value: "crm-contacts", show: adminRole !== 'junior_consultant' && adminRole !== 'support_staff' },
         { icon: ClipboardList, label: "Applications", value: "applications", show: true },
       ],
     },

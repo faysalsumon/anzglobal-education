@@ -50,6 +50,7 @@ import {
   ChevronRight,
   UserCheck,
   Mail,
+  TrendingUp,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -78,7 +79,7 @@ interface NavSection {
   items: NavItem[];
 }
 
-const PRIMARY_TABS = ["overview", "messages", "crm-contacts", "applications"];
+const PRIMARY_TABS = ["overview", "messages", "crm-leads", "applications"];
 
 export function AdminMobileBottomNav({
   activeTab,
@@ -89,7 +90,7 @@ export function AdminMobileBottomNav({
   onLogout,
 }: AdminMobileBottomNavProps) {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const { user, allowedNavSections } = useAuth();
+  const { user, allowedNavSections, adminRole } = useAuth();
 
   const adminRegionCode = user?.regionCode || null;
   const isGlobalScope = user?.defaultScope === "global" || !adminRegionCode;
@@ -156,6 +157,7 @@ export function AdminMobileBottomNav({
         { icon: Mail, label: "Email", value: "email", show: true },
         { icon: ListTodo, label: "My Tasks", value: "my-tasks", show: true },
         { icon: BarChart3, label: "Team Workload", value: "team-workload", show: isCTO },
+        { icon: Contact, label: "Contacts", value: "crm-contacts", show: adminRole !== 'junior_consultant' && adminRole !== 'support_staff' },
       ],
     },
     {
@@ -241,9 +243,9 @@ export function AdminMobileBottomNav({
       testId: "mobile-tab-chat",
     },
     {
-      value: "crm-contacts",
+      value: "crm-leads",
       label: "Leads",
-      icon: Contact,
+      icon: TrendingUp,
       badge: 0,
       testId: "mobile-tab-leads",
     },

@@ -66,6 +66,7 @@ import { MyTasksPanel } from "@/components/my-tasks-panel";
 import { TeamWorkloadPanel } from "@/components/team-workload-panel";
 import { UpcomingRemindersPanel } from "@/components/upcoming-reminders-panel";
 import { CrmContactsPanel } from "@/components/crm-contacts-panel";
+import { CrmLeadsPanel } from "@/components/crm-leads-panel";
 import { AdminCmsPanel } from "@/components/admin-cms-panel";
 import { AdminSeoPanel } from "@/components/admin-seo-panel";
 import { AdminAffiliatesPanel } from "@/components/admin-affiliates-panel";
@@ -495,7 +496,7 @@ export default function AdminDashboard() {
   
   // Initialize activeTab from hash OR query parameters (for notification deep-linking)
   const getInitialTab = () => {
-    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
+    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'crm-leads', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
     const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
     const ctoOnlyTabs = ['ai-settings'];
     const superAdminOnlyTabs = ['role-management', 'profile-management'];
@@ -544,6 +545,7 @@ export default function AdminDashboard() {
     'institutions': 'Institutions',
     'courses': 'Courses',
     'crm-contacts': 'Contacts',
+    'crm-leads': 'Leads',
     'applications': 'Applications',
     'data-import': 'Data Import',
     'web-scraping': 'Web Scraping',
@@ -590,7 +592,7 @@ export default function AdminDashboard() {
     const searchParams = new URLSearchParams(searchString);
     const tabFromQuery = searchParams.get('tab');
     if (tabFromQuery && tabFromQuery !== activeTab) {
-      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
+      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'crm-leads', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
       if (validTabs.includes(tabFromQuery)) {
         setActiveTab(tabFromQuery);
       }
@@ -2079,6 +2081,13 @@ export default function AdminDashboard() {
         {activeTab === "team-workload" && hasFullAdminAccess && (
           <div className="space-y-4">
             <TeamWorkloadPanel />
+          </div>
+        )}
+
+        {/* CRM Leads Tab */}
+        {activeTab === "crm-leads" && (
+          <div className="space-y-4">
+            <CrmLeadsPanel />
           </div>
         )}
 
