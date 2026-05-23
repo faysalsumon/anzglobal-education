@@ -33,13 +33,14 @@ interface CrmLead {
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
+  phone: string | null;
   mobile: string | null;
   leadStatus: 'not_contacted' | 'contacted' | 'qualified' | 'unqualified' | 'converted' | 'lost';
   leadRating: 'cold' | 'warm' | 'hot';
   leadSource: string | null;
   leadCreationMethod: string | null;
   branch: string | null;
+  branchId: string | null;
   nationality: string | null;
   country: string | null;
   city: string | null;
@@ -47,6 +48,7 @@ interface CrmLead {
   universityId: string | null;
   courseName: string | null;
   interestedIn: string | null;
+  productInterest: string | null;
   intakeMonth: string | null;
   intakeYear: string | null;
   notes: string | null;
@@ -109,9 +111,7 @@ export default function AdminLeadForm() {
     },
   });
 
-  const selectedBranchId = formData.branch 
-    ? branchesData?.find(b => b.name === formData.branch)?.id 
-    : undefined;
+  const selectedBranchId = formData.branchId || undefined;
 
   const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string; branchId: string | null }[]>({
     queryKey: ["/api/admin/users", selectedBranchId],
@@ -171,16 +171,18 @@ export default function AdminLeadForm() {
   const createMutation = useMutation({
     mutationFn: async (data: Partial<CrmLead>) => {
       const response = await apiRequest("POST", "/api/crm/leads", data);
-      return response.json();
+      const json = await response.json();
+      if (!json || !json.id) throw new Error("Invalid response from server");
+      return json as CrmLead;
     },
     onSuccess: (newLead: CrmLead) => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", newLead.id, "activity-log"] });
       toast({ title: "Lead created", description: "New lead has been added successfully" });
       navigate(`/admin/leads/${newLead.id}/edit`);
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create lead", variant: "destructive" });
+    onError: (error: any) => {
+      const message = error?.message || "Failed to create lead";
+      toast({ title: "Error", description: message, variant: "destructive" });
     },
   });
 
@@ -579,11 +581,13 @@ export default function AdminLeadForm() {
                   <div className="space-y-2">
                     <Label htmlFor="branch">Branch</Label>
                     <Select
-                      value={formData.branch || ""}
+                      value={formData.branchId || ""}
                       onValueChange={(value) => {
+                        const selected = branchesData?.find(b => b.id === value);
                         setFormData({ 
                           ...formData, 
-                          branch: value, 
+                          branchId: value || null,
+                          branch: selected?.name || null,
                           assignedTo: undefined
                         });
                       }}
@@ -593,7 +597,7 @@ export default function AdminLeadForm() {
                       </SelectTrigger>
                       <SelectContent>
                         {branchesData?.map((branch) => (
-                          <SelectItem key={branch.id} value={branch.name}>
+                          <SelectItem key={branch.id} value={branch.id}>
                             {branch.name}{branch.city ? ` (${branch.city})` : ''}
                           </SelectItem>
                         ))}
@@ -617,7 +621,7 @@ export default function AdminLeadForm() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {formData.branch && admins?.length === 0 && (
+                    {formData.branchId && admins?.length === 0 && (
                       <p className="text-sm text-muted-foreground">
                         No team members found for this branch
                       </p>
