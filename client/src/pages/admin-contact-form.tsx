@@ -80,6 +80,9 @@ interface CrmContact {
   courseName: string | null;
   courseUrl: string | null;
   interestedIn: string | null;
+  programDiscipline: string | null;
+  programType: string | null;
+  whereToStudy: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -1000,6 +1003,89 @@ export default function AdminContactForm() {
                     placeholder="Link to course page"
                     data-testid="input-course-url"
                   />
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Study Preferences</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="programDiscipline" className="text-xs text-muted-foreground">Interested Discipline</Label>
+                    <Select
+                      value={formData.programDiscipline || ""}
+                      onValueChange={(value) => setFormData({ ...formData, programDiscipline: value || null })}
+                    >
+                      <SelectTrigger id="programDiscipline" data-testid="select-program-discipline">
+                        <SelectValue placeholder="Select discipline" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          'Accounting, Business & Finance',
+                          'Agriculture & Forestry',
+                          'Applied Sciences & Professions',
+                          'Arts, Design & Architecture',
+                          'Computer Science & IT',
+                          'Education & Training',
+                          'Engineering & Technology',
+                          'Environmental Studies & Earth Sciences',
+                          'Hospitality, Leisure & Sports',
+                          'Humanities',
+                          'Journalism & Media',
+                          'Law',
+                          'Medicine & Health',
+                          'Short Courses',
+                          'Trade',
+                        ].map((d) => (
+                          <SelectItem key={d} value={d}>{d}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="programType" className="text-xs text-muted-foreground">Study Level</Label>
+                    <Select
+                      value={formData.programType || ""}
+                      onValueChange={(value) => setFormData({ ...formData, programType: value || null })}
+                    >
+                      <SelectTrigger id="programType" data-testid="select-program-type">
+                        <SelectValue placeholder="Select level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          'Certificate I',
+                          'Certificate II',
+                          'Certificate III',
+                          'Certificate IV',
+                          'Diploma',
+                          'Advanced Diploma',
+                          'Associate Degree',
+                          'Bachelor Degree',
+                          'Graduate Certificate',
+                          'Graduate Diploma',
+                          'Masters Degree',
+                          'Doctoral Degree',
+                          'ELICOS',
+                          'Foundation',
+                          'Short Course',
+                          'Other',
+                        ].map((l) => (
+                          <SelectItem key={l} value={l}>{l}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="whereToStudy" className="text-xs text-muted-foreground">Destination Country</Label>
+                    <Input
+                      id="whereToStudy"
+                      value={formData.whereToStudy || ""}
+                      onChange={(e) => setFormData({ ...formData, whereToStudy: e.target.value || null })}
+                      placeholder="e.g. Australia, UK, Canada"
+                      data-testid="input-where-to-study"
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>
