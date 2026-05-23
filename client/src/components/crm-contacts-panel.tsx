@@ -1615,6 +1615,30 @@ function ContactFormDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
+
+        {/* ── Contact Type — governs the entire form ─────────────── */}
+        <div className="rounded-md border border-primary/20 bg-primary/5 p-4 space-y-2" data-testid="section-contact-type">
+          <div>
+            <p className="text-sm font-semibold">Contact Type <span className="text-destructive">*</span></p>
+            <p className="text-xs text-muted-foreground">Sets the required fields and workflow for this contact</p>
+          </div>
+          <Select
+            value={formData.contactType || "clients"}
+            onValueChange={(value: any) => setFormData({ ...formData, contactType: value })}
+          >
+            <SelectTrigger data-testid="select-contact-type" className="bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="clients">Clients (Students)</SelectItem>
+              <SelectItem value="external">External (Referrals)</SelectItem>
+              <SelectItem value="partner">Partner</SelectItem>
+              <SelectItem value="providers_rep">Providers Rep</SelectItem>
+              <SelectItem value="others">Others</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <Tabs defaultValue="basic" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
@@ -1704,33 +1728,13 @@ function ContactFormDialog({
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Contact Type</Label>
-                <Select
-                  value={formData.contactType || "none"}
-                  onValueChange={(value: any) => setFormData({ ...formData, contactType: value })}
-                >
-                  <SelectTrigger data-testid="select-contact-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="clients">Clients</SelectItem>
-                    <SelectItem value="external">External</SelectItem>
-                    <SelectItem value="partner">Partner</SelectItem>
-                    <SelectItem value="providers_rep">Providers Rep</SelectItem>
-                    <SelectItem value="others">Others</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Nationality</Label>
-                <Input
-                  value={formData.nationality || ""}
-                  onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                  data-testid="input-nationality"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Nationality</Label>
+              <Input
+                value={formData.nationality || ""}
+                onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                data-testid="input-nationality"
+              />
             </div>
             <div className="space-y-2">
               <Label>Assign To</Label>
