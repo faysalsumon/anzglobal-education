@@ -64,6 +64,13 @@
       "when": 1773523200000,
       "tag": "0008_featured_markets",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1779544750963,
+      "tag": "0009_sturdy_mongu",
+      "breakpoints": true
     }
   ]
 }

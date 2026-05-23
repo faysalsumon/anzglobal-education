@@ -2957,6 +2957,25 @@ export const contactHistory = pgTable("contact_history", {
   actionIdx: index("contact_history_action_idx").on(table.action),
 }));
 
+// Lead Course Preferences — up to 3 ranked study preferences per CRM lead
+export const leadCoursePreferences = pgTable("lead_course_preferences", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  leadId: varchar("lead_id").notNull().references(() => crmContacts.id, { onDelete: "cascade" }),
+  preferenceRank: integer("preference_rank").notNull(), // 1, 2, or 3
+  country: text("country"),
+  universityId: varchar("university_id").references(() => universities.id, { onDelete: "set null" }),
+  courseId: varchar("course_id").references(() => courses.id, { onDelete: "set null" }),
+  courseName: text("course_name"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  leadIdIdx: index("lead_course_prefs_lead_idx").on(table.leadId),
+  rankIdx: index("lead_course_prefs_rank_idx").on(table.leadId, table.preferenceRank),
+}));
+
+export const insertLeadCoursePreferenceSchema = createInsertSchema(leadCoursePreferences).omit({ id: true, createdAt: true });
+export type LeadCoursePreference = typeof leadCoursePreferences.$inferSelect;
+export type InsertLeadCoursePreference = z.infer<typeof insertLeadCoursePreferenceSchema>;
+
 // CSV Import batches table for bulk import with approval workflow
 export const importBatches = pgTable("import_batches", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

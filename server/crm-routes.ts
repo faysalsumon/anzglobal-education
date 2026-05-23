@@ -14,6 +14,7 @@ import {
   applications,
   applicationCourses,
   contactNotes,
+  leadCoursePreferences,
 } from "@shared/schema";
 import { eq, desc, and, or, ilike, count, isNull, aliasedTable, ne, sql, type SQL } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
@@ -2273,6 +2274,72 @@ router.delete("/leads/:id/notes/:noteId", requireAdmin, async (req: any, res) =>
   } catch (error) {
     console.error("Error deleting lead note:", error);
     res.status(500).json({ message: "Failed to delete note" });
+  }
+});
+
+// ─── Lead Course Preferences ───────────────────────────────────────────────
+
+// GET /api/crm/leads/:id/preferences
+router.get("/leads/:id/preferences", requireAdmin, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const rows = await db
+      .select()
+      .from(leadCoursePreferences)
+      .where(eq(leadCoursePreferences.leadId, id))
+      .orderBy(leadCoursePreferences.preferenceRank);
+    res.json(rows);
+  } catch (error) {
+    console.error("Error fetching lead preferences:", error);
+    res.status(500).json({ message: "Failed to fetch preferences" });
+  }
+});
+
+// PUT /api/crm/leads/:id/preferences — bulk replace
+router.put("/leads/:id/preferences", requireAdmin, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verify lead exists
+    const lead = await db
+      .select({ id: crmContacts.id })
+      .from(crmContacts)
+      .where(eq(crmContacts.id, id))
+      .limit(1)
+      .then(r => r[0]);
+    if (!lead) return res.status(404).json({ message: "Lead not found" });
+
+    const payload = req.body;
+    if (!Array.isArray(payload)) {
+      return res.status(400).json({ message: "Body must be an array of preferences" });
+    }
+
+    // Delete existing and re-insert
+    await db.delete(leadCoursePreferences).where(eq(leadCoursePreferences.leadId, id));
+
+    if (payload.length > 0) {
+      const toInsert = payload
+        .slice(0, 3)
+        .map((p: any) => ({
+          leadId: id,
+          preferenceRank: p.rank ?? p.preferenceRank ?? 1,
+          country: p.country ?? null,
+          universityId: p.universityId ?? null,
+          courseId: p.courseId ?? null,
+          courseName: p.courseName ?? null,
+        }));
+      await db.insert(leadCoursePreferences).values(toInsert);
+    }
+
+    const saved = await db
+      .select()
+      .from(leadCoursePreferences)
+      .where(eq(leadCoursePreferences.leadId, id))
+      .orderBy(leadCoursePreferences.preferenceRank);
+    res.json(saved);
+  } catch (error) {
+    console.error("Error saving lead preferences:", error);
+    res.status(500).json({ message: "Failed to save preferences" });
   }
 });
 

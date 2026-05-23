@@ -9,14 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Save, Loader2, ChevronsUpDown, Check, Search } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Plus, X, CheckCircle2 } from "lucide-react";
 import { LeadNotes } from "@/components/lead-notes";
 import { LeadActivityLog } from "@/components/lead-activity-log";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { getCountryCode, getFlagUrl } from "@/lib/country-flags";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
@@ -59,14 +60,31 @@ interface CrmLead {
   createdByUserId: string | null;
 }
 
-interface Course {
+interface Institution {
   id: string;
-  title: string;
-  institutionName?: string;
+  name: string;
+  country: string | null;
+  logo: string | null;
 }
 
+interface CourseOption {
+  id: string;
+  title: string;
+  level: string | null;
+  duration: string | null;
+}
+
+interface CoursePreference {
+  country: string;
+  universityId: string;
+  courseId: string;
+  courseName: string;
+}
+
+const EMPTY_PREF: CoursePreference = { country: "", universityId: "", courseId: "", courseName: "" };
+
 const COUNTRIES = [
-  "Afghanistan", "Albania", "Algeria", "Argentina", "Australia", "Austria", 
+  "Afghanistan", "Albania", "Algeria", "Argentina", "Australia", "Austria",
   "Bangladesh", "Belgium", "Brazil", "Canada", "Chile", "China", "Colombia",
   "Egypt", "Ethiopia", "France", "Germany", "Ghana", "Greece", "Hong Kong",
   "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Japan",
@@ -84,18 +102,227 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ];
 
+// ─── Single preference slot ────────────────────────────────────────────────
+
+interface PreferenceSlotProps {
+  rank: number;
+  pref: CoursePreference;
+  institutions: Institution[];
+  onChange: (updated: CoursePreference) => void;
+  onRemove: () => void;
+  canRemove: boolean;
+}
+
+function PreferenceSlot({ rank, pref, institutions, onChange, onRemove, canRemove }: PreferenceSlotProps) {
+  const countryOptions = Array.from(
+    new Set(institutions.map(i => i.country).filter(Boolean))
+  ).sort() as string[];
+
+  const filteredInstitutions = institutions.filter(i => i.country === pref.country);
+
+  const { data: coursesForSlot, isLoading: loadingCourses } = useQuery<CourseOption[]>({
+    queryKey: ["/api/courses/by-institution", pref.universityId],
+    queryFn: async () => {
+      if (!pref.universityId) return [];
+      const response = await fetch(`/api/courses?universityId=${pref.universityId}&publishStatus=published&limit=200`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return Array.isArray(data) ? data : (data.courses ?? []);
+    },
+    enabled: !!pref.universityId,
+  });
+
+  const [courseSearch, setCourseSearch] = useState("");
+  const filteredCourses = (coursesForSlot ?? []).filter(c =>
+    !courseSearch || c.title.toLowerCase().includes(courseSearch.toLowerCase())
+  );
+
+  return (
+    <div className="border rounded-md p-4 space-y-3 bg-muted/20">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground">Preference {rank}</span>
+        {canRemove && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onRemove}
+            data-testid={`button-remove-preference-${rank}`}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+
+      {/* Step 1 — Country */}
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground">Country</Label>
+        <Select
+          value={pref.country}
+          onValueChange={(v) => onChange({ ...EMPTY_PREF, country: v })}
+        >
+          <SelectTrigger data-testid={`select-pref-country-${rank}`}>
+            <SelectValue placeholder="Select a country">
+              {pref.country && (() => {
+                const code = getCountryCode(pref.country);
+                return (
+                  <div className="flex items-center gap-2">
+                    {code && (
+                      <img src={getFlagUrl(code)} className="w-5 h-3.5 object-cover rounded-sm shrink-0" alt={pref.country} />
+                    )}
+                    <span>{pref.country}</span>
+                  </div>
+                );
+              })()}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {countryOptions.map((country) => {
+              const code = getCountryCode(country);
+              return (
+                <SelectItem key={country} value={country} data-testid={`pref-country-option-${country}`}>
+                  <div className="flex items-center gap-2">
+                    {code && (
+                      <img src={getFlagUrl(code)} className="w-5 h-3.5 object-cover rounded-sm shrink-0" alt={country} />
+                    )}
+                    <span>{country}</span>
+                  </div>
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Step 2 — Institution */}
+      {pref.country && (
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Institution</Label>
+          <Select
+            value={pref.universityId}
+            onValueChange={(v) => onChange({ ...pref, universityId: v, courseId: "", courseName: "" })}
+          >
+            <SelectTrigger data-testid={`select-pref-institution-${rank}`}>
+              <SelectValue placeholder="Select an institution">
+                {pref.universityId && (() => {
+                  const inst = filteredInstitutions.find(i => i.id === pref.universityId);
+                  if (!inst) return null;
+                  return (
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5 shrink-0">
+                        <AvatarImage src={inst.logo || undefined} />
+                        <AvatarFallback className="text-[9px]">{inst.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <span className="truncate">{inst.name}</span>
+                    </div>
+                  );
+                })()}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {filteredInstitutions.length === 0 && (
+                <div className="px-3 py-2 text-sm text-muted-foreground">No institutions in {pref.country}</div>
+              )}
+              {filteredInstitutions.map((inst) => (
+                <SelectItem key={inst.id} value={inst.id} data-testid={`pref-institution-option-${inst.id}`}>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-5 w-5 shrink-0">
+                      <AvatarImage src={inst.logo || undefined} />
+                      <AvatarFallback className="text-[9px] bg-muted">{inst.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="truncate">{inst.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Step 3 — Course */}
+      {pref.universityId && (
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Course</Label>
+          <Input
+            placeholder="Search courses..."
+            value={courseSearch}
+            onChange={(e) => setCourseSearch(e.target.value)}
+            className="h-8 text-sm"
+            data-testid={`input-pref-course-search-${rank}`}
+          />
+          {loadingCourses && (
+            <p className="text-xs text-muted-foreground py-1">Loading courses...</p>
+          )}
+          {!loadingCourses && filteredCourses.length > 0 && (
+            <ScrollArea className="h-44 border rounded-md">
+              <div className="p-1.5 space-y-0.5">
+                {filteredCourses.map((course) => {
+                  const isSelected = pref.courseId === course.id;
+                  return (
+                    <div
+                      key={course.id}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer hover-elevate ${
+                        isSelected ? "bg-primary/10 border border-primary/30" : "border border-transparent"
+                      }`}
+                      onClick={() => onChange({ ...pref, courseId: course.id, courseName: course.title })}
+                      data-testid={`pref-course-option-${rank}-${course.id}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-tight">{course.title}</p>
+                        {course.level && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 mt-0.5 no-default-active-elevate">{course.level}</Badge>
+                        )}
+                      </div>
+                      {isSelected ? (
+                        <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                      ) : (
+                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          )}
+          {!loadingCourses && filteredCourses.length === 0 && !loadingCourses && (
+            <p className="text-xs text-muted-foreground py-1">No published courses found.</p>
+          )}
+          {pref.courseName && (
+            <div className="flex items-center gap-2 pt-1">
+              <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="text-xs text-muted-foreground truncate">{pref.courseName}</span>
+              <button
+                type="button"
+                className="ml-auto text-xs text-muted-foreground hover:text-foreground shrink-0"
+                onClick={() => onChange({ ...pref, courseId: "", courseName: "" })}
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main form ────────────────────────────────────────────────────────────
+
 export default function AdminLeadForm() {
   const [, navigate] = useLocation();
   const params = useParams<{ id?: string }>();
   const isEditing = !!params.id;
   const { toast } = useToast();
-  const [courseSearchOpen, setCourseSearchOpen] = useState(false);
 
   const [formData, setFormData] = useState<Partial<CrmLead>>({
     leadStatus: 'not_contacted',
     leadRating: 'cold',
     leadCreationMethod: 'manually',
   });
+
+  // Course preferences state — always 1 visible, up to 3 total
+  const [preferences, setPreferences] = useState<CoursePreference[]>([{ ...EMPTY_PREF }]);
+  const [visiblePrefCount, setVisiblePrefCount] = useState(1);
 
   // Get current user for auto-assignment
   const { data: currentUser } = useQuery<{ id: string; firstName: string; lastName: string }>({
@@ -130,14 +357,15 @@ export default function AdminLeadForm() {
     },
   });
 
-  // Fetch courses for searchable dropdown
-  const { data: coursesData } = useQuery<Course[]>({
-    queryKey: ["/api/courses"],
+  // Institutions for country cascade
+  const { data: institutionsData } = useQuery<Institution[]>({
+    queryKey: ["/api/institutions", "all-for-prefs"],
     queryFn: async () => {
-      const response = await fetch("/api/courses");
+      const response = await fetch("/api/institutions?limit=200");
       if (!response.ok) return [];
       const data = await response.json();
-      return Array.isArray(data) ? data : [];
+      const list = Array.isArray(data) ? data : (data.institutions ?? data.universities ?? []);
+      return list.map((i: any) => ({ id: i.id, name: i.name, country: i.country ?? null, logo: i.logo ?? null }));
     },
   });
 
@@ -152,11 +380,44 @@ export default function AdminLeadForm() {
     enabled: isEditing,
   });
 
+  // Load saved preferences when editing
+  const { data: savedPreferences } = useQuery<{ preferenceRank: number; country: string | null; universityId: string | null; courseId: string | null; courseName: string | null }[]>({
+    queryKey: ["/api/crm/leads", params.id, "preferences"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/crm/leads/${params.id}/preferences`, { credentials: 'include', headers });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: isEditing && !!params.id,
+  });
+
   useEffect(() => {
     if (existingLead) {
       setFormData(existingLead);
     }
   }, [existingLead]);
+
+  // Populate preference slots from saved data
+  useEffect(() => {
+    if (savedPreferences && savedPreferences.length > 0) {
+      const filled: CoursePreference[] = [{ ...EMPTY_PREF }, { ...EMPTY_PREF }, { ...EMPTY_PREF }];
+      for (const sp of savedPreferences) {
+        const idx = (sp.preferenceRank ?? 1) - 1;
+        if (idx >= 0 && idx < 3) {
+          filled[idx] = {
+            country: sp.country ?? "",
+            universityId: sp.universityId ?? "",
+            courseId: sp.courseId ?? "",
+            courseName: sp.courseName ?? "",
+          };
+        }
+      }
+      const maxRank = Math.max(...savedPreferences.map(p => p.preferenceRank ?? 1));
+      setPreferences(filled);
+      setVisiblePrefCount(Math.max(1, maxRank));
+    }
+  }, [savedPreferences]);
 
   // Auto-assign new leads to current user
   useEffect(() => {
@@ -169,6 +430,19 @@ export default function AdminLeadForm() {
     }
   }, [isEditing, currentUser, formData.assignedTo]);
 
+  const savePreferences = async (leadId: string) => {
+    const validPrefs = preferences
+      .slice(0, visiblePrefCount)
+      .map((p, i) => ({ rank: i + 1, country: p.country || null, universityId: p.universityId || null, courseId: p.courseId || null, courseName: p.courseName || null }))
+      .filter(p => p.country || p.universityId || p.courseId);
+
+    try {
+      await apiRequest("PUT", `/api/crm/leads/${leadId}/preferences`, validPrefs);
+    } catch (err) {
+      console.error("Failed to save preferences", err);
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: Partial<CrmLead>) => {
       const response = await apiRequest("POST", "/api/crm/leads", data);
@@ -180,7 +454,8 @@ export default function AdminLeadForm() {
       if (!json || !json.id) throw new Error("Invalid response from server");
       return json as CrmLead;
     },
-    onSuccess: (newLead: CrmLead) => {
+    onSuccess: async (newLead: CrmLead) => {
+      await savePreferences(newLead.id);
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
       toast({ title: "Lead created", description: "New lead has been added successfully" });
       navigate(`/admin/leads/${newLead.id}/edit`);
@@ -195,9 +470,11 @@ export default function AdminLeadForm() {
     mutationFn: async ({ id, data }: { id: string; data: Partial<CrmLead> }) => {
       return apiRequest("PATCH", `/api/crm/leads/${id}`, data);
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: async (_data, variables) => {
+      await savePreferences(variables.id);
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", variables.id, "activity-log"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", variables.id, "preferences"] });
       toast({ title: "Lead updated", description: "Lead has been updated successfully" });
       navigate("/admin?tab=crm-leads");
     },
@@ -208,7 +485,7 @@ export default function AdminLeadForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.firstName || !formData.lastName || !formData.email) {
       toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
@@ -222,6 +499,23 @@ export default function AdminLeadForm() {
   };
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
+
+  const updatePref = (idx: number, updated: CoursePreference) => {
+    setPreferences(prev => {
+      const next = [...prev];
+      next[idx] = updated;
+      return next;
+    });
+  };
+
+  const removePref = (idx: number) => {
+    setPreferences(prev => {
+      const next = [...prev];
+      next[idx] = { ...EMPTY_PREF };
+      return next;
+    });
+    setVisiblePrefCount(prev => Math.max(1, prev - 1));
+  };
 
   if (isEditing && isLoadingLead) {
     return (
@@ -466,78 +760,50 @@ export default function AdminLeadForm() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Course Name / Interest</Label>
-                  <Popover open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={courseSearchOpen}
-                        className="w-full justify-between"
-                        data-testid="button-select-course"
-                      >
-                        {formData.courseId && coursesData ? (
-                          <span className="truncate">
-                            {coursesData.find(c => c.id === formData.courseId)?.title || formData.courseName || "Select a course"}
-                          </span>
-                        ) : formData.courseName ? (
-                          <span className="truncate">{formData.courseName}</span>
-                        ) : (
-                          <span className="text-muted-foreground">Search and select a course...</span>
-                        )}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Search courses..." />
-                        <CommandList>
-                          <CommandEmpty>No courses found.</CommandEmpty>
-                          <CommandGroup heading="Available Courses">
-                            {formData.courseId && (
-                              <CommandItem
-                                value="clear"
-                                onSelect={() => {
-                                  setFormData({ ...formData, courseId: null, courseName: null });
-                                  setCourseSearchOpen(false);
-                                }}
-                                className="cursor-pointer text-muted-foreground"
-                              >
-                                <span>Clear selection</span>
-                              </CommandItem>
-                            )}
-                            {coursesData?.map((course) => (
-                              <CommandItem
-                                key={course.id}
-                                value={`${course.title} ${course.institutionName || ''}`}
-                                onSelect={() => {
-                                  setFormData({ 
-                                    ...formData, 
-                                    courseId: course.id,
-                                    courseName: course.title
-                                  });
-                                  setCourseSearchOpen(false);
-                                }}
-                                className="cursor-pointer"
-                              >
-                                <div className="flex flex-col">
-                                  <span>{course.title}</span>
-                                  {course.institutionName && (
-                                    <span className="text-xs text-muted-foreground">{course.institutionName}</span>
-                                  )}
-                                </div>
-                                {formData.courseId === course.id && (
-                                  <Check className="ml-auto h-4 w-4" />
-                                )}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                <Separator />
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Course Preferences</Label>
+                    <span className="text-xs text-muted-foreground">Up to 3 preferences</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {Array.from({ length: visiblePrefCount }).map((_, i) => (
+                      <PreferenceSlot
+                        key={i}
+                        rank={i + 1}
+                        pref={preferences[i] ?? { ...EMPTY_PREF }}
+                        institutions={institutionsData ?? []}
+                        onChange={(updated) => updatePref(i, updated)}
+                        onRemove={() => removePref(i)}
+                        canRemove={visiblePrefCount > 1}
+                      />
+                    ))}
+                  </div>
+
+                  {visiblePrefCount < 3 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setVisiblePrefCount(prev => Math.min(3, prev + 1));
+                        setPreferences(prev => {
+                          const next = [...prev];
+                          while (next.length < visiblePrefCount + 1) next.push({ ...EMPTY_PREF });
+                          return next;
+                        });
+                      }}
+                      data-testid="button-add-preference"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Preference
+                    </Button>
+                  )}
                 </div>
+
+                <Separator />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -589,8 +855,8 @@ export default function AdminLeadForm() {
                       value={formData.branchId || ""}
                       onValueChange={(value) => {
                         const selected = branchesData?.find(b => b.id === value);
-                        setFormData({ 
-                          ...formData, 
+                        setFormData({
+                          ...formData,
                           branchId: value || null,
                           branch: selected?.name || null,
                           assignedTo: undefined
@@ -662,8 +928,8 @@ export default function AdminLeadForm() {
 
             {isEditing && params.id ? (
               <>
-                <LeadNotes 
-                  leadId={params.id} 
+                <LeadNotes
+                  leadId={params.id}
                   leadName={`${formData.firstName || ''} ${formData.lastName || ''}`}
                 />
                 <LeadActivityLog leadId={params.id} />
