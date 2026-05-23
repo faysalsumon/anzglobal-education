@@ -66,6 +66,8 @@ import {
   Star,
   MessageCircle,
   GraduationCap,
+  X,
+  CheckCircle2,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -1103,6 +1105,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
   const [courseSearch, setCourseSearch] = useState("");
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [applicationNotes, setApplicationNotes] = useState("");
+  const [courseInstitutionFilter, setCourseInstitutionFilter] = useState("");
 
   const startEdit = (section: LeadEditSection, fields: Partial<CrmLead>) => {
     setEditingSection(section);
@@ -1132,10 +1135,16 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
   });
 
   const { data: coursesData, isLoading: isLoadingCourses } = useQuery<{ courses: any[]; total: number }>({
-    queryKey: ["/api/courses", { search: courseSearch, limit: 20, publishStatus: 'published' }],
-    enabled: isCreateApplicationOpen && courseSearch.length > 1,
+    queryKey: ["/api/courses", { search: courseSearch, limit: courseInstitutionFilter ? 100 : 20, publishStatus: 'published', universityId: courseInstitutionFilter || undefined }],
+    enabled: isCreateApplicationOpen && (courseSearch.length > 1 || !!courseInstitutionFilter),
   });
   const searchCourses = coursesData?.courses || [];
+
+  const { data: courseInstitutionsData } = useQuery<any[]>({
+    queryKey: ["/api/institutions", { limit: 100, includePrivate: 'true' }],
+    enabled: isCreateApplicationOpen,
+  });
+  const courseInstitutionOptions = Array.isArray(courseInstitutionsData) ? courseInstitutionsData : [];
 
   const alreadyAppliedCourseIds = new Set((applicationsData?.applications ?? []).map((a) => a.courseId));
 
@@ -1846,21 +1855,26 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
                   data-testid={`application-${app.id}`}
                 >
                   <div className="flex items-center gap-4">
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-12 w-12">
                       <AvatarImage src={app.universityLogo || undefined} />
                       <AvatarFallback>
-                        <GraduationCap className="h-5 w-5" />
+                        <GraduationCap className="h-6 w-6" />
                       </AvatarFallback>
                     </Avatar>
                     <div className="space-y-1">
-                      <p className="font-medium text-sm">{app.courseName || 'Unknown Course'}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <p className="font-medium">{app.courseName || 'Unknown Course'}</p>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Building2 className="h-3 w-3" />
                         <span>{app.universityName || 'Unknown Institution'}</span>
                         {app.courseLevel && <><span>•</span><span>{app.courseLevel}</span></>}
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={app.status === 'accepted' ? 'default' : app.status === 'rejected' ? 'destructive' : 'outline'}>
+                        <Badge variant={
+                          app.status === 'accepted' ? 'default' :
+                          app.status === 'rejected' ? 'destructive' :
+                          app.status === 'withdrawn' ? 'secondary' :
+                          'outline'
+                        }>
                           {app.status}
                         </Badge>
                         <Badge variant="outline">{app.currentStage}</Badge>
@@ -1875,10 +1889,13 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
                   </div>
                   <div className="flex items-center gap-2">
                     {app.assignedConsultant && (
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={app.assignedConsultant.profileImageUrl || undefined} />
-                        <AvatarFallback>{app.assignedConsultant.firstName?.[0]}</AvatarFallback>
-                      </Avatar>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={app.assignedConsultant.profileImageUrl || undefined} />
+                          <AvatarFallback>{app.assignedConsultant.firstName?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="hidden md:inline">{app.assignedConsultant.firstName}</span>
+                      </div>
                     )}
                     <ExternalLink className="h-4 w-4 text-muted-foreground" />
                   </div>
@@ -1956,80 +1973,227 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
       </Collapsible>
 
       {/* ── Create Application Dialog ──────────────────────────── */}
-      <Dialog open={isCreateApplicationOpen} onOpenChange={setIsCreateApplicationOpen}>
+      <Dialog open={isCreateApplicationOpen} onOpenChange={(open) => {
+        setIsCreateApplicationOpen(open);
+        if (!open) {
+          setCourseSearch("");
+          setSelectedCourseIds([]);
+          setApplicationNotes("");
+          setCourseInstitutionFilter("");
+        }
+      }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Create Application</DialogTitle>
             <DialogDescription>
-              Search for a course and create an application for {lead.firstName} {lead.lastName}.
+              Create a new application on behalf of {lead.firstName} {lead.lastName}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Search Course</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Type to search courses..."
-                  value={courseSearch}
-                  onChange={(e) => setCourseSearch(e.target.value)}
-                  className="pl-9"
-                  data-testid="input-course-search"
-                />
-              </div>
-            </div>
-            {isLoadingCourses && <p className="text-sm text-muted-foreground">Searching...</p>}
-            {searchCourses.length > 0 && (
-              <div className="border rounded-md max-h-48 overflow-y-auto divide-y">
-                {searchCourses.map((course: any) => {
-                  const isSelected = selectedCourseIds.includes(course.id);
-                  const isApplied = alreadyAppliedCourseIds.has(course.id);
-                  return (
-                    <div
-                      key={course.id}
-                      className={`flex items-center justify-between p-3 cursor-pointer hover-elevate ${isApplied ? 'opacity-50' : ''}`}
-                      onClick={() => {
-                        if (isApplied) return;
-                        setSelectedCourseIds(prev =>
-                          isSelected ? prev.filter(id => id !== course.id) : [...prev, course.id]
-                        );
-                      }}
-                      data-testid={`course-option-${course.id}`}
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{course.name}</p>
-                        <p className="text-xs text-muted-foreground">{course.university?.name}</p>
+
+            {/* Institution filter */}
+            <div className="space-y-1.5">
+              <Label>Filter by Institution</Label>
+              <Select
+                value={courseInstitutionFilter}
+                onValueChange={(v) => {
+                  setCourseInstitutionFilter(v === "_all" ? "" : v);
+                  setSelectedCourseIds([]);
+                  setCourseSearch("");
+                }}
+              >
+                <SelectTrigger data-testid="select-institution-filter">
+                  <SelectValue placeholder="All Institutions">
+                    {courseInstitutionFilter ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={courseInstitutionOptions.find((i: any) => i.id === courseInstitutionFilter)?.logo || undefined} />
+                          <AvatarFallback className="text-[9px]">
+                            {courseInstitutionOptions.find((i: any) => i.id === courseInstitutionFilter)?.name?.slice(0,2).toUpperCase() ?? "IN"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{courseInstitutionOptions.find((i: any) => i.id === courseInstitutionFilter)?.name}</span>
                       </div>
-                      {isApplied ? (
-                        <Badge variant="secondary">Applied</Badge>
-                      ) : isSelected ? (
-                        <Check className="h-4 w-4 text-primary" />
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    ) : "All Institutions"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">All Institutions</SelectItem>
+                  {courseInstitutionOptions.map((inst: any) => (
+                    <SelectItem key={inst.id} value={inst.id} data-testid={`institution-option-${inst.id}`}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5 shrink-0">
+                          <AvatarImage src={inst.logo || undefined} />
+                          <AvatarFallback className="text-[9px] bg-muted">{inst.name?.slice(0,2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{inst.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Course search */}
+            <div className="space-y-1.5">
+              <Label>{courseInstitutionFilter ? "Select Course(s)" : "Search Course"} *</Label>
+              <Input
+                placeholder={courseInstitutionFilter ? "Optionally filter by name..." : "Type to search courses..."}
+                value={courseSearch}
+                onChange={(e) => setCourseSearch(e.target.value)}
+                data-testid="input-course-search"
+              />
+              {isLoadingCourses && (
+                <p className="text-xs text-muted-foreground py-2">
+                  {courseInstitutionFilter
+                    ? `Loading courses from ${courseInstitutionOptions.find((i: any) => i.id === courseInstitutionFilter)?.name ?? "institution"}...`
+                    : "Searching courses..."}
+                </p>
+              )}
+              {!isLoadingCourses && searchCourses.length > 0 && (
+                <ScrollArea className="h-52 border rounded-md">
+                  <div className="p-1.5 space-y-1">
+                    {searchCourses.map((course: any) => {
+                      const uni = course.university;
+                      const isAlreadyApplied = alreadyAppliedCourseIds.has(course.id);
+                      const isSelected = selectedCourseIds.includes(course.id);
+                      return (
+                        <div
+                          key={course.id}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-md ${
+                            isAlreadyApplied
+                              ? "opacity-50 cursor-not-allowed border border-transparent"
+                              : isSelected
+                                ? "bg-primary/10 border border-primary/30 cursor-pointer hover-elevate"
+                                : "border border-transparent cursor-pointer hover-elevate"
+                          }`}
+                          onClick={() => {
+                            if (isAlreadyApplied) return;
+                            setSelectedCourseIds((prev) =>
+                              isSelected ? prev.filter((id) => id !== course.id) : [...prev, course.id]
+                            );
+                          }}
+                          data-testid={`course-option-${course.id}`}
+                        >
+                          <Avatar className="h-9 w-9 shrink-0">
+                            <AvatarImage src={uni?.logo || undefined} alt={uni?.name || "Institution"} />
+                            <AvatarFallback className="text-xs font-medium bg-muted">
+                              {uni?.name?.slice(0, 2).toUpperCase() ?? "IN"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium leading-tight">{course.title}</p>
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              {uni?.name && !courseInstitutionFilter && (
+                                <span className="text-xs text-muted-foreground truncate max-w-[160px]">{uni.name}</span>
+                              )}
+                              {course.level && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 no-default-active-elevate">{course.level}</Badge>
+                              )}
+                              {course.duration && (
+                                <span className="text-xs text-muted-foreground">{course.duration}</span>
+                              )}
+                            </div>
+                          </div>
+                          {isAlreadyApplied ? (
+                            <Badge variant="secondary" className="text-[10px] shrink-0 no-default-active-elevate">Applied</Badge>
+                          ) : isSelected ? (
+                            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                          ) : (
+                            <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              )}
+              {!isLoadingCourses && (courseSearch.length > 1 || !!courseInstitutionFilter) && searchCourses.length === 0 && (
+                <p className="text-xs text-muted-foreground py-1">
+                  {courseInstitutionFilter
+                    ? "No published courses found for this institution."
+                    : "No courses found. Try a different search term."}
+                </p>
+              )}
+            </div>
+
+            {/* Selected courses summary */}
             {selectedCourseIds.length > 0 && (
-              <div className="space-y-2">
-                <Label>Notes (optional)</Label>
-                <Textarea
-                  placeholder="Add notes about this application..."
-                  value={applicationNotes}
-                  onChange={(e) => setApplicationNotes(e.target.value)}
-                  data-testid="input-application-notes"
-                />
+              <div className="space-y-1.5" data-testid="selected-courses-summary">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Selected ({selectedCourseIds.length})
+                  </span>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground underline hover:text-foreground"
+                    onClick={() => setSelectedCourseIds([])}
+                  >
+                    Clear all
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedCourseIds.map((id) => {
+                    const c = searchCourses.find((x: any) => x.id === id);
+                    const label = c?.title ?? id;
+                    return (
+                      <Badge
+                        key={id}
+                        variant="secondary"
+                        className="text-xs max-w-[200px] truncate pr-1 gap-1 no-default-active-elevate"
+                        data-testid={`selected-course-badge-${id}`}
+                      >
+                        <span className="truncate">{label}</span>
+                        <button
+                          type="button"
+                          className="ml-0.5 shrink-0 opacity-60 hover:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedCourseIds((prev) => prev.filter((x) => x !== id));
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label>Notes (Optional)</Label>
+              <Textarea
+                placeholder="Add any notes about this application..."
+                value={applicationNotes}
+                onChange={(e) => setApplicationNotes(e.target.value)}
+                className="resize-none"
+                rows={3}
+                data-testid="input-application-notes"
+              />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateApplicationOpen(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => {
+              setIsCreateApplicationOpen(false);
+              setSelectedCourseIds([]);
+              setCourseSearch("");
+              setApplicationNotes("");
+              setCourseInstitutionFilter("");
+            }}>
+              Cancel
+            </Button>
             <Button
+              type="button"
               onClick={handleCreateApplication}
-              disabled={selectedCourseIds.length === 0 || createApplicationMutation.isPending}
+              disabled={!selectedCourseIds.length || createApplicationMutation.isPending}
               data-testid="button-confirm-create-application"
             >
-              {createApplicationMutation.isPending ? "Creating..." : `Create ${selectedCourseIds.length > 1 ? `${selectedCourseIds.length} Applications` : 'Application'}`}
+              {createApplicationMutation.isPending
+                ? "Creating..."
+                : selectedCourseIds.length > 1
+                  ? `Create ${selectedCourseIds.length} Applications`
+                  : "Create Application"}
             </Button>
           </DialogFooter>
         </DialogContent>
