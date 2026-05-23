@@ -561,6 +561,7 @@ export function ApplicationDetailsPanel({
         <CardContent className="p-5">
           <div className="flex flex-col sm:flex-row gap-4">
             <Avatar className="h-14 w-14 shrink-0 ring-2 ring-background ring-offset-2">
+              <AvatarImage src={student.profilePicture || undefined} alt={`${student.firstName} ${student.lastName}`} />
               <AvatarFallback className="text-base font-semibold bg-primary/10 text-primary">
                 {(student.firstName?.[0] ?? '') + (student.lastName?.[0] ?? '')}
               </AvatarFallback>
