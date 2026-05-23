@@ -553,6 +553,20 @@ const csvUpload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Track registration status of each named route group so we can print a
+  // health-check summary at startup and make failures immediately obvious.
+  const _routeGroupStatus: Array<{ name: string; ok: boolean; error?: string }> = [];
+  function _markRouteGroup(name: string, ok: boolean, error?: unknown) {
+    _routeGroupStatus.push({ name, ok, error: error ? String(error) : undefined });
+    if (!ok) {
+      console.error(`\n${'═'.repeat(70)}`);
+      console.error(`[routes] FATAL: Failed to register route group: ${name}`);
+      console.error(`[routes] Error: ${error}`);
+      console.error(`[routes] All endpoints in "${name}" will return 404.`);
+      console.error(`${'═'.repeat(70)}\n`);
+    }
+  }
+
   // Session middleware for CSRF token support (Supabase handles auth via JWT)
   const session = await import('express-session');
   const connectPg = await import('connect-pg-simple');
@@ -661,11 +675,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // the file throws, every route registered after that point is silently lost.
   // Registering the CRM router here (right after CSRF) guarantees it is always
   // available regardless of what fails further down the file.
-  {
+  try {
     const crmRouterEarly = await import('./crm-routes');
     const { injectAccessContext: injectAccessContextEarly } = await import('./middleware/region-scope');
     app.use('/api/crm', isAuthenticated, injectAccessContextEarly, crmRouterEarly.default);
     console.log('[routes] CRM routes registered early');
+    _markRouteGroup('crm-routes (early)', true);
+  } catch (err) {
+    _markRouteGroup('crm-routes (early)', false, err);
   }
 
   // Serve uploaded files from the public directory
@@ -17204,54 +17221,108 @@ Sitemap: ${baseUrl}/sitemap.xml
   });
 
   // Register chat routes
-  const { registerChatRoutes } = await import('./chat-routes');
-  registerChatRoutes(app);
-  console.log('Chat routes registered with RAG-powered AI assistant');
+  try {
+    const { registerChatRoutes } = await import('./chat-routes');
+    registerChatRoutes(app);
+    console.log('Chat routes registered with RAG-powered AI assistant');
+    _markRouteGroup('chat-routes', true);
+  } catch (err) {
+    _markRouteGroup('chat-routes', false, err);
+  }
 
   // Register admin chat routes (role-aware, team-aware Zan for admin team)
-  const { registerAdminChatRoutes } = await import('./admin-chat-routes');
-  registerAdminChatRoutes(app);
+  try {
+    const { registerAdminChatRoutes } = await import('./admin-chat-routes');
+    registerAdminChatRoutes(app);
+    _markRouteGroup('admin-chat-routes', true);
+  } catch (err) {
+    _markRouteGroup('admin-chat-routes', false, err);
+  }
 
   // Register scraping routes (protected with authentication)
-  const scrapingRouter = await import('./scraping-routes');
-  app.use('/api/admin/scraping', isAuthenticated, scrapingRouter.default);
-  console.log('Scraping routes registered for AI-powered course extraction');
+  try {
+    const scrapingRouter = await import('./scraping-routes');
+    app.use('/api/admin/scraping', isAuthenticated, scrapingRouter.default);
+    console.log('Scraping routes registered for AI-powered course extraction');
+    _markRouteGroup('scraping-routes', true);
+  } catch (err) {
+    _markRouteGroup('scraping-routes', false, err);
+  }
 
   // Register application workflow routes
-  const { registerApplicationWorkflowRoutes } = await import('./application-workflow-routes');
-  registerApplicationWorkflowRoutes(app);
-  console.log('Application workflow routes registered for CRM-style application management');
+  try {
+    const { registerApplicationWorkflowRoutes } = await import('./application-workflow-routes');
+    registerApplicationWorkflowRoutes(app);
+    console.log('Application workflow routes registered for CRM-style application management');
+    _markRouteGroup('application-workflow-routes', true);
+  } catch (err) {
+    _markRouteGroup('application-workflow-routes', false, err);
+  }
 
   // Register workflow validation routes (business rules)
-  const { registerWorkflowValidationRoutes } = await import('./workflow-validation-routes');
-  registerWorkflowValidationRoutes(app);
-  console.log('Workflow validation routes registered for business rules enforcement');
-
+  try {
+    const { registerWorkflowValidationRoutes } = await import('./workflow-validation-routes');
+    registerWorkflowValidationRoutes(app);
+    console.log('Workflow validation routes registered for business rules enforcement');
+    _markRouteGroup('workflow-validation-routes', true);
+  } catch (err) {
+    _markRouteGroup('workflow-validation-routes', false, err);
+  }
 
   // Register Institution CRM routes for contacts, business terms, and documents
-  const institutionCrmRouter = await import('./institution-crm-routes');
-  app.use('/api/admin/institution-crm', isAuthenticated, institutionCrmRouter.default);
-  console.log('Institution CRM routes registered for contacts, business terms, and documents');
+  try {
+    const institutionCrmRouter = await import('./institution-crm-routes');
+    app.use('/api/admin/institution-crm', isAuthenticated, institutionCrmRouter.default);
+    console.log('Institution CRM routes registered for contacts, business terms, and documents');
+    _markRouteGroup('institution-crm-routes', true);
+  } catch (err) {
+    _markRouteGroup('institution-crm-routes', false, err);
+  }
 
   // Register region management routes for global scalability
-  const { registerRegionRoutes } = await import('./region-routes');
-  registerRegionRoutes(app);
-  console.log('Region management routes registered for global scalability');
+  try {
+    const { registerRegionRoutes } = await import('./region-routes');
+    registerRegionRoutes(app);
+    console.log('Region management routes registered for global scalability');
+    _markRouteGroup('region-routes', true);
+  } catch (err) {
+    _markRouteGroup('region-routes', false, err);
+  }
 
   // Register Supabase authentication routes
-  setupSupabaseAuth(app);
+  try {
+    setupSupabaseAuth(app);
+    _markRouteGroup('supabase-auth-routes', true);
+  } catch (err) {
+    _markRouteGroup('supabase-auth-routes', false, err);
+  }
 
   // Register attendance routes (People / HR module)
-  const { registerAttendanceRoutes } = await import('./attendance-routes');
-  registerAttendanceRoutes(app);
-  console.log('Attendance routes registered for People/HR module');
+  try {
+    const { registerAttendanceRoutes } = await import('./attendance-routes');
+    registerAttendanceRoutes(app);
+    console.log('Attendance routes registered for People/HR module');
+    _markRouteGroup('attendance-routes', true);
+  } catch (err) {
+    _markRouteGroup('attendance-routes', false, err);
+  }
 
   // Register Zoho Mail routes
-  const { registerMailRoutes } = await import('./mail-routes');
-  registerMailRoutes(app);
-  console.log('Mail routes registered');
+  try {
+    const { registerMailRoutes } = await import('./mail-routes');
+    registerMailRoutes(app);
+    console.log('Mail routes registered');
+    _markRouteGroup('mail-routes', true);
+  } catch (err) {
+    _markRouteGroup('mail-routes', false, err);
+  }
 
-  registerAccountingRoutes(app);
+  try {
+    registerAccountingRoutes(app);
+    _markRouteGroup('accounting-routes', true);
+  } catch (err) {
+    _markRouteGroup('accounting-routes', false, err);
+  }
 
   // ========== Activity Logs API ==========
   
@@ -23618,19 +23689,51 @@ Sitemap: ${baseUrl}/sitemap.xml
   }, REMINDER_CHECK_INTERVAL);
 
   // Start scraping worker only if Redis is available
-  const { checkRedisAvailability } = await import('./scraping-queue');
-  const redisAvailable = await checkRedisAvailability();
-  
-  if (redisAvailable) {
-    const { startScrapingWorker } = await import('./scraping-worker');
-    const { startThumbnailWorker } = await import('./thumbnail-worker');
-    startScrapingWorker();
-    startThumbnailWorker();
-    console.log('Background job processing enabled (Redis connected)');
-  } else {
-    console.log('Background job processing disabled (Redis not available)');
-    console.log('Use POST /api/admin/scraping/jobs/:jobId/process for manual scraping');
+  try {
+    const { checkRedisAvailability } = await import('./scraping-queue');
+    const redisAvailable = await checkRedisAvailability();
+
+    if (redisAvailable) {
+      const { startScrapingWorker } = await import('./scraping-worker');
+      const { startThumbnailWorker } = await import('./thumbnail-worker');
+      startScrapingWorker();
+      startThumbnailWorker();
+      console.log('Background job processing enabled (Redis connected)');
+    } else {
+      console.log('Background job processing disabled (Redis not available)');
+      console.log('Use POST /api/admin/scraping/jobs/:jobId/process for manual scraping');
+    }
+  } catch (err) {
+    console.error('[routes] Failed to start background workers:', err);
   }
-  
+
+  // ─── Startup route-group health check ───────────────────────────────────────
+  // Print a summary of every named route group so any silent 404s are
+  // immediately visible in the startup logs.
+  {
+    const ok = _routeGroupStatus.filter(g => g.ok);
+    const failed = _routeGroupStatus.filter(g => !g.ok);
+    const border = '─'.repeat(70);
+    console.log(`\n${border}`);
+    console.log('[routes] Route-group registration summary');
+    console.log(border);
+    for (const g of ok) {
+      console.log(`  [OK]   ${g.name}`);
+    }
+    if (failed.length > 0) {
+      console.log('');
+      for (const g of failed) {
+        console.error(`  [FAIL] ${g.name}  →  ${g.error}`);
+      }
+      console.error('');
+      console.error(`  ⚠ ${failed.length} route group(s) failed to register.`);
+      console.error('  Endpoints in those groups will return 404 until the errors above are fixed.');
+    } else {
+      console.log('');
+      console.log('  All route groups registered successfully.');
+    }
+    console.log(`${border}\n`);
+  }
+
   return httpServer;
 }
