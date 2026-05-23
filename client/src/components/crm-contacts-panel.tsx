@@ -2088,7 +2088,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
     : courseInstitutionOptions;
 
   // Course preferences
-  const { data: contactPreferences } = useQuery<{ preferenceRank: number; country: string | null; universityId: string | null; courseId: string | null; courseName: string | null }[]>({
+  const { data: contactPreferences } = useQuery<{ preferenceRank: number; country: string | null; universityId: string | null; universityName: string | null; courseId: string | null; courseName: string | null }[]>({
     queryKey: ["/api/crm/leads", contact.id, "preferences"],
     queryFn: async () => {
       const headers = await getAuthHeaders();
@@ -2098,6 +2098,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
     },
     enabled: !!contact.id,
   });
+  const hasAnyContactPreferenceData = !!contactPreferences?.some(p => p.country || p.universityName || p.courseName);
 
   // Fetch applications for this contact (only for 'clients' type)
   const { data: applicationsData, isLoading: isLoadingApplications, isError: isApplicationsError } = useQuery<{
@@ -2459,11 +2460,11 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 )}
               </div>
             )}
-            {contactPreferences && contactPreferences.length > 0 && (
+            {hasAnyContactPreferenceData && (
               <div className="space-y-2" data-testid="section-course-preferences">
                 <span className="text-muted-foreground text-sm shrink-0">Course Preferences</span>
-                {contactPreferences.map((pref) => {
-                  if (!pref.country && !pref.courseName) return null;
+                {contactPreferences!.slice(0, 3).map((pref) => {
+                  if (!pref.country && !pref.universityName && !pref.courseName) return null;
                   const code = getCountryCode(pref.country);
                   return (
                     <div key={pref.preferenceRank} className="flex items-start gap-2 pl-1" data-testid={`pref-row-${pref.preferenceRank}`}>
@@ -2478,6 +2479,9 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                             )}
                             <span className="text-xs text-muted-foreground">{pref.country}</span>
                           </div>
+                        )}
+                        {pref.universityName && (
+                          <span className="text-sm text-muted-foreground leading-tight">{pref.universityName}</span>
                         )}
                         {pref.courseName && (
                           <span className="text-sm font-medium leading-tight">{pref.courseName}</span>
@@ -2535,7 +2539,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 <span className="text-sm">{format(new Date(contact.firstVisit), "MMM d, yyyy 'at' h:mm a")}</span>
               </div>
             )}
-            {!contact.courseName && !contact.entrySource && !contact.leadRating && !contact.visaStatus && !contact.country && (
+            {!contact.courseName && !contact.entrySource && !contact.leadRating && !contact.visaStatus && !contact.country && !hasAnyContactPreferenceData && (
               <p className="text-sm text-muted-foreground">No inquiry details on file</p>
             )}
           </CardContent>

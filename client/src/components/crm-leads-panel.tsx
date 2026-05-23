@@ -1158,7 +1158,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
   const alreadyAppliedCourseIds = new Set((applicationsData?.applications ?? []).map((a) => a.courseId));
 
   // Course preferences
-  const { data: leadPreferences } = useQuery<{ preferenceRank: number; country: string | null; universityId: string | null; courseId: string | null; courseName: string | null }[]>({
+  const { data: leadPreferences } = useQuery<{ preferenceRank: number; country: string | null; universityId: string | null; universityName: string | null; courseId: string | null; courseName: string | null }[]>({
     queryKey: ["/api/crm/leads", lead.id, "preferences"],
     queryFn: async () => {
       const headers = await getAuthHeaders();
@@ -1168,6 +1168,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
     },
     enabled: !!lead.id,
   });
+  const hasAnyPreferenceData = !!leadPreferences?.some(p => p.country || p.universityName || p.courseName);
 
 
   // ── Mutations ─────────────────────────────────────────────────────────────
@@ -1524,11 +1525,11 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
                   )}
                 </div>
               )}
-              {leadPreferences && leadPreferences.length > 0 && (
+              {hasAnyPreferenceData && (
                 <div className="space-y-2" data-testid="section-course-preferences">
                   <span className="text-muted-foreground text-sm shrink-0">Course Preferences</span>
-                  {leadPreferences.map((pref) => {
-                    if (!pref.country && !pref.courseName) return null;
+                  {leadPreferences!.slice(0, 3).map((pref) => {
+                    if (!pref.country && !pref.universityName && !pref.courseName) return null;
                     const code = getCountryCode(pref.country);
                     return (
                       <div key={pref.preferenceRank} className="flex items-start gap-2 pl-1" data-testid={`pref-row-${pref.preferenceRank}`}>
@@ -1539,10 +1540,13 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
                           {pref.country && (
                             <div className="flex items-center gap-1.5">
                               {code && (
-                                <img src={getFlagUrl(code)} alt={pref.country} className="h-3 w-4.5 rounded-sm object-cover shrink-0" style={{ width: '18px', height: '12px' }} />
+                                <img src={getFlagUrl(code)} alt={pref.country} className="rounded-sm object-cover shrink-0" style={{ width: '18px', height: '12px' }} />
                               )}
                               <span className="text-xs text-muted-foreground">{pref.country}</span>
                             </div>
+                          )}
+                          {pref.universityName && (
+                            <span className="text-sm text-muted-foreground leading-tight">{pref.universityName}</span>
                           )}
                           {pref.courseName && (
                             <span className="text-sm font-medium leading-tight">{pref.courseName}</span>
@@ -1591,7 +1595,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
                   <span className="text-sm">{format(new Date(lead.firstVisit), "MMM d, yyyy 'at' h:mm a")}</span>
                 </div>
               )}
-              {!lead.courseName && !lead.entrySource && !lead.visaStatus && !lead.country && (
+              {!lead.courseName && !lead.entrySource && !lead.visaStatus && !lead.country && !hasAnyPreferenceData && (
                 <p className="text-sm text-muted-foreground">No inquiry details on file</p>
               )}
             </CardContent>

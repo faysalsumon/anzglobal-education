@@ -2284,8 +2284,16 @@ router.get("/leads/:id/preferences", requireAdmin, async (req: any, res) => {
   try {
     const { id } = req.params;
     const rows = await db
-      .select()
+      .select({
+        preferenceRank: leadCoursePreferences.preferenceRank,
+        country: leadCoursePreferences.country,
+        universityId: leadCoursePreferences.universityId,
+        universityName: universities.name,
+        courseId: leadCoursePreferences.courseId,
+        courseName: leadCoursePreferences.courseName,
+      })
       .from(leadCoursePreferences)
+      .leftJoin(universities, eq(leadCoursePreferences.universityId, universities.id))
       .where(eq(leadCoursePreferences.leadId, id))
       .orderBy(leadCoursePreferences.preferenceRank);
     res.json(rows);
