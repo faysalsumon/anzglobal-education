@@ -184,7 +184,7 @@ function AdminApplicationDetailContent() {
   const studentInitials = `${student.firstName?.charAt(0) || ''}${student.lastName?.charAt(0) || ''}`.toUpperCase();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-16">
       {/* Header with back button, student name, course, and status */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
