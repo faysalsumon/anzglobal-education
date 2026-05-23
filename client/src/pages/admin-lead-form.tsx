@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
@@ -113,7 +114,7 @@ export default function AdminLeadForm() {
 
   const selectedBranchId = formData.branchId || undefined;
 
-  const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string; branchId: string | null }[]>({
+  const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string; branchId: string | null; profileImageUrl: string | null }[]>({
     queryKey: ["/api/admin/users", selectedBranchId],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -615,12 +616,36 @@ export default function AdminLeadForm() {
                       onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}
                     >
                       <SelectTrigger id="assignedTo" data-testid="select-assigned-to">
-                        <SelectValue placeholder="Select consultant" />
+                        <SelectValue placeholder="Select consultant">
+                          {formData.assignedTo && (() => {
+                            const selected = admins?.find(a => a.id === formData.assignedTo);
+                            if (!selected) return null;
+                            return (
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={selected.profileImageUrl || undefined} />
+                                  <AvatarFallback className="text-[9px]">
+                                    {selected.firstName?.[0]}{selected.lastName?.[0]}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span>{selected.firstName} {selected.lastName}</span>
+                              </div>
+                            );
+                          })()}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {admins?.map((admin) => (
-                          <SelectItem key={admin.id} value={admin.id}>
-                            {admin.firstName} {admin.lastName}
+                          <SelectItem key={admin.id} value={admin.id} data-testid={`assigned-to-option-${admin.id}`}>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={admin.profileImageUrl || undefined} />
+                                <AvatarFallback className="text-[10px]">
+                                  {admin.firstName?.[0]}{admin.lastName?.[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span>{admin.firstName} {admin.lastName}</span>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
