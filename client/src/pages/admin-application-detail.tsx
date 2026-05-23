@@ -188,11 +188,9 @@ function AdminApplicationDetailContent() {
       {/* Header with back button, student name, course, and status */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" asChild data-testid="button-back">
-            <Link href="/admin">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Link>
+          <Button variant="ghost" data-testid="button-back" onClick={() => window.history.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
           </Button>
           <div>
             <h1 className="text-xl font-bold text-foreground" data-testid="text-header-student-name">
