@@ -2087,6 +2087,18 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
     ? courseInstitutionOptions.filter((i: any) => i.country === courseCountryFilter)
     : courseInstitutionOptions;
 
+  // Course preferences
+  const { data: contactPreferences } = useQuery<{ preferenceRank: number; country: string | null; universityId: string | null; courseId: string | null; courseName: string | null }[]>({
+    queryKey: ["/api/crm/leads", contact.id, "preferences"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/crm/leads/${contact.id}/preferences`, { credentials: 'include', headers });
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!contact.id,
+  });
+
   // Fetch applications for this contact (only for 'clients' type)
   const { data: applicationsData, isLoading: isLoadingApplications, isError: isApplicationsError } = useQuery<{
     applications: ContactApplication[];
@@ -2445,6 +2457,35 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 ) : (
                   <span className="text-sm font-medium text-right">{contact.courseName}</span>
                 )}
+              </div>
+            )}
+            {contactPreferences && contactPreferences.length > 0 && (
+              <div className="space-y-2" data-testid="section-course-preferences">
+                <span className="text-muted-foreground text-sm shrink-0">Course Preferences</span>
+                {contactPreferences.map((pref) => {
+                  if (!pref.country && !pref.courseName) return null;
+                  const code = getCountryCode(pref.country);
+                  return (
+                    <div key={pref.preferenceRank} className="flex items-start gap-2 pl-1" data-testid={`pref-row-${pref.preferenceRank}`}>
+                      <Badge variant="outline" className="text-xs shrink-0 mt-0.5 no-default-active-elevate">
+                        {pref.preferenceRank}
+                      </Badge>
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        {pref.country && (
+                          <div className="flex items-center gap-1.5">
+                            {code && (
+                              <img src={getFlagUrl(code)} alt={pref.country} className="rounded-sm object-cover shrink-0" style={{ width: '18px', height: '12px' }} />
+                            )}
+                            <span className="text-xs text-muted-foreground">{pref.country}</span>
+                          </div>
+                        )}
+                        {pref.courseName && (
+                          <span className="text-sm font-medium leading-tight">{pref.courseName}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
             {contact.country && (
