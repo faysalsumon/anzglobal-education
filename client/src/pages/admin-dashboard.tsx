@@ -602,7 +602,7 @@ export default function AdminDashboard() {
         setActiveTab(isContactsRestricted ? 'crm-leads' : tabFromQuery);
       }
     }
-  }, [searchString, activeTab]);
+  }, [searchString]);
   
   // User state
   const [userSearchQuery, setUserSearchQuery] = useState("");
@@ -1923,6 +1923,7 @@ export default function AdminDashboard() {
       return;
     }
     setActiveTab(tab);
+    setLocation(`/admin/dashboard?tab=${tab}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
