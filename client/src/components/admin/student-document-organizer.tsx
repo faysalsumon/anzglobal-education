@@ -38,6 +38,7 @@ import {
   Briefcase,
   FileSignature,
   IdCard,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SECTION_DOCUMENT_MAPPING, type ProfileSection } from "@/components/section-document-upload";
@@ -56,6 +57,7 @@ interface Document {
   studentProfileId: string;
   createdAt: Date;
   reviewNotes?: string;
+  senderType?: string;
 }
 
 interface StudentDocumentOrganizerProps {
@@ -192,12 +194,18 @@ export function StudentDocumentOrganizer({ studentProfileId, compact = false }: 
       >
         <FileIcon className="h-8 w-8 text-primary flex-shrink-0" />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm truncate">{doc.title || doc.fileName}</span>
             <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", status.color)}>
               <StatusIcon className="h-3 w-3 mr-1" />
               {status.label}
             </Badge>
+            {doc.senderType && doc.senderType !== 'student' && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                <ShieldCheck className="h-3 w-3 mr-1" />
+                Admin upload
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
             <span>{formatFileSize(doc.fileSize)}</span>
