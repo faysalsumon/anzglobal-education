@@ -3289,6 +3289,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const budgetNote = data.budgetMin || data.budgetMax
         ? `Budget: $${(data.budgetMin || 0).toLocaleString()} - $${(data.budgetMax || 0).toLocaleString()} AUD/year`
         : '';
+
+      // Check for an existing contact with the same email (case-insensitive)
+      const existingContact = await db
+        .select()
+        .from(crmContacts)
+        .where(eq(crmContacts.email, data.email))
+        .limit(1)
+        .then(rows => rows[0] || null);
+
+      if (existingContact) {
+        // Silent update — refresh study preferences and append a timestamped note
+        const retakeDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+        const retakeNote = [
+          `Quiz retaken ${retakeDate}`,
+          data.discipline ? `Discipline: ${data.discipline}` : '',
+          data.level ? `Level: ${data.level}` : '',
+          data.country ? `Destination: ${data.country}` : '',
+          budgetNote,
+        ].filter(Boolean).join(' — ');
+
+        const updatedNotes = existingContact.notes
+          ? `${existingContact.notes}\n${retakeNote}`
+          : retakeNote;
+
+        await db.update(crmContacts).set({
+          programDiscipline: data.discipline || existingContact.programDiscipline,
+          programType: data.level || existingContact.programType,
+          whereToStudy: data.country || existingContact.whereToStudy,
+          mobile: existingContact.mobile || data.phone || undefined,
+          notes: updatedNotes,
+          updatedAt: new Date(),
+        }).where(eq(crmContacts.id, existingContact.id));
+
+        return res.status(201).json({ message: "Thank you! Our team will contact you shortly." });
+      }
+
+      // No existing contact — create a new one and notify admins
       const notes = [
         `Course Match Quiz Lead`,
         data.discipline ? `Discipline: ${data.discipline}` : '',
