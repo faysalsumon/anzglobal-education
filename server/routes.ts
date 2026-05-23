@@ -656,6 +656,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // so failed token checks return 403 JSON instead of falling through to Vite's HTML
   app.use(csrfErrorHandler);
 
+  // ─── CRITICAL: Register CRM routes early ───────────────────────────────────
+  // routes.ts is 23k+ lines with many dynamic imports. If any import later in
+  // the file throws, every route registered after that point is silently lost.
+  // Registering the CRM router here (right after CSRF) guarantees it is always
+  // available regardless of what fails further down the file.
+  {
+    const crmRouterEarly = await import('./crm-routes');
+    const { injectAccessContext: injectAccessContextEarly } = await import('./middleware/region-scope');
+    app.use('/api/crm', isAuthenticated, injectAccessContextEarly, crmRouterEarly.default);
+    console.log('[routes] CRM routes registered early');
+  }
+
   // Serve uploaded files from the public directory
   app.use('/students', express.static(path.join(process.cwd(), 'public', 'students')));
   app.use('/institutions', express.static(path.join(process.cwd(), 'public', 'institutions')));

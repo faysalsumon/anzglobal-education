@@ -171,6 +171,10 @@ export default function AdminLeadForm() {
   const createMutation = useMutation({
     mutationFn: async (data: Partial<CrmLead>) => {
       const response = await apiRequest("POST", "/api/crm/leads", data);
+      const contentType = response.headers.get("Content-Type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("Server returned an unexpected response. Please refresh the page and try again.");
+      }
       const json = await response.json();
       if (!json || !json.id) throw new Error("Invalid response from server");
       return json as CrmLead;
