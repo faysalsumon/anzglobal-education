@@ -1902,7 +1902,6 @@ router.get("/leads/:id", requireAdmin, async (req, res) => {
 
 // POST /leads - create new lead
 router.post("/leads", requireAdmin, async (req: any, res) => {
-  console.log('[CRM] POST /leads handler reached');
   try {
     const userId = getUserId(req);
     const {

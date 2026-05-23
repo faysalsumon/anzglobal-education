@@ -17227,11 +17227,6 @@ Sitemap: ${baseUrl}/sitemap.xml
   registerWorkflowValidationRoutes(app);
   console.log('Workflow validation routes registered for business rules enforcement');
 
-  // Register CRM routes for leads and contacts management
-  const crmRouter = await import('./crm-routes');
-  const { injectAccessContext } = await import('./middleware/region-scope');
-  app.use('/api/crm', isAuthenticated, injectAccessContext, crmRouter.default);
-  console.log('CRM routes registered for leads and contacts management');
 
   // Register Institution CRM routes for contacts, business terms, and documents
   const institutionCrmRouter = await import('./institution-crm-routes');
