@@ -3249,9 +3249,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/public/quiz-leads", async (req, res) => {
     try {
-      const turnstile = await verifyTurnstileToken(req.body.turnstileToken, req.ip);
-      if (!turnstile.success) {
-        return res.status(400).json({ message: turnstile.error || "CAPTCHA verification failed." });
+      if (req.body.turnstileToken) {
+        const turnstile = await verifyTurnstileToken(req.body.turnstileToken, req.ip);
+        if (!turnstile.success) {
+          return res.status(400).json({ message: turnstile.error || "CAPTCHA verification failed." });
+        }
       }
 
       const quizLeadSchema = z.object({

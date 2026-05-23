@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { TurnstileWidget } from "@/components/turnstile-widget";
 import {
   GraduationCap, BookOpen, Globe, DollarSign, ArrowRight, ArrowLeft, X, Sparkles, Check,
   Briefcase, TreePine, FlaskConical, Palette, Monitor, BookOpenCheck, Cog, Mountain,
   Hotel, ScrollText, Newspaper, Scale, Stethoscope, Clock, Wrench, Loader2, GraduationCap as GradCap,
-  User, Phone, Mail, MessageCircle, CheckCircle, Search
+  User, Phone, Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +15,7 @@ import { getFlagUrl, getCountryByName } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { useRegion } from "@/context/RegionContext";
 import { apiRequest } from "@/lib/queryClient";
+import { getFrameworksForCountry, FRAMEWORK_CONFIGS } from "@shared/qualification-frameworks";
 import type { LucideIcon } from "lucide-react";
 
 interface DisciplineStyle {
@@ -86,18 +86,19 @@ interface FilterOptions {
   countries: string[];
 }
 
-type StepType = "country" | "discipline" | "level" | "budget" | "results_contact";
+type StepType = "country" | "discipline" | "level" | "budget" | "name" | "email" | "phone";
 
-const BD_STEPS: StepType[] = ["country", "discipline", "level", "budget", "results_contact"];
+const BD_STEPS: StepType[] = ["country", "discipline", "level", "budget", "name", "email", "phone"];
 const AU_STEPS: StepType[] = ["discipline", "level", "budget"];
 
-
 const STEP_CONFIG: Record<StepType, { title: string; subtitle: string; icon: LucideIcon }> = {
-  country: { title: "Where do you want to study?", subtitle: "Pick your dream study destination", icon: Globe },
-  discipline: { title: "What do you want to study?", subtitle: "Choose your preferred field of study", icon: BookOpen },
-  level: { title: "What level of study?", subtitle: "Select the qualification you're aiming for", icon: GraduationCap },
-  budget: { title: "What's your budget?", subtitle: "Set your annual tuition budget range (AUD)", icon: DollarSign },
-  results_contact: { title: "Your matched courses are ready!", subtitle: "Get free personalized counseling from our team", icon: Sparkles },
+  country:    { title: "Where do you want to study?",   subtitle: "Pick your dream study destination",              icon: Globe },
+  discipline: { title: "What do you want to study?",    subtitle: "Choose your preferred field of study",           icon: BookOpen },
+  level:      { title: "What level of study?",          subtitle: "Select the qualification you're aiming for",     icon: GraduationCap },
+  budget:     { title: "What's your budget?",           subtitle: "Set your annual tuition budget range (AUD)",     icon: DollarSign },
+  name:       { title: "What's your name?",             subtitle: "We'd love to know who we're helping",            icon: User },
+  email:      { title: "What's your email address?",    subtitle: "We'll send your matched courses here",           icon: Mail },
+  phone:      { title: "What's your mobile number?",   subtitle: "Our counselor will reach out to help you",       icon: Phone },
 };
 
 interface CourseMatchQuizProps {
@@ -129,10 +130,6 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
   const [contactPhone, setContactPhone] = useState("+880 ");
   const [contactErrors, setContactErrors] = useState<Record<string, string>>({});
   const [submittingLead, setSubmittingLead] = useState(false);
-  const [leadSubmitted, setLeadSubmitted] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState<string>("");
-  const handleTurnstileSuccess = useCallback((token: string) => setTurnstileToken(token), []);
-  const handleTurnstileExpire = useCallback(() => setTurnstileToken(""), []);
 
   const { data: filterOptions, isLoading: filtersLoading } = useQuery<FilterOptions>({
     queryKey: ["/api/courses/filter-options"],
@@ -154,39 +151,58 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
       setContactPhone("+880 ");
       setContactErrors({});
       setSubmittingLead(false);
-      setLeadSubmitted(false);
       document.body.style.overflow = "hidden";
       setTimeout(() => modalRef.current?.focus(), 50);
     } else {
       document.body.style.overflow = "";
       previousFocusRef.current?.focus();
     }
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => { document.body.style.overflow = ""; };
   }, [open]);
 
   const currentStepType = steps[step];
 
   const canProceed = useCallback(() => {
     switch (currentStepType) {
+      case "country":    return !!selectedCountry;
       case "discipline": return !!selectedDiscipline;
-      case "level": return !!selectedLevel;
-      case "country": return !!selectedCountry;
-      case "budget": return true;
-      case "results_contact": return true;
-      default: return false;
+      case "level":      return !!selectedLevel;
+      case "budget":     return true;
+      case "name":       return !!contactFirstName.trim() && !!contactLastName.trim();
+      case "email": {
+        const t = contactEmail.trim();
+        return !!t && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t);
+      }
+      case "phone":      return contactPhone.replace(/\D/g, "").length >= 10;
+      default:           return false;
     }
-  }, [currentStepType, selectedDiscipline, selectedLevel, selectedCountry]);
+  }, [currentStepType, selectedCountry, selectedDiscipline, selectedLevel, contactFirstName, contactLastName, contactEmail, contactPhone]);
 
   const transitionTo = (nextStep: number, dir: "forward" | "backward") => {
     if (animating) return;
     setDirection(dir);
     setAnimating(true);
-    setTimeout(() => {
-      setStep(nextStep);
-      setAnimating(false);
-    }, 300);
+    setTimeout(() => { setStep(nextStep); setAnimating(false); }, 300);
+  };
+
+  const handleBack = () => {
+    if (step > 0) transitionTo(step - 1, "backward");
+  };
+
+  const buildCourseUrl = () => {
+    const params = new URLSearchParams();
+    if (selectedDiscipline) params.set("discipline", selectedDiscipline);
+    if (selectedLevel) params.set("level", selectedLevel);
+    if (selectedCountry) params.set("country", selectedCountry);
+    if (budgetRange[0] > 5000)    params.set("minFees", budgetRange[0].toString());
+    if (budgetRange[1] < 100000)  params.set("maxFees", budgetRange[1].toString());
+    if (isBD) params.set("region", "BD");
+    return `/courses?${params.toString()}`;
+  };
+
+  const handleComplete = () => {
+    onClose();
+    navigate(buildCourseUrl());
   };
 
   const handleNext = useCallback(() => {
@@ -198,48 +214,14 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
     }
   }, [step, totalSteps, canProceed]);
 
-  const handleBack = () => {
-    if (step > 0) {
-      transitionTo(step - 1, "backward");
-    }
-  };
-
-  const buildCourseUrl = () => {
-    const params = new URLSearchParams();
-    if (selectedDiscipline) params.set("discipline", selectedDiscipline);
-    if (selectedLevel) params.set("level", selectedLevel);
-    if (selectedCountry) params.set("country", selectedCountry);
-    if (budgetRange[0] > 5000) params.set("minFees", budgetRange[0].toString());
-    if (budgetRange[1] < 100000) params.set("maxFees", budgetRange[1].toString());
-    if (isBD) params.set("region", "BD");
-    return `/courses?${params.toString()}`;
-  };
-
-  const handleComplete = () => {
-    onClose();
-    navigate(buildCourseUrl());
-  };
-
-  const validateContactForm = () => {
-    const errors: Record<string, string> = {};
-    if (!contactFirstName.trim()) errors.firstName = "First name is required";
-    if (!contactLastName.trim()) errors.lastName = "Last name is required";
-    if (!contactEmail.trim()) {
-      errors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) {
-      errors.email = "Please enter a valid email";
-    }
+  const handleSubmitAndNavigate = async () => {
     const phoneDigits = contactPhone.replace(/\D/g, "");
     if (phoneDigits.length < 10) {
-      errors.phone = "Please enter a valid phone number";
+      setContactErrors({ phone: "Please enter a valid phone number (min 10 digits)" });
+      return;
     }
-    setContactErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSubmitLead = async () => {
-    if (!validateContactForm()) return;
     setSubmittingLead(true);
+    setContactErrors({});
     try {
       await apiRequest("POST", "/api/public/quiz-leads", {
         firstName: contactFirstName.trim(),
@@ -252,9 +234,9 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
         budgetMin: budgetRange[0],
         budgetMax: budgetRange[1],
         regionCode: "BD",
-        turnstileToken: turnstileToken || undefined,
       });
-      setLeadSubmitted(true);
+      onClose();
+      navigate(buildCourseUrl());
     } catch {
       setContactErrors({ submit: "Something went wrong. Please try again." });
     } finally {
@@ -264,33 +246,28 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
 
   const handleSelectDiscipline = (disc: string) => {
     setSelectedDiscipline(disc);
-    const disciplineStepIndex = steps.indexOf("discipline");
-    setTimeout(() => {
-      if (step === disciplineStepIndex) transitionTo(step + 1, "forward");
-    }, 250);
+    const idx = steps.indexOf("discipline");
+    setTimeout(() => { if (step === idx) transitionTo(step + 1, "forward"); }, 250);
   };
 
   const handleSelectLevel = (level: string) => {
     setSelectedLevel(level);
-    const levelStepIndex = steps.indexOf("level");
-    setTimeout(() => {
-      if (step === levelStepIndex) transitionTo(step + 1, "forward");
-    }, 250);
+    const idx = steps.indexOf("level");
+    setTimeout(() => { if (step === idx) transitionTo(step + 1, "forward"); }, 250);
   };
 
   const handleSelectCountry = (country: string) => {
     setSelectedCountry(country);
-    const countryStepIndex = steps.indexOf("country");
-    setTimeout(() => {
-      if (step === countryStepIndex) transitionTo(step + 1, "forward");
-    }, 250);
+    setSelectedLevel("");
+    const idx = steps.indexOf("country");
+    setTimeout(() => { if (step === idx) transitionTo(step + 1, "forward"); }, 250);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
       e.stopPropagation();
       onClose();
-    } else if (e.key === "Enter" && canProceed() && currentStepType !== "results_contact") {
+    } else if (e.key === "Enter" && canProceed() && currentStepType !== "phone") {
       e.preventDefault();
       handleNext();
     }
@@ -299,21 +276,14 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
   if (!open) return null;
 
   const disciplines = filterOptions?.disciplines || [];
-  const levels = filterOptions?.levels || [];
-  const countries = filterOptions?.countries || [];
+  const allLevels   = filterOptions?.levels || [];
+  const countries   = filterOptions?.countries || [];
 
-  const quizStepCount = isBD ? totalSteps - 1 : totalSteps;
-  const displayStep = Math.min(step + 1, quizStepCount);
-  const progress = (displayStep / quizStepCount) * 100;
-  const isResultsStep = currentStepType === "results_contact";
-
-  const stepConfig = STEP_CONFIG[currentStepType];
+  const progress = ((step + 1) / totalSteps) * 100;
 
   const getSlideClass = () => {
     if (animating) {
-      return direction === "forward"
-        ? "opacity-0 translate-y-8"
-        : "opacity-0 -translate-y-8";
+      return direction === "forward" ? "opacity-0 translate-y-8" : "opacity-0 -translate-y-8";
     }
     return "opacity-100 translate-y-0";
   };
@@ -324,17 +294,15 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-3">
           <BookOpen className="h-7 w-7 text-primary" />
         </div>
-        <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{stepConfig.title}</h2>
-        <p id="quiz-description" className="text-muted-foreground text-base">{stepConfig.subtitle}</p>
+        <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{STEP_CONFIG.discipline.title}</h2>
+        <p id="quiz-description" className="text-muted-foreground text-base">{STEP_CONFIG.discipline.subtitle}</p>
       </div>
       {filtersLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 text-primary animate-spin" />
         </div>
       ) : disciplines.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>No disciplines available at this time.</p>
-        </div>
+        <div className="text-center py-12 text-muted-foreground"><p>No disciplines available at this time.</p></div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {disciplines.map((disc) => {
@@ -346,11 +314,8 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
                 key={disc}
                 onClick={() => handleSelectDiscipline(disc)}
                 className={cn(
-                  "flex items-center gap-3 p-3.5 rounded-lg border text-left transition-all duration-200",
-                  "hover-elevate",
-                  isSelected
-                    ? `${style.selectedBorder} ${style.selectedBg} ring-1 ${style.selectedRing}`
-                    : "border-border"
+                  "flex items-center gap-3 p-3.5 rounded-lg border text-left transition-all duration-200 hover-elevate",
+                  isSelected ? `${style.selectedBorder} ${style.selectedBg} ring-1 ${style.selectedRing}` : "border-border"
                 )}
                 data-testid={`quiz-discipline-${disc.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
               >
@@ -358,9 +323,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
                   <IconComponent className={cn("h-[18px] w-[18px]", style.text)} />
                 </div>
                 <span className="text-sm font-medium text-foreground">{disc}</span>
-                {isSelected && (
-                  <Check className={cn("h-4 w-4 ml-auto flex-shrink-0", style.checkColor)} />
-                )}
+                {isSelected && <Check className={cn("h-4 w-4 ml-auto flex-shrink-0", style.checkColor)} />}
               </button>
             );
           })}
@@ -369,48 +332,57 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
     </div>
   );
 
-  const renderLevelStep = () => (
-    <div className="space-y-6" data-testid="quiz-step-level">
-      <div className="text-center space-y-2 mb-8">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-3">
-          <GraduationCap className="h-7 w-7 text-primary" />
+  const renderLevelStep = () => {
+    const frameworks = getFrameworksForCountry(selectedCountry || null);
+    const allowedValues = new Set(
+      frameworks.flatMap(fw => (FRAMEWORK_CONFIGS[fw]?.levels ?? []).map(l => l.value))
+    );
+    const displayLevels = isBD && selectedCountry
+      ? allLevels.filter(l => allowedValues.has(l))
+      : allLevels;
+
+    return (
+      <div className="space-y-6" data-testid="quiz-step-level">
+        <div className="text-center space-y-2 mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-3">
+            <GraduationCap className="h-7 w-7 text-primary" />
+          </div>
+          <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{STEP_CONFIG.level.title}</h2>
+          <p id="quiz-description" className="text-muted-foreground text-base">{STEP_CONFIG.level.subtitle}</p>
+          {isBD && selectedCountry && (
+            <p className="text-xs text-muted-foreground/70">Showing qualifications for {selectedCountry}</p>
+          )}
         </div>
-        <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{stepConfig.title}</h2>
-        <p id="quiz-description" className="text-muted-foreground text-base">{stepConfig.subtitle}</p>
+        {filtersLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 text-primary animate-spin" />
+          </div>
+        ) : displayLevels.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <p>No qualification levels found for {selectedCountry || "this selection"}.</p>
+            <p className="text-xs mt-1">Please go back and choose a different country.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {displayLevels.map((level) => (
+              <button
+                key={level}
+                onClick={() => handleSelectLevel(level)}
+                className={cn(
+                  "flex items-center gap-3 p-3.5 rounded-lg border text-left transition-all duration-200 hover-elevate",
+                  selectedLevel === level ? "border-primary bg-primary/10 ring-1 ring-primary/30" : "border-border"
+                )}
+                data-testid={`quiz-level-${level.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+              >
+                <span className="text-sm font-medium text-foreground">{level}</span>
+                {selectedLevel === level && <Check className="h-4 w-4 text-primary ml-auto flex-shrink-0" />}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      {filtersLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 text-primary animate-spin" />
-        </div>
-      ) : levels.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>No levels available at this time.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {levels.map((level) => (
-            <button
-              key={level}
-              onClick={() => handleSelectLevel(level)}
-              className={cn(
-                "flex items-center gap-3 p-3.5 rounded-lg border text-left transition-all duration-200",
-                "hover-elevate",
-                selectedLevel === level
-                  ? "border-primary bg-primary/10 ring-1 ring-primary/30"
-                  : "border-border"
-              )}
-              data-testid={`quiz-level-${level.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-            >
-              <span className="text-sm font-medium text-foreground">{level}</span>
-              {selectedLevel === level && (
-                <Check className="h-4 w-4 text-primary ml-auto flex-shrink-0" />
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   const renderCountryStep = () => (
     <div className="space-y-6" data-testid="quiz-step-country">
@@ -418,17 +390,15 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-3">
           <Globe className="h-7 w-7 text-primary" />
         </div>
-        <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{stepConfig.title}</h2>
-        <p id="quiz-description" className="text-muted-foreground text-base">{stepConfig.subtitle}</p>
+        <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{STEP_CONFIG.country.title}</h2>
+        <p id="quiz-description" className="text-muted-foreground text-base">{STEP_CONFIG.country.subtitle}</p>
       </div>
       {filtersLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 text-primary animate-spin" />
         </div>
       ) : countries.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>No destinations available at this time.</p>
-        </div>
+        <div className="text-center py-12 text-muted-foreground"><p>No destinations available at this time.</p></div>
       ) : (
         <div className="grid grid-cols-1 gap-3 max-w-md mx-auto">
           {countries.map((countryName) => {
@@ -439,25 +409,16 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
                 key={countryName}
                 onClick={() => handleSelectCountry(countryName)}
                 className={cn(
-                  "flex items-center gap-4 p-4 rounded-lg border text-left transition-all duration-200",
-                  "hover-elevate",
-                  selectedCountry === countryName
-                    ? "border-primary bg-primary/10 ring-1 ring-primary/30"
-                    : "border-border"
+                  "flex items-center gap-4 p-4 rounded-lg border text-left transition-all duration-200 hover-elevate",
+                  selectedCountry === countryName ? "border-primary bg-primary/10 ring-1 ring-primary/30" : "border-border"
                 )}
                 data-testid={`quiz-country-${code.toLowerCase() || countryName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
               >
                 {code && (
-                  <img
-                    src={getFlagUrl(code)}
-                    alt={countryName}
-                    className="w-8 h-6 object-cover rounded-sm shadow-sm"
-                  />
+                  <img src={getFlagUrl(code)} alt={countryName} className="w-8 h-6 object-cover rounded-sm shadow-sm" />
                 )}
                 <span className="text-base font-medium text-foreground">{countryName}</span>
-                {selectedCountry === countryName && (
-                  <Check className="h-4 w-4 text-primary ml-auto flex-shrink-0" />
-                )}
+                {selectedCountry === countryName && <Check className="h-4 w-4 text-primary ml-auto flex-shrink-0" />}
               </button>
             );
           })}
@@ -472,8 +433,8 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-3">
           <DollarSign className="h-7 w-7 text-primary" />
         </div>
-        <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{stepConfig.title}</h2>
-        <p id="quiz-description" className="text-muted-foreground text-base">{stepConfig.subtitle}</p>
+        <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{STEP_CONFIG.budget.title}</h2>
+        <p id="quiz-description" className="text-muted-foreground text-base">{STEP_CONFIG.budget.subtitle}</p>
       </div>
       <div className="max-w-md mx-auto space-y-8">
         <div className="text-center">
@@ -501,171 +462,113 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
     </div>
   );
 
-  const renderResultsContactStep = () => (
-    <div className="space-y-6" data-testid="quiz-step-results-contact">
-      <div className="text-center space-y-3 mb-4">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent/10 mb-2">
-          <CheckCircle className="h-8 w-8 text-accent" />
+  const renderNameStep = () => (
+    <div className="space-y-8" data-testid="quiz-step-name">
+      <div className="text-center space-y-2 mb-8">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-3">
+          <User className="h-7 w-7 text-primary" />
         </div>
-        <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">
-          Your matched courses are ready!
-        </h2>
-        <p id="quiz-description" className="text-muted-foreground text-base">
-          Browse your results now, or leave your details for free personalized counseling
-        </p>
+        <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{STEP_CONFIG.name.title}</h2>
+        <p id="quiz-description" className="text-muted-foreground text-base">{STEP_CONFIG.name.subtitle}</p>
       </div>
+      <div className="max-w-md mx-auto space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="quiz-first-name" className="text-sm font-medium">First Name</Label>
+            <Input
+              id="quiz-first-name"
+              autoFocus
+              value={contactFirstName}
+              onChange={(e) => { setContactFirstName(e.target.value); setContactErrors(p => ({ ...p, firstName: "" })); }}
+              placeholder="Your first name"
+              data-testid="quiz-input-first-name"
+            />
+            {contactErrors.firstName && <p className="text-xs text-destructive">{contactErrors.firstName}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="quiz-last-name" className="text-sm font-medium">Last Name</Label>
+            <Input
+              id="quiz-last-name"
+              value={contactLastName}
+              onChange={(e) => { setContactLastName(e.target.value); setContactErrors(p => ({ ...p, lastName: "" })); }}
+              placeholder="Your last name"
+              data-testid="quiz-input-last-name"
+            />
+            {contactErrors.lastName && <p className="text-xs text-destructive">{contactErrors.lastName}</p>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
-      <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground mb-2">
-        {selectedCountry && (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted">
-            <Globe className="h-3 w-3" /> {selectedCountry}
-          </span>
-        )}
-        {selectedDiscipline && (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted">
-            <BookOpen className="h-3 w-3" /> {selectedDiscipline}
-          </span>
-        )}
-        {selectedLevel && (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted">
-            <GraduationCap className="h-3 w-3" /> {selectedLevel}
-          </span>
+  const renderEmailStep = () => (
+    <div className="space-y-8" data-testid="quiz-step-email">
+      <div className="text-center space-y-2 mb-8">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-3">
+          <Mail className="h-7 w-7 text-primary" />
+        </div>
+        <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{STEP_CONFIG.email.title}</h2>
+        <p id="quiz-description" className="text-muted-foreground text-base">{STEP_CONFIG.email.subtitle}</p>
+      </div>
+      <div className="max-w-md mx-auto space-y-2">
+        <Label htmlFor="quiz-email" className="text-sm font-medium">Email Address</Label>
+        <Input
+          id="quiz-email"
+          type="email"
+          autoFocus
+          value={contactEmail}
+          onChange={(e) => { setContactEmail(e.target.value); setContactErrors(p => ({ ...p, email: "" })); }}
+          placeholder="you@example.com"
+          data-testid="quiz-input-email"
+        />
+        {contactErrors.email && <p className="text-xs text-destructive">{contactErrors.email}</p>}
+      </div>
+    </div>
+  );
+
+  const renderPhoneStep = () => (
+    <div className="space-y-8" data-testid="quiz-step-phone">
+      <div className="text-center space-y-2 mb-8">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-3">
+          <Phone className="h-7 w-7 text-primary" />
+        </div>
+        <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{STEP_CONFIG.phone.title}</h2>
+        <p id="quiz-description" className="text-muted-foreground text-base">{STEP_CONFIG.phone.subtitle}</p>
+      </div>
+      <div className="max-w-md mx-auto space-y-2">
+        <Label htmlFor="quiz-phone" className="text-sm font-medium">Mobile Number</Label>
+        <Input
+          id="quiz-phone"
+          type="tel"
+          autoFocus
+          value={contactPhone}
+          onChange={(e) => { setContactPhone(e.target.value); setContactErrors(p => ({ ...p, phone: "" })); }}
+          placeholder="+880 1XXXXXXXXX"
+          data-testid="quiz-input-phone"
+        />
+        {contactErrors.phone && <p className="text-xs text-destructive">{contactErrors.phone}</p>}
+        {contactErrors.submit && (
+          <p className="text-sm text-destructive text-center pt-2">{contactErrors.submit}</p>
         )}
       </div>
-
-      <Button
-        className="w-full bg-accent text-white border-accent-border"
-        size="lg"
-        onClick={handleComplete}
-        data-testid="quiz-browse-courses-button"
-      >
-        <Search className="mr-2 h-5 w-5" />
-        Browse Matched Courses
-        <ArrowRight className="ml-2 h-5 w-5" />
-      </Button>
-
-      {!leadSubmitted ? (
-        <div className="border border-border rounded-lg p-5 space-y-4" data-testid="quiz-contact-form">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 flex-shrink-0">
-              <MessageCircle className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">Want free expert guidance?</h3>
-              <p className="text-xs text-muted-foreground">Our counselors will help you choose the best course and guide your application</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="quiz-first-name" className="text-xs font-medium flex items-center gap-1.5">
-                <User className="h-3 w-3" /> First Name
-              </Label>
-              <Input
-                id="quiz-first-name"
-                value={contactFirstName}
-                onChange={(e) => { setContactFirstName(e.target.value); setContactErrors((p) => ({ ...p, firstName: "" })); }}
-                placeholder="Your first name"
-                data-testid="quiz-input-first-name"
-              />
-              {contactErrors.firstName && <p className="text-xs text-destructive">{contactErrors.firstName}</p>}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="quiz-last-name" className="text-xs font-medium flex items-center gap-1.5">
-                <User className="h-3 w-3" /> Last Name
-              </Label>
-              <Input
-                id="quiz-last-name"
-                value={contactLastName}
-                onChange={(e) => { setContactLastName(e.target.value); setContactErrors((p) => ({ ...p, lastName: "" })); }}
-                placeholder="Your last name"
-                data-testid="quiz-input-last-name"
-              />
-              {contactErrors.lastName && <p className="text-xs text-destructive">{contactErrors.lastName}</p>}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="quiz-email" className="text-xs font-medium flex items-center gap-1.5">
-              <Mail className="h-3 w-3" /> Email
-            </Label>
-            <Input
-              id="quiz-email"
-              type="email"
-              value={contactEmail}
-              onChange={(e) => { setContactEmail(e.target.value); setContactErrors((p) => ({ ...p, email: "" })); }}
-              placeholder="you@example.com"
-              data-testid="quiz-input-email"
-            />
-            {contactErrors.email && <p className="text-xs text-destructive">{contactErrors.email}</p>}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="quiz-phone" className="text-xs font-medium flex items-center gap-1.5">
-              <Phone className="h-3 w-3" /> Phone (Bangladesh)
-            </Label>
-            <Input
-              id="quiz-phone"
-              type="tel"
-              value={contactPhone}
-              onChange={(e) => { setContactPhone(e.target.value); setContactErrors((p) => ({ ...p, phone: "" })); }}
-              placeholder="+880 1XXXXXXXXX"
-              data-testid="quiz-input-phone"
-            />
-            {contactErrors.phone && <p className="text-xs text-destructive">{contactErrors.phone}</p>}
-          </div>
-
-          {contactErrors.submit && (
-            <p className="text-sm text-destructive text-center">{contactErrors.submit}</p>
-          )}
-
-          <TurnstileWidget
-            onSuccess={handleTurnstileSuccess}
-            onExpire={handleTurnstileExpire}
-            className="flex justify-center"
-          />
-
-          <Button
-            className="w-full"
-            onClick={handleSubmitLead}
-            disabled={submittingLead}
-            data-testid="quiz-submit-lead-button"
-          >
-            {submittingLead ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
-            Get Free Counseling
-          </Button>
-        </div>
-      ) : (
-        <div className="border border-primary/30 bg-primary/5 rounded-lg p-5 text-center space-y-2" data-testid="quiz-lead-success">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-1">
-            <CheckCircle className="h-6 w-6 text-primary" />
-          </div>
-          <h3 className="text-base font-semibold text-foreground">Thank you!</h3>
-          <p className="text-sm text-muted-foreground">
-            Our counseling team will contact you shortly to help with your study plans.
-          </p>
-        </div>
-      )}
     </div>
   );
 
   const renderCurrentStep = () => {
     switch (currentStepType) {
+      case "country":    return renderCountryStep();
       case "discipline": return renderDisciplineStep();
-      case "level": return renderLevelStep();
-      case "country": return renderCountryStep();
-      case "budget": return renderBudgetStep();
-      case "results_contact": return renderResultsContactStep();
-      default: return null;
+      case "level":      return renderLevelStep();
+      case "budget":     return renderBudgetStep();
+      case "name":       return renderNameStep();
+      case "email":      return renderEmailStep();
+      case "phone":      return renderPhoneStep();
+      default:           return null;
     }
   };
 
-  const isLastQuizStep = !isBD && step === totalSteps - 1;
-  const isBudgetStepBD = isBD && currentStepType === "budget";
+  const isLastAUStep = !isBD && step === totalSteps - 1;
+  const isPhoneStep  =  isBD && currentStepType === "phone";
 
   return (
     <div
@@ -682,32 +585,26 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
       <div className="absolute inset-0 bg-background/95 backdrop-blur-md" onClick={onClose} aria-hidden="true" />
 
       <div className="relative w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col" data-testid="quiz-modal-container">
-        {!isResultsStep && (
-          <div className="absolute top-0 left-0 right-0 h-1 bg-muted rounded-full overflow-hidden z-10" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
-            <div
-              className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
-              style={{ width: `${progress}%` }}
-              data-testid="quiz-progress-bar"
-            />
-          </div>
-        )}
+        <div
+          className="absolute top-0 left-0 right-0 h-1 bg-muted rounded-full overflow-hidden z-10"
+          role="progressbar"
+          aria-valuenow={progress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div
+            className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
+            style={{ width: `${progress}%` }}
+            data-testid="quiz-progress-bar"
+          />
+        </div>
 
         <div className="flex items-center justify-between pt-6 pb-2 px-1">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Sparkles className="h-4 w-4 text-primary" />
-            {isResultsStep ? (
-              <span>Results</span>
-            ) : (
-              <span>Step {displayStep} of {quizStepCount}</span>
-            )}
+            <span>Step {step + 1} of {totalSteps}</span>
           </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onClose}
-            aria-label="Close quiz"
-            data-testid="quiz-close-button"
-          >
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close quiz" data-testid="quiz-close-button">
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -716,60 +613,51 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
           {renderCurrentStep()}
         </div>
 
-        {!isResultsStep && (
-          <div className="flex items-center justify-between pt-4 pb-2 px-1 border-t border-border/50">
-            <div>
-              {step > 0 ? (
-                <Button
-                  variant="ghost"
-                  onClick={handleBack}
-                  data-testid="quiz-back-button"
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-              ) : (
-                <div />
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {step < totalSteps - 1 && canProceed() && (steps[step] as string) !== "results_contact" && (
-                <span className="text-xs text-muted-foreground hidden sm:inline">
-                  Press Enter
-                </span>
-              )}
-              {isLastQuizStep ? (
-                <Button
-                  onClick={handleComplete}
-                  className="bg-accent text-white border-accent-border"
-                  data-testid="quiz-find-courses-button"
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Match My Courses
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : isBudgetStepBD ? (
-                <Button
-                  onClick={handleNext}
-                  className="bg-accent text-white border-accent-border"
-                  data-testid="quiz-see-results-button"
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  See My Results
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : canProceed() ? (
-                <Button
-                  onClick={handleNext}
-                  data-testid="quiz-next-button"
-                >
-                  Next
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : null}
-            </div>
+        <div className="flex items-center justify-between pt-4 pb-2 px-1 border-t border-border/50">
+          <div>
+            {step > 0 ? (
+              <Button variant="ghost" onClick={handleBack} data-testid="quiz-back-button">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+            ) : (
+              <div />
+            )}
           </div>
-        )}
+          <div className="flex items-center gap-2">
+            {isLastAUStep ? (
+              <Button
+                onClick={handleComplete}
+                className="bg-accent text-white border-accent-border"
+                data-testid="quiz-find-courses-button"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                Match My Courses
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : isPhoneStep ? (
+              <Button
+                onClick={handleSubmitAndNavigate}
+                disabled={submittingLead || !canProceed()}
+                className="bg-accent text-white border-accent-border"
+                data-testid="quiz-get-results-button"
+              >
+                {submittingLead ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Get My Results
+                {!submittingLead && <ArrowRight className="ml-2 h-4 w-4" />}
+              </Button>
+            ) : canProceed() ? (
+              <Button onClick={handleNext} data-testid="quiz-next-button">
+                Next
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : null}
+          </div>
+        </div>
       </div>
     </div>
   );
