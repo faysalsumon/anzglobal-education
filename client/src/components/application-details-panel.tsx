@@ -164,6 +164,7 @@ interface Consultant {
   lastName: string | null;
   email: string | null;
   userType?: string;
+  profileImageUrl?: string | null;
 }
 
 export function ApplicationDetailsPanel({
@@ -735,7 +736,15 @@ export function ApplicationDetailsPanel({
                       <SelectItem value="_unassigned">Unassigned</SelectItem>
                       {assignableUsers.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
-                          {c.firstName} {c.lastName}
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-5 w-5 shrink-0">
+                              <AvatarImage src={c.profileImageUrl || undefined} alt={`${c.firstName} ${c.lastName}`} />
+                              <AvatarFallback className="text-[9px]">
+                                {(c.firstName?.[0] ?? '')}{(c.lastName?.[0] ?? '')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>{c.firstName} {c.lastName}</span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
