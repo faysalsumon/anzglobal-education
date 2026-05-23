@@ -210,7 +210,8 @@ export default function AdminContactForm() {
       const headers = await getAuthHeaders();
       const response = await fetch("/api/admin/users", { credentials: 'include', headers });
       if (!response.ok) return [];
-      return response.json();
+      const data = await response.json();
+      return Array.isArray(data) ? data : (data.users ?? []);
     },
   });
 
