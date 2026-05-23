@@ -192,7 +192,7 @@ import {
 import { sendContactInquiryEmails, sendProfileCompletionReminder, sendNewLeadAdminNotification, sendTaskAssignedEmail, sendTaskDueReminderEmail, sendTaskCompletedEmail, sendLeadAssignedEmail, sendApplicationAssignedEmail, sendDocumentUploadedAdminEmail } from "./email-service";
 import { logActivity, logApprove, logReject, logCreate, logDelete, logUpdate, logStatusChange } from "./activity-logger";
 import express from "express";
-import { doubleCsrfProtection, csrfTokenEndpoint } from "./middleware/csrf";
+import { doubleCsrfProtection, csrfTokenEndpoint, csrfErrorHandler } from "./middleware/csrf";
 import { geocodingService } from "./geocoding-service";
 
 // Standardized main disciplines list - single source of truth for courses and institutions
@@ -651,6 +651,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     return doubleCsrfProtection(req, res, next);
   });
+
+  // Handle CSRF validation errors — must come right after doubleCsrfProtection
+  // so failed token checks return 403 JSON instead of falling through to Vite's HTML
+  app.use(csrfErrorHandler);
 
   // Serve uploaded files from the public directory
   app.use('/students', express.static(path.join(process.cwd(), 'public', 'students')));
