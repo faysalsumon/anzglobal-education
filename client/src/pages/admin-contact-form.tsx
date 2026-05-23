@@ -473,6 +473,33 @@ export default function AdminContactForm() {
         </div>
       </div>
 
+      {/* ── Contact Type — governs the entire form ─────────────── */}
+      <div className="rounded-md border border-primary/20 bg-primary/5 p-4 space-y-2" data-testid="section-contact-type">
+        <div>
+          <p className="text-sm font-semibold">Contact Type <span className="text-destructive">*</span></p>
+          <p className="text-xs text-muted-foreground">Sets the required fields and workflow for this contact</p>
+        </div>
+        <Select
+          value={formData.contactType || "clients"}
+          onValueChange={(value: ContactType) => setFormData({
+            ...formData,
+            contactType: value,
+            ...(value !== 'clients' ? { clientStatus: null, leadRating: null, leadStage: null } : {}),
+          })}
+        >
+          <SelectTrigger id="contactType" data-testid="select-contact-type" className="bg-background">
+            <SelectValue placeholder="Select contact type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="clients">Clients (Students)</SelectItem>
+            <SelectItem value="external">External (Referrals)</SelectItem>
+            <SelectItem value="partner">Partner</SelectItem>
+            <SelectItem value="providers_rep">Providers Rep</SelectItem>
+            <SelectItem value="others">Others</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <Tabs defaultValue="basic" className="w-full">
         <TabsList className={`grid w-full mb-6 ${isEditing && roleNeedsInstitution(formData.contactType) ? 'grid-cols-5' : 'grid-cols-4'}`}>
           <TabsTrigger value="basic" data-testid="tab-basic">Basic Info</TabsTrigger>
@@ -655,30 +682,7 @@ export default function AdminContactForm() {
 
               <Separator />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="contactType">Contact Type *</Label>
-                  <Select
-                    value={formData.contactType || "clients"}
-                    onValueChange={(value: ContactType) => setFormData({
-                      ...formData,
-                      contactType: value,
-                      ...(value !== 'clients' ? { clientStatus: null, leadRating: null, leadStage: null } : {}),
-                    })}
-                  >
-                    <SelectTrigger id="contactType" data-testid="select-contact-type">
-                      <SelectValue placeholder="Select contact type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="clients">Clients</SelectItem>
-                      <SelectItem value="external">External</SelectItem>
-                      <SelectItem value="partner">Partner</SelectItem>
-                      <SelectItem value="providers_rep">Providers Rep</SelectItem>
-                      <SelectItem value="others">Others</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <Label htmlFor="nationality">Nationality</Label>
                   <Select
                     value={(() => {
@@ -726,7 +730,6 @@ export default function AdminContactForm() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="country">Country of Residence</Label>
