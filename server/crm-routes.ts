@@ -1983,7 +1983,7 @@ router.post("/leads", requireAdmin, async (req: any, res) => {
       notes: notes || null,
       referrer: referrer || null,
       assignedTo: assignedTo || null,
-      contactOwner: leadOwner || null,
+      contactOwner: leadOwner || userId,
       createdByUserId: userId || undefined,
     } as any).returning();
 

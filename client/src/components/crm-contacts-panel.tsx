@@ -70,10 +70,13 @@ import {
   CheckCircle2,
   UserPlus,
   UserMinus,
-  Pencil
+  Pencil,
+  ChevronsUpDown,
+  Check
 } from "lucide-react";
 import { COUNTRIES, getCountryByName } from "@/lib/countries";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { SavedFilter } from "@shared/schema";
 import { format } from "date-fns";
@@ -1993,6 +1996,10 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
   const [editingSection, setEditingSection] = useState<EditSection>(null);
   const [sectionData, setSectionData] = useState<Partial<CrmContact>>({});
 
+  // Owner reassign popover
+  const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
+  const [ownerSearch, setOwnerSearch] = useState("");
+
   const startEdit = (section: EditSection, fields: Partial<CrmContact>) => {
     setEditingSection(section);
     setSectionData(fields);
@@ -2001,6 +2008,21 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
     setEditingSection(null);
     setSectionData({});
   };
+
+  const ownerMutation = useMutation({
+    mutationFn: async (newOwnerId: string | null) => {
+      return apiRequest("PATCH", `/api/crm/contacts/${contact.id}`, { contactOwner: newOwnerId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
+      setOwnerPopoverOpen(false);
+      setOwnerSearch("");
+      toast({ title: "Owner updated", description: "Contact owner has been reassigned" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update owner", variant: "destructive" });
+    },
+  });
 
   const saveSectionMutation = useMutation({
     mutationFn: async (data: Partial<CrmContact>) => {
@@ -2515,17 +2537,64 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
             )}
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Contact Owner</span>
-              {contact.ownerUser ? (
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={contact.ownerUser.profileImageUrl || undefined} />
-                    <AvatarFallback>{contact.ownerUser.firstName?.[0]}</AvatarFallback>
-                  </Avatar>
-                  <span>{contact.ownerUser.firstName} {contact.ownerUser.lastName}</span>
-                </div>
-              ) : (
-                <span className="text-sm text-muted-foreground italic">Not set</span>
-              )}
+              <div className="flex items-center gap-2">
+                {contact.ownerUser ? (
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={contact.ownerUser.profileImageUrl || undefined} />
+                      <AvatarFallback className="text-[10px]">{contact.ownerUser.firstName?.[0]}{contact.ownerUser.lastName?.[0]}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">{contact.ownerUser.firstName} {contact.ownerUser.lastName}</span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground italic">Not set</span>
+                )}
+                <Popover open={ownerPopoverOpen} onOpenChange={(v) => { setOwnerPopoverOpen(v); if (!v) setOwnerSearch(""); }}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" data-testid="button-reassign-owner">
+                      <ChevronsUpDown className="h-3.5 w-3.5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[250px] p-0" align="end">
+                    <Command>
+                      <CommandInput placeholder="Search team members..." value={ownerSearch} onValueChange={setOwnerSearch} />
+                      <CommandList>
+                        <CommandEmpty>No team members found.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem value="no-owner" onSelect={() => ownerMutation.mutate(null)} className="cursor-pointer">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                              <span>No owner</span>
+                            </div>
+                            {!contact.contactOwner && <Check className="ml-auto h-4 w-4" />}
+                          </CommandItem>
+                          {admins.filter(a => {
+                            const q = ownerSearch.toLowerCase();
+                            return !q || a.firstName.toLowerCase().includes(q) || a.lastName.toLowerCase().includes(q);
+                          }).map((admin) => (
+                            <CommandItem
+                              key={admin.id}
+                              value={`${admin.firstName} ${admin.lastName}`}
+                              onSelect={() => ownerMutation.mutate(admin.id)}
+                              className="cursor-pointer"
+                              data-testid={`option-owner-${admin.id}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={admin.profileImageUrl || undefined} />
+                                  <AvatarFallback className="text-[10px]">{admin.firstName?.[0]}{admin.lastName?.[0]}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm">{admin.firstName} {admin.lastName}</span>
+                              </div>
+                              {contact.contactOwner === admin.id && <Check className="ml-auto h-4 w-4" />}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Assigned To</span>
