@@ -357,11 +357,12 @@ export default function AdminLeadForm() {
     },
   });
 
-  // Institutions for country cascade
+  // Institutions for country cascade (includePrivate so all admin-visible institutions appear)
   const { data: institutionsData } = useQuery<Institution[]>({
     queryKey: ["/api/institutions", "all-for-prefs"],
     queryFn: async () => {
-      const response = await fetch("/api/institutions?limit=200");
+      const headers = await getAuthHeaders();
+      const response = await fetch("/api/institutions?limit=200&includePrivate=true", { credentials: 'include', headers });
       if (!response.ok) return [];
       const data = await response.json();
       const list = Array.isArray(data) ? data : (data.institutions ?? data.universities ?? []);
@@ -440,6 +441,7 @@ export default function AdminLeadForm() {
       await apiRequest("PUT", `/api/crm/leads/${leadId}/preferences`, validPrefs);
     } catch (err) {
       console.error("Failed to save preferences", err);
+      toast({ title: "Warning", description: "Lead saved but course preferences could not be saved. Please try again.", variant: "destructive" });
     }
   };
 
@@ -510,8 +512,9 @@ export default function AdminLeadForm() {
 
   const removePref = (idx: number) => {
     setPreferences(prev => {
-      const next = [...prev];
-      next[idx] = { ...EMPTY_PREF };
+      // Remove the target slot and compact remaining ones upward
+      const next = prev.filter((_, i) => i !== idx);
+      while (next.length < 3) next.push({ ...EMPTY_PREF });
       return next;
     });
     setVisiblePrefCount(prev => Math.max(1, prev - 1));
