@@ -1659,6 +1659,404 @@ export async function updateContactStatusOnApplication(userId: string, newStatus
 }
 
 // ============================
+// CRM LEADS CRUD ROUTES
+// ============================
+
+function mapStageToStatus(stage: string | null): string {
+  switch (stage) {
+    case 'new': return 'not_contacted';
+    case 'contacted': return 'contacted';
+    case 'qualified': return 'qualified';
+    case 'counselling': return 'contacted';
+    case 'ready_to_apply': return 'qualified';
+    case 'converted': return 'converted';
+    case 'lost': return 'lost';
+    default: return 'not_contacted';
+  }
+}
+
+function mapStatusToStage(status: string): string {
+  switch (status) {
+    case 'not_contacted': return 'new';
+    case 'contacted': return 'contacted';
+    case 'qualified': return 'qualified';
+    case 'unqualified': return 'lost';
+    case 'converted': return 'converted';
+    case 'lost': return 'lost';
+    default: return 'new';
+  }
+}
+
+function mapEntrySourceToCreationMethod(source: string | null): string | null {
+  switch (source) {
+    case 'website': return 'website_form';
+    case 'consultant': return 'manually';
+    case 'sub_agent': return 'recruitment_agent';
+    case 'affiliate': return 'manually';
+    case 'import': return 'database_import';
+    case 'referral': return 'referral';
+    case 'facebook_ads': return 'facebook_ads';
+    case 'walk_in': return 'campus_walk_in';
+    case 'other': return 'manually';
+    default: return null;
+  }
+}
+
+function mapCreationMethodToEntrySource(method: string | null): string {
+  switch (method) {
+    case 'manually': return 'consultant';
+    case 'website_form': return 'website';
+    case 'facebook_ads': return 'facebook_ads';
+    case 'google_ads': return 'other';
+    case 'education_fair': return 'other';
+    case 'referral': return 'referral';
+    case 'recruitment_agent': return 'sub_agent';
+    case 'campus_walk_in': return 'walk_in';
+    case 'database_import': return 'import';
+    case 'ai_web_scrape': return 'other';
+    default: return 'consultant';
+  }
+}
+
+function formatAsLead(contact: any, ownerUser: any, assignedUser: any): any {
+  return {
+    id: contact.id,
+    firstName: contact.firstName,
+    lastName: contact.lastName,
+    email: contact.email,
+    phone: contact.phone,
+    mobile: contact.mobile,
+    leadStatus: mapStageToStatus(contact.leadStage),
+    leadRating: contact.leadRating,
+    leadSource: contact.referenceSource,
+    leadCreationMethod: mapEntrySourceToCreationMethod(contact.entrySource),
+    branch: null,
+    branchId: contact.branchId,
+    nationality: contact.nationality,
+    country: contact.country,
+    city: contact.city,
+    courseId: contact.courseId,
+    universityId: contact.universityId,
+    courseName: contact.courseName,
+    interestedIn: contact.interestedIn,
+    productInterest: contact.programDiscipline,
+    intakeMonth: null,
+    intakeYear: null,
+    notes: contact.notes,
+    referrer: contact.referrer,
+    assignedTo: contact.assignedTo,
+    leadOwner: contact.contactOwner,
+    convertedContactId: null,
+    convertedAt: null,
+    lastActivityTime: contact.lastActivityTime,
+    createdAt: contact.createdAt,
+    updatedAt: contact.updatedAt,
+    assignedToUser: assignedUser?.id ? assignedUser : null,
+    ownerUser: ownerUser?.id ? ownerUser : null,
+  };
+}
+
+// GET /leads - list all leads (crmContacts with clientStatus='lead')
+router.get("/leads", requireAdmin, async (req: any, res) => {
+  try {
+    const { status, rating, branch, source, country, assignedTo, search } = req.query;
+
+    const conditions: any[] = [eq(crmContacts.clientStatus, 'lead')];
+
+    if (status) {
+      const stage = mapStatusToStage(status as string);
+      conditions.push(eq(crmContacts.leadStage, stage as any));
+    }
+    if (rating) {
+      conditions.push(eq(crmContacts.leadRating, rating as any));
+    }
+    if (branch) {
+      conditions.push(eq(crmContacts.branchId, branch as string));
+    }
+    if (country) {
+      conditions.push(eq(crmContacts.country, country as string));
+    }
+    if (assignedTo) {
+      conditions.push(eq(crmContacts.assignedTo, assignedTo as string));
+    }
+    if (source) {
+      const entrySource = mapCreationMethodToEntrySource(source as string);
+      conditions.push(eq(crmContacts.entrySource, entrySource as any));
+    }
+    if (search) {
+      conditions.push(
+        or(
+          ilike(crmContacts.firstName, `%${search}%`),
+          ilike(crmContacts.lastName, `%${search}%`),
+          ilike(crmContacts.email, `%${search}%`),
+          ilike(crmContacts.mobile, `%${search}%`)
+        )
+      );
+    }
+
+    if (req.accessContext) {
+      const regionFilter = buildRegionScopedFilter(req.accessContext, {
+        regionIdColumn: crmContacts.regionId,
+        branchIdColumn: crmContacts.branchId,
+        assignedToColumn: crmContacts.assignedTo,
+        createdByColumn: crmContacts.createdByUserId,
+      });
+      if (regionFilter) conditions.push(regionFilter);
+    }
+
+    const whereClause = and(...conditions);
+
+    const ownerUsers = aliasedTable(users, "lead_owner_u");
+    const assignedUsers = aliasedTable(users, "lead_assigned_u");
+
+    const [leads, totalResult] = await Promise.all([
+      db.select({
+        contact: crmContacts,
+        ownerUser: {
+          id: ownerUsers.id,
+          firstName: ownerUsers.firstName,
+          lastName: ownerUsers.lastName,
+          email: ownerUsers.email,
+          profileImageUrl: ownerUsers.profileImageUrl,
+        },
+        assignedUser: {
+          id: assignedUsers.id,
+          firstName: assignedUsers.firstName,
+          lastName: assignedUsers.lastName,
+          email: assignedUsers.email,
+          profileImageUrl: assignedUsers.profileImageUrl,
+        },
+      })
+        .from(crmContacts)
+        .leftJoin(ownerUsers, eq(crmContacts.contactOwner, ownerUsers.id))
+        .leftJoin(assignedUsers, eq(crmContacts.assignedTo, assignedUsers.id))
+        .where(whereClause)
+        .orderBy(desc(crmContacts.createdAt))
+        .limit(200),
+      db.select({ count: count() }).from(crmContacts).where(whereClause),
+    ]);
+
+    res.json({
+      leads: leads.map(({ contact, ownerUser, assignedUser }) =>
+        formatAsLead(contact, ownerUser, assignedUser)
+      ),
+      total: totalResult[0]?.count || 0,
+    });
+  } catch (error) {
+    console.error("Error fetching leads:", error);
+    res.status(500).json({ message: "Failed to fetch leads" });
+  }
+});
+
+// GET /leads/:id - get single lead with status history
+router.get("/leads/:id", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const ownerUsers = aliasedTable(users, "sl_owner_u");
+    const assignedUsers = aliasedTable(users, "sl_assigned_u");
+
+    const result = await db
+      .select({
+        contact: crmContacts,
+        ownerUser: {
+          id: ownerUsers.id,
+          firstName: ownerUsers.firstName,
+          lastName: ownerUsers.lastName,
+          email: ownerUsers.email,
+          profileImageUrl: ownerUsers.profileImageUrl,
+        },
+        assignedUser: {
+          id: assignedUsers.id,
+          firstName: assignedUsers.firstName,
+          lastName: assignedUsers.lastName,
+          email: assignedUsers.email,
+          profileImageUrl: assignedUsers.profileImageUrl,
+        },
+      })
+      .from(crmContacts)
+      .leftJoin(ownerUsers, eq(crmContacts.contactOwner, ownerUsers.id))
+      .leftJoin(assignedUsers, eq(crmContacts.assignedTo, assignedUsers.id))
+      .where(eq(crmContacts.id, id))
+      .limit(1)
+      .then((rows) => rows[0]);
+
+    if (!result) return res.status(404).json({ message: "Lead not found" });
+
+    const statusHistory = await db
+      .select()
+      .from(contactStatusHistory)
+      .where(eq(contactStatusHistory.contactId, id))
+      .orderBy(desc(contactStatusHistory.createdAt))
+      .limit(20);
+
+    res.json({
+      ...formatAsLead(result.contact, result.ownerUser, result.assignedUser),
+      statusHistory,
+    });
+  } catch (error) {
+    console.error("Error fetching lead:", error);
+    res.status(500).json({ message: "Failed to fetch lead" });
+  }
+});
+
+// POST /leads - create new lead
+router.post("/leads", requireAdmin, async (req: any, res) => {
+  try {
+    const userId = getUserId(req);
+    const {
+      firstName, lastName, email, phone, mobile,
+      leadStatus, leadRating, leadCreationMethod, leadSource,
+      branchId, nationality, country, city,
+      courseId, universityId, courseName, interestedIn, productInterest,
+      notes, referrer, assignedTo, leadOwner,
+    } = req.body;
+
+    if (!firstName || !lastName || !email) {
+      return res.status(400).json({ message: "First name, last name, and email are required" });
+    }
+
+    const [contact] = await db.insert(crmContacts).values({
+      firstName,
+      lastName,
+      email: email.trim().toLowerCase(),
+      phone: phone || null,
+      mobile: mobile || null,
+      contactType: 'clients',
+      clientStatus: 'lead',
+      leadStage: mapStatusToStage(leadStatus || 'not_contacted') as any,
+      leadRating: (leadRating || 'cold') as any,
+      entrySource: mapCreationMethodToEntrySource(leadCreationMethod || 'manually') as any,
+      referenceSource: leadSource || null,
+      branchId: branchId || null,
+      nationality: nationality || null,
+      country: country || null,
+      city: city || null,
+      courseId: courseId || null,
+      universityId: universityId || null,
+      courseName: courseName || null,
+      interestedIn: interestedIn || null,
+      programDiscipline: productInterest || null,
+      notes: notes || null,
+      referrer: referrer || null,
+      assignedTo: assignedTo || null,
+      contactOwner: leadOwner || null,
+      createdByUserId: userId || undefined,
+    } as any).returning();
+
+    res.status(201).json(formatAsLead(contact, null, null));
+  } catch (error) {
+    console.error("Error creating lead:", error);
+    res.status(500).json({ message: "Failed to create lead" });
+  }
+});
+
+// PATCH /leads/:id - update lead
+router.patch("/leads/:id", requireAdmin, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const userId = getUserId(req);
+
+    const existing = await db
+      .select()
+      .from(crmContacts)
+      .where(eq(crmContacts.id, id))
+      .limit(1)
+      .then((r) => r[0]);
+    if (!existing) return res.status(404).json({ message: "Lead not found" });
+
+    const updates: any = { updatedAt: new Date() };
+    if (userId) updates.updatedByUserId = userId;
+
+    const {
+      firstName, lastName, email, phone, mobile,
+      leadStatus, leadRating, leadCreationMethod, leadSource,
+      branchId, nationality, country, city,
+      courseId, universityId, courseName, interestedIn, productInterest,
+      notes, referrer, assignedTo, leadOwner,
+    } = req.body;
+
+    if (firstName !== undefined) updates.firstName = firstName;
+    if (lastName !== undefined) updates.lastName = lastName;
+    if (email !== undefined) updates.email = email.trim().toLowerCase();
+    if (phone !== undefined) updates.phone = phone;
+    if (mobile !== undefined) updates.mobile = mobile;
+    if (leadStatus !== undefined) updates.leadStage = mapStatusToStage(leadStatus);
+    if (leadRating !== undefined) updates.leadRating = leadRating;
+    if (leadCreationMethod !== undefined) updates.entrySource = mapCreationMethodToEntrySource(leadCreationMethod);
+    if (leadSource !== undefined) updates.referenceSource = leadSource;
+    if (branchId !== undefined) updates.branchId = branchId;
+    if (nationality !== undefined) updates.nationality = nationality;
+    if (country !== undefined) updates.country = country;
+    if (city !== undefined) updates.city = city;
+    if (courseId !== undefined) updates.courseId = courseId;
+    if (universityId !== undefined) updates.universityId = universityId;
+    if (courseName !== undefined) updates.courseName = courseName;
+    if (interestedIn !== undefined) updates.interestedIn = interestedIn;
+    if (productInterest !== undefined) updates.programDiscipline = productInterest;
+    if (notes !== undefined) updates.notes = notes;
+    if (referrer !== undefined) updates.referrer = referrer;
+    if (assignedTo !== undefined) updates.assignedTo = assignedTo;
+    if (leadOwner !== undefined) updates.contactOwner = leadOwner;
+
+    const [updated] = await db
+      .update(crmContacts)
+      .set(updates)
+      .where(eq(crmContacts.id, id))
+      .returning();
+
+    res.json(formatAsLead(updated, null, null));
+  } catch (error) {
+    console.error("Error updating lead:", error);
+    res.status(500).json({ message: "Failed to update lead" });
+  }
+});
+
+// DELETE /leads/:id - delete lead
+router.delete("/leads/:id", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.delete(crmContacts).where(eq(crmContacts.id, id));
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting lead:", error);
+    res.status(500).json({ message: "Failed to delete lead" });
+  }
+});
+
+// POST /leads/:id/convert - convert lead to a full contact
+router.post("/leads/:id/convert", requireAdmin, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const { contactType } = req.body;
+
+    const existing = await db
+      .select()
+      .from(crmContacts)
+      .where(eq(crmContacts.id, id))
+      .limit(1)
+      .then((r) => r[0]);
+    if (!existing) return res.status(404).json({ message: "Lead not found" });
+
+    const [updated] = await db
+      .update(crmContacts)
+      .set({
+        contactType: (contactType || 'clients') as any,
+        clientStatus: 'applicant',
+        leadStage: 'converted',
+        updatedAt: new Date(),
+      })
+      .where(eq(crmContacts.id, id))
+      .returning();
+
+    res.json({ success: true, contact: updated });
+  } catch (error) {
+    console.error("Error converting lead:", error);
+    res.status(500).json({ message: "Failed to convert lead" });
+  }
+});
+
+// ============================
 // LEAD / CONTACT NOTES ROUTES
 // ============================
 

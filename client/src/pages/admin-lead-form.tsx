@@ -192,7 +192,7 @@ export default function AdminLeadForm() {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", variables.id, "activity-log"] });
       toast({ title: "Lead updated", description: "Lead has been updated successfully" });
-      navigate("/admin");
+      navigate("/admin?tab=crm-leads");
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to update lead", variant: "destructive" });
@@ -228,7 +228,7 @@ export default function AdminLeadForm() {
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto p-6">
         <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} data-testid="button-back">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/admin?tab=crm-leads")} data-testid="button-back">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -660,7 +660,7 @@ export default function AdminLeadForm() {
             )}
 
             <div className="flex justify-end gap-4">
-              <Button type="button" variant="outline" onClick={() => navigate("/admin")} data-testid="button-cancel">
+              <Button type="button" variant="outline" onClick={() => navigate("/admin?tab=crm-leads")} data-testid="button-cancel">
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading} data-testid="button-save">

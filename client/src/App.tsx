@@ -64,6 +64,7 @@ const AcceptInvitation = lazy(() => import("@/pages/accept-invitation"));
 const ForcePasswordReset = lazy(() => import("@/pages/force-password-reset"));
 const PrintInvoice = lazy(() => import("@/pages/print-invoice"));
 const AdminContactForm = lazy(() => import("@/pages/admin-contact-form"));
+const AdminLeadForm = lazy(() => import("@/pages/admin-lead-form"));
 const StudyAbroad = lazy(() => import("@/pages/study-abroad"));
 
 function PageLoader() {
@@ -124,6 +125,8 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
         <Route path="/admin/accounting/invoices/:id/print" component={PrintInvoice} />
         <Route path="/admin/contacts/new" component={AdminContactForm} />
         <Route path="/admin/contacts/:id/edit" component={AdminContactForm} />
+        <Route path="/admin/leads/new" component={AdminLeadForm} />
+        <Route path="/admin/leads/:id/edit" component={AdminLeadForm} />
         <Route path="/student/dashboard" component={StudentDashboardPage} />
         <Route path="/student/courses" component={StudentCourses} />
         <Route path="/student/courses/:id" component={CourseDetail} />
