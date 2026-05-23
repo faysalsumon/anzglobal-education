@@ -54,7 +54,6 @@ import {
   BookOpen,
   Eye,
   ChevronLeft,
-  UserCheck,
   List,
   LayoutGrid,
   ChevronDown,
@@ -174,7 +173,6 @@ export function CrmLeadsPanel() {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<CrmLead | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [initialTab, setInitialTab] = useState<string>("details");
   
@@ -297,22 +295,6 @@ export function CrmLeadsPanel() {
     },
   });
 
-  const convertMutation = useMutation({
-    mutationFn: async ({ id, contactType }: { id: string; contactType: string }) => {
-      return apiRequest("POST", `/api/crm/leads/${id}/convert`, { contactType });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
-      setIsConvertOpen(false);
-      setSelectedLead(null);
-      toast({ title: "Lead converted", description: "Lead has been converted to a contact" });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to convert lead", variant: "destructive" });
-    },
-  });
-
   const statusUpdateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<CrmLead> }) => {
       return apiRequest("PATCH", `/api/crm/leads/${id}`, data);
@@ -335,24 +317,17 @@ export function CrmLeadsPanel() {
     }
   };
 
-  const handleConvertLead = (contactType: string) => {
-    if (selectedLead) {
-      convertMutation.mutate({ id: selectedLead.id, contactType });
-    }
-  };
-
   const openEditPage = (lead: CrmLead) => {
     navigate(`/admin/leads/${lead.id}/edit`);
   };
 
-  if (selectedLead && !isDeleteOpen && !isConvertOpen) {
+  if (selectedLead && !isDeleteOpen) {
     return (
       <LeadDetailView
         lead={leadDetail || selectedLead}
         onBack={() => { setSelectedLead(null); setInitialTab('details'); }}
         onEdit={() => openEditPage(selectedLead)}
         onDelete={() => setIsDeleteOpen(true)}
-        onConvert={() => setIsConvertOpen(true)}
         activeTab={initialTab}
         onTabChange={setInitialTab}
       />
@@ -758,39 +733,6 @@ export function CrmLeadsPanel() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={isConvertOpen} onOpenChange={setIsConvertOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Convert Lead to Contact</DialogTitle>
-            <DialogDescription>
-              This will create a new contact from this lead and mark the lead as converted.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Contact Type</Label>
-              <Select defaultValue="clients" onValueChange={(value) => handleConvertLead(value)}>
-                <SelectTrigger data-testid="select-contact-type">
-                  <SelectValue placeholder="Select contact type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="clients">Clients</SelectItem>
-                  <SelectItem value="partner">Partner</SelectItem>
-                  <SelectItem value="providers_rep">Providers Rep</SelectItem>
-                  <SelectItem value="others">Others</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsConvertOpen(false)}>Cancel</Button>
-            <Button onClick={() => handleConvertLead("clients")} disabled={convertMutation.isPending}>
-              <UserCheck className="h-4 w-4 mr-2" />
-              Convert to Contact
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -985,12 +927,11 @@ interface LeadDetailViewProps {
   onBack: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  onConvert: () => void;
   activeTab: string;
   onTabChange: (tab: string) => void;
 }
 
-function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert, activeTab, onTabChange }: LeadDetailViewProps) {
+function LeadDetailView({ lead, onBack, onEdit, onDelete, activeTab, onTabChange }: LeadDetailViewProps) {
   const { toast } = useToast();
   const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
 
@@ -1036,13 +977,6 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert, activeTab, 
           </div>
         </div>
         <div className="flex gap-2 flex-wrap w-full sm:w-auto">
-          {lead.leadStatus !== 'converted' && (
-            <Button variant="outline" onClick={onConvert} data-testid="button-convert-lead" className="flex-1 sm:flex-none">
-              <ArrowRight className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Convert to Contact</span>
-              <span className="sm:hidden">Convert</span>
-            </Button>
-          )}
           <Button variant="outline" onClick={onEdit} data-testid="button-edit-lead" className="flex-1 sm:flex-none">
             <Edit className="h-4 w-4 mr-2" />
             Edit
