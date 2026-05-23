@@ -526,6 +526,10 @@ export default function AdminDashboard() {
       if (marketingExecutiveTabs.includes(tab) && !hasFullAdminAccess && !isMarketingExecutive) {
         return defaultTab;
       }
+      // Contacts is hidden from junior_consultant and support_staff
+      if (tab === 'crm-contacts' && (adminRole === 'junior_consultant' || adminRole === 'support_staff')) {
+        return 'crm-leads';
+      }
       return tab; // Valid tab with proper access
     };
     
@@ -594,7 +598,8 @@ export default function AdminDashboard() {
     if (tabFromQuery && tabFromQuery !== activeTab) {
       const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'crm-leads', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
       if (validTabs.includes(tabFromQuery)) {
-        setActiveTab(tabFromQuery);
+        const isContactsRestricted = tabFromQuery === 'crm-contacts' && (adminRole === 'junior_consultant' || adminRole === 'support_staff');
+        setActiveTab(isContactsRestricted ? 'crm-leads' : tabFromQuery);
       }
     }
   }, [searchString, activeTab]);
@@ -2092,7 +2097,7 @@ export default function AdminDashboard() {
         )}
 
         {/* CRM Contacts Tab */}
-        {activeTab === "crm-contacts" && (
+        {activeTab === "crm-contacts" && adminRole !== 'junior_consultant' && adminRole !== 'support_staff' && (
           <div className="space-y-4">
             <CrmContactsPanel />
           </div>
