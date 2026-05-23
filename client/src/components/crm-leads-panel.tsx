@@ -14,9 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -61,7 +59,13 @@ import {
   Globe,
   Check,
   ChevronsUpDown,
-  UserPlus
+  UserPlus,
+  ExternalLink,
+  FileText,
+  Pencil,
+  Star,
+  MessageCircle,
+  GraduationCap,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -70,29 +74,57 @@ type LeadStatus = 'not_contacted' | 'contacted' | 'qualified' | 'unqualified' | 
 
 const KANBAN_STATUSES: LeadStatus[] = ['not_contacted', 'contacted', 'qualified', 'unqualified', 'converted', 'lost'];
 
+type LeadStage = 'new' | 'contacted' | 'qualified' | 'counselling' | 'ready_to_apply' | 'converted' | 'lost';
+
 interface CrmLead {
   id: string;
   firstName: string;
   lastName: string;
+  preferredName: string | null;
+  gender: string | null;
+  photo: string | null;
   email: string;
-  phone: string;
+  phone: string | null;
   mobile: string | null;
+  whatsapp: string | null;
   leadStatus: 'not_contacted' | 'contacted' | 'qualified' | 'unqualified' | 'converted' | 'lost';
+  leadStage: LeadStage | null;
   leadRating: 'cold' | 'warm' | 'hot';
   leadSource: string | null;
+  entrySource: string | null;
   leadCreationMethod: 'manually' | 'website_form' | 'facebook_ads' | 'google_ads' | 'education_fair' | 'referral' | 'recruitment_agent' | 'campus_walk_in' | 'database_import' | 'ai_web_scrape' | null;
   branch: string | null;
   branchId: string | null;
   nationality: string | null;
   country: string | null;
   city: string | null;
+  // Address
+  unitNo: string | null;
+  street: string | null;
+  suburb: string | null;
+  state: string | null;
+  postcode: string | null;
+  // Emergency Contact
+  emergencyContactName: string | null;
+  emergencyContactMobile: string | null;
+  emergencyContactRelationship: string | null;
+  emergencyContactAddress: string | null;
+  // Student fields
   courseId: string | null;
+  courseSlug: string | null;
   universityId: string | null;
   courseName: string | null;
   interestedIn: string | null;
   productInterest: string | null;
+  visaStatus: string | null;
   intakeMonth: string | null;
   intakeYear: string | null;
+  // Contact type
+  contactType: string | null;
+  clientStatus: string | null;
+  // Visit tracking
+  firstVisit: string | null;
+  firstPageVisited: string | null;
   notes: string | null;
   referrer: string | null;
   assignedTo: string | null;
@@ -116,6 +148,31 @@ interface CrmLead {
     email: string;
     profileImageUrl: string | null;
   } | null;
+  createdByUser?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileImageUrl: string | null;
+  } | null;
+  updatedByUser?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileImageUrl: string | null;
+  } | null;
+}
+
+interface LeadApplication {
+  id: string;
+  courseId: string;
+  courseName: string | null;
+  courseLevel: string | null;
+  universityName: string | null;
+  universityLogo: string | null;
+  status: string;
+  currentStage: string;
+  createdAt: string | null;
+  assignedConsultant: { firstName: string; lastName: string; profileImageUrl: string | null } | null;
 }
 
 interface StatusHistory {
@@ -922,6 +979,99 @@ function KanbanLeadCardOverlay({ lead }: { lead: CrmLead }) {
   );
 }
 
+// ── Lead Stage Constants ──────────────────────────────────────────────────
+const ACTIVE_LEAD_STAGES: LeadStage[] = ['new', 'contacted', 'qualified', 'counselling', 'ready_to_apply'];
+
+const leadStageLabels: Record<string, string> = {
+  new: 'New',
+  contacted: 'Contacted',
+  qualified: 'Qualified',
+  counselling: 'Counselling',
+  ready_to_apply: 'Ready to Apply',
+  converted: 'Converted',
+  lost: 'Lost',
+};
+
+const leadStageColors: Record<string, string> = {
+  new: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  contacted: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+  qualified: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400",
+  counselling: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
+  ready_to_apply: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  converted: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+  lost: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+};
+
+// ── Lead Stage Progress Bar ───────────────────────────────────────────────
+function LeadStageProgressBar({
+  currentStage,
+  onStageChange,
+  isUpdating,
+}: {
+  currentStage: LeadStage;
+  onStageChange: (stage: LeadStage) => void;
+  isUpdating: boolean;
+}) {
+  const currentIndex = ACTIVE_LEAD_STAGES.indexOf(currentStage);
+  const isTerminal = currentStage === 'converted' || currentStage === 'lost';
+
+  return (
+    <Card data-testid="card-lead-pipeline">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <CardTitle className="text-sm font-semibold">Lead Pipeline</CardTitle>
+          {isTerminal && (
+            <Badge variant="outline" className={`no-default-active-elevate ${leadStageColors[currentStage]}`}>
+              {leadStageLabels[currentStage]}
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isTerminal ? (
+          <p className="text-sm text-muted-foreground">
+            This lead has been {currentStage === 'converted' ? 'converted to an applicant' : 'marked as lost'}.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center gap-1">
+              {ACTIVE_LEAD_STAGES.map((stage, index) => {
+                const isActive = index <= currentIndex;
+                const isCurrent = stage === currentStage;
+                return (
+                  <div key={stage} className="flex-1 flex flex-col items-center gap-1">
+                    <button
+                      onClick={() => !isUpdating && onStageChange(stage)}
+                      disabled={isUpdating}
+                      className={`w-full h-2 rounded-full transition-colors ${
+                        isActive ? 'bg-primary' : 'bg-muted'
+                      } ${isUpdating ? 'opacity-50' : 'cursor-pointer'}`}
+                      data-testid={`button-stage-${stage}`}
+                    />
+                    <span className={`text-xs whitespace-nowrap ${
+                      isCurrent ? 'font-semibold text-foreground' : 'text-muted-foreground'
+                    }`}>
+                      {leadStageLabels[stage]}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            {currentStage === 'ready_to_apply' && (
+              <div className="flex items-center gap-2 pt-1">
+                <Badge variant="outline" className={`no-default-active-elevate ${leadStageColors['ready_to_apply']}`}>
+                  Ready for application
+                </Badge>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Lead Detail View ──────────────────────────────────────────────────────
 interface LeadDetailViewProps {
   lead: CrmLead & { statusHistory?: StatusHistory[] };
   onBack: () => void;
@@ -931,10 +1081,38 @@ interface LeadDetailViewProps {
   onTabChange: (tab: string) => void;
 }
 
-function LeadDetailView({ lead, onBack, onEdit, onDelete, activeTab, onTabChange }: LeadDetailViewProps) {
+type LeadEditSection = 'contact_info' | 'address' | 'emergency' | null;
+
+function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps) {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+
+  // Inline editing
+  const [editingSection, setEditingSection] = useState<LeadEditSection>(null);
+  const [sectionData, setSectionData] = useState<Partial<CrmLead>>({});
+
+  // Assign popover
   const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
 
+  // Status history collapsible
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Create application dialog
+  const [isCreateApplicationOpen, setIsCreateApplicationOpen] = useState(false);
+  const [courseSearch, setCourseSearch] = useState("");
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+  const [applicationNotes, setApplicationNotes] = useState("");
+
+  const startEdit = (section: LeadEditSection, fields: Partial<CrmLead>) => {
+    setEditingSection(section);
+    setSectionData(fields);
+  };
+  const cancelEdit = () => {
+    setEditingSection(null);
+    setSectionData({});
+  };
+
+  // ── Queries ──────────────────────────────────────────────────────────────
   const { data: teamMembers } = useQuery<{ id: string; firstName: string; lastName: string; email: string; profileImageUrl: string | null }[]>({
     queryKey: ["/api/crm/team-members"],
     queryFn: async () => {
@@ -945,6 +1123,37 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, activeTab, onTabChange
     },
   });
 
+  const { data: applicationsData, isLoading: isLoadingApplications, isError: isApplicationsError } = useQuery<{
+    applications: LeadApplication[];
+    studentProfile: { id: string; maxApplicationSlots: number } | null;
+  }>({
+    queryKey: ["/api/crm/contacts", lead.id, "applications"],
+  });
+
+  const { data: coursesData, isLoading: isLoadingCourses } = useQuery<{ courses: any[]; total: number }>({
+    queryKey: ["/api/courses", { search: courseSearch, limit: 20, publishStatus: 'published' }],
+    enabled: isCreateApplicationOpen && courseSearch.length > 1,
+  });
+  const searchCourses = coursesData?.courses || [];
+
+  const alreadyAppliedCourseIds = new Set((applicationsData?.applications ?? []).map((a) => a.courseId));
+
+  // ── Mutations ─────────────────────────────────────────────────────────────
+  const saveSectionMutation = useMutation({
+    mutationFn: async (data: Partial<CrmLead>) => {
+      return apiRequest("PATCH", `/api/crm/leads/${lead.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", lead.id] });
+      cancelEdit();
+      toast({ title: "Saved", description: "Lead updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to save changes", variant: "destructive" });
+    },
+  });
+
   const assignMutation = useMutation({
     mutationFn: async (assignedToUserId: string | null) => {
       return apiRequest("PATCH", `/api/crm/leads/${lead.id}`, { assignedTo: assignedToUserId });
@@ -952,8 +1161,6 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, activeTab, onTabChange
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", lead.id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", lead.id, "activity-log"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", lead.id, "status-history"] });
       setAssigneePopoverOpen(false);
       toast({ title: "Assignee updated", description: "Lead has been reassigned" });
     },
@@ -962,166 +1169,435 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, activeTab, onTabChange
     },
   });
 
+  const updateStageMutation = useMutation({
+    mutationFn: async (newStage: LeadStage) => {
+      return apiRequest("PATCH", `/api/crm/leads/${lead.id}`, { leadStage: newStage });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", lead.id] });
+      toast({ title: "Lead stage updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update lead stage", variant: "destructive" });
+    },
+  });
+
+  const createApplicationMutation = useMutation({
+    mutationFn: async (data: { courseId: string; notes?: string }) => {
+      return apiRequest("POST", `/api/crm/contacts/${lead.id}/applications`, data);
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to create application", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleCreateApplication = async () => {
+    const coursesToCreate = selectedCourseIds.filter((id) => !alreadyAppliedCourseIds.has(id));
+    if (!coursesToCreate.length) return;
+    try {
+      for (const courseId of coursesToCreate) {
+        await createApplicationMutation.mutateAsync({ courseId, notes: applicationNotes || undefined });
+      }
+      const n = coursesToCreate.length;
+      toast({ title: `${n} application${n !== 1 ? "s" : ""} created successfully` });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts", lead.id, "applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
+      setIsCreateApplicationOpen(false);
+      setSelectedCourseIds([]);
+      setCourseSearch("");
+      setApplicationNotes("");
+    } catch {
+      // error toast already shown
+    }
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <Button variant="ghost" size="icon" onClick={onBack} data-testid="button-back">
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-xl sm:text-2xl font-bold truncate" data-testid="text-lead-detail-name">
-              {lead.firstName} {lead.lastName}
-            </h2>
-            <p className="text-muted-foreground text-sm sm:text-base truncate">{lead.email}</p>
+    <div className="space-y-5">
+
+      {/* ── Hero Card ─────────────────────────────────────────── */}
+      <Card className="overflow-hidden border-t-4 border-t-primary" data-testid="card-lead-hero">
+        <CardContent className="pt-5 pb-4 px-5">
+          {/* Back + actions row */}
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <Button type="button" variant="ghost" size="sm" onClick={onBack} data-testid="button-back" className="-ml-1 gap-1">
+              <ChevronLeft className="h-4 w-4" />Back
+            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-lead">
+                <Edit className="h-3.5 w-3.5 mr-1" />Edit
+              </Button>
+              <Button type="button" variant="destructive" size="sm" onClick={onDelete} data-testid="button-delete-lead">
+                <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
+              </Button>
+            </div>
           </div>
-        </div>
-        <div className="flex gap-2 flex-wrap w-full sm:w-auto">
-          <Button variant="outline" onClick={onEdit} data-testid="button-edit-lead" className="flex-1 sm:flex-none">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button variant="destructive" onClick={onDelete} data-testid="button-delete-lead" className="flex-1 sm:flex-none">
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
-        </div>
-      </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <Badge variant="outline" className={statusColors[lead.leadStatus]}>
-          {statusLabels[lead.leadStatus]}
-        </Badge>
-        <Badge variant="outline" className={ratingColors[lead.leadRating]}>
-          {lead.leadRating}
-        </Badge>
-        {lead.leadCreationMethod && (
-          <Badge variant="secondary">
-            {lead.leadCreationMethod === 'website_form' ? 'Website Inquiry' : lead.leadCreationMethod.replace(/_/g, ' ')}
-          </Badge>
-        )}
-        {lead.branch && <Badge variant="secondary">{lead.branch}</Badge>}
-      </div>
-
-      {lead.courseName && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="py-4">
-            <div className="flex flex-col sm:flex-row items-start gap-3">
-              <div className="flex items-start gap-3 flex-1 min-w-0">
-                <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-                  <BookOpen className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Course Interest</h4>
-                  <p className="text-base sm:text-lg font-medium mt-1 break-words" data-testid="text-detail-course-name">{lead.courseName}</p>
-                  {lead.interestedIn && (
-                    <p className="text-sm text-muted-foreground mt-1">{lead.interestedIn}</p>
-                  )}
-                </div>
-              </div>
-              {lead.courseId && (
-                <a 
-                  href={`/courses/${lead.courseSlug || lead.courseId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:w-auto"
+          {/* Avatar + identity */}
+          <div className="flex items-start gap-4">
+            <Avatar className="h-16 w-16 shrink-0 ring-2 ring-background ring-offset-2">
+              <AvatarImage src={lead.photo || undefined} />
+              <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">
+                {lead.firstName?.[0]}{lead.lastName?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-2xl font-bold leading-tight" data-testid="text-lead-detail-name">
+                {lead.firstName} {lead.lastName}
+              </h2>
+              {lead.preferredName && (
+                <p className="text-sm text-muted-foreground">{lead.preferredName}</p>
+              )}
+              {lead.email && (
+                <a
+                  href={`mailto:${lead.email}`}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mt-0.5 w-fit"
+                  data-testid="link-lead-email"
                 >
-                  <Button variant="outline" data-testid="button-view-course" className="w-full sm:w-auto">
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Course
-                  </Button>
+                  <Mail className="h-3.5 w-3.5 shrink-0" />{lead.email}
                 </a>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Badges row */}
+          <div className="flex items-center gap-2 flex-wrap mt-4">
+            <Badge variant="outline" className={`no-default-active-elevate ${statusColors[lead.leadStatus]}`} data-testid="badge-lead-status">
+              {statusLabels[lead.leadStatus]}
+            </Badge>
+            <Badge variant="outline" className={`no-default-active-elevate ${ratingColors[lead.leadRating]}`} data-testid="badge-lead-rating">
+              <Star className="h-3 w-3 mr-1" />
+              {lead.leadRating.charAt(0).toUpperCase() + lead.leadRating.slice(1)}
+            </Badge>
+            {lead.gender && (
+              <Badge variant="secondary" className="no-default-active-elevate">
+                {lead.gender === 'male' ? 'Male' : lead.gender === 'female' ? 'Female' : lead.gender === 'other' ? 'Other' : 'Prefer not to say'}
+              </Badge>
+            )}
+            {lead.nationality && (
+              <Badge variant="secondary" className="no-default-active-elevate">{lead.nationality}</Badge>
+            )}
+            {lead.leadCreationMethod && lead.leadCreationMethod !== 'manually' && (
+              <Badge variant="secondary" className="no-default-active-elevate">
+                {lead.leadCreationMethod === 'website_form' ? 'Website Inquiry' : lead.leadCreationMethod.replace(/_/g, ' ')}
+              </Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Lead Stage Progress ─────────────────────────────────── */}
+      {lead.leadStage && (
+        <div className="my-1">
+          <LeadStageProgressBar
+            currentStage={lead.leadStage}
+            onStageChange={(newStage) => updateStageMutation.mutate(newStage)}
+            isUpdating={updateStageMutation.isPending}
+          />
+        </div>
       )}
 
-      <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-        <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
-          <TabsTrigger value="history">Status History</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="details" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Contact Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{lead.email}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{lead.phone}</span>
-                </div>
-                {lead.mobile && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{lead.mobile} (Mobile)</span>
-                  </div>
-                )}
-                {lead.city && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{lead.city}, {lead.country}</span>
-                  </div>
-                )}
-                {lead.nationality && (
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span>Nationality: {lead.nationality}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+      {/* ── Two-column layout ──────────────────────────────────── */}
+      <div className="flex flex-col lg:flex-row gap-5 items-start">
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Lead Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {lead.leadSource && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Source</span>
-                    <span className="capitalize">{lead.leadSource}</span>
-                  </div>
+        {/* LEFT — info cards */}
+        <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+          {/* ── Contact Information ─────────────────────────────── */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  Contact Information
+                </span>
+                {editingSection !== 'contact_info' && (
+                  <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
+                    data-testid="button-edit-contact_info"
+                    onClick={() => startEdit('contact_info', { email: lead.email, mobile: lead.mobile, whatsapp: lead.whatsapp, phone: lead.phone })}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
                 )}
-                {lead.branch && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Branch</span>
-                    <span>{lead.branch}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2.5">
+              {editingSection === 'contact_info' ? (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Email</Label>
+                    <Input value={sectionData.email || ""} onChange={e => setSectionData(p => ({ ...p, email: e.target.value }))} data-testid="input-edit-email" />
                   </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Mobile</Label>
+                    <Input value={sectionData.mobile || ""} onChange={e => setSectionData(p => ({ ...p, mobile: e.target.value }))} placeholder="+61 4xx xxx xxx" data-testid="input-edit-mobile" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">WhatsApp</Label>
+                    <Input value={sectionData.whatsapp || ""} onChange={e => setSectionData(p => ({ ...p, whatsapp: e.target.value }))} placeholder="+61 4xx xxx xxx" data-testid="input-edit-whatsapp" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Phone</Label>
+                    <Input value={sectionData.phone || ""} onChange={e => setSectionData(p => ({ ...p, phone: e.target.value }))} placeholder="+61 x xxxx xxxx" data-testid="input-edit-phone" />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button type="button" size="sm" onClick={() => saveSectionMutation.mutate(sectionData)} disabled={saveSectionMutation.isPending} data-testid="button-save-contact_info">
+                      {saveSectionMutation.isPending ? "Saving..." : "Save"}
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={cancelEdit} data-testid="button-cancel-contact_info">Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {lead.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <a href={`mailto:${lead.email}`} className="text-sm hover:text-primary truncate" data-testid="link-email-detail">{lead.email}</a>
+                    </div>
+                  )}
+                  {lead.mobile && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <a href={`tel:${lead.mobile}`} className="text-sm hover:text-primary" data-testid="link-mobile-detail">{lead.mobile}</a>
+                      <span className="text-xs text-muted-foreground">Mobile</span>
+                    </div>
+                  )}
+                  {lead.whatsapp && (
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <a href={`https://wa.me/${lead.whatsapp.replace(/\D/g,'')}`} className="text-sm hover:text-primary" target="_blank" rel="noopener noreferrer" data-testid="link-whatsapp-detail">{lead.whatsapp}</a>
+                      <span className="text-xs text-muted-foreground">WhatsApp</span>
+                    </div>
+                  )}
+                  {lead.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <a href={`tel:${lead.phone}`} className="text-sm hover:text-primary" data-testid="link-phone-detail">{lead.phone}</a>
+                    </div>
+                  )}
+                  {!lead.email && !lead.mobile && !lead.whatsapp && !lead.phone && (
+                    <p className="text-sm text-muted-foreground">No contact info on file</p>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ── Address ─────────────────────────────────────────── */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  Address
+                </span>
+                {editingSection !== 'address' && (
+                  <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
+                    data-testid="button-edit-address"
+                    onClick={() => startEdit('address', { unitNo: lead.unitNo, street: lead.street, suburb: lead.suburb, city: lead.city, state: lead.state, postcode: lead.postcode, country: lead.country })}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
                 )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1 text-sm">
+              {editingSection === 'address' ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Unit No</Label>
+                      <Input value={sectionData.unitNo || ""} onChange={e => setSectionData(p => ({ ...p, unitNo: e.target.value }))} placeholder="Unit" data-testid="input-edit-unitno" />
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs text-muted-foreground">Street</Label>
+                      <Input value={sectionData.street || ""} onChange={e => setSectionData(p => ({ ...p, street: e.target.value }))} placeholder="Street address" data-testid="input-edit-street" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Suburb</Label>
+                    <Input value={sectionData.suburb || ""} onChange={e => setSectionData(p => ({ ...p, suburb: e.target.value }))} data-testid="input-edit-suburb" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">City</Label>
+                      <Input value={sectionData.city || ""} onChange={e => setSectionData(p => ({ ...p, city: e.target.value }))} data-testid="input-edit-city" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">State</Label>
+                      <Input value={sectionData.state || ""} onChange={e => setSectionData(p => ({ ...p, state: e.target.value }))} data-testid="input-edit-state" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Postcode</Label>
+                      <Input value={sectionData.postcode || ""} onChange={e => setSectionData(p => ({ ...p, postcode: e.target.value }))} data-testid="input-edit-postcode" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button type="button" size="sm" onClick={() => saveSectionMutation.mutate(sectionData)} disabled={saveSectionMutation.isPending} data-testid="button-save-address">
+                      {saveSectionMutation.isPending ? "Saving..." : "Save"}
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={cancelEdit} data-testid="button-cancel-address">Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                lead.street || lead.city ? (
+                  <>
+                    {(lead.unitNo || lead.street) && (
+                      <p>{[lead.unitNo, lead.street].filter(Boolean).join(" ")}</p>
+                    )}
+                    {lead.suburb && <p>{lead.suburb}</p>}
+                    {(lead.city || lead.state || lead.postcode) && (
+                      <p>{[lead.city, lead.state, lead.postcode].filter(Boolean).join(", ")}</p>
+                    )}
+                    {lead.country && <p>{lead.country}</p>}
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">No address on file</p>
+                )
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ── Inquiry Details ──────────────────────────────────── */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Inquiry Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {lead.courseName && (
+                <div className="flex justify-between items-center gap-3">
+                  <span className="text-muted-foreground text-sm shrink-0">Course Interested In</span>
+                  {lead.courseId ? (
+                    <a href={`/courses/${lead.courseSlug || lead.courseId}`} className="text-sm font-medium text-primary hover:underline flex items-center gap-1 text-right" target="_blank" rel="noopener noreferrer" data-testid="link-inquiry-course">
+                      {lead.courseName}<ExternalLink className="h-3 w-3 shrink-0" />
+                    </a>
+                  ) : (
+                    <span className="text-sm font-medium text-right">{lead.courseName}</span>
+                  )}
+                </div>
+              )}
+              {lead.country && (
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground text-sm shrink-0">Country</span>
+                  <span className="text-sm">{lead.country}</span>
+                </div>
+              )}
+              {lead.visaStatus && (
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground text-sm shrink-0">Visa Status</span>
+                  <span className="text-sm">{lead.visaStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                </div>
+              )}
+              {lead.entrySource && (
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground text-sm shrink-0">Entry Source</span>
+                  <Badge variant="secondary" data-testid="badge-entry-source">
+                    {lead.entrySource.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </Badge>
+                </div>
+              )}
+              {lead.referrer && (
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-3">
+                  <span className="text-muted-foreground text-sm shrink-0">Referrer</span>
+                  <span className="text-sm text-muted-foreground break-all sm:text-right">{lead.referrer}</span>
+                </div>
+              )}
+              {lead.firstPageVisited && (
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-3">
+                  <span className="text-muted-foreground text-sm shrink-0">Page Visited</span>
+                  <span className="text-sm text-muted-foreground break-all sm:text-right">{lead.firstPageVisited}</span>
+                </div>
+              )}
+              {lead.firstVisit && !isNaN(new Date(lead.firstVisit).getTime()) && (
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground text-sm shrink-0">First Visit</span>
+                  <span className="text-sm">{format(new Date(lead.firstVisit), "MMM d, yyyy 'at' h:mm a")}</span>
+                </div>
+              )}
+              {!lead.courseName && !lead.entrySource && !lead.visaStatus && !lead.country && (
+                <p className="text-sm text-muted-foreground">No inquiry details on file</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ── Contact Details ───────────────────────────────────── */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                Contact Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Created By</span>
+                {lead.createdByUser ? (
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={lead.createdByUser.profileImageUrl || undefined} />
+                      <AvatarFallback>{lead.createdByUser.firstName?.[0]}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">{lead.createdByUser.firstName} {lead.createdByUser.lastName}</span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground italic">System Generated</span>
+                )}
+              </div>
+              {lead.createdAt && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Created On</span>
+                  <span className="text-sm">{format(new Date(lead.createdAt), "MMM d, yyyy 'at' h:mm a")}</span>
+                </div>
+              )}
+              {lead.updatedAt && (
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Assigned To</span>
+                  <span className="text-sm text-muted-foreground">Last Updated</span>
+                  <div className="flex items-center gap-2">
+                    {lead.updatedByUser && (
+                      <>
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={lead.updatedByUser.profileImageUrl || undefined} />
+                          <AvatarFallback>{lead.updatedByUser.firstName?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">{lead.updatedByUser.firstName} {lead.updatedByUser.lastName}</span>
+                        <span className="text-muted-foreground">·</span>
+                      </>
+                    )}
+                    <span className="text-sm text-muted-foreground">{format(new Date(lead.updatedAt), "MMM d, yyyy")}</span>
+                  </div>
+                </div>
+              )}
+              {lead.ownerUser && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Lead Owner</span>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={lead.ownerUser.profileImageUrl || undefined} />
+                      <AvatarFallback>{lead.ownerUser.firstName?.[0]}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">{lead.ownerUser.firstName} {lead.ownerUser.lastName}</span>
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Assigned To</span>
+                <div className="flex items-center gap-2">
+                  {lead.assignedToUser ? (
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={lead.assignedToUser.profileImageUrl || undefined} />
+                        <AvatarFallback className="text-[10px]">{lead.assignedToUser.firstName?.[0]}{lead.assignedToUser.lastName?.[0]}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm">{lead.assignedToUser.firstName} {lead.assignedToUser.lastName}</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground italic">Not assigned</span>
+                  )}
                   <Popover open={assigneePopoverOpen} onOpenChange={setAssigneePopoverOpen}>
                     <PopoverTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        data-testid="button-assign-lead"
-                      >
-                        {lead.assignedToUser ? (
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage src={lead.assignedToUser.profileImageUrl || undefined} />
-                              <AvatarFallback>{lead.assignedToUser.firstName?.[0]}</AvatarFallback>
-                            </Avatar>
-                            <span>{lead.assignedToUser.firstName} {lead.assignedToUser.lastName}</span>
-                            <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <UserPlus className="h-4 w-4" />
-                            <span>Assign</span>
-                            <ChevronsUpDown className="h-3 w-3" />
-                          </div>
-                        )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7" data-testid="button-assign-lead">
+                        <ChevronsUpDown className="h-3.5 w-3.5" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[250px] p-0" align="end">
@@ -1130,11 +1606,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, activeTab, onTabChange
                         <CommandList>
                           <CommandEmpty>No team members found.</CommandEmpty>
                           <CommandGroup>
-                            <CommandItem
-                              value="unassigned"
-                              onSelect={() => assignMutation.mutate(null)}
-                              className="cursor-pointer"
-                            >
+                            <CommandItem value="unassigned" onSelect={() => assignMutation.mutate(null)} className="cursor-pointer">
                               <div className="flex items-center gap-2">
                                 <User className="h-4 w-4 text-muted-foreground" />
                                 <span>Unassigned</span>
@@ -1167,74 +1639,208 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, activeTab, onTabChange
                     </PopoverContent>
                   </Popover>
                 </div>
-                {lead.ownerUser && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Owner</span>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={lead.ownerUser.profileImageUrl || undefined} />
-                        <AvatarFallback>{lead.ownerUser.firstName?.[0]}</AvatarFallback>
-                      </Avatar>
-                      <span>{lead.ownerUser.firstName} {lead.ownerUser.lastName}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── Emergency Contact ─────────────────────────────────── */}
+          <Card className="sm:col-span-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center justify-between gap-2">
+                <span>Emergency Contact</span>
+                {editingSection !== 'emergency' && (
+                  <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
+                    data-testid="button-edit-emergency"
+                    onClick={() => startEdit('emergency', { emergencyContactName: lead.emergencyContactName, emergencyContactMobile: lead.emergencyContactMobile, emergencyContactRelationship: lead.emergencyContactRelationship, emergencyContactAddress: lead.emergencyContactAddress })}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {editingSection === 'emergency' ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Name</Label>
+                      <Input value={sectionData.emergencyContactName || ""} onChange={e => setSectionData(p => ({ ...p, emergencyContactName: e.target.value }))} data-testid="input-edit-emergency-name" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Mobile</Label>
+                      <Input value={sectionData.emergencyContactMobile || ""} onChange={e => setSectionData(p => ({ ...p, emergencyContactMobile: e.target.value }))} placeholder="+61 4xx xxx xxx" data-testid="input-edit-emergency-mobile" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Relationship</Label>
+                      <Input value={sectionData.emergencyContactRelationship || ""} onChange={e => setSectionData(p => ({ ...p, emergencyContactRelationship: e.target.value }))} placeholder="e.g. Parent, Sibling" data-testid="input-edit-emergency-relationship" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Address</Label>
+                      <Input value={sectionData.emergencyContactAddress || ""} onChange={e => setSectionData(p => ({ ...p, emergencyContactAddress: e.target.value }))} data-testid="input-edit-emergency-address" />
                     </div>
                   </div>
-                )}
-                {lead.createdAt && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Created</span>
-                    <span>{format(new Date(lead.createdAt), "MMM d, yyyy")}</span>
+                  <div className="flex gap-2 pt-1">
+                    <Button type="button" size="sm" onClick={() => saveSectionMutation.mutate(sectionData)} disabled={saveSectionMutation.isPending} data-testid="button-save-emergency">
+                      {saveSectionMutation.isPending ? "Saving..." : "Save"}
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={cancelEdit} data-testid="button-cancel-emergency">Cancel</Button>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </div>
+              ) : (
+                lead.emergencyContactName ? (
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="flex justify-between col-span-2 sm:col-span-1">
+                      <span className="text-muted-foreground">Name</span>
+                      <span>{lead.emergencyContactName}</span>
+                    </div>
+                    {lead.emergencyContactMobile && (
+                      <div className="flex justify-between col-span-2 sm:col-span-1">
+                        <span className="text-muted-foreground">Mobile</span>
+                        <span>{lead.emergencyContactMobile}</span>
+                      </div>
+                    )}
+                    {lead.emergencyContactRelationship && (
+                      <div className="flex justify-between col-span-2 sm:col-span-1">
+                        <span className="text-muted-foreground">Relationship</span>
+                        <span>{lead.emergencyContactRelationship}</span>
+                      </div>
+                    )}
+                    {lead.emergencyContactAddress && (
+                      <div className="flex justify-between col-span-2 sm:col-span-1">
+                        <span className="text-muted-foreground">Address</span>
+                        <span>{lead.emergencyContactAddress}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No emergency contact on file</p>
+                )
+              )}
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Product Interest</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {lead.productInterest && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Interest</span>
-                    <span>{lead.productInterest}</span>
-                  </div>
-                )}
-                {lead.intakeMonth && lead.intakeYear && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Target Intake</span>
-                    <span>{lead.intakeMonth} {lead.intakeYear}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+        </div>{/* end left info grid */}
 
-            {lead.notes && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Legacy Notes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{lead.notes}</p>
-                </CardContent>
-              </Card>
+        {/* RIGHT — sticky notes panel */}
+        <div className="w-full lg:w-[360px] shrink-0 lg:sticky lg:top-4 flex flex-col" style={{ maxHeight: "calc(100vh - 90px)" }}>
+          <Card className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <CardContent className="flex-1 flex flex-col min-h-0 pt-4 px-4 pb-4 overflow-hidden">
+              <LeadNotes
+                leadId={lead.id}
+                leadName={`${lead.firstName} ${lead.lastName}`}
+                branchId={lead.branchId}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+      </div>{/* end two-column flex */}
+
+      {/* ── Applications ───────────────────────────────────────── */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <GraduationCap className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Applications</CardTitle>
+            {applicationsData?.applications && applicationsData.applications.length > 0 && (
+              <Badge variant="secondary">{applicationsData.applications.length}</Badge>
             )}
           </div>
-        </TabsContent>
+          <div className="flex items-center gap-3">
+            {applicationsData?.studentProfile && (
+              <span className="text-sm text-muted-foreground">
+                {applicationsData.applications.length} / {applicationsData.studentProfile.maxApplicationSlots} slots used
+              </span>
+            )}
+            <Button
+              size="sm"
+              onClick={() => setIsCreateApplicationOpen(true)}
+              disabled={!!(applicationsData?.studentProfile && applicationsData.applications.length >= (applicationsData.studentProfile.maxApplicationSlots || 3))}
+              data-testid="button-create-application"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Create Application
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isLoadingApplications ? (
+            <p className="text-muted-foreground">Loading applications...</p>
+          ) : isApplicationsError ? (
+            <p className="text-destructive">Failed to load applications. Please try again later.</p>
+          ) : !applicationsData?.studentProfile ? (
+            <p className="text-muted-foreground text-sm">No student profile linked to this contact.</p>
+          ) : applicationsData.applications.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No applications yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {applicationsData.applications.map((app) => (
+                <div
+                  key={app.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover-elevate cursor-pointer"
+                  onClick={() => navigate(`/admin/applications/${app.id}`)}
+                  data-testid={`application-${app.id}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={app.universityLogo || undefined} />
+                      <AvatarFallback>
+                        <GraduationCap className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-1">
+                      <p className="font-medium text-sm">{app.courseName || 'Unknown Course'}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Building2 className="h-3 w-3" />
+                        <span>{app.universityName || 'Unknown Institution'}</span>
+                        {app.courseLevel && <><span>•</span><span>{app.courseLevel}</span></>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={app.status === 'accepted' ? 'default' : app.status === 'rejected' ? 'destructive' : 'outline'}>
+                          {app.status}
+                        </Badge>
+                        <Badge variant="outline">{app.currentStage}</Badge>
+                        {app.createdAt && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {format(new Date(app.createdAt), "MMM d, yyyy")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {app.assignedConsultant && (
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={app.assignedConsultant.profileImageUrl || undefined} />
+                        <AvatarFallback>{app.assignedConsultant.firstName?.[0]}</AvatarFallback>
+                      </Avatar>
+                    )}
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        <TabsContent value="notes" className="mt-4">
-          <LeadNotes 
-            leadId={lead.id} 
-            leadName={`${lead.firstName} ${lead.lastName}`}
-            branchId={lead.branchId}
-          />
-        </TabsContent>
-
-        <TabsContent value="history" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Status History</CardTitle>
-            </CardHeader>
-            <CardContent>
+      {/* ── Status History (collapsible) ───────────────────────── */}
+      <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" className="w-full flex items-center justify-between px-4 py-3 border rounded-lg" data-testid="button-toggle-history">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium text-sm">Status History</span>
+              {lead.statusHistory && lead.statusHistory.length > 0 && (
+                <Badge variant="secondary">{lead.statusHistory.length}</Badge>
+              )}
+            </div>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isHistoryOpen ? 'rotate-180' : ''}`} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <Card className="mt-2">
+            <CardContent className="pt-4">
               {lead.statusHistory && lead.statusHistory.length > 0 ? (
                 <div className="space-y-4">
                   {lead.statusHistory.map((history, index) => (
@@ -1277,12 +1883,93 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, activeTab, onTabChange
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-center py-4">No status history available</p>
+                <p className="text-muted-foreground text-center py-4 text-sm">No status history available</p>
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* ── Create Application Dialog ──────────────────────────── */}
+      <Dialog open={isCreateApplicationOpen} onOpenChange={setIsCreateApplicationOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create Application</DialogTitle>
+            <DialogDescription>
+              Search for a course and create an application for {lead.firstName} {lead.lastName}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Search Course</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Type to search courses..."
+                  value={courseSearch}
+                  onChange={(e) => setCourseSearch(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-course-search"
+                />
+              </div>
+            </div>
+            {isLoadingCourses && <p className="text-sm text-muted-foreground">Searching...</p>}
+            {searchCourses.length > 0 && (
+              <div className="border rounded-md max-h-48 overflow-y-auto divide-y">
+                {searchCourses.map((course: any) => {
+                  const isSelected = selectedCourseIds.includes(course.id);
+                  const isApplied = alreadyAppliedCourseIds.has(course.id);
+                  return (
+                    <div
+                      key={course.id}
+                      className={`flex items-center justify-between p-3 cursor-pointer hover-elevate ${isApplied ? 'opacity-50' : ''}`}
+                      onClick={() => {
+                        if (isApplied) return;
+                        setSelectedCourseIds(prev =>
+                          isSelected ? prev.filter(id => id !== course.id) : [...prev, course.id]
+                        );
+                      }}
+                      data-testid={`course-option-${course.id}`}
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{course.name}</p>
+                        <p className="text-xs text-muted-foreground">{course.university?.name}</p>
+                      </div>
+                      {isApplied ? (
+                        <Badge variant="secondary">Applied</Badge>
+                      ) : isSelected ? (
+                        <Check className="h-4 w-4 text-primary" />
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {selectedCourseIds.length > 0 && (
+              <div className="space-y-2">
+                <Label>Notes (optional)</Label>
+                <Textarea
+                  placeholder="Add notes about this application..."
+                  value={applicationNotes}
+                  onChange={(e) => setApplicationNotes(e.target.value)}
+                  data-testid="input-application-notes"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateApplicationOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleCreateApplication}
+              disabled={selectedCourseIds.length === 0 || createApplicationMutation.isPending}
+              data-testid="button-confirm-create-application"
+            >
+              {createApplicationMutation.isPending ? "Creating..." : `Create ${selectedCourseIds.length > 1 ? `${selectedCourseIds.length} Applications` : 'Application'}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

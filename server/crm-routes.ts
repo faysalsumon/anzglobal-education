@@ -1718,32 +1718,57 @@ function mapCreationMethodToEntrySource(method: string | null): string {
   }
 }
 
-function formatAsLead(contact: any, ownerUser: any, assignedUser: any): any {
+function formatAsLead(contact: any, ownerUser: any, assignedUser: any, createdByUser?: any, updatedByUser?: any): any {
   return {
     id: contact.id,
     firstName: contact.firstName,
     lastName: contact.lastName,
+    preferredName: contact.preferredName,
+    gender: contact.gender,
+    photo: contact.photo,
     email: contact.email,
     phone: contact.phone,
     mobile: contact.mobile,
+    whatsapp: contact.whatsapp,
     leadStatus: mapStageToStatus(contact.leadStage),
+    leadStage: contact.leadStage,
     leadRating: contact.leadRating,
     leadSource: contact.referenceSource,
     leadCreationMethod: mapEntrySourceToCreationMethod(contact.entrySource),
+    entrySource: contact.entrySource,
     branch: null,
     branchId: contact.branchId,
     nationality: contact.nationality,
     country: contact.country,
     city: contact.city,
+    // Address
+    unitNo: contact.unitNo,
+    street: contact.street,
+    suburb: contact.suburb,
+    state: contact.state,
+    postcode: contact.postcode,
+    // Emergency Contact
+    emergencyContactName: contact.emergencyContactName,
+    emergencyContactMobile: contact.emergencyContactMobile,
+    emergencyContactRelationship: contact.emergencyContactRelationship,
+    emergencyContactAddress: contact.emergencyContactAddress,
+    // Student fields
     courseId: contact.courseId,
     universityId: contact.universityId,
     courseName: contact.courseName,
     interestedIn: contact.interestedIn,
     productInterest: contact.programDiscipline,
+    visaStatus: contact.visaStatus,
     intakeMonth: null,
     intakeYear: null,
-    notes: contact.notes,
+    // Contact type
+    contactType: contact.contactType,
+    clientStatus: contact.clientStatus,
+    // Visit tracking
+    firstVisit: contact.firstVisit,
+    firstPageVisited: contact.firstPageVisited,
     referrer: contact.referrer,
+    notes: contact.notes,
     assignedTo: contact.assignedTo,
     leadOwner: contact.contactOwner,
     convertedContactId: null,
@@ -1753,6 +1778,8 @@ function formatAsLead(contact: any, ownerUser: any, assignedUser: any): any {
     updatedAt: contact.updatedAt,
     assignedToUser: assignedUser?.id ? assignedUser : null,
     ownerUser: ownerUser?.id ? ownerUser : null,
+    createdByUser: createdByUser?.id ? createdByUser : null,
+    updatedByUser: updatedByUser?.id ? updatedByUser : null,
   };
 }
 
@@ -1855,6 +1882,8 @@ router.get("/leads/:id", requireAdmin, async (req, res) => {
 
     const ownerUsers = aliasedTable(users, "sl_owner_u");
     const assignedUsers = aliasedTable(users, "sl_assigned_u");
+    const createdByUsers = aliasedTable(users, "sl_created_u");
+    const updatedByUsers = aliasedTable(users, "sl_updated_u");
 
     const result = await db
       .select({
@@ -1873,10 +1902,24 @@ router.get("/leads/:id", requireAdmin, async (req, res) => {
           email: assignedUsers.email,
           profileImageUrl: assignedUsers.profileImageUrl,
         },
+        createdByUser: {
+          id: createdByUsers.id,
+          firstName: createdByUsers.firstName,
+          lastName: createdByUsers.lastName,
+          profileImageUrl: createdByUsers.profileImageUrl,
+        },
+        updatedByUser: {
+          id: updatedByUsers.id,
+          firstName: updatedByUsers.firstName,
+          lastName: updatedByUsers.lastName,
+          profileImageUrl: updatedByUsers.profileImageUrl,
+        },
       })
       .from(crmContacts)
       .leftJoin(ownerUsers, eq(crmContacts.contactOwner, ownerUsers.id))
       .leftJoin(assignedUsers, eq(crmContacts.assignedTo, assignedUsers.id))
+      .leftJoin(createdByUsers, eq(crmContacts.createdByUserId, createdByUsers.id))
+      .leftJoin(updatedByUsers, eq(crmContacts.updatedByUserId, updatedByUsers.id))
       .where(eq(crmContacts.id, id))
       .limit(1)
       .then((rows) => rows[0]);
@@ -1891,7 +1934,7 @@ router.get("/leads/:id", requireAdmin, async (req, res) => {
       .limit(20);
 
     res.json({
-      ...formatAsLead(result.contact, result.ownerUser, result.assignedUser),
+      ...formatAsLead(result.contact, result.ownerUser, result.assignedUser, result.createdByUser, result.updatedByUser),
       statusHistory,
     });
   } catch (error) {
@@ -1969,9 +2012,11 @@ router.patch("/leads/:id", requireAdmin, async (req: any, res) => {
     if (userId) updates.updatedByUserId = userId;
 
     const {
-      firstName, lastName, email, phone, mobile,
-      leadStatus, leadRating, leadCreationMethod, leadSource,
+      firstName, lastName, email, phone, mobile, whatsapp,
+      leadStatus, leadStage, leadRating, leadCreationMethod, leadSource,
       branchId, nationality, country, city,
+      unitNo, street, suburb, state, postcode,
+      emergencyContactName, emergencyContactMobile, emergencyContactRelationship, emergencyContactAddress,
       courseId, universityId, courseName, interestedIn, productInterest,
       notes, referrer, assignedTo, leadOwner,
     } = req.body;
@@ -1981,7 +2026,9 @@ router.patch("/leads/:id", requireAdmin, async (req: any, res) => {
     if (email !== undefined) updates.email = email.trim().toLowerCase();
     if (phone !== undefined) updates.phone = phone;
     if (mobile !== undefined) updates.mobile = mobile;
+    if (whatsapp !== undefined) updates.whatsapp = whatsapp;
     if (leadStatus !== undefined) updates.leadStage = mapStatusToStage(leadStatus);
+    if (leadStage !== undefined) updates.leadStage = leadStage;
     if (leadRating !== undefined) updates.leadRating = leadRating;
     if (leadCreationMethod !== undefined) updates.entrySource = mapCreationMethodToEntrySource(leadCreationMethod);
     if (leadSource !== undefined) updates.referenceSource = leadSource;
@@ -1989,6 +2036,15 @@ router.patch("/leads/:id", requireAdmin, async (req: any, res) => {
     if (nationality !== undefined) updates.nationality = nationality;
     if (country !== undefined) updates.country = country;
     if (city !== undefined) updates.city = city;
+    if (unitNo !== undefined) updates.unitNo = unitNo;
+    if (street !== undefined) updates.street = street;
+    if (suburb !== undefined) updates.suburb = suburb;
+    if (state !== undefined) updates.state = state;
+    if (postcode !== undefined) updates.postcode = postcode;
+    if (emergencyContactName !== undefined) updates.emergencyContactName = emergencyContactName;
+    if (emergencyContactMobile !== undefined) updates.emergencyContactMobile = emergencyContactMobile;
+    if (emergencyContactRelationship !== undefined) updates.emergencyContactRelationship = emergencyContactRelationship;
+    if (emergencyContactAddress !== undefined) updates.emergencyContactAddress = emergencyContactAddress;
     if (courseId !== undefined) updates.courseId = courseId;
     if (universityId !== undefined) updates.universityId = universityId;
     if (courseName !== undefined) updates.courseName = courseName;
