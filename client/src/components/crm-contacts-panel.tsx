@@ -75,6 +75,7 @@ import {
   Check
 } from "lucide-react";
 import { COUNTRIES, getCountryByName } from "@/lib/countries";
+import { getCountryCode, getFlagUrl } from "@/lib/country-flags";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -1991,6 +1992,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
   const [applicationNotes, setApplicationNotes] = useState("");
   const [courseInstitutionFilter, setCourseInstitutionFilter] = useState("");
+  const [courseCountryFilter, setCourseCountryFilter] = useState("");
 
   // Inline section editing
   const [editingSection, setEditingSection] = useState<EditSection>(null);
@@ -2077,6 +2079,13 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
     enabled: isCreateApplicationOpen,
   });
   const courseInstitutionOptions = Array.isArray(courseInstitutionsData) ? courseInstitutionsData : [];
+
+  const courseCountryOptions = Array.from(
+    new Set(courseInstitutionOptions.map((i: any) => i.country).filter(Boolean))
+  ).sort() as string[];
+  const filteredInstitutionOptions = courseCountryFilter
+    ? courseInstitutionOptions.filter((i: any) => i.country === courseCountryFilter)
+    : courseInstitutionOptions;
 
   // Fetch applications for this contact (only for 'clients' type)
   const { data: applicationsData, isLoading: isLoadingApplications, isError: isApplicationsError } = useQuery<{
@@ -2989,10 +2998,11 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
       <Dialog open={isCreateApplicationOpen} onOpenChange={(open) => {
         setIsCreateApplicationOpen(open);
         if (!open) {
-          setCourseSearch("");
-          setSelectedCourseIds([]);
-          setApplicationNotes("");
+          setCourseCountryFilter("");
           setCourseInstitutionFilter("");
+          setSelectedCourseIds([]);
+          setCourseSearch("");
+          setApplicationNotes("");
         }
       }}>
         <DialogContent className="max-w-lg">
@@ -3004,133 +3014,184 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
           </DialogHeader>
           <div className="space-y-4">
 
-            {/* Institution filter */}
+            {/* Step 1 — Country */}
             <div className="space-y-1.5">
-              <Label>Filter by Institution</Label>
+              <Label>Country</Label>
               <Select
-                value={courseInstitutionFilter}
+                value={courseCountryFilter}
                 onValueChange={(v) => {
-                  setCourseInstitutionFilter(v === "_all" ? "" : v);
+                  setCourseCountryFilter(v);
+                  setCourseInstitutionFilter("");
                   setSelectedCourseIds([]);
                   setCourseSearch("");
                 }}
               >
-                <SelectTrigger data-testid="select-institution-filter">
-                  <SelectValue placeholder="All Institutions">
-                    {courseInstitutionFilter ? (
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={courseInstitutionOptions.find(i => i.id === courseInstitutionFilter)?.logo || undefined} />
-                          <AvatarFallback className="text-[9px]">
-                            {courseInstitutionOptions.find(i => i.id === courseInstitutionFilter)?.name?.slice(0,2).toUpperCase() ?? "IN"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="truncate">{courseInstitutionOptions.find(i => i.id === courseInstitutionFilter)?.name}</span>
-                      </div>
-                    ) : "All Institutions"}
+                <SelectTrigger data-testid="select-country-filter">
+                  <SelectValue placeholder="Select a country">
+                    {courseCountryFilter && (() => {
+                      const code = getCountryCode(courseCountryFilter);
+                      return (
+                        <div className="flex items-center gap-2">
+                          {code && (
+                            <img
+                              src={getFlagUrl(code)}
+                              className="w-5 h-3.5 object-cover rounded-sm shrink-0"
+                              alt={courseCountryFilter}
+                            />
+                          )}
+                          <span>{courseCountryFilter}</span>
+                        </div>
+                      );
+                    })()}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="_all">All Institutions</SelectItem>
-                  {courseInstitutionOptions.map((inst: any) => (
-                    <SelectItem key={inst.id} value={inst.id} data-testid={`institution-option-${inst.id}`}>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5 shrink-0">
-                          <AvatarImage src={inst.logo || undefined} />
-                          <AvatarFallback className="text-[9px] bg-muted">{inst.name?.slice(0,2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <span className="truncate">{inst.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {courseCountryOptions.map((country) => {
+                    const code = getCountryCode(country);
+                    return (
+                      <SelectItem key={country} value={country} data-testid={`country-option-${country}`}>
+                        <div className="flex items-center gap-2">
+                          {code && (
+                            <img
+                              src={getFlagUrl(code)}
+                              className="w-5 h-3.5 object-cover rounded-sm shrink-0"
+                              alt={country}
+                            />
+                          )}
+                          <span>{country}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Course search / browse */}
-            <div className="space-y-1.5">
-              <Label>{courseInstitutionFilter ? "Select Course(s)" : "Search Course"} *</Label>
-              <Input
-                placeholder={courseInstitutionFilter ? "Optionally filter by name..." : "Type to search courses..."}
-                value={courseSearch}
-                onChange={(e) => setCourseSearch(e.target.value)}
-                data-testid="input-course-search"
-              />
-
-              {/* Results list */}
-              {isLoadingCourses && (
-                <p className="text-xs text-muted-foreground py-2">
-                  {courseInstitutionFilter
-                    ? `Loading courses from ${courseInstitutionOptions.find(i => i.id === courseInstitutionFilter)?.name ?? "institution"}...`
-                    : "Searching courses..."}
-                </p>
-              )}
-              {!isLoadingCourses && searchCourses.length > 0 && (
-                <ScrollArea className="h-52 border rounded-md">
-                  <div className="p-1.5 space-y-1">
-                    {searchCourses.map((course: any) => {
-                      const uni = course.university;
-                      const isAlreadyApplied = alreadyAppliedCourseIds.has(course.id);
-                      const isSelected = selectedCourseIds.includes(course.id);
-                      return (
-                        <div
-                          key={course.id}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-md ${
-                            isAlreadyApplied
-                              ? "opacity-50 cursor-not-allowed border border-transparent"
-                              : isSelected
-                                ? "bg-primary/10 border border-primary/30 cursor-pointer hover-elevate"
-                                : "border border-transparent cursor-pointer hover-elevate"
-                          }`}
-                          onClick={() => {
-                            if (isAlreadyApplied) return;
-                            setSelectedCourseIds((prev) =>
-                              isSelected ? prev.filter((id) => id !== course.id) : [...prev, course.id]
-                            );
-                          }}
-                          data-testid={`course-option-${course.id}`}
-                        >
-                          <Avatar className="h-9 w-9 shrink-0">
-                            <AvatarImage src={uni?.logo || undefined} alt={uni?.name || "Institution"} />
-                            <AvatarFallback className="text-xs font-medium bg-muted">
-                              {uni?.name?.slice(0, 2).toUpperCase() ?? "IN"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium leading-tight">{course.title}</p>
-                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                              {uni?.name && !courseInstitutionFilter && (
-                                <span className="text-xs text-muted-foreground truncate max-w-[160px]">{uni.name}</span>
-                              )}
-                              {course.level && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 no-default-active-elevate">{course.level}</Badge>
-                              )}
-                              {course.duration && (
-                                <span className="text-xs text-muted-foreground">{course.duration}</span>
-                              )}
-                            </div>
+            {/* Step 2 — Institution (only after country chosen) */}
+            {courseCountryFilter && (
+              <div className="space-y-1.5">
+                <Label>Institution</Label>
+                <Select
+                  value={courseInstitutionFilter}
+                  onValueChange={(v) => {
+                    setCourseInstitutionFilter(v);
+                    setSelectedCourseIds([]);
+                    setCourseSearch("");
+                  }}
+                >
+                  <SelectTrigger data-testid="select-institution-filter">
+                    <SelectValue placeholder="Select an institution">
+                      {courseInstitutionFilter && (() => {
+                        const inst = filteredInstitutionOptions.find((i: any) => i.id === courseInstitutionFilter);
+                        if (!inst) return null;
+                        return (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage src={inst.logo || undefined} />
+                              <AvatarFallback className="text-[9px]">
+                                {inst.name?.slice(0, 2).toUpperCase() ?? "IN"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="truncate">{inst.name}</span>
                           </div>
-                          {isAlreadyApplied ? (
-                            <Badge variant="secondary" className="text-[10px] shrink-0 no-default-active-elevate">Applied</Badge>
-                          ) : isSelected ? (
-                            <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                          ) : (
-                            <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
-                          )}
+                        );
+                      })()}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredInstitutionOptions.map((inst: any) => (
+                      <SelectItem key={inst.id} value={inst.id} data-testid={`institution-option-${inst.id}`}>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-5 w-5 shrink-0">
+                            <AvatarImage src={inst.logo || undefined} />
+                            <AvatarFallback className="text-[9px] bg-muted">{inst.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <span className="truncate">{inst.name}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-              )}
-              {!isLoadingCourses && (courseSearch.length > 1 || !!courseInstitutionFilter) && searchCourses.length === 0 && (
-                <p className="text-xs text-muted-foreground py-1">
-                  {courseInstitutionFilter
-                    ? "No published courses found for this institution."
-                    : "No courses found. Try a different search term."}
-                </p>
-              )}
-            </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Step 3 — Courses (only after both country + institution chosen) */}
+            {courseCountryFilter && courseInstitutionFilter && (
+              <div className="space-y-1.5">
+                <Label>Select Course(s) *</Label>
+                <Input
+                  placeholder="Optionally filter by name..."
+                  value={courseSearch}
+                  onChange={(e) => setCourseSearch(e.target.value)}
+                  data-testid="input-course-search"
+                />
+                {isLoadingCourses && (
+                  <p className="text-xs text-muted-foreground py-2">
+                    {`Loading courses from ${filteredInstitutionOptions.find((i: any) => i.id === courseInstitutionFilter)?.name ?? "institution"}...`}
+                  </p>
+                )}
+                {!isLoadingCourses && searchCourses.length > 0 && (
+                  <ScrollArea className="h-52 border rounded-md">
+                    <div className="p-1.5 space-y-1">
+                      {searchCourses.map((course: any) => {
+                        const uni = course.university;
+                        const isAlreadyApplied = alreadyAppliedCourseIds.has(course.id);
+                        const isSelected = selectedCourseIds.includes(course.id);
+                        return (
+                          <div
+                            key={course.id}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-md ${
+                              isAlreadyApplied
+                                ? "opacity-50 cursor-not-allowed border border-transparent"
+                                : isSelected
+                                  ? "bg-primary/10 border border-primary/30 cursor-pointer hover-elevate"
+                                  : "border border-transparent cursor-pointer hover-elevate"
+                            }`}
+                            onClick={() => {
+                              if (isAlreadyApplied) return;
+                              setSelectedCourseIds((prev) =>
+                                isSelected ? prev.filter((id) => id !== course.id) : [...prev, course.id]
+                              );
+                            }}
+                            data-testid={`course-option-${course.id}`}
+                          >
+                            <Avatar className="h-9 w-9 shrink-0">
+                              <AvatarImage src={uni?.logo || undefined} alt={uni?.name || "Institution"} />
+                              <AvatarFallback className="text-xs font-medium bg-muted">
+                                {uni?.name?.slice(0, 2).toUpperCase() ?? "IN"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium leading-tight">{course.title}</p>
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                {course.level && (
+                                  <Badge variant="outline" className="text-[10px] px-1.5 no-default-active-elevate">{course.level}</Badge>
+                                )}
+                                {course.duration && (
+                                  <span className="text-xs text-muted-foreground">{course.duration}</span>
+                                )}
+                              </div>
+                            </div>
+                            {isAlreadyApplied ? (
+                              <Badge variant="secondary" className="text-[10px] shrink-0 no-default-active-elevate">Applied</Badge>
+                            ) : isSelected ? (
+                              <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                            ) : (
+                              <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                )}
+                {!isLoadingCourses && searchCourses.length === 0 && (
+                  <p className="text-xs text-muted-foreground py-1">
+                    No published courses found for this institution.
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Selected courses summary */}
             {selectedCourseIds.length > 0 && (
@@ -3191,10 +3252,11 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => {
               setIsCreateApplicationOpen(false);
+              setCourseCountryFilter("");
+              setCourseInstitutionFilter("");
               setSelectedCourseIds([]);
               setCourseSearch("");
               setApplicationNotes("");
-              setCourseInstitutionFilter("");
             }}>
               Cancel
             </Button>
