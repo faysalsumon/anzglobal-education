@@ -152,10 +152,10 @@ const EMAIL_FONT = "'Nunito', 'Open Sans', -apple-system, BlinkMacSystemFont, 'S
 function emailHeader(baseUrl: string, title: string, subtitle?: string): string {
   return `
     <tr>
-      <td style="background: linear-gradient(135deg, #3465A5 0%, #1d3f6f 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+      <td style="background-color: #ffffff; padding: 40px; border-radius: 12px 12px 0 0; text-align: center; border-bottom: 3px solid ${EMAIL_COLORS.primary};">
         <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; font-family: ${EMAIL_FONT};">${title}</h1>
-        ${subtitle ? `<p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; font-weight: 600; font-family: ${EMAIL_FONT};">${subtitle}</p>` : ''}
+        <h1 style="color: ${EMAIL_COLORS.textDark}; margin: 0; font-size: 24px; font-weight: 700; font-family: ${EMAIL_FONT};">${title}</h1>
+        ${subtitle ? `<p style="color: ${EMAIL_COLORS.primary}; margin: 8px 0 0 0; font-size: 14px; font-weight: 600; font-family: ${EMAIL_FONT};">${subtitle}</p>` : ''}
       </td>
     </tr>`;
 }
@@ -354,10 +354,10 @@ function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: str
           <td align="center">
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: ${EMAIL_COLORS.card}; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
               <tr>
-                <td style="background: linear-gradient(135deg, #3465A5 0%, #1d3f6f 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                <td style="background-color: #ffffff; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; border-bottom: 3px solid ${EMAIL_COLORS.primary};">
                   <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; font-family: ${EMAIL_FONT};">New ${isStudent ? 'Student' : 'Institution'} Inquiry</h1>
-                  <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; font-weight: 600;">Inquiry ID: ${data.id}</p>
+                  <h1 style="color: ${EMAIL_COLORS.textDark}; margin: 0; font-size: 24px; font-weight: 700; font-family: ${EMAIL_FONT};">New ${isStudent ? 'Student' : 'Institution'} Inquiry</h1>
+                  <p style="color: ${EMAIL_COLORS.primary}; margin: 8px 0 0 0; font-size: 14px; font-weight: 600;">Inquiry ID: ${data.id}</p>
                 </td>
               </tr>
               
