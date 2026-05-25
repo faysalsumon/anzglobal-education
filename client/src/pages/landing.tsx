@@ -452,7 +452,7 @@ export default function Landing() {
                 <div className="absolute -inset-1 rounded-lg bg-accent/30 blur-sm animate-pulse pointer-events-none" />
                 <Button
                   size="lg"
-                  className="relative px-10 bg-accent text-accent-foreground border-accent-border shadow-lg text-base font-semibold"
+                  className="relative px-10 bg-accent text-white border-accent-border shadow-lg text-base font-semibold"
                   onClick={openQuiz}
                   data-testid="button-hero-find-my-course"
                 >
