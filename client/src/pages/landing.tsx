@@ -447,21 +447,24 @@ export default function Landing() {
             </p>
 
             {/* Primary CTA */}
-            <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-col items-center gap-4">
               <div className="relative inline-flex">
-                <div className="absolute -inset-1 rounded-lg bg-primary/30 blur-sm animate-pulse pointer-events-none" />
+                {/* Gradient glow ring */}
+                <div className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-primary/50 via-blue-400/40 to-primary/50 blur-lg animate-pulse pointer-events-none" />
                 <Button
                   size="lg"
-                  className="relative px-10 bg-primary text-white border-primary shadow-lg text-base font-semibold"
+                  className="relative rounded-full px-12 bg-gradient-to-r from-[#3465A5] to-[#5a9fd4] text-white border-0 shadow-2xl text-base font-bold tracking-wide overflow-hidden"
                   onClick={openQuiz}
                   data-testid="button-hero-find-my-course"
                 >
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  {t("hero.matchMyCourse")}
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  {/* Shimmer sweep */}
+                  <span className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 animate-shimmer pointer-events-none" />
+                  <Sparkles className="relative mr-2 h-5 w-5" />
+                  <span className="relative">{t("hero.matchMyCourse")}</span>
+                  <ArrowRight className="relative ml-2 h-5 w-5" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground tracking-wide">
                 Takes 2 minutes &middot; No sign-up required &middot; 100% free
               </p>
             </div>
