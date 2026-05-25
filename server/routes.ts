@@ -3320,6 +3320,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           programType: data.level || existingContact.programType,
           whereToStudy: data.country || existingContact.whereToStudy,
           mobile: existingContact.mobile || data.phone || undefined,
+          budgetMin: data.budgetMin !== undefined ? data.budgetMin.toString() : existingContact.budgetMin,
+          budgetMax: data.budgetMax !== undefined ? data.budgetMax.toString() : existingContact.budgetMax,
           notes: updatedNotes,
           updatedAt: new Date(),
         }).where(eq(crmContacts.id, existingContact.id));
@@ -3349,6 +3351,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         programDiscipline: data.discipline || undefined,
         programType: data.level || undefined,
         whereToStudy: data.country || undefined,
+        budgetMin: data.budgetMin !== undefined ? data.budgetMin.toString() : undefined,
+        budgetMax: data.budgetMax !== undefined ? data.budgetMax.toString() : undefined,
         nationality: data.regionCode === "BD" ? "Bangladesh" : undefined,
         notes,
         referrer: req.headers["referer"] as string || undefined,

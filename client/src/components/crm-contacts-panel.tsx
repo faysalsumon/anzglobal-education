@@ -130,6 +130,8 @@ interface CrmContact {
   programDiscipline: string | null;
   programType: string | null;
   whereToStudy: string | null;
+  budgetMin: string | number | null;
+  budgetMax: string | number | null;
   courseId: string | null;
   universityId: string | null;
   visaStatus: string | null;
@@ -1843,6 +1845,33 @@ function ContactFormDialog({
                 data-testid="input-where-to-study"
               />
             </div>
+            <div className="col-span-2 space-y-2">
+              <Label className="text-xs text-muted-foreground">Budget Range (AUD / year)</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Minimum</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={formData.budgetMin ?? ""}
+                    onChange={(e) => setFormData({ ...formData, budgetMin: e.target.value ? Number(e.target.value) : null })}
+                    placeholder="e.g. 5000"
+                    data-testid="input-budget-min"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Maximum</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={formData.budgetMax ?? ""}
+                    onChange={(e) => setFormData({ ...formData, budgetMax: e.target.value ? Number(e.target.value) : null })}
+                    placeholder="e.g. 60000"
+                    data-testid="input-budget-max"
+                  />
+                </div>
+              </div>
+            </div>
           </TabsContent>
           <TabsContent value="address" className="space-y-4 mt-4">
             <div className="grid grid-cols-3 gap-4">
@@ -2628,7 +2657,17 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 <span className="text-sm">{format(new Date(contact.firstVisit), "MMM d, yyyy 'at' h:mm a")}</span>
               </div>
             )}
-            {!contact.courseName && !contact.entrySource && !contact.leadRating && !contact.visaStatus && !contact.country && !hasAnyContactPreferenceData && (
+            {(contact.budgetMin || contact.budgetMax) && (
+              <div className="flex justify-between items-center gap-3">
+                <span className="text-muted-foreground shrink-0">Budget Range</span>
+                <span className="text-sm font-medium" data-testid="text-budget-range">
+                  {contact.budgetMin ? `$${Number(contact.budgetMin).toLocaleString()}` : "Any"}
+                  {" — "}
+                  {contact.budgetMax ? `$${Number(contact.budgetMax).toLocaleString()} AUD/yr` : "Any"}
+                </span>
+              </div>
+            )}
+            {!contact.courseName && !contact.entrySource && !contact.leadRating && !contact.visaStatus && !contact.country && !hasAnyContactPreferenceData && !contact.budgetMin && !contact.budgetMax && (
               <p className="text-sm text-muted-foreground">No inquiry details on file</p>
             )}
           </CardContent>

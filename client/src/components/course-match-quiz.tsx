@@ -89,7 +89,7 @@ interface FilterOptions {
 type StepType = "country" | "discipline" | "level" | "budget" | "name" | "email" | "phone";
 
 const BD_STEPS: StepType[] = ["country", "discipline", "level", "budget", "name", "email", "phone"];
-const AU_STEPS: StepType[] = ["discipline", "level", "budget"];
+const AU_STEPS: StepType[] = ["discipline", "level", "budget", "name", "email", "phone"];
 
 const STEP_CONFIG: Record<StepType, { title: string; subtitle: string; icon: LucideIcon }> = {
   country:    { title: "Where do you want to study?",   subtitle: "Pick your dream study destination",              icon: Globe },
@@ -233,7 +233,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
         country: selectedCountry,
         budgetMin: budgetRange[0],
         budgetMax: budgetRange[1],
-        regionCode: "BD",
+        regionCode: regionCode || "AU",
       });
       onClose();
       navigate(buildCourseUrl());
@@ -543,7 +543,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
           autoFocus
           value={contactPhone}
           onChange={(e) => { setContactPhone(e.target.value); setContactErrors(p => ({ ...p, phone: "" })); }}
-          placeholder="+880 1XXXXXXXXX"
+          placeholder={isBD ? "+880 1XXXXXXXXX" : "+61 4XX XXX XXX"}
           data-testid="quiz-input-phone"
         />
         {contactErrors.phone && <p className="text-xs text-destructive">{contactErrors.phone}</p>}
@@ -567,8 +567,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
     }
   };
 
-  const isLastAUStep = !isBD && step === totalSteps - 1;
-  const isPhoneStep  =  isBD && currentStepType === "phone";
+  const isPhoneStep = currentStepType === "phone";
 
   return (
     <div
@@ -625,17 +624,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {isLastAUStep ? (
-              <Button
-                onClick={handleComplete}
-                className="bg-accent text-white border-accent-border"
-                data-testid="quiz-find-courses-button"
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                Match My Courses
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : isPhoneStep ? (
+            {isPhoneStep ? (
               <Button
                 onClick={handleSubmitAndNavigate}
                 disabled={submittingLead || !canProceed()}

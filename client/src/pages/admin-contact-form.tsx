@@ -83,6 +83,8 @@ interface CrmContact {
   programDiscipline: string | null;
   programType: string | null;
   whereToStudy: string | null;
+  budgetMin: number | null;
+  budgetMax: number | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -1084,6 +1086,38 @@ export default function AdminContactForm() {
                       onChange={(e) => setFormData({ ...formData, whereToStudy: e.target.value || null })}
                       placeholder="e.g. Australia, UK, Canada"
                       data-testid="input-where-to-study"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Budget Range (AUD / year)</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="budgetMin" className="text-xs text-muted-foreground">Minimum Budget</Label>
+                    <Input
+                      id="budgetMin"
+                      type="number"
+                      min={0}
+                      value={formData.budgetMin ?? ""}
+                      onChange={(e) => setFormData({ ...formData, budgetMin: e.target.value ? Number(e.target.value) : null })}
+                      placeholder="e.g. 5000"
+                      data-testid="input-budget-min"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="budgetMax" className="text-xs text-muted-foreground">Maximum Budget</Label>
+                    <Input
+                      id="budgetMax"
+                      type="number"
+                      min={0}
+                      value={formData.budgetMax ?? ""}
+                      onChange={(e) => setFormData({ ...formData, budgetMax: e.target.value ? Number(e.target.value) : null })}
+                      placeholder="e.g. 60000"
+                      data-testid="input-budget-max"
                     />
                   </div>
                 </div>
