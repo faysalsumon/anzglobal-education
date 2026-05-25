@@ -416,132 +416,90 @@ export default function Landing() {
       </Helmet>
 
       {/* Hero Section */}
-      <section id="main-content" className="relative py-16 md:py-24 lg:py-28 overflow-hidden">
-        {/* Subtle decorative elements */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none" />
-        <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] bg-primary/3 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+      <section id="main-content" className="relative py-20 md:py-28 lg:py-36 overflow-hidden">
+        {/* Decorative blurs */}
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none" />
 
         <div className="container mx-auto px-4 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            {/* Left: Content */}
-            <div className="text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary mb-6 border border-primary/20">
-                <Sparkles className="h-3.5 w-3.5" />
-                <span className="text-xs font-semibold uppercase tracking-wide" data-testid="text-app-name">ANZ Global Education - Study Abroad</span>
-              </div>
+          <div className="max-w-3xl mx-auto text-center">
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1] mb-4 min-h-[100px] sm:min-h-[120px] lg:min-h-[140px]">
-                {t("hero.findYour")}{" "}
-                <TypingText 
-                  words={heroTypingWords}
-                  className="text-primary"
-                />
-              </h1>
-
-              <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
-                {heroSubtitle}
-              </p>
-
-              {/* Primary CTA */}
-              <div className="flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start mb-8">
-                <Button 
-                  size="lg" 
-                  className="px-8 text-base bg-accent text-accent-foreground border-accent-border"
-                  onClick={openQuiz}
-                  data-testid="button-hero-find-my-course"
-                >
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  {t("hero.matchMyCourse")}
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </div>
-
-              {/* Benefit badges */}
-              {isBD ? (
-                <div className="flex flex-wrap items-center gap-4 justify-center lg:justify-start text-sm">
-                  <div className="flex items-center gap-2" data-testid="badge-hero-counseling">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10">
-                      <MessageCircle className="h-3.5 w-3.5 text-primary" />
-                    </div>
-                    <div>
-                      <span className="font-semibold text-foreground">{t("hero.freeCounseling")}</span>
-                      <p className="text-xs text-muted-foreground">{t("hero.freeCounselingDesc")}</p>
-                    </div>
-                  </div>
-                  <div className="w-px h-8 bg-border hidden sm:block" />
-                  <div className="flex items-center gap-2" data-testid="badge-hero-visa">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-accent/10">
-                      <CheckCircle className="h-3.5 w-3.5 text-accent" />
-                    </div>
-                    <div>
-                      <span className="font-semibold text-foreground">{t("hero.visaSuccess")}</span>
-                      <p className="text-xs text-muted-foreground">{t("hero.visaSuccessDescBD")}</p>
-                    </div>
-                  </div>
-                  <div className="w-px h-8 bg-border hidden sm:block" />
-                  <div className="flex items-center gap-2" data-testid="badge-hero-scholarship">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10">
-                      <Award className="h-3.5 w-3.5 text-primary" />
-                    </div>
-                    <div>
-                      <span className="font-semibold text-foreground">{t("hero.scholarship")}</span>
-                      <p className="text-xs text-muted-foreground">{t("hero.scholarshipDesc")}</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-wrap items-center gap-4 justify-center lg:justify-start text-sm">
-                  <div className="flex items-center gap-2" data-testid="badge-hero-compare">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10">
-                      <Filter className="h-3.5 w-3.5 text-primary" />
-                    </div>
-                    <div>
-                      <span className="font-semibold text-foreground" data-testid="text-hero-benefit-compare">Compare Side-by-Side</span>
-                      <p className="text-xs text-muted-foreground" data-testid="text-hero-benefit-compare-desc">Fees, scholarships & career paths</p>
-                    </div>
-                  </div>
-                  <div className="w-px h-8 bg-border hidden sm:block" />
-                  <div className="flex items-center gap-2" data-testid="badge-hero-visa">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-accent/10">
-                      <CheckCircle className="h-3.5 w-3.5 text-accent" />
-                    </div>
-                    <div>
-                      <span className="font-semibold text-foreground" data-testid="text-hero-benefit-visa">98% Visa Success</span>
-                      <p className="text-xs text-muted-foreground" data-testid="text-hero-benefit-visa-desc">Expert guidance at every step</p>
-                    </div>
-                  </div>
-                  <div className="w-px h-8 bg-border hidden sm:block" />
-                  <div className="flex items-center gap-2" data-testid="badge-hero-free">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10">
-                      <Users className="h-3.5 w-3.5 text-primary" />
-                    </div>
-                    <div>
-                      <span className="font-semibold text-foreground" data-testid="text-hero-benefit-free">100% Free for Students</span>
-                      <p className="text-xs text-muted-foreground" data-testid="text-hero-benefit-free-desc">No hidden fees, ever</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+            {/* Label */}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary mb-8 border border-primary/20">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span className="text-xs font-semibold uppercase tracking-wide" data-testid="text-app-name">ANZ Global Education — Study Abroad</span>
             </div>
 
-            {/* Right: Search */}
-            <div>
-              <Card className="border-border/50 shadow-lg">
-                <CardContent className="p-5 sm:p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                      <Sparkles className="h-4 w-4 text-primary" />
+            {/* Headline */}
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1] mb-6 min-h-[100px] sm:min-h-[120px] lg:min-h-[140px]">
+              {t("hero.findYour")}{" "}
+              <TypingText
+                words={heroTypingWords}
+                className="text-primary"
+              />
+            </h1>
+
+            {/* Subtitle */}
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
+              {isBD
+                ? t("hero.subtitle")
+                : "Answer a few quick questions and we'll match you with the right courses, universities, and destinations — for free."}
+            </p>
+
+            {/* Primary CTA */}
+            <Button
+              size="lg"
+              className="px-10 py-6 text-lg bg-accent text-accent-foreground border-accent-border shadow-lg"
+              onClick={openQuiz}
+              data-testid="button-hero-find-my-course"
+            >
+              <Sparkles className="mr-2 h-5 w-5" />
+              {t("hero.matchMyCourse")}
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+
+            {/* How it works */}
+            <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-0 sm:gap-0">
+              {[
+                { icon: MessageCircle, step: "1", label: "Answer a few questions", desc: "About your goals & budget" },
+                { icon: Sparkles,      step: "2", label: "Get matched instantly",  desc: "AI finds your best options"  },
+                { icon: CheckCircle,   step: "3", label: "Apply for free",         desc: "Expert support at every step" },
+              ].map(({ icon: Icon, step, label, desc }, i) => (
+                <div key={step} className="flex items-center">
+                  <div className="flex flex-col items-center px-6 py-4 text-center" data-testid={`hero-step-${step}`}>
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 mb-3">
+                      <Icon className="h-5 w-5 text-primary" />
                     </div>
-                    <div>
-                      <p className="font-semibold text-sm text-foreground">{t("hero.aiSearch")}</p>
-                      <p className="text-xs text-muted-foreground">{t("hero.aiSearchDesc")}</p>
-                    </div>
+                    <p className="font-semibold text-sm text-foreground">{label}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
                   </div>
-                  <NaturalLanguageSearch variant="light" />
-                </CardContent>
-              </Card>
+                  {i < 2 && (
+                    <div className="hidden sm:flex items-center text-border">
+                      <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
+
+            {/* Trust strip */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1.5" data-testid="badge-hero-free">
+                <CheckCircle className="h-4 w-4 text-primary" />
+                100% Free for Students
+              </span>
+              <span className="w-px h-4 bg-border hidden sm:block" />
+              <span className="flex items-center gap-1.5" data-testid="badge-hero-visa">
+                <Award className="h-4 w-4 text-primary" />
+                {isBD ? t("hero.visaSuccess") : "98% Visa Success Rate"}
+              </span>
+              <span className="w-px h-4 bg-border hidden sm:block" />
+              <span className="flex items-center gap-1.5" data-testid="badge-hero-counseling">
+                <Users className="h-4 w-4 text-primary" />
+                {isBD ? t("hero.freeCounseling") : "Free Expert Counseling"}
+              </span>
+            </div>
+
           </div>
         </div>
       </section>
