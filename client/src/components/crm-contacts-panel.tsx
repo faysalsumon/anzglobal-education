@@ -2557,15 +2557,107 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
           </CardContent>
         </Card>
 
-        {/* ── Inquiry Details (read-only) ───────────────────────── */}
+        {/* ── Inquiry Details ───────────────────────────────────── */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              Inquiry Details
+            <CardTitle className="text-sm font-semibold flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Inquiry Details
+              </span>
+              {editingSection !== 'inquiry' && (
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
+                  data-testid="button-edit-inquiry"
+                  onClick={() => startEdit('inquiry', {
+                    programDiscipline: contact.programDiscipline,
+                    programType: contact.programType,
+                    whereToStudy: contact.whereToStudy,
+                    budgetMin: contact.budgetMin as number | null,
+                    budgetMax: contact.budgetMax as number | null,
+                  })}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {editingSection === 'inquiry' && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Interested Discipline</Label>
+                  <Select
+                    value={sectionData.programDiscipline || ""}
+                    onValueChange={(v) => setSectionData(p => ({ ...p, programDiscipline: v || null }))}
+                  >
+                    <SelectTrigger data-testid="select-edit-discipline">
+                      <SelectValue placeholder="Select discipline" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className="z-[9999]">
+                      {[
+                        'Accounting, Business & Finance','Agriculture & Forestry','Applied Sciences & Professions',
+                        'Arts, Design & Architecture','Computer Science & IT','Education & Training',
+                        'Engineering & Technology','Environmental Studies & Earth Sciences','Hospitality, Leisure & Sports',
+                        'Humanities','Journalism & Media','Law','Medicine & Health','Short Courses','Trade',
+                      ].map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Study Level</Label>
+                  <Select
+                    value={sectionData.programType || ""}
+                    onValueChange={(v) => setSectionData(p => ({ ...p, programType: v || null }))}
+                  >
+                    <SelectTrigger data-testid="select-edit-level">
+                      <SelectValue placeholder="Select level" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className="z-[9999]">
+                      {[
+                        'Certificate I','Certificate II','Certificate III','Certificate IV','Diploma',
+                        'Advanced Diploma','Associate Degree','Bachelor Degree','Graduate Certificate',
+                        'Graduate Diploma','Masters Degree','Doctoral Degree','ELICOS','Foundation','Short Course','Other',
+                      ].map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Destination Country</Label>
+                  <Input
+                    value={sectionData.whereToStudy || ""}
+                    onChange={e => setSectionData(p => ({ ...p, whereToStudy: e.target.value || null }))}
+                    placeholder="e.g. Australia, UK, Canada"
+                    data-testid="input-edit-where-to-study"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Budget Range (AUD / year)</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={sectionData.budgetMin ?? ""}
+                      onChange={e => setSectionData(p => ({ ...p, budgetMin: e.target.value ? Number(e.target.value) : null }))}
+                      placeholder="Min e.g. 5000"
+                      data-testid="input-edit-budget-min"
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      value={sectionData.budgetMax ?? ""}
+                      onChange={e => setSectionData(p => ({ ...p, budgetMax: e.target.value ? Number(e.target.value) : null }))}
+                      placeholder="Max e.g. 60000"
+                      data-testid="input-edit-budget-max"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button type="button" size="sm" onClick={() => saveSectionMutation.mutate(sectionData)} disabled={saveSectionMutation.isPending} data-testid="button-save-inquiry">
+                    {saveSectionMutation.isPending ? "Saving..." : "Save"}
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={cancelEdit} data-testid="button-cancel-inquiry">Cancel</Button>
+                </div>
+              </div>
+            )}
             {contact.courseName && (
               <div className="flex justify-between items-center gap-3">
                 <span className="text-muted-foreground shrink-0">Course Interested In</span>
