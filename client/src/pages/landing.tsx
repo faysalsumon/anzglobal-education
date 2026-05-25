@@ -449,8 +449,6 @@ export default function Landing() {
             {/* Primary CTA */}
             <div className="flex flex-col items-center gap-4">
               <div className="relative inline-flex">
-                {/* Gradient glow ring */}
-                <div className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-primary/50 via-blue-400/40 to-primary/50 blur-lg animate-pulse pointer-events-none" />
                 <Button
                   size="lg"
                   className="relative rounded-full px-12 bg-gradient-to-r from-[#3465A5] to-[#5a9fd4] text-white border-0 shadow-2xl text-base font-bold tracking-wide overflow-hidden"
