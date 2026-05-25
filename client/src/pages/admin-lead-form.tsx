@@ -51,6 +51,8 @@ interface CrmLead {
   courseName: string | null;
   interestedIn: string | null;
   productInterest: string | null;
+  budgetMin: number | null;
+  budgetMax: number | null;
   intakeMonth: string | null;
   intakeYear: string | null;
   notes: string | null;
@@ -841,6 +843,38 @@ export default function AdminLeadForm() {
                         <SelectItem value="2027">2027</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <Label>Budget Range (AUD / year)</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="budgetMin" className="text-xs text-muted-foreground">Minimum</Label>
+                      <Input
+                        id="budgetMin"
+                        type="number"
+                        min={0}
+                        value={formData.budgetMin ?? ""}
+                        onChange={(e) => setFormData({ ...formData, budgetMin: e.target.value ? Number(e.target.value) : null })}
+                        placeholder="e.g. 5000"
+                        data-testid="input-budget-min"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="budgetMax" className="text-xs text-muted-foreground">Maximum</Label>
+                      <Input
+                        id="budgetMax"
+                        type="number"
+                        min={0}
+                        value={formData.budgetMax ?? ""}
+                        onChange={(e) => setFormData({ ...formData, budgetMax: e.target.value ? Number(e.target.value) : null })}
+                        placeholder="e.g. 60000"
+                        data-testid="input-budget-max"
+                      />
+                    </div>
                   </div>
                 </div>
               </CardContent>

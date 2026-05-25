@@ -1953,6 +1953,7 @@ router.post("/leads", requireAdmin, async (req: any, res) => {
       leadStatus, leadRating, leadCreationMethod, leadSource,
       branchId, nationality, country, city,
       courseId, universityId, courseName, interestedIn, productInterest,
+      budgetMin, budgetMax,
       notes, referrer, assignedTo, leadOwner,
     } = req.body;
 
@@ -1981,6 +1982,8 @@ router.post("/leads", requireAdmin, async (req: any, res) => {
       courseName: courseName || null,
       interestedIn: interestedIn || null,
       programDiscipline: productInterest || null,
+      budgetMin: budgetMin !== undefined ? budgetMin.toString() : null,
+      budgetMax: budgetMax !== undefined ? budgetMax.toString() : null,
       notes: notes || null,
       referrer: referrer || null,
       assignedTo: assignedTo || null,
@@ -2019,6 +2022,7 @@ router.patch("/leads/:id", requireAdmin, async (req: any, res) => {
       unitNo, street, suburb, state, postcode,
       emergencyContactName, emergencyContactMobile, emergencyContactRelationship, emergencyContactAddress,
       courseId, universityId, courseName, interestedIn, productInterest,
+      budgetMin, budgetMax,
       notes, referrer, assignedTo, leadOwner,
     } = req.body;
 
@@ -2051,6 +2055,8 @@ router.patch("/leads/:id", requireAdmin, async (req: any, res) => {
     if (courseName !== undefined) updates.courseName = courseName;
     if (interestedIn !== undefined) updates.interestedIn = interestedIn;
     if (productInterest !== undefined) updates.programDiscipline = productInterest;
+    if (budgetMin !== undefined) updates.budgetMin = budgetMin !== null ? budgetMin.toString() : null;
+    if (budgetMax !== undefined) updates.budgetMax = budgetMax !== null ? budgetMax.toString() : null;
     if (notes !== undefined) updates.notes = notes;
     if (referrer !== undefined) updates.referrer = referrer;
     if (assignedTo !== undefined) updates.assignedTo = assignedTo;
