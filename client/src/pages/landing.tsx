@@ -447,16 +447,24 @@ export default function Landing() {
             </p>
 
             {/* Primary CTA */}
-            <Button
-              size="lg"
-              className="px-10 py-6 text-lg bg-accent text-accent-foreground border-accent-border shadow-lg"
-              onClick={openQuiz}
-              data-testid="button-hero-find-my-course"
-            >
-              <Sparkles className="mr-2 h-5 w-5" />
-              {t("hero.matchMyCourse")}
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative inline-flex">
+                <div className="absolute -inset-1 rounded-lg bg-accent/30 blur-sm animate-pulse pointer-events-none" />
+                <Button
+                  size="lg"
+                  className="relative px-10 bg-accent text-accent-foreground border-accent-border shadow-lg text-base font-semibold"
+                  onClick={openQuiz}
+                  data-testid="button-hero-find-my-course"
+                >
+                  <Sparkles className="mr-2 h-5 w-5" />
+                  {t("hero.matchMyCourse")}
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Takes 2 minutes &middot; No sign-up required &middot; 100% free
+              </p>
+            </div>
 
             {/* How it works */}
             <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-0 sm:gap-0">
