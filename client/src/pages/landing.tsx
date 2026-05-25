@@ -591,7 +591,7 @@ export default function Landing() {
                       <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">{dest.name}</h3>
                       <p className="text-sm text-muted-foreground mb-3">{dest.description}</p>
                       {dest.badge && (
-                        <Badge className="bg-accent text-accent-foreground border-accent-border">{dest.badge.label}</Badge>
+                        <Badge className="bg-accent text-white border-accent-border">{dest.badge.label}</Badge>
                       )}
                     </CardContent>
                   </Card>
@@ -602,7 +602,7 @@ export default function Landing() {
             <div className="text-center mt-10">
               <Button 
                 size="lg"
-                className="px-8 bg-accent text-accent-foreground border-accent-border"
+                className="px-8 bg-accent text-white border-accent-border"
                 onClick={() => window.dispatchEvent(new CustomEvent("open-course-quiz"))}
                 data-testid="button-bd-find-course"
               >
@@ -802,7 +802,7 @@ export default function Landing() {
                           </div>
                         )}
                         <div 
-                          className="bg-accent text-accent-foreground px-2 py-1 rounded-md text-xs font-medium"
+                          className="bg-accent text-white px-2 py-1 rounded-md text-xs font-medium"
                           data-testid={`badge-featured-course-${course.id}`}
                         >
                           {t("landing.featured")}
@@ -877,7 +877,7 @@ export default function Landing() {
               <Button 
                 asChild 
                 size="lg"
-                className="px-8 bg-accent text-accent-foreground border-accent-border"
+                className="px-8 bg-accent text-white border-accent-border"
                 data-testid="button-view-all-courses"
               >
                 <Link href="/courses">
@@ -975,7 +975,7 @@ export default function Landing() {
               <Button 
                 asChild
                 size="lg" 
-                className="px-8 bg-accent text-accent-foreground border-accent-border"
+                className="px-8 bg-accent text-white border-accent-border"
                 data-testid="button-student-get-started"
               >
                 <Link href="/auth">
@@ -1144,7 +1144,7 @@ export default function Landing() {
               </p>
               <div className="flex flex-wrap items-center justify-center gap-4">
                 <Link href="/courses" data-testid="link-explore-courses-video">
-                  <Button size="lg" className="gap-2 shadow-lg bg-accent text-accent-foreground border-accent-border" data-testid="button-explore-courses-video">
+                  <Button size="lg" className="gap-2 shadow-lg bg-accent text-white border-accent-border" data-testid="button-explore-courses-video">
                     <Search className="h-5 w-5" />
                     {t("landing.exploreCourses")}
                   </Button>
@@ -1245,7 +1245,7 @@ export default function Landing() {
             <Button 
               asChild
               size="lg" 
-              className="px-8 bg-accent text-accent-foreground border-accent-border"
+              className="px-8 bg-accent text-white border-accent-border"
               data-testid="button-institution-partner"
             >
               <Link href="/auth">
