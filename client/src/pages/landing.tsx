@@ -500,14 +500,14 @@ export default function Landing() {
                 100% Free for Students
               </span>
               <span className="w-px h-4 bg-border hidden sm:block" />
-              <span className="flex items-center gap-1.5" data-testid="badge-hero-visa">
-                <Award className="h-4 w-4 text-primary" />
-                {isBD ? t("hero.visaSuccess") : "98% Visa Success Rate"}
+              <span className="flex items-center gap-1.5" data-testid="badge-hero-match">
+                <Sparkles className="h-4 w-4 text-primary" />
+                {isBD ? t("hero.visaSuccess") : "Quick Match in 2 Minutes"}
               </span>
               <span className="w-px h-4 bg-border hidden sm:block" />
-              <span className="flex items-center gap-1.5" data-testid="badge-hero-counseling">
+              <span className="flex items-center gap-1.5" data-testid="badge-hero-support">
                 <Users className="h-4 w-4 text-primary" />
-                {isBD ? t("hero.freeCounseling") : "Free Expert Counseling"}
+                {isBD ? t("hero.freeCounseling") : "Dedicated Support Team"}
               </span>
             </div>
 
