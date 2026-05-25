@@ -1680,7 +1680,7 @@ export default function Landing() {
                 <Button 
                   asChild
                   size="lg" 
-                  className="w-full sm:w-auto bg-accent text-accent-foreground font-semibold shadow-lg border-accent-border" 
+                  className="w-full sm:w-auto bg-accent text-white font-semibold shadow-lg border-accent-border" 
                   data-testid="button-institution-cta"
                 >
                   <Link href="/auth">
