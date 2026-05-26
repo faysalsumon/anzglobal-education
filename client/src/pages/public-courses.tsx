@@ -443,6 +443,11 @@ export default function PublicCourses() {
   const pendingUrlHydrationRef = useRef<FilterSnapshot | null>(null);
   const previousUrlSnapshotRef = useRef<FilterSnapshot | null>(null);
 
+  // Quiz lead confirmation banner
+  const [quizLeadFirstName, setQuizLeadFirstName] = useState<string | null>(null);
+  const [showQuizBanner, setShowQuizBanner] = useState(false);
+  const quizBannerDecidedRef = useRef(false);
+
   const { isAuthenticated, isStudent } = useAuth();
   const { toast } = useToast();
   const { region, regionCode } = useRegion();
@@ -1025,6 +1030,30 @@ export default function PublicCourses() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, subject, discipline, subDiscipline, framework, level, country, campusState, universityFilter, campusCity, minFees, maxFees, feeCurrency]);
+
+  // Read quiz lead from sessionStorage on mount (without clearing, so no-results path can still use it)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("quiz_lead_submitted");
+      if (raw) {
+        const { firstName } = JSON.parse(raw) as { firstName: string; submittedAt: number };
+        setQuizLeadFirstName(firstName || null);
+      }
+    } catch {
+      // ignore malformed entries
+    }
+  }, []);
+
+  // Once courses finish loading, decide whether to show banner (only when results ARE found)
+  useEffect(() => {
+    if (isLoading || quizBannerDecidedRef.current || quizLeadFirstName === null) return;
+    quizBannerDecidedRef.current = true;
+    if (filteredCourses.length > 0) {
+      setShowQuizBanner(true);
+      sessionStorage.removeItem("quiz_lead_submitted");
+    }
+    // If no results, CourseSearchLeadCapture will handle the sessionStorage entry itself
+  }, [isLoading, quizLeadFirstName, filteredCourses.length]);
 
   // Sort filtered courses
   const sortedCourses = useMemo(() => {
@@ -1827,6 +1856,31 @@ export default function PublicCourses() {
 
             {/* Main Content Area */}
             <div className="flex-1 min-w-0 space-y-4">
+              {/* Quiz lead confirmation banner */}
+              {showQuizBanner && (
+                <div
+                  className="flex items-start gap-3 rounded-md border border-primary/20 bg-primary/5 px-4 py-3 text-sm"
+                  role="status"
+                  data-testid="banner-quiz-confirmation"
+                >
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" aria-hidden="true" />
+                  <p className="flex-1 text-foreground">
+                    <span className="font-semibold">
+                      {quizLeadFirstName ? `Thanks, ${quizLeadFirstName}!` : "Thanks!"}
+                    </span>{" "}
+                    Here are your matches. We'll also reach out to help you find the right course.
+                  </p>
+                  <button
+                    onClick={() => setShowQuizBanner(false)}
+                    aria-label="Dismiss confirmation"
+                    className="ml-1 flex-shrink-0 text-muted-foreground opacity-70 hover:opacity-100"
+                    data-testid="button-dismiss-quiz-banner"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
               {/* Results Header with Sort */}
               <div className="flex items-center justify-between gap-4">
                 <p className="text-sm text-muted-foreground" data-testid="results-count">
