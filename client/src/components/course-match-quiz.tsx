@@ -235,6 +235,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
         budgetMax: budgetRange[1],
         regionCode: regionCode || "AU",
       });
+      sessionStorage.setItem("quiz_lead_submitted", JSON.stringify({ firstName: contactFirstName.trim(), submittedAt: Date.now() }));
       onClose();
       navigate(buildCourseUrl());
     } catch {

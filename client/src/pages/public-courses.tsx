@@ -223,6 +223,21 @@ function CourseSearchLeadCapture({
   const { toast } = useToast();
   const { regionCode } = useRegion();
   const [submitted, setSubmitted] = useState(false);
+  const [submittedName, setSubmittedName] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("quiz_lead_submitted");
+      if (raw) {
+        sessionStorage.removeItem("quiz_lead_submitted");
+        const { firstName } = JSON.parse(raw) as { firstName: string; submittedAt: number };
+        setSubmittedName(firstName || null);
+        setSubmitted(true);
+      }
+    } catch {
+      // ignore malformed sessionStorage entries
+    }
+  }, []);
 
   const form = useForm<CourseSearchLeadForm>({
     resolver: zodResolver(courseSearchLeadSchema),
@@ -257,9 +272,13 @@ function CourseSearchLeadCapture({
       <Card>
         <CardContent className="py-12 text-center">
           <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-primary opacity-80" />
-          <p className="text-lg font-semibold mb-2">Thank you!</p>
+          <p className="text-lg font-semibold mb-2">
+            {submittedName ? `Thanks, ${submittedName}!` : "Thank you!"}
+          </p>
           <p className="text-sm text-muted-foreground">
-            We've received your request and an education consultant will be in touch with you shortly.
+            {submittedName
+              ? "We already have your details — an education consultant will be in touch with you shortly."
+              : "We've received your request and an education consultant will be in touch with you shortly."}
           </p>
         </CardContent>
       </Card>
