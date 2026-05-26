@@ -127,7 +127,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
   const [contactFirstName, setContactFirstName] = useState("");
   const [contactLastName, setContactLastName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
-  const [contactPhone, setContactPhone] = useState("+880 ");
+  const [contactPhone, setContactPhone] = useState(isBD ? "+880 " : "+61 ");
   const [contactErrors, setContactErrors] = useState<Record<string, string>>({});
   const [submittingLead, setSubmittingLead] = useState(false);
 
