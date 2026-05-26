@@ -279,7 +279,7 @@ export function ApplicationDetailsPanel({
   const [addCourseMode, setAddCourseMode] = useState<"search" | "manual">("search");
   const [manualCourseNameToAdd, setManualCourseNameToAdd] = useState("");
   const [manualInstitutionNameToAdd, setManualInstitutionNameToAdd] = useState("");
-  const [manualCountryToAdd, setManualCountryToAdd] = useState("");
+  const [manualCountryToAdd, setManualCountryToAdd] = useState("Australia");
 
   const { data: consultantsData } = useQuery<{ consultants: Consultant[] }>({
     queryKey: ["/api/admin/consultants"],
@@ -1454,7 +1454,7 @@ export function ApplicationDetailsPanel({
           setAddCourseMode("search");
           setManualCourseNameToAdd("");
           setManualInstitutionNameToAdd("");
-          setManualCountryToAdd("");
+          setManualCountryToAdd("Australia");
         }
       }}>
         <DialogContent data-testid="dialog-add-course" className="max-w-lg">
@@ -1629,7 +1629,7 @@ export function ApplicationDetailsPanel({
             </div>
           </div>}
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setAddCourseDialogOpen(false); setAddCourseMode("search"); setManualCourseNameToAdd(""); setManualInstitutionNameToAdd(""); setManualCountryToAdd(""); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setAddCourseDialogOpen(false); setAddCourseMode("search"); setManualCourseNameToAdd(""); setManualInstitutionNameToAdd(""); setManualCountryToAdd("Australia"); }}>Cancel</Button>
             <Button 
               onClick={() => {
                 if (addCourseMode === "search") {

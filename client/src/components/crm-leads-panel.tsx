@@ -1113,7 +1113,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
   const [externalEntries, setExternalEntries] = useState<{ courseName: string; institutionName: string; country?: string }[]>([]);
   const [manualCourseName, setManualCourseName] = useState("");
   const [manualInstitutionName, setManualInstitutionName] = useState("");
-  const [manualCountry, setManualCountry] = useState("");
+  const [manualCountry, setManualCountry] = useState("Australia");
 
   const startEdit = (section: LeadEditSection, fields: Partial<CrmLead>) => {
     setEditingSection(section);
@@ -1268,7 +1268,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
       setExternalEntries([]);
       setManualCourseName("");
       setManualInstitutionName("");
-      setManualCountry("");
+      setManualCountry("Australia");
       setCourseEntryMode("search");
     } catch {
       // error toast already shown
@@ -2057,7 +2057,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
           setExternalEntries([]);
           setManualCourseName("");
           setManualInstitutionName("");
-          setManualCountry("");
+          setManualCountry("Australia");
           setCourseEntryMode("search");
         }
       }}>
@@ -2349,7 +2349,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
                     setExternalEntries(prev => [...prev, { courseName: manualCourseName.trim(), institutionName: manualInstitutionName.trim(), country: manualCountry || undefined }]);
                     setManualCourseName("");
                     setManualInstitutionName("");
-                    setManualCountry("");
+                    setManualCountry("Australia");
                   }}
                   data-testid="button-add-external-entry"
                 >
@@ -2403,7 +2403,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
               setExternalEntries([]);
               setManualCourseName("");
               setManualInstitutionName("");
-              setManualCountry("");
+              setManualCountry("Australia");
               setCourseEntryMode("search");
             }}>
               Cancel
