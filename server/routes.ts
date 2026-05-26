@@ -7711,6 +7711,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select({
           id: applicationCourses.id,
           courseId: applicationCourses.courseId,
+          externalCourseName: applicationCourses.externalCourseName,
+          externalInstitutionName: applicationCourses.externalInstitutionName,
           isPrimary: applicationCourses.isPrimary,
           notes: applicationCourses.notes,
           displayOrder: applicationCourses.displayOrder,
@@ -7746,10 +7748,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/applications/:id/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { courseId, notes } = req.body;
+      const { courseId, externalCourseName, externalInstitutionName, notes } = req.body;
       
-      if (!courseId) {
-        return res.status(400).json({ message: "Course ID is required" });
+      if (!courseId && (!externalCourseName || !externalInstitutionName)) {
+        return res.status(400).json({ message: "Either courseId or both externalCourseName and externalInstitutionName are required" });
       }
       
       const application = await storage.getApplicationById(req.params.id);
@@ -7757,27 +7759,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Application not found" });
       }
       
-      // Verify the course exists and is published
-      const course = await storage.getCourseById(courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      if (course.publishStatus !== 'published') {
-        return res.status(400).json({ message: "Can only add published courses" });
-      }
-      
-      // Check if course already in application
-      const existing = await db
-        .select({ id: applicationCourses.id })
-        .from(applicationCourses)
-        .where(and(
-          eq(applicationCourses.applicationId, req.params.id),
-          eq(applicationCourses.courseId, courseId)
-        ))
-        .limit(1);
-      
-      if (existing.length > 0) {
-        return res.status(400).json({ message: "Course already added to this application" });
+      if (courseId) {
+        // Verify the course exists and is published
+        const course = await storage.getCourseById(courseId);
+        if (!course) {
+          return res.status(404).json({ message: "Course not found" });
+        }
+        if (course.publishStatus !== 'published') {
+          return res.status(400).json({ message: "Can only add published courses" });
+        }
+        
+        // Check if course already in application
+        const existing = await db
+          .select({ id: applicationCourses.id })
+          .from(applicationCourses)
+          .where(and(
+            eq(applicationCourses.applicationId, req.params.id),
+            eq(applicationCourses.courseId, courseId)
+          ))
+          .limit(1);
+        
+        if (existing.length > 0) {
+          return res.status(400).json({ message: "Course already added to this application" });
+        }
       }
       
       // Get current max display order
@@ -7787,10 +7791,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(applicationCourses.applicationId, req.params.id))
         .then(rows => rows[0]?.maxOrder ?? -1);
       
-      // Add the course
+      // Add the course (platform or external)
       const [newCourse] = await db.insert(applicationCourses).values({
         applicationId: req.params.id,
-        courseId,
+        courseId: courseId || null,
+        externalCourseName: courseId ? null : (externalCourseName || null),
+        externalInstitutionName: courseId ? null : (externalInstitutionName || null),
         notes,
         displayOrder: maxOrder + 1,
         addedBy: userId,
@@ -7857,6 +7863,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error removing course from application:", error);
       res.status(500).json({ message: "Failed to remove course from application" });
+    }
+  });
+
+  // Remove a course entry by junction table row ID (supports external/manual entries)
+  app.delete("/api/applications/:id/course-entries/:entryId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id, entryId } = req.params;
+      
+      const application = await storage.getApplicationById(id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      const courseEntry = await db
+        .select()
+        .from(applicationCourses)
+        .where(and(
+          eq(applicationCourses.applicationId, id),
+          eq(applicationCourses.id, entryId)
+        ))
+        .limit(1)
+        .then(rows => rows[0]);
+      
+      if (!courseEntry) {
+        return res.status(404).json({ message: "Course entry not found in application" });
+      }
+      
+      const courseCount = await db
+        .select({ count: dsql<number>`count(*)` })
+        .from(applicationCourses)
+        .where(eq(applicationCourses.applicationId, id))
+        .then(rows => rows[0]?.count ?? 0);
+      
+      if (courseCount <= 1) {
+        return res.status(400).json({ message: "Cannot remove the last course from an application" });
+      }
+      
+      await db.delete(applicationCourses)
+        .where(eq(applicationCourses.id, entryId));
+      
+      if (courseEntry.isPrimary) {
+        await db
+          .update(applicationCourses)
+          .set({ isPrimary: true })
+          .where(eq(applicationCourses.applicationId, id))
+          .orderBy(applicationCourses.displayOrder);
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing course entry from application:", error);
+      res.status(500).json({ message: "Failed to remove course entry from application" });
     }
   });
   

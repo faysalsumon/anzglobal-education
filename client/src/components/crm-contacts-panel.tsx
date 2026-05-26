@@ -2111,6 +2111,10 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
   const [applicationNotes, setApplicationNotes] = useState("");
   const [courseInstitutionFilter, setCourseInstitutionFilter] = useState("");
   const [courseCountryFilter, setCourseCountryFilter] = useState("");
+  const [courseEntryMode, setCourseEntryMode] = useState<"search" | "manual">("search");
+  const [externalEntries, setExternalEntries] = useState<{ courseName: string; institutionName: string }[]>([]);
+  const [manualCourseName, setManualCourseName] = useState("");
+  const [manualInstitutionName, setManualInstitutionName] = useState("");
 
   // Inline section editing
   const [editingSection, setEditingSection] = useState<EditSection>(null);
@@ -2269,7 +2273,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
   });
 
   const createApplicationMutation = useMutation({
-    mutationFn: async (data: { courseIds: string[]; notes?: string }) => {
+    mutationFn: async (data: { courseIds?: string[]; externalEntries?: { courseName: string; institutionName: string }[]; notes?: string }) => {
       return apiRequest("POST", `/api/crm/contacts/${contact.id}/applications`, data);
     },
     onError: (error: any) => {
@@ -2279,10 +2283,14 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
 
   const handleCreateApplication = async () => {
     const coursesToCreate = selectedCourseIds.filter((id) => !alreadyAppliedCourseIds.has(id));
-    if (!coursesToCreate.length) return;
+    if (!coursesToCreate.length && !externalEntries.length) return;
     try {
-      await createApplicationMutation.mutateAsync({ courseIds: coursesToCreate, notes: applicationNotes || undefined });
-      const n = coursesToCreate.length;
+      const payload: { courseIds?: string[]; externalEntries?: { courseName: string; institutionName: string }[]; notes?: string } = {};
+      if (coursesToCreate.length) payload.courseIds = coursesToCreate;
+      if (externalEntries.length) payload.externalEntries = externalEntries;
+      if (applicationNotes) payload.notes = applicationNotes;
+      await createApplicationMutation.mutateAsync(payload);
+      const n = coursesToCreate.length + externalEntries.length;
       toast({ title: `Application created${n > 1 ? ` with ${n} courses` : ""} successfully` });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts", contact.id, "applications"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
@@ -2291,6 +2299,10 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
       setCourseSearch("");
       setApplicationNotes("");
       setCourseInstitutionFilter("");
+      setExternalEntries([]);
+      setManualCourseName("");
+      setManualInstitutionName("");
+      setCourseEntryMode("search");
     } catch {
       // error toast already shown by mutation onError
     }
@@ -3120,7 +3132,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                               </>
                             )}
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Badge 
                               variant={
                                 app.status === 'accepted' ? 'default' :
@@ -3134,6 +3146,9 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                             <Badge variant="outline">
                               {app.currentStage}
                             </Badge>
+                            {(app as any).hasExternalCourses && (
+                              <Badge variant="outline" className="text-[10px] px-1.5">External</Badge>
+                            )}
                             {app.createdAt && (
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
@@ -3268,6 +3283,10 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
           setSelectedCourseIds([]);
           setCourseSearch("");
           setApplicationNotes("");
+          setExternalEntries([]);
+          setManualCourseName("");
+          setManualInstitutionName("");
+          setCourseEntryMode("search");
         }
       }}>
         <DialogContent className="max-w-lg">
@@ -3278,6 +3297,12 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <Tabs value={courseEntryMode} onValueChange={(v) => setCourseEntryMode(v as "search" | "manual")}>
+              <TabsList className="w-full grid grid-cols-2">
+                <TabsTrigger value="search">Search Courses</TabsTrigger>
+                <TabsTrigger value="manual">Manual Entry</TabsTrigger>
+              </TabsList>
+              <TabsContent value="search" className="space-y-3 mt-2">
 
             {/* Step 1 — Country */}
             <div className="space-y-1.5">
@@ -3502,6 +3527,68 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
               </div>
             )}
 
+              </TabsContent>
+              <TabsContent value="manual" className="space-y-3 mt-2">
+                <p className="text-xs text-muted-foreground">
+                  Enter the institution and course name for a course not in the platform catalog.
+                </p>
+                <div className="space-y-1.5">
+                  <Label>Institution Name *</Label>
+                  <Input
+                    placeholder="e.g. University of Melbourne"
+                    value={manualInstitutionName}
+                    onChange={(e) => setManualInstitutionName(e.target.value)}
+                    data-testid="input-manual-institution"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Course Name *</Label>
+                  <Input
+                    placeholder="e.g. Master of Data Science"
+                    value={manualCourseName}
+                    onChange={(e) => setManualCourseName(e.target.value)}
+                    data-testid="input-manual-course"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!manualCourseName.trim() || !manualInstitutionName.trim()}
+                  onClick={() => {
+                    setExternalEntries(prev => [...prev, { courseName: manualCourseName.trim(), institutionName: manualInstitutionName.trim() }]);
+                    setManualCourseName("");
+                    setManualInstitutionName("");
+                  }}
+                  data-testid="button-add-external-entry"
+                >
+                  <Plus className="h-3 w-3 mr-1" />Add to List
+                </Button>
+                {externalEntries.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-medium text-muted-foreground">External Entries ({externalEntries.length})</span>
+                    <div className="space-y-1">
+                      {externalEntries.map((entry, idx) => (
+                        <div key={idx} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md border text-sm">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{entry.courseName}</p>
+                            <p className="text-xs text-muted-foreground truncate">{entry.institutionName}</p>
+                          </div>
+                          <button
+                            type="button"
+                            className="shrink-0 opacity-60 hover:opacity-100"
+                            onClick={() => setExternalEntries(prev => prev.filter((_, i) => i !== idx))}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+
             <div className="space-y-2">
               <Label>Notes (Optional)</Label>
               <Textarea
@@ -3522,13 +3609,17 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
               setSelectedCourseIds([]);
               setCourseSearch("");
               setApplicationNotes("");
+              setExternalEntries([]);
+              setManualCourseName("");
+              setManualInstitutionName("");
+              setCourseEntryMode("search");
             }}>
               Cancel
             </Button>
             <Button
               type="button"
               onClick={handleCreateApplication}
-              disabled={!selectedCourseIds.length || createApplicationMutation.isPending}
+              disabled={(!selectedCourseIds.length && !externalEntries.length) || createApplicationMutation.isPending}
               data-testid="button-confirm-create-application"
             >
               {createApplicationMutation.isPending

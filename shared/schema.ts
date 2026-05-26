@@ -2188,7 +2188,9 @@ export const applications = pgTable("applications", {
 export const applicationCourses = pgTable("application_courses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   applicationId: varchar("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
-  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  courseId: varchar("course_id").references(() => courses.id, { onDelete: "set null" }),
+  externalCourseName: varchar("external_course_name"),
+  externalInstitutionName: varchar("external_institution_name"),
   
   // Course-specific details within the application
   isPrimary: boolean("is_primary").default(false), // First/main course in the package
@@ -2202,7 +2204,6 @@ export const applicationCourses = pgTable("application_courses", {
 }, (table) => [
   index("app_courses_application_idx").on(table.applicationId),
   index("app_courses_course_idx").on(table.courseId),
-  uniqueIndex("app_courses_unique").on(table.applicationId, table.courseId),
 ]);
 
 // Application stage history for tracking all stage transitions

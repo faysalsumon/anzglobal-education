@@ -47,7 +47,9 @@ import { DocumentPreviewModal } from "@/components/document-preview-modal";
 
 interface ApplicationCourse {
   id: string;
-  courseId: string;
+  courseId: string | null;
+  externalCourseName: string | null;
+  externalInstitutionName: string | null;
   isPrimary: boolean;
   notes: string | null;
   displayOrder: number;
@@ -59,12 +61,12 @@ interface ApplicationCourse {
     duration: string | null;
     fees: string | null;
     universityId: string;
-  };
+  } | null;
   university: {
     id: string;
     name: string;
     logo: string | null;
-  };
+  } | null;
 }
 
 interface ApplicationDetailsPanelProps {
@@ -273,6 +275,9 @@ export function ApplicationDetailsPanel({
   const [selectedCourseToAdd, setSelectedCourseToAdd] = useState("");
   const [courseSearchQuery, setCourseSearchQuery] = useState("");
   const [addCourseInstitutionFilter, setAddCourseInstitutionFilter] = useState("");
+  const [addCourseMode, setAddCourseMode] = useState<"search" | "manual">("search");
+  const [manualCourseNameToAdd, setManualCourseNameToAdd] = useState("");
+  const [manualInstitutionNameToAdd, setManualInstitutionNameToAdd] = useState("");
 
   const { data: consultantsData } = useQuery<{ consultants: Consultant[] }>({
     queryKey: ["/api/admin/consultants"],
@@ -476,14 +481,17 @@ export function ApplicationDetailsPanel({
   
   // Mutation to add a course to the application
   const addCourseMutation = useMutation({
-    mutationFn: async (courseId: string) => {
-      return apiRequest("POST", `/api/applications/${application.id}/courses`, { courseId });
+    mutationFn: async (payload: { courseId?: string; externalCourseName?: string; externalInstitutionName?: string }) => {
+      return apiRequest("POST", `/api/applications/${application.id}/courses`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/applications", application.id, "courses"] });
       toast({ title: "Course Added", description: "Course has been added to the application" });
       setAddCourseDialogOpen(false);
       setSelectedCourseToAdd("");
+      setManualCourseNameToAdd("");
+      setManualInstitutionNameToAdd("");
+      setAddCourseMode("search");
     },
     onError: (error: any) => {
       toast({ title: "Failed to Add Course", description: error.message, variant: "destructive" });
@@ -492,8 +500,8 @@ export function ApplicationDetailsPanel({
   
   // Mutation to remove a course from the application
   const removeCourseMutation = useMutation({
-    mutationFn: async (courseId: string) => {
-      return apiRequest("DELETE", `/api/applications/${application.id}/courses/${courseId}`);
+    mutationFn: async (entryId: string) => {
+      return apiRequest("DELETE", `/api/applications/${application.id}/course-entries/${entryId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/applications", application.id, "courses"] });
@@ -669,19 +677,28 @@ export function ApplicationDetailsPanel({
                 {coursesLoading ? (
                   <p className="text-xs text-muted-foreground">Loading courses...</p>
                 ) : applicationCourses.length > 0 ? (
-                  applicationCourses.map((appCourse, index) => (
+                  applicationCourses.map((appCourse, index) => {
+                    const isExternal = !appCourse.courseId;
+                    const displayName = isExternal ? appCourse.externalCourseName : appCourse.course?.title;
+                    const displayInstitution = isExternal ? appCourse.externalInstitutionName : appCourse.university?.name;
+                    return (
                     <div key={appCourse.id} className="flex items-start justify-between gap-3 p-3 rounded-md border" data-testid={`course-item-${index}`}>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="text-sm font-medium">{appCourse.course.title}</p>
+                          <p className="text-sm font-medium">{displayName ?? "(Untitled)"}</p>
                           {appCourse.isPrimary && (
                             <Badge variant="secondary" className="text-[10px] px-1.5 no-default-active-elevate">Primary</Badge>
                           )}
+                          {isExternal && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 no-default-active-elevate">External</Badge>
+                          )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                          <Building className="h-3 w-3 shrink-0" />{appCourse.university.name}
-                        </p>
-                        {appCourse.course.level && (
+                        {displayInstitution && (
+                          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <Building className="h-3 w-3 shrink-0" />{displayInstitution}
+                          </p>
+                        )}
+                        {!isExternal && appCourse.course?.level && (
                           <p className="text-xs text-muted-foreground/70 mt-0.5">{appCourse.course.level}</p>
                         )}
                       </div>
@@ -690,7 +707,7 @@ export function ApplicationDetailsPanel({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeCourseMutation.mutate(appCourse.courseId)}
+                          onClick={() => removeCourseMutation.mutate(appCourse.id)}
                           disabled={removeCourseMutation.isPending}
                           data-testid={`button-remove-course-${index}`}
                         >
@@ -698,7 +715,8 @@ export function ApplicationDetailsPanel({
                         </Button>
                       )}
                     </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="p-3 rounded-md border">
                     <p className="text-sm font-medium">{course.title}</p>
@@ -1428,16 +1446,27 @@ export function ApplicationDetailsPanel({
           setCourseSearchQuery("");
           setSelectedCourseToAdd("");
           setAddCourseInstitutionFilter("");
+          setAddCourseMode("search");
+          setManualCourseNameToAdd("");
+          setManualInstitutionNameToAdd("");
         }
       }}>
         <DialogContent data-testid="dialog-add-course" className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Add Course to Application</DialogTitle>
             <DialogDescription>
-              Search for a published course to add to this application package.
+              Search for a published platform course, or enter one manually.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="px-6 pb-2">
+            <Tabs value={addCourseMode} onValueChange={(v) => { setAddCourseMode(v as "search" | "manual"); setSelectedCourseToAdd(""); }} className="w-full">
+              <TabsList className="w-full grid grid-cols-2">
+                <TabsTrigger value="search">Search Courses</TabsTrigger>
+                <TabsTrigger value="manual">Manual Entry</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          {addCourseMode === "search" && <div className="space-y-4 py-2 px-6">
 
             {/* Institution filter */}
             <div className="space-y-1.5">
@@ -1551,12 +1580,41 @@ export function ApplicationDetailsPanel({
                 </div>
               </div>
             )}
-          </div>
+          </div>}
+          {addCourseMode === "manual" && <div className="space-y-4 py-2 px-6">
+            <p className="text-xs text-muted-foreground">
+              Enter the institution and course name for a course not in the platform catalog.
+            </p>
+            <div className="space-y-1.5">
+              <Label>Institution Name *</Label>
+              <Input
+                placeholder="e.g. University of Melbourne"
+                value={manualInstitutionNameToAdd}
+                onChange={(e) => setManualInstitutionNameToAdd(e.target.value)}
+                data-testid="input-manual-institution-add"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Course Name *</Label>
+              <Input
+                placeholder="e.g. Master of Data Science"
+                value={manualCourseNameToAdd}
+                onChange={(e) => setManualCourseNameToAdd(e.target.value)}
+                data-testid="input-manual-course-add"
+              />
+            </div>
+          </div>}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddCourseDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setAddCourseDialogOpen(false); setAddCourseMode("search"); setManualCourseNameToAdd(""); setManualInstitutionNameToAdd(""); }}>Cancel</Button>
             <Button 
-              onClick={() => addCourseMutation.mutate(selectedCourseToAdd)}
-              disabled={!selectedCourseToAdd || addCourseMutation.isPending}
+              onClick={() => {
+                if (addCourseMode === "search") {
+                  addCourseMutation.mutate({ courseId: selectedCourseToAdd });
+                } else {
+                  addCourseMutation.mutate({ externalCourseName: manualCourseNameToAdd, externalInstitutionName: manualInstitutionNameToAdd });
+                }
+              }}
+              disabled={addCourseMutation.isPending || (addCourseMode === "search" ? !selectedCourseToAdd : !manualCourseNameToAdd.trim() || !manualInstitutionNameToAdd.trim())}
               data-testid="button-confirm-add-course"
             >
               <Plus className="h-4 w-4 mr-1" />

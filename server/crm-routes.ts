@@ -16,7 +16,7 @@ import {
   contactNotes,
   leadCoursePreferences,
 } from "@shared/schema";
-import { eq, desc, and, or, ilike, count, isNull, aliasedTable, ne, sql, inArray, type SQL } from "drizzle-orm";
+import { eq, desc, and, or, ilike, count, isNull, isNotNull, aliasedTable, ne, sql, inArray, type SQL } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
 import multer from "multer";
 import path from "path";
@@ -1375,25 +1375,45 @@ router.get("/contacts/:id/applications", requireAdmin, async (req: any, res) => 
       })
     );
 
-    // Fetch all course IDs per application from the junction table
-    // so the frontend can correctly identify already-applied courses
+    // Fetch all course entries per application (platform + external) from the junction table
     const allAppIds = applicationsWithConsultants.map(a => a.id);
-    let courseMappings: { applicationId: string; courseId: string }[] = [];
+    let courseMappings: { applicationId: string; courseId: string | null; externalCourseName: string | null; externalInstitutionName: string | null; isPrimary: boolean | null }[] = [];
     if (allAppIds.length > 0) {
       courseMappings = await db
-        .select({ applicationId: applicationCourses.applicationId, courseId: applicationCourses.courseId })
+        .select({
+          applicationId: applicationCourses.applicationId,
+          courseId: applicationCourses.courseId,
+          externalCourseName: applicationCourses.externalCourseName,
+          externalInstitutionName: applicationCourses.externalInstitutionName,
+          isPrimary: applicationCourses.isPrimary,
+        })
         .from(applicationCourses)
-        .where(inArray(applicationCourses.applicationId, allAppIds));
+        .where(inArray(applicationCourses.applicationId, allAppIds))
+        .orderBy(applicationCourses.displayOrder);
     }
     const coursesByAppId = new Map<string, string[]>();
+    const courseEntriesByAppId = new Map<string, typeof courseMappings>();
     for (const m of courseMappings) {
-      if (!coursesByAppId.has(m.applicationId)) coursesByAppId.set(m.applicationId, []);
-      coursesByAppId.get(m.applicationId)!.push(m.courseId);
+      if (m.courseId) {
+        if (!coursesByAppId.has(m.applicationId)) coursesByAppId.set(m.applicationId, []);
+        coursesByAppId.get(m.applicationId)!.push(m.courseId);
+      }
+      if (!courseEntriesByAppId.has(m.applicationId)) courseEntriesByAppId.set(m.applicationId, []);
+      courseEntriesByAppId.get(m.applicationId)!.push(m);
     }
-    const finalApplications = applicationsWithConsultants.map(app => ({
-      ...app,
-      allCourseIds: coursesByAppId.get(app.id) ?? (app.courseId ? [app.courseId] : []),
-    }));
+    const finalApplications = applicationsWithConsultants.map(app => {
+      const entries = courseEntriesByAppId.get(app.id) ?? [];
+      // For external-only applications, derive courseName/universityName from the first external entry
+      const firstExternal = entries.find(e => !e.courseId);
+      return {
+        ...app,
+        courseName: app.courseName ?? (firstExternal?.externalCourseName ?? null),
+        universityName: app.universityName ?? (firstExternal?.externalInstitutionName ?? null),
+        allCourseIds: coursesByAppId.get(app.id) ?? (app.courseId ? [app.courseId] : []),
+        allCourseEntries: entries,
+        hasExternalCourses: entries.some(e => !e.courseId),
+      };
+    });
 
     res.json({ 
       applications: finalApplications, 
@@ -1413,11 +1433,14 @@ router.get("/contacts/:id/applications", requireAdmin, async (req: any, res) => 
 router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) => {
   try {
     const { id } = req.params;
-    const { courseIds, notes } = req.body;
+    const { courseIds, externalEntries, notes } = req.body;
+    const hasPlatformCourses = Array.isArray(courseIds) && courseIds.length > 0 && courseIds.every((c: any) => typeof c === 'string');
+    const hasExternalEntries = Array.isArray(externalEntries) && externalEntries.length > 0
+      && externalEntries.every((e: any) => typeof e.courseName === 'string' && typeof e.institutionName === 'string');
 
     // Validate required fields
-    if (!Array.isArray(courseIds) || courseIds.length === 0 || !courseIds.every((c: any) => typeof c === 'string')) {
-      return res.status(400).json({ message: "courseIds must be a non-empty array of strings" });
+    if (!hasPlatformCourses && !hasExternalEntries) {
+      return res.status(400).json({ message: "At least one platform course (courseIds) or manual entry (externalEntries) is required" });
     }
     if (notes && typeof notes !== 'string') {
       return res.status(400).json({ message: "Notes must be a string" });
@@ -1510,36 +1533,39 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
       });
     }
 
-    // Validate all courses exist and are published
-    const courseRecords = await db
-      .select({ id: courses.id, title: courses.title, publishStatus: courses.publishStatus })
-      .from(courses)
-      .where(inArray(courses.id, courseIds));
+    // Validate all platform courses exist and are published
+    let courseRecords: { id: string; title: string; publishStatus: string | null }[] = [];
+    if (hasPlatformCourses) {
+      courseRecords = await db
+        .select({ id: courses.id, title: courses.title, publishStatus: courses.publishStatus })
+        .from(courses)
+        .where(inArray(courses.id, courseIds));
 
-    const foundIds = new Set(courseRecords.map(c => c.id));
-    const missingIds = courseIds.filter((cid: string) => !foundIds.has(cid));
-    if (missingIds.length > 0) {
-      return res.status(404).json({ message: `Courses not found: ${missingIds.join(', ')}` });
-    }
+      const foundIds = new Set(courseRecords.map(c => c.id));
+      const missingIds = courseIds.filter((cid: string) => !foundIds.has(cid));
+      if (missingIds.length > 0) {
+        return res.status(404).json({ message: `Courses not found: ${missingIds.join(', ')}` });
+      }
 
-    const unpublished = courseRecords.filter(c => c.publishStatus !== 'published');
-    if (unpublished.length > 0) {
-      return res.status(400).json({ message: `Some courses are not published: ${unpublished.map(c => c.title).join(', ')}` });
-    }
+      const unpublished = courseRecords.filter(c => c.publishStatus !== 'published');
+      if (unpublished.length > 0) {
+        return res.status(400).json({ message: `Some courses are not published: ${unpublished.map(c => c.title).join(', ')}` });
+      }
 
-    // Check for duplicate courses across all existing applications (via applicationCourses junction)
-    if (existingApplications.length > 0) {
-      const existingAppIds = existingApplications.map(a => a.id);
-      const existingCourseMappings = await db
-        .select({ courseId: applicationCourses.courseId })
-        .from(applicationCourses)
-        .where(inArray(applicationCourses.applicationId, existingAppIds));
+      // Check for duplicate platform courses across all existing applications
+      if (existingApplications.length > 0) {
+        const existingAppIds = existingApplications.map(a => a.id);
+        const existingCourseMappings = await db
+          .select({ courseId: applicationCourses.courseId })
+          .from(applicationCourses)
+          .where(inArray(applicationCourses.applicationId, existingAppIds));
 
-      const existingCourseIdSet = new Set(existingCourseMappings.map(m => m.courseId));
-      const duplicates = courseIds.filter((cid: string) => existingCourseIdSet.has(cid));
-      if (duplicates.length > 0) {
-        const duplicateTitles = courseRecords.filter(c => duplicates.includes(c.id)).map(c => c.title);
-        return res.status(400).json({ message: `Student has already applied to: ${duplicateTitles.join(', ')}` });
+        const existingCourseIdSet = new Set(existingCourseMappings.map(m => m.courseId).filter(Boolean));
+        const duplicates = courseIds.filter((cid: string) => existingCourseIdSet.has(cid));
+        if (duplicates.length > 0) {
+          const duplicateTitles = courseRecords.filter(c => duplicates.includes(c.id)).map(c => c.title);
+          return res.status(400).json({ message: `Student has already applied to: ${duplicateTitles.join(', ')}` });
+        }
       }
     }
 
@@ -1561,12 +1587,12 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
     }
     const applicationNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
 
-    // Create ONE application — primary courseId is the first in the array (backwards compat column)
+    // Create ONE application — primary courseId is the first platform course or null for external-only
     const [newApplication] = await db
       .insert(applications)
       .values({
         studentId: studentProfile.id,
-        courseId: courseIds[0],
+        courseId: hasPlatformCourses ? courseIds[0] : null,
         status: 'pending',
         currentStage: 'Assessment',
         additionalInfo: notes || null,
@@ -1574,16 +1600,36 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
       })
       .returning();
     
-    // Insert all courses into the applicationCourses junction table
-    await db.insert(applicationCourses).values(
-      courseIds.map((courseId: string, index: number) => ({
-        applicationId: newApplication.id,
-        courseId,
-        isPrimary: index === 0,
-        displayOrder: index,
-        addedBy: req.user?.claims?.sub || null,
-      }))
-    );
+    // Build all junction table entries: platform courses + external entries
+    const junctionEntries: any[] = [];
+    let displayIdx = 0;
+    if (hasPlatformCourses) {
+      for (const courseId of courseIds) {
+        junctionEntries.push({
+          applicationId: newApplication.id,
+          courseId,
+          isPrimary: displayIdx === 0,
+          displayOrder: displayIdx,
+          addedBy: req.user?.claims?.sub || null,
+        });
+        displayIdx++;
+      }
+    }
+    if (hasExternalEntries) {
+      for (const entry of externalEntries) {
+        junctionEntries.push({
+          applicationId: newApplication.id,
+          courseId: null,
+          externalCourseName: entry.courseName,
+          externalInstitutionName: entry.institutionName,
+          isPrimary: displayIdx === 0,
+          displayOrder: displayIdx,
+          addedBy: req.user?.claims?.sub || null,
+        });
+        displayIdx++;
+      }
+    }
+    await db.insert(applicationCourses).values(junctionEntries);
 
     // Update contact status to 'applicant' and lead stage to 'converted' if this is the first application
     if (existingApplications.length === 0) {
@@ -1605,12 +1651,13 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
       });
     }
 
-    console.log(`[CRM] Admin created application ${newApplication.id} for contact ${id} (${courseIds.length} course(s))`);
+    const totalCourses = junctionEntries.length;
+    console.log(`[CRM] Admin created application ${newApplication.id} for contact ${id} (${totalCourses} course(s))`);
 
     res.json({ 
       success: true, 
       application: newApplication,
-      message: `Application created with ${courseIds.length} course${courseIds.length !== 1 ? 's' : ''}`,
+      message: `Application created with ${totalCourses} course${totalCourses !== 1 ? 's' : ''}`,
     });
   } catch (error) {
     console.error("Error creating application for contact:", error);
