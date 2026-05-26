@@ -7713,6 +7713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           courseId: applicationCourses.courseId,
           externalCourseName: applicationCourses.externalCourseName,
           externalInstitutionName: applicationCourses.externalInstitutionName,
+          externalCountry: applicationCourses.externalCountry,
           isPrimary: applicationCourses.isPrimary,
           notes: applicationCourses.notes,
           displayOrder: applicationCourses.displayOrder,
