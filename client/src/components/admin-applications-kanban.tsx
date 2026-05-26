@@ -368,7 +368,7 @@ function DraggableApplicationCard({
   );
 
   const studentInitials = getInitials(app.student.firstName, app.student.lastName);
-  const institutionInitials = getInstitutionInitials(app.university.name);
+  const institutionInitials = getInstitutionInitials(app.university?.name ?? "");
   const consultantInitials = app.consultant 
     ? getInitials(app.consultant.firstName, app.consultant.lastName)
     : null;
@@ -435,7 +435,7 @@ function DraggableApplicationCard({
                 </Avatar>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs">
-                {app.university.name}
+                {app.university?.name}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -647,7 +647,7 @@ export function AdminApplicationsKanban() {
       !searchLower ||
       `${app.student.firstName || ""} ${app.student.lastName || ""}`.toLowerCase().includes(searchLower) ||
       app.course.title.toLowerCase().includes(searchLower) ||
-      app.university.name.toLowerCase().includes(searchLower);
+      (app.university?.name ?? "").toLowerCase().includes(searchLower);
 
     const matchesConsultant =
       consultantFilter === "all" ||
@@ -724,7 +724,7 @@ export function AdminApplicationsKanban() {
   const paginatedApplications = sortedApplications.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // Get unique universities
-  const universities = Array.from(new Set(applications.map(app => app.university.name).filter(Boolean)));
+  const universities = Array.from(new Set(applications.map(app => app.university?.name).filter(Boolean)));
   
   // Track mobile breakpoint
   useEffect(() => {
@@ -1026,8 +1026,8 @@ export function AdminApplicationsKanban() {
                   `${app.student.firstName || ''} ${app.student.lastName || ''}`.trim(),
                   app.student.email || '',
                   isExternal ? (app.externalCourseName || app.course.title) : app.course.title,
-                  isExternal ? (app.externalInstitutionName || app.university.name) : app.university.name,
-                  isExternal ? (app.externalCountry || '') : (app.university.country || ''),
+                  isExternal ? (app.externalInstitutionName || app.university?.name || '') : (app.university?.name || ''),
+                  isExternal ? (app.externalCountry || '') : (app.university?.country || ''),
                   isExternal ? 'External' : 'Platform',
                   app.application.currentStage,
                   app.application.status || '',
@@ -1533,7 +1533,7 @@ export function AdminApplicationsKanban() {
                         </div>
                         <div className="flex items-center gap-2 mt-1 lg:justify-center flex-wrap">
                           <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <span className="text-sm text-muted-foreground truncate">{app.university.name}</span>
+                          <span className="text-sm text-muted-foreground truncate">{app.university?.name}</span>
                           {app.externalCountry && !app.application.courseId && (
                             <span className="text-xs text-muted-foreground/70 flex items-center gap-1 shrink-0">
                               <Globe className="h-3 w-3" />{app.externalCountry}
