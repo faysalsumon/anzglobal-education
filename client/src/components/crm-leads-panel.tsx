@@ -1155,7 +1155,9 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
     ? courseInstitutionOptions.filter((i: any) => i.country === courseCountryFilter)
     : courseInstitutionOptions;
 
-  const alreadyAppliedCourseIds = new Set((applicationsData?.applications ?? []).map((a) => a.courseId));
+  const alreadyAppliedCourseIds = new Set(
+    (applicationsData?.applications ?? []).flatMap((a: any) => a.allCourseIds ?? (a.courseId ? [a.courseId] : []))
+  );
 
   // Course preferences
   const { data: leadPreferences } = useQuery<{ preferenceRank: number; country: string | null; universityId: string | null; universityName: string | null; courseId: string | null; courseName: string | null }[]>({
@@ -1232,7 +1234,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
   });
 
   const createApplicationMutation = useMutation({
-    mutationFn: async (data: { courseId: string; notes?: string }) => {
+    mutationFn: async (data: { courseIds: string[]; notes?: string }) => {
       return apiRequest("POST", `/api/crm/contacts/${lead.id}/applications`, data);
     },
     onError: (error: any) => {
@@ -1244,11 +1246,9 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
     const coursesToCreate = selectedCourseIds.filter((id) => !alreadyAppliedCourseIds.has(id));
     if (!coursesToCreate.length) return;
     try {
-      for (const courseId of coursesToCreate) {
-        await createApplicationMutation.mutateAsync({ courseId, notes: applicationNotes || undefined });
-      }
+      await createApplicationMutation.mutateAsync({ courseIds: coursesToCreate, notes: applicationNotes || undefined });
       const n = coursesToCreate.length;
-      toast({ title: `${n} application${n !== 1 ? "s" : ""} created successfully` });
+      toast({ title: `Application created${n > 1 ? ` with ${n} courses` : ""} successfully` });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts", lead.id, "applications"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
       setIsCreateApplicationOpen(false);
@@ -2301,9 +2301,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
             >
               {createApplicationMutation.isPending
                 ? "Creating..."
-                : selectedCourseIds.length > 1
-                  ? `Create ${selectedCourseIds.length} Applications`
-                  : "Create Application"}
+                : "Create Application"}
             </Button>
           </DialogFooter>
         </DialogContent>

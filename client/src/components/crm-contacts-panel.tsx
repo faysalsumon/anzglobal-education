@@ -2229,7 +2229,9 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
 
   // Set of course IDs the student has already applied to — used to block re-selection in the dialog
   const alreadyAppliedCourseIds = useMemo(
-    () => new Set((applicationsData?.applications ?? []).map((a) => a.courseId)),
+    () => new Set(
+      (applicationsData?.applications ?? []).flatMap((a: any) => a.allCourseIds ?? (a.courseId ? [a.courseId] : []))
+    ),
     [applicationsData]
   );
 
@@ -2267,7 +2269,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
   });
 
   const createApplicationMutation = useMutation({
-    mutationFn: async (data: { courseId: string; notes?: string }) => {
+    mutationFn: async (data: { courseIds: string[]; notes?: string }) => {
       return apiRequest("POST", `/api/crm/contacts/${contact.id}/applications`, data);
     },
     onError: (error: any) => {
@@ -2279,11 +2281,9 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
     const coursesToCreate = selectedCourseIds.filter((id) => !alreadyAppliedCourseIds.has(id));
     if (!coursesToCreate.length) return;
     try {
-      for (const courseId of coursesToCreate) {
-        await createApplicationMutation.mutateAsync({ courseId, notes: applicationNotes || undefined });
-      }
+      await createApplicationMutation.mutateAsync({ courseIds: coursesToCreate, notes: applicationNotes || undefined });
       const n = coursesToCreate.length;
-      toast({ title: `${n} application${n !== 1 ? "s" : ""} created successfully` });
+      toast({ title: `Application created${n > 1 ? ` with ${n} courses` : ""} successfully` });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts", contact.id, "applications"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
       setIsCreateApplicationOpen(false);
@@ -3533,9 +3533,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
             >
               {createApplicationMutation.isPending
                 ? "Creating..."
-                : selectedCourseIds.length > 1
-                  ? `Create ${selectedCourseIds.length} Applications`
-                  : "Create Application"}
+                : "Create Application"}
             </Button>
           </DialogFooter>
         </DialogContent>

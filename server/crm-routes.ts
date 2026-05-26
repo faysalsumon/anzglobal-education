@@ -16,7 +16,7 @@ import {
   contactNotes,
   leadCoursePreferences,
 } from "@shared/schema";
-import { eq, desc, and, or, ilike, count, isNull, aliasedTable, ne, sql, type SQL } from "drizzle-orm";
+import { eq, desc, and, or, ilike, count, isNull, aliasedTable, ne, sql, inArray, type SQL } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
 import multer from "multer";
 import path from "path";
@@ -1375,8 +1375,28 @@ router.get("/contacts/:id/applications", requireAdmin, async (req: any, res) => 
       })
     );
 
+    // Fetch all course IDs per application from the junction table
+    // so the frontend can correctly identify already-applied courses
+    const allAppIds = applicationsWithConsultants.map(a => a.id);
+    let courseMappings: { applicationId: string; courseId: string }[] = [];
+    if (allAppIds.length > 0) {
+      courseMappings = await db
+        .select({ applicationId: applicationCourses.applicationId, courseId: applicationCourses.courseId })
+        .from(applicationCourses)
+        .where(inArray(applicationCourses.applicationId, allAppIds));
+    }
+    const coursesByAppId = new Map<string, string[]>();
+    for (const m of courseMappings) {
+      if (!coursesByAppId.has(m.applicationId)) coursesByAppId.set(m.applicationId, []);
+      coursesByAppId.get(m.applicationId)!.push(m.courseId);
+    }
+    const finalApplications = applicationsWithConsultants.map(app => ({
+      ...app,
+      allCourseIds: coursesByAppId.get(app.id) ?? (app.courseId ? [app.courseId] : []),
+    }));
+
     res.json({ 
-      applications: applicationsWithConsultants, 
+      applications: finalApplications, 
       studentProfile: {
         id: studentProfile.id,
         maxApplicationSlots: studentProfile.maxApplicationSlots,
@@ -1389,14 +1409,15 @@ router.get("/contacts/:id/applications", requireAdmin, async (req: any, res) => 
 });
 
 // Create application on behalf of a contact (admin only)
+// Accepts courseIds[] — creates ONE application with all courses as line items
 router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) => {
   try {
     const { id } = req.params;
-    const { courseId, notes } = req.body;
+    const { courseIds, notes } = req.body;
 
     // Validate required fields
-    if (!courseId || typeof courseId !== 'string') {
-      return res.status(400).json({ message: "Course ID is required and must be a string" });
+    if (!Array.isArray(courseIds) || courseIds.length === 0 || !courseIds.every((c: any) => typeof c === 'string')) {
+      return res.status(400).json({ message: "courseIds must be a non-empty array of strings" });
     }
     if (notes && typeof notes !== 'string') {
       return res.status(400).json({ message: "Notes must be a string" });
@@ -1426,7 +1447,6 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
     let studentProfile;
     
     if (userId) {
-      // Try to find existing student profile
       studentProfile = await db
         .select()
         .from(studentProfiles)
@@ -1435,11 +1455,8 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
         .then(rows => rows[0]);
     }
     
-    // If no student profile exists, create one automatically
     if (!studentProfile) {
-      // If no linked user, we need to create one first
       if (!userId) {
-        // Create a minimal user record for this contact
         const [newUser] = await db
           .insert(users)
           .values({
@@ -1451,7 +1468,6 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
         
         userId = newUser.id;
         
-        // Link the contact to the new user
         await db
           .update(crmContacts)
           .set({ linkedUserId: userId })
@@ -1460,7 +1476,6 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
         console.log(`[CRM] Created user ${userId} for contact ${contact.id}`);
       }
       
-      // Now create the student profile
       const [newProfile] = await db
         .insert(studentProfiles)
         .values({
@@ -1479,7 +1494,7 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
       console.log(`[CRM] Created student profile ${studentProfile.id} for contact ${contact.id}`);
     }
 
-    // Check application slot limit
+    // Check application slot limit (one slot per application, not per course)
     const existingApplications = await db
       .select({ id: applications.id })
       .from(applications)
@@ -1495,36 +1510,37 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
       });
     }
 
-    // Verify the course exists and is published
-    const course = await db
-      .select()
+    // Validate all courses exist and are published
+    const courseRecords = await db
+      .select({ id: courses.id, title: courses.title, publishStatus: courses.publishStatus })
       .from(courses)
-      .where(eq(courses.id, courseId))
-      .limit(1)
-      .then(rows => rows[0]);
+      .where(inArray(courses.id, courseIds));
 
-    if (!course) {
-      return res.status(404).json({ message: "Course not found" });
+    const foundIds = new Set(courseRecords.map(c => c.id));
+    const missingIds = courseIds.filter((cid: string) => !foundIds.has(cid));
+    if (missingIds.length > 0) {
+      return res.status(404).json({ message: `Courses not found: ${missingIds.join(', ')}` });
     }
 
-    // Ensure the course is published (admins can only create applications for published courses)
-    if (course.publishStatus !== 'published') {
-      return res.status(400).json({ message: "Can only create applications for published courses" });
+    const unpublished = courseRecords.filter(c => c.publishStatus !== 'published');
+    if (unpublished.length > 0) {
+      return res.status(400).json({ message: `Some courses are not published: ${unpublished.map(c => c.title).join(', ')}` });
     }
 
-    // Check if student already applied to this course
-    const existingApplication = await db
-      .select({ id: applications.id })
-      .from(applications)
-      .where(and(
-        eq(applications.studentId, studentProfile.id),
-        eq(applications.courseId, courseId)
-      ))
-      .limit(1)
-      .then(rows => rows[0]);
+    // Check for duplicate courses across all existing applications (via applicationCourses junction)
+    if (existingApplications.length > 0) {
+      const existingAppIds = existingApplications.map(a => a.id);
+      const existingCourseMappings = await db
+        .select({ courseId: applicationCourses.courseId })
+        .from(applicationCourses)
+        .where(inArray(applicationCourses.applicationId, existingAppIds));
 
-    if (existingApplication) {
-      return res.status(400).json({ message: "Student has already applied to this course" });
+      const existingCourseIdSet = new Set(existingCourseMappings.map(m => m.courseId));
+      const duplicates = courseIds.filter((cid: string) => existingCourseIdSet.has(cid));
+      if (duplicates.length > 0) {
+        const duplicateTitles = courseRecords.filter(c => duplicates.includes(c.id)).map(c => c.title);
+        return res.status(400).json({ message: `Student has already applied to: ${duplicateTitles.join(', ')}` });
+      }
     }
 
     // Generate application number
@@ -1545,12 +1561,12 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
     }
     const applicationNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
 
-    // Create the application
+    // Create ONE application — primary courseId is the first in the array (backwards compat column)
     const [newApplication] = await db
       .insert(applications)
       .values({
         studentId: studentProfile.id,
-        courseId: courseId,
+        courseId: courseIds[0],
         status: 'pending',
         currentStage: 'Assessment',
         additionalInfo: notes || null,
@@ -1558,18 +1574,19 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
       })
       .returning();
     
-    // Also add course to applicationCourses junction table
-    await db.insert(applicationCourses).values({
-      applicationId: newApplication.id,
-      courseId: courseId,
-      isPrimary: true,
-      displayOrder: 0,
-      addedBy: req.user?.claims?.sub || null,
-    });
+    // Insert all courses into the applicationCourses junction table
+    await db.insert(applicationCourses).values(
+      courseIds.map((courseId: string, index: number) => ({
+        applicationId: newApplication.id,
+        courseId,
+        isPrimary: index === 0,
+        displayOrder: index,
+        addedBy: req.user?.claims?.sub || null,
+      }))
+    );
 
     // Update contact status to 'applicant' and lead stage to 'converted' if this is the first application
     if (existingApplications.length === 0) {
-      // Set lead stage to converted
       await db
         .update(crmContacts)
         .set({ 
@@ -1579,7 +1596,6 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
         })
         .where(eq(crmContacts.id, id));
       
-      // Log the status transition
       await db.insert(contactStatusHistory).values({
         contactId: id,
         fromStatus: contact.clientStatus,
@@ -1589,12 +1605,12 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
       });
     }
 
-    console.log(`[CRM] Admin created application ${newApplication.id} for contact ${id} (course: ${courseId})`);
+    console.log(`[CRM] Admin created application ${newApplication.id} for contact ${id} (${courseIds.length} course(s))`);
 
     res.json({ 
       success: true, 
       application: newApplication,
-      message: "Application created successfully"
+      message: `Application created with ${courseIds.length} course${courseIds.length !== 1 ? 's' : ''}`,
     });
   } catch (error) {
     console.error("Error creating application for contact:", error);
