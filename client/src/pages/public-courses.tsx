@@ -332,7 +332,7 @@ function CourseSearchLeadCapture({
                 <FormItem>
                   <FormLabel>Phone <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
                   <FormControl>
-                    <Input type="tel" placeholder="+880 1700 000000" {...field} data-testid="input-lead-phone" />
+                    <Input type="tel" placeholder={regionCode?.toUpperCase() === "AU" ? "+61 400 000 000" : regionCode?.toUpperCase() === "BD" ? "+880 1XXXXXXXXX" : "+XX ..."} {...field} data-testid="input-lead-phone" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
