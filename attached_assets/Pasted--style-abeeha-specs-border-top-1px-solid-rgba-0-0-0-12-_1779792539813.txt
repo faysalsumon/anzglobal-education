@@ -1,0 +1,428 @@
+<style>
+  .abeeha-specs { border-top: 1px solid rgba(0,0,0,.12); margin-top: 18px; }
+  .abeeha-specs details { border-bottom: 1px solid rgba(0,0,0,.12); padding: 14px 0; }
+
+  .abeeha-specs summary{
+    list-style:none;
+    cursor:pointer;
+    font-weight:600;
+    font-size:18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+  }
+
+  .abeeha-specs summary::-webkit-details-marker{
+    display:none;
+  }
+
+  .abeeha-specs .icon{
+    width:28px;
+    height:28px;
+    border-radius:999px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid rgba(0,0,0,.18);
+    font-size:18px;
+    line-height:1;
+    flex:0 0 auto;
+  }
+
+  .abeeha-specs details:not([open]) .icon::before {
+    content:"+";
+  }
+
+  .abeeha-specs details[open] .icon::before {
+    content:"–";
+  }
+
+  .abeeha-specs .content{
+    padding-top:12px;
+  }
+
+  .abeeha-specs table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+  }
+
+  .abeeha-specs th,
+  .abeeha-specs td{
+    padding:9px 0;
+    vertical-align:top;
+  }
+
+  .abeeha-specs th{
+    width:42%;
+    text-align:left;
+    font-weight:600;
+    opacity:.9;
+    padding-right:14px;
+  }
+
+  .abeeha-specs td{
+    opacity:.95;
+    word-break:break-word;
+  }
+</style>
+
+{% comment %}
+Abeeha - Product Specifications
+{% endcomment %}
+
+{%- comment -%} Shopify category metafields {%- endcomment -%}
+{%- assign mf_color        = product.metafields.shopify['color-pattern'] -%}
+{%- assign mf_light_color  = product.metafields.shopify['light-color'] -%}
+{%- assign mf_bulb_size    = product.metafields.shopify['bulb-size'] -%}
+{%- assign mf_bulb_cap     = product.metafields.shopify['bulb-cap-type'] -%}
+{%- assign mf_bulb_type    = product.metafields.shopify['bulb-type'] -%}
+{%- assign mf_bulb_shape   = product.metafields.shopify['bulb-shape'] -%}
+{%- assign mf_energy       = product.metafields.shopify['energy-efficiency-class'] -%}
+{%- assign mf_temp         = product.metafields.shopify['light-temperature'] -%}
+{%- assign mf_mounting     = product.metafields.shopify['mounting-type'] -%}
+{%- assign mf_style        = product.metafields.shopify['style'] -%}
+{%- assign mf_material     = product.metafields.shopify['material'] -%}
+
+{%- comment -%} Custom metafields {%- endcomment -%}
+{%- assign mf_assembly     = product.metafields.custom['assesmbly'] -%}
+{%- assign mf_frame_colour = product.metafields.custom['frame_colour'] -%}
+{%- assign mf_crystal_type = product.metafields.custom['type_of_crystals'] -%}
+{%- assign mf_weight       = product.metafields.custom['product_weight'] -%}
+{%- assign mf_dimmable     = product.metafields.custom['dimmable'] -%}
+{%- assign mf_bulbs_count  = product.metafields.custom['no_of_bulbs_types'] -%}
+{%- assign mf_suspension   = product.metafields.custom['suspension'] -%}
+{%- assign mf_depth        = product.metafields.custom['product_depth'] -%}
+{%- assign mf_height       = product.metafields.custom['product_height'] -%}
+{%- assign mf_length       = product.metafields.custom['product_length'] -%}
+{%- assign mf_diameter     = product.metafields.custom['product_diameter'] -%}
+{%- assign mf_certs        = product.metafields.custom['certifications_standards'] -%}
+
+{% capture specs_rows %}
+
+  {% assign f = mf_color %}
+  {% if f != blank %}
+    <tr>
+      <th>Color</th>
+      <td>
+        {% if f.type contains 'list' %}
+          {% for item in f.value %}
+            {{ item.label | default: item.name | default: item.title | default: item.value }}
+            {% unless forloop.last %}, {% endunless %}
+          {% endfor %}
+        {% elsif f.type contains 'metaobject' %}
+          {{ f.value.label | default: f.value.name | default: f.value.title | default: f.value.value }}
+        {% else %}
+          {{ f.value }}
+        {% endif %}
+      </td>
+    </tr>
+  {% endif %}
+
+  {% assign f = mf_material %}
+  {% if f != blank %}
+    <tr>
+      <th>Material</th>
+      <td>
+        {% if f.type contains 'list' %}
+          {% for item in f.value %}
+            {{ item.label | default: item.name | default: item.title | default: item.value }}
+            {% unless forloop.last %}, {% endunless %}
+          {% endfor %}
+        {% elsif f.type contains 'metaobject' %}
+          {{ f.value.label | default: f.value.name | default: f.value.title | default: f.value.value }}
+        {% else %}
+          {{ f.value }}
+        {% endif %}
+      </td>
+    </tr>
+  {% endif %}
+
+  {% assign f = mf_frame_colour %}
+  {% if f != blank %}
+    <tr>
+      <th>Frame Colour</th>
+      <td>
+        {% if f.type contains 'list' %}
+          {% for item in f.value %}
+            {{ item.label | default: item.name | default: item.title | default: item.value }}
+            {% unless forloop.last %}, {% endunless %}
+          {% endfor %}
+        {% elsif f.type contains 'metaobject' %}
+          {{ f.value.label | default: f.value.name | default: f.value.title | default: f.value.value }}
+        {% else %}
+          {{ f.value }}
+        {% endif %}
+      </td>
+    </tr>
+  {% endif %}
+
+  {% if mf_crystal_type != blank %}
+    <tr>
+      <th>Type of Crystals</th>
+      <td>{{ mf_crystal_type.value }}</td>
+    </tr>
+  {% endif %}
+
+  {% if mf_assembly != blank %}
+    <tr>
+      <th>Assembly</th>
+      <td>{{ mf_assembly.value }}</td>
+    </tr>
+  {% endif %}
+
+  {% if mf_weight != blank %}
+    <tr>
+      <th>Product Weight</th>
+      <td>{{ mf_weight.value }}</td>
+    </tr>
+  {% endif %}
+
+  {% if mf_dimmable != blank %}
+    <tr>
+      <th>Dimmable</th>
+      <td>{{ mf_dimmable.value }}</td>
+    </tr>
+  {% endif %}
+
+  {% if mf_bulbs_count != blank %}
+    <tr>
+      <th>No. of Bulbs &amp; Types</th>
+      <td>{{ mf_bulbs_count.value }}</td>
+    </tr>
+  {% endif %}
+
+  {% if mf_suspension != blank %}
+    <tr>
+      <th>Suspension</th>
+      <td>{{ mf_suspension.value }}</td>
+    </tr>
+  {% endif %}
+
+  {% if mf_depth != blank %}
+    <tr>
+      <th>Product Depth</th>
+      <td>{{ mf_depth.value }}</td>
+    </tr>
+  {% endif %}
+
+  {% if mf_height != blank %}
+    <tr>
+      <th>Product Height</th>
+      <td>{{ mf_height.value }}</td>
+    </tr>
+  {% endif %}
+
+  {% if mf_length != blank %}
+    <tr>
+      <th>Product Length</th>
+      <td>{{ mf_length.value }}</td>
+    </tr>
+  {% endif %}
+
+  {% if mf_diameter != blank %}
+    <tr>
+      <th>Product Diameter</th>
+      <td>{{ mf_diameter.value }}</td>
+    </tr>
+  {% endif %}
+
+  {% assign f = mf_bulb_shape %}
+  {% if f != blank %}
+    <tr>
+      <th>Bulb Shape</th>
+      <td>
+        {% if f.type contains 'list' %}
+          {% for item in f.value %}
+            {{ item.label | default: item.name | default: item.title | default: item.value }}
+            {% unless forloop.last %}, {% endunless %}
+          {% endfor %}
+        {% elsif f.type contains 'metaobject' %}
+          {{ f.value.label | default: f.value.name | default: f.value.title | default: f.value.value }}
+        {% else %}
+          {{ f.value }}
+        {% endif %}
+      </td>
+    </tr>
+  {% endif %}
+
+  {% assign f = mf_bulb_cap %}
+  {% if f != blank %}
+    <tr>
+      <th>Bulb Cap Type</th>
+      <td>
+        {% if f.type contains 'list' %}
+          {% for item in f.value %}
+            {{ item.label | default: item.name | default: item.title | default: item.value }}
+            {% unless forloop.last %}, {% endunless %}
+          {% endfor %}
+        {% elsif f.type contains 'metaobject' %}
+          {{ f.value.label | default: f.value.name | default: f.value.title | default: f.value.value }}
+        {% else %}
+          {{ f.value }}
+        {% endif %}
+      </td>
+    </tr>
+  {% endif %}
+
+  {% assign f = mf_bulb_type %}
+  {% if f != blank %}
+    <tr>
+      <th>Bulb Type</th>
+      <td>
+        {% if f.type contains 'list' %}
+          {% for item in f.value %}
+            {{ item.label | default: item.name | default: item.title | default: item.value }}
+            {% unless forloop.last %}, {% endunless %}
+          {% endfor %}
+        {% elsif f.type contains 'metaobject' %}
+          {{ f.value.label | default: f.value.name | default: f.value.title | default: f.value.value }}
+        {% else %}
+          {{ f.value }}
+        {% endif %}
+      </td>
+    </tr>
+  {% endif %}
+
+  {% assign f = mf_bulb_size %}
+  {% if f != blank %}
+    <tr>
+      <th>Bulb Size</th>
+      <td>
+        {% if f.type contains 'list' %}
+          {% for item in f.value %}
+            {{ item.label | default: item.name | default: item.title | default: item.value }}
+            {% unless forloop.last %}, {% endunless %}
+          {% endfor %}
+        {% elsif f.type contains 'metaobject' %}
+          {{ f.value.label | default: f.value.name | default: f.value.title | default: f.value.value }}
+        {% else %}
+          {{ f.value }}
+        {% endif %}
+      </td>
+    </tr>
+  {% endif %}
+
+  {% assign f = mf_energy %}
+  {% if f != blank %}
+    <tr>
+      <th>Energy Efficiency Class</th>
+      <td>
+        {% if f.type contains 'list' %}
+          {% for item in f.value %}
+            {{ item.label | default: item.name | default: item.title | default: item.value }}
+            {% unless forloop.last %}, {% endunless %}
+          {% endfor %}
+        {% elsif f.type contains 'metaobject' %}
+          {{ f.value.label | default: f.value.name | default: f.value.title | default: f.value.value }}
+        {% else %}
+          {{ f.value }}
+        {% endif %}
+      </td>
+    </tr>
+  {% endif %}
+
+  {% assign f = mf_temp %}
+  {% if f != blank %}
+    <tr>
+      <th>Light Temperature</th>
+      <td>
+        {% if f.type contains 'list' %}
+          {% for item in f.value %}
+            {{ item.label | default: item.name | default: item.title | default: item.value }}
+            {% unless forloop.last %}, {% endunless %}
+          {% endfor %}
+        {% elsif f.type contains 'metaobject' %}
+          {{ f.value.label | default: f.value.name | default: f.value.title | default: f.value.value }}
+        {% else %}
+          {{ f.value }}
+        {% endif %}
+      </td>
+    </tr>
+  {% endif %}
+
+  {% assign f = mf_light_color %}
+  {% if f != blank %}
+    <tr>
+      <th>Light Color</th>
+      <td>
+        {% if f.type contains 'list' %}
+          {% for item in f.value %}
+            {{ item.label | default: item.name | default: item.title | default: item.value }}
+            {% unless forloop.last %}, {% endunless %}
+          {% endfor %}
+        {% elsif f.type contains 'metaobject' %}
+          {{ f.value.label | default: f.value.name | default: f.value.title | default: f.value.value }}
+        {% else %}
+          {{ f.value }}
+        {% endif %}
+      </td>
+    </tr>
+  {% endif %}
+
+  {% assign f = mf_mounting %}
+  {% if f != blank %}
+    <tr>
+      <th>Mounting Type</th>
+      <td>
+        {% if f.type contains 'list' %}
+          {% for item in f.value %}
+            {{ item.label | default: item.name | default: item.title | default: item.value }}
+            {% unless forloop.last %}, {% endunless %}
+          {% endfor %}
+        {% elsif f.type contains 'metaobject' %}
+          {{ f.value.label | default: f.value.name | default: f.value.title | default: f.value.value }}
+        {% else %}
+          {{ f.value }}
+        {% endif %}
+      </td>
+    </tr>
+  {% endif %}
+
+  {% assign f = mf_style %}
+  {% if f != blank %}
+    <tr>
+      <th>Style</th>
+      <td>
+        {% if f.type contains 'list' %}
+          {% for item in f.value %}
+            {{ item.label | default: item.name | default: item.title | default: item.value }}
+            {% unless forloop.last %}, {% endunless %}
+          {% endfor %}
+        {% elsif f.type contains 'metaobject' %}
+          {{ f.value.label | default: f.value.name | default: f.value.title | default: f.value.value }}
+        {% else %}
+          {{ f.value }}
+        {% endif %}
+      </td>
+    </tr>
+  {% endif %}
+
+  {% if mf_certs != blank %}
+    <tr>
+      <th>Certifications &amp; Standards</th>
+      <td>{{ mf_certs.value }}</td>
+    </tr>
+  {% endif %}
+
+{% endcapture %}
+
+{% if specs_rows contains '<tr>' %}
+  <div class="abeeha-specs">
+    <details open>
+      <summary>
+        Product Specifications
+        <span class="icon" aria-hidden="true"></span>
+      </summary>
+
+      <div class="content">
+        <table>
+          <tbody>
+            {{ specs_rows }}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+{% endif %}
