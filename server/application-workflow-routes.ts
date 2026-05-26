@@ -5,6 +5,7 @@ import {
   applications,
   applicationStageHistory,
   applicationStageDocuments,
+  applicationCourses,
   documents,
   insertApplicationStageHistorySchema,
   insertApplicationStageDocumentSchema,
@@ -492,17 +493,44 @@ export function registerApplicationWorkflowRoutes(app: Express) {
       // Create a map for quick lookup
       const docStatsMap = new Map(documentStats.map(stat => [stat.applicationId, stat]));
 
-      // Add document progress to each application
-      const applicationsWithProgress = adminApplications.map(app => ({
-        ...app,
-        documentProgress: docStatsMap.get(app.application.id) || {
-          totalDocs: 0,
-          uploadedDocs: 0,
-          verifiedDocs: 0,
-          requiredDocs: 0,
-          requiredUploaded: 0,
-        },
-      }));
+      // Fetch primary external course data for all applications
+      const applicationIds = adminApplications.map(app => app.application.id);
+      const primaryExternalCourses = applicationIds.length > 0
+        ? await db
+            .select({
+              applicationId: applicationCourses.applicationId,
+              externalCountry: applicationCourses.externalCountry,
+              externalCourseName: applicationCourses.externalCourseName,
+              externalInstitutionName: applicationCourses.externalInstitutionName,
+            })
+            .from(applicationCourses)
+            .where(
+              and(
+                inArray(applicationCourses.applicationId, applicationIds),
+                isNull(applicationCourses.courseId)
+              )
+            )
+        : [];
+
+      const externalCourseMap = new Map(primaryExternalCourses.map(ec => [ec.applicationId, ec]));
+
+      // Add document progress and external course data to each application
+      const applicationsWithProgress = adminApplications.map(app => {
+        const extCourse = externalCourseMap.get(app.application.id);
+        return {
+          ...app,
+          documentProgress: docStatsMap.get(app.application.id) || {
+            totalDocs: 0,
+            uploadedDocs: 0,
+            verifiedDocs: 0,
+            requiredDocs: 0,
+            requiredUploaded: 0,
+          },
+          externalCountry: extCourse?.externalCountry ?? null,
+          externalCourseName: extCourse?.externalCourseName ?? null,
+          externalInstitutionName: extCourse?.externalInstitutionName ?? null,
+        };
+      });
 
       res.json({ applications: applicationsWithProgress });
     } catch (error: any) {
@@ -573,6 +601,24 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         requiredUploaded: 0,
       };
 
+      // Fetch primary external course entry (if any) for this application
+      const primaryExtCourses = await db
+        .select({
+          externalCountry: applicationCourses.externalCountry,
+          externalCourseName: applicationCourses.externalCourseName,
+          externalInstitutionName: applicationCourses.externalInstitutionName,
+        })
+        .from(applicationCourses)
+        .where(
+          and(
+            eq(applicationCourses.applicationId, applicationId),
+            isNull(applicationCourses.courseId)
+          )
+        )
+        .limit(1);
+
+      const primaryExtCourse = primaryExtCourses[0] ?? null;
+
       res.json({
         application: appData.application,
         course: appData.course ? {
@@ -584,13 +630,13 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           fees: appData.course.fees,
           country: appData.course.country,
           subject: appData.course.subject,
-        } : { id: '', title: 'Unknown Course', level: null, duration: null, fees: null, country: null, subject: null },
+        } : { id: '', title: primaryExtCourse?.externalCourseName || 'Unknown Course', level: null, duration: null, fees: null, country: null, subject: null },
         university: appData.university ? {
           id: appData.university.id,
           name: appData.university.name,
           logo: appData.university.logo,
           country: appData.university.country,
-        } : { id: '', name: 'Unknown University', country: null, logo: null },
+        } : { id: '', name: primaryExtCourse?.externalInstitutionName || 'Unknown Institution', country: null, logo: null },
         student: {
           id: appData.student?.id || '',
           firstName: appData.student?.firstName || null,
@@ -608,6 +654,9 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           email: appData.consultant.email,
         } : null,
         documentProgress,
+        externalCountry: primaryExtCourse?.externalCountry ?? null,
+        externalCourseName: primaryExtCourse?.externalCourseName ?? null,
+        externalInstitutionName: primaryExtCourse?.externalInstitutionName ?? null,
       });
     } catch (error: any) {
       console.error("Error fetching admin application:", error);

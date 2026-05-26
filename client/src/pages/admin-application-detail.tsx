@@ -81,6 +81,9 @@ interface AdminApplicationDetail {
     country: string | null;
     logo: string | null;
   };
+  externalCountry?: string | null;
+  externalCourseName?: string | null;
+  externalInstitutionName?: string | null;
   student: {
     id: string;
     oddsId?: string;
@@ -176,7 +179,7 @@ function AdminApplicationDetailContent() {
     );
   }
 
-  const { application, course, university, student, consultant, documentProgress } = data;
+  const { application, course, university, student, consultant, documentProgress, externalCountry, externalCourseName, externalInstitutionName } = data;
   const progress = documentProgress.requiredDocs > 0 
     ? Math.round((documentProgress.requiredUploaded / documentProgress.requiredDocs) * 100)
     : 0;
@@ -302,7 +305,12 @@ function AdminApplicationDetailContent() {
                 </div>
               )}
               <div className="flex-1">
-                <h3 className="font-semibold" data-testid="text-course-title">{course.title}</h3>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-semibold" data-testid="text-course-title">{course.title}</h3>
+                  {externalCourseName && !application.courseId && (
+                    <Badge variant="outline" className="text-[10px] px-1.5">External</Badge>
+                  )}
+                </div>
                 <p className="text-sm text-muted-foreground" data-testid="text-university-name">{university.name}</p>
                 {course.level && (
                   <Badge variant="secondary" className="mt-1">{course.level}</Badge>
@@ -325,10 +333,10 @@ function AdminApplicationDetailContent() {
                 </p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Country</p>
+                <p className="text-xs text-muted-foreground">Destination Country</p>
                 <p className="text-sm font-medium flex items-center gap-1">
                   <Globe className="h-3 w-3" />
-                  {course.country || university.country || 'Not specified'}
+                  {externalCountry || course.country || university.country || 'Not specified'}
                 </p>
               </div>
               <div>

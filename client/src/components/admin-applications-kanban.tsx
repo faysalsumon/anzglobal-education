@@ -26,7 +26,7 @@ import {
   ChevronRight, UserPlus, AlertCircle, Filter, BarChart3, GripVertical, MessageSquare, Bell,
   List, LayoutGrid, ChevronDown, X, Building2, GraduationCap, Calendar, Eye, AlertTriangle,
   CheckCheck, Users, Trash2, PanelLeftClose, PanelLeft, Bookmark, SlidersHorizontal, Save,
-  ArrowUpDown, ChevronLeft
+  ArrowUpDown, ChevronLeft, Globe, Download
 } from "lucide-react";
 import type { SavedFilter } from "@shared/schema";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
@@ -79,6 +79,9 @@ interface AdminApplication {
     country: string | null;
     logo: string | null;
   };
+  externalCountry?: string | null;
+  externalCourseName?: string | null;
+  externalInstitutionName?: string | null;
   student: {
     id: string;
     firstName: string | null;
@@ -1011,6 +1014,42 @@ export function AdminApplicationsKanban() {
               <SelectItem value="sla">By SLA urgency</SelectItem>
             </SelectContent>
           </Select>
+          {/* Export CSV button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 shrink-0"
+            onClick={() => {
+              const rows = filteredApplications.map(app => {
+                const isExternal = !app.application.courseId;
+                return [
+                  `${app.student.firstName || ''} ${app.student.lastName || ''}`.trim(),
+                  app.student.email || '',
+                  isExternal ? (app.externalCourseName || app.course.title) : app.course.title,
+                  isExternal ? (app.externalInstitutionName || app.university.name) : app.university.name,
+                  isExternal ? (app.externalCountry || '') : (app.university.country || ''),
+                  isExternal ? 'External' : 'Platform',
+                  app.application.currentStage,
+                  app.application.status || '',
+                  app.consultant ? `${app.consultant.firstName || ''} ${app.consultant.lastName || ''}`.trim() : '',
+                  app.application.createdAt ? format(new Date(app.application.createdAt), 'yyyy-MM-dd') : '',
+                ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+              });
+              const headers = ['Student Name','Email','Course','Institution','Destination Country','Type','Stage','Status','Consultant','Applied Date'];
+              const csv = [headers.join(','), ...rows].join('\n');
+              const blob = new Blob([csv], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `applications-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            data-testid="button-export-csv"
+          >
+            <Download className="h-3.5 w-3.5 mr-1.5" />
+            Export
+          </Button>
           {/* View toggle — right side */}
           <div className="flex items-center gap-1 border rounded-lg p-0.5 shrink-0">
             <Button
@@ -1485,13 +1524,21 @@ export function AdminApplicationsKanban() {
 
                       {/* Center: Course and University */}
                       <div className="flex-1 min-w-0 lg:text-center">
-                        <div className="flex items-center gap-2 lg:justify-center">
+                        <div className="flex items-center gap-2 lg:justify-center flex-wrap">
                           <GraduationCap className="h-4 w-4 text-muted-foreground shrink-0" />
                           <span className="text-sm font-medium truncate">{app.course.title}</span>
+                          {app.externalCourseName && !app.application.courseId && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 no-default-active-elevate shrink-0">External</Badge>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2 mt-1 lg:justify-center">
+                        <div className="flex items-center gap-2 mt-1 lg:justify-center flex-wrap">
                           <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
                           <span className="text-sm text-muted-foreground truncate">{app.university.name}</span>
+                          {app.externalCountry && !app.application.courseId && (
+                            <span className="text-xs text-muted-foreground/70 flex items-center gap-1 shrink-0">
+                              <Globe className="h-3 w-3" />{app.externalCountry}
+                            </span>
+                          )}
                         </div>
                       </div>
 
