@@ -2191,6 +2191,7 @@ export const applicationCourses = pgTable("application_courses", {
   courseId: varchar("course_id").references(() => courses.id, { onDelete: "set null" }),
   externalCourseName: varchar("external_course_name"),
   externalInstitutionName: varchar("external_institution_name"),
+  externalCountry: varchar("external_country"),
   
   // Course-specific details within the application
   isPrimary: boolean("is_primary").default(false), // First/main course in the package

@@ -1622,6 +1622,7 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
           courseId: null,
           externalCourseName: entry.courseName,
           externalInstitutionName: entry.institutionName,
+          externalCountry: entry.country || null,
           isPrimary: displayIdx === 0,
           displayOrder: displayIdx,
           addedBy: req.user?.claims?.sub || null,

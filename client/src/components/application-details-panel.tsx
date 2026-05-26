@@ -50,6 +50,7 @@ interface ApplicationCourse {
   courseId: string | null;
   externalCourseName: string | null;
   externalInstitutionName: string | null;
+  externalCountry: string | null;
   isPrimary: boolean;
   notes: string | null;
   displayOrder: number;
@@ -278,6 +279,7 @@ export function ApplicationDetailsPanel({
   const [addCourseMode, setAddCourseMode] = useState<"search" | "manual">("search");
   const [manualCourseNameToAdd, setManualCourseNameToAdd] = useState("");
   const [manualInstitutionNameToAdd, setManualInstitutionNameToAdd] = useState("");
+  const [manualCountryToAdd, setManualCountryToAdd] = useState("");
 
   const { data: consultantsData } = useQuery<{ consultants: Consultant[] }>({
     queryKey: ["/api/admin/consultants"],
@@ -697,6 +699,9 @@ export function ApplicationDetailsPanel({
                           <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                             <Building className="h-3 w-3 shrink-0" />{displayInstitution}
                           </p>
+                        )}
+                        {isExternal && appCourse.externalCountry && (
+                          <p className="text-xs text-muted-foreground/70 mt-0.5">{appCourse.externalCountry}</p>
                         )}
                         {!isExternal && appCourse.course?.level && (
                           <p className="text-xs text-muted-foreground/70 mt-0.5">{appCourse.course.level}</p>
@@ -1449,6 +1454,7 @@ export function ApplicationDetailsPanel({
           setAddCourseMode("search");
           setManualCourseNameToAdd("");
           setManualInstitutionNameToAdd("");
+          setManualCountryToAdd("");
         }
       }}>
         <DialogContent data-testid="dialog-add-course" className="max-w-lg">
@@ -1603,15 +1609,33 @@ export function ApplicationDetailsPanel({
                 data-testid="input-manual-course-add"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label>Destination Country</Label>
+              <Select value={manualCountryToAdd} onValueChange={setManualCountryToAdd}>
+                <SelectTrigger data-testid="select-manual-country-add">
+                  <SelectValue placeholder="Select country" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Australia">Australia</SelectItem>
+                  <SelectItem value="UK">United Kingdom</SelectItem>
+                  <SelectItem value="Canada">Canada</SelectItem>
+                  <SelectItem value="USA">United States</SelectItem>
+                  <SelectItem value="New Zealand">New Zealand</SelectItem>
+                  <SelectItem value="Ireland">Ireland</SelectItem>
+                  <SelectItem value="Germany">Germany</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>}
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setAddCourseDialogOpen(false); setAddCourseMode("search"); setManualCourseNameToAdd(""); setManualInstitutionNameToAdd(""); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setAddCourseDialogOpen(false); setAddCourseMode("search"); setManualCourseNameToAdd(""); setManualInstitutionNameToAdd(""); setManualCountryToAdd(""); }}>Cancel</Button>
             <Button 
               onClick={() => {
                 if (addCourseMode === "search") {
                   addCourseMutation.mutate({ courseId: selectedCourseToAdd });
                 } else {
-                  addCourseMutation.mutate({ externalCourseName: manualCourseNameToAdd, externalInstitutionName: manualInstitutionNameToAdd });
+                  addCourseMutation.mutate({ externalCourseName: manualCourseNameToAdd, externalInstitutionName: manualInstitutionNameToAdd, externalCountry: manualCountryToAdd || undefined });
                 }
               }}
               disabled={addCourseMutation.isPending || (addCourseMode === "search" ? !selectedCourseToAdd : !manualCourseNameToAdd.trim() || !manualInstitutionNameToAdd.trim())}

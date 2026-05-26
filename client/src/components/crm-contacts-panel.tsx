@@ -2112,9 +2112,10 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
   const [courseInstitutionFilter, setCourseInstitutionFilter] = useState("");
   const [courseCountryFilter, setCourseCountryFilter] = useState("");
   const [courseEntryMode, setCourseEntryMode] = useState<"search" | "manual">("search");
-  const [externalEntries, setExternalEntries] = useState<{ courseName: string; institutionName: string }[]>([]);
+  const [externalEntries, setExternalEntries] = useState<{ courseName: string; institutionName: string; country?: string }[]>([]);
   const [manualCourseName, setManualCourseName] = useState("");
   const [manualInstitutionName, setManualInstitutionName] = useState("");
+  const [manualCountry, setManualCountry] = useState("");
 
   // Inline section editing
   const [editingSection, setEditingSection] = useState<EditSection>(null);
@@ -2302,6 +2303,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
       setExternalEntries([]);
       setManualCourseName("");
       setManualInstitutionName("");
+      setManualCountry("");
       setCourseEntryMode("search");
     } catch {
       // error toast already shown by mutation onError
@@ -3286,6 +3288,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
           setExternalEntries([]);
           setManualCourseName("");
           setManualInstitutionName("");
+          setManualCountry("");
           setCourseEntryMode("search");
         }
       }}>
@@ -3550,15 +3553,34 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                     data-testid="input-manual-course"
                   />
                 </div>
+                <div className="space-y-1.5">
+                  <Label>Destination Country</Label>
+                  <Select value={manualCountry} onValueChange={setManualCountry}>
+                    <SelectTrigger data-testid="select-manual-country">
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Australia">Australia</SelectItem>
+                      <SelectItem value="UK">United Kingdom</SelectItem>
+                      <SelectItem value="Canada">Canada</SelectItem>
+                      <SelectItem value="USA">United States</SelectItem>
+                      <SelectItem value="New Zealand">New Zealand</SelectItem>
+                      <SelectItem value="Ireland">Ireland</SelectItem>
+                      <SelectItem value="Germany">Germany</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   disabled={!manualCourseName.trim() || !manualInstitutionName.trim()}
                   onClick={() => {
-                    setExternalEntries(prev => [...prev, { courseName: manualCourseName.trim(), institutionName: manualInstitutionName.trim() }]);
+                    setExternalEntries(prev => [...prev, { courseName: manualCourseName.trim(), institutionName: manualInstitutionName.trim(), country: manualCountry || undefined }]);
                     setManualCourseName("");
                     setManualInstitutionName("");
+                    setManualCountry("");
                   }}
                   data-testid="button-add-external-entry"
                 >
@@ -3572,7 +3594,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                         <div key={idx} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md border text-sm">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{entry.courseName}</p>
-                            <p className="text-xs text-muted-foreground truncate">{entry.institutionName}</p>
+                            <p className="text-xs text-muted-foreground truncate">{entry.institutionName}{entry.country ? ` · ${entry.country}` : ""}</p>
                           </div>
                           <button
                             type="button"
@@ -3612,6 +3634,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
               setExternalEntries([]);
               setManualCourseName("");
               setManualInstitutionName("");
+              setManualCountry("");
               setCourseEntryMode("search");
             }}>
               Cancel

@@ -1,0 +1,1 @@
+ALTER TABLE "application_courses" ADD COLUMN "external_country" varchar;

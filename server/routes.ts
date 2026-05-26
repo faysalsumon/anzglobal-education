@@ -7748,7 +7748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/applications/:id/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { courseId, externalCourseName, externalInstitutionName, notes } = req.body;
+      const { courseId, externalCourseName, externalInstitutionName, externalCountry, notes } = req.body;
       
       if (!courseId && (!externalCourseName || !externalInstitutionName)) {
         return res.status(400).json({ message: "Either courseId or both externalCourseName and externalInstitutionName are required" });
@@ -7797,6 +7797,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         courseId: courseId || null,
         externalCourseName: courseId ? null : (externalCourseName || null),
         externalInstitutionName: courseId ? null : (externalInstitutionName || null),
+        externalCountry: courseId ? null : (externalCountry || null),
         notes,
         displayOrder: maxOrder + 1,
         addedBy: userId,
