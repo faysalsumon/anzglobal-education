@@ -315,11 +315,11 @@ export function ApplicationDetailsPanel({
   });
   const searchableCourses = courseSearchData?.courses || [];
 
-  const { data: addCourseInstitutionsData } = useQuery<{ universities: any[] }>({
+  const { data: addCourseInstitutionsData } = useQuery<any[]>({
     queryKey: ["/api/institutions", { limit: 100, includePrivate: 'true' }],
     enabled: addCourseDialogOpen,
   });
-  const addCourseInstitutions = addCourseInstitutionsData?.universities ?? [];
+  const addCourseInstitutions = Array.isArray(addCourseInstitutionsData) ? addCourseInstitutionsData : [];
   
   const consultants = consultantsData?.consultants || [];
 
