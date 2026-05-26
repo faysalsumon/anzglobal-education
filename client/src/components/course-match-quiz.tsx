@@ -333,11 +333,12 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
   );
 
   const renderLevelStep = () => {
-    const frameworks = getFrameworksForCountry(selectedCountry || null);
+    const effectiveCountry = isBD ? (selectedCountry || null) : 'Australia';
+    const frameworks = getFrameworksForCountry(effectiveCountry);
     const allowedValues = new Set(
       frameworks.flatMap(fw => (FRAMEWORK_CONFIGS[fw]?.levels ?? []).map(l => l.value))
     );
-    const displayLevels = isBD && selectedCountry
+    const displayLevels = effectiveCountry
       ? allLevels.filter(l => allowedValues.has(l))
       : allLevels;
 
