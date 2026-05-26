@@ -446,7 +446,35 @@ export default function PublicCourses() {
   // Quiz lead confirmation banner
   const [quizLeadFirstName, setQuizLeadFirstName] = useState<string | null>(null);
   const [showQuizBanner, setShowQuizBanner] = useState(false);
+  const [bannerDismissing, setBannerDismissing] = useState(false);
   const quizBannerDecidedRef = useRef(false);
+  const quizBannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dismissQuizBanner = () => {
+    if (quizBannerTimerRef.current) {
+      clearTimeout(quizBannerTimerRef.current);
+      quizBannerTimerRef.current = null;
+    }
+    setBannerDismissing(true);
+    setTimeout(() => {
+      setShowQuizBanner(false);
+      setBannerDismissing(false);
+    }, 400);
+  };
+
+  useEffect(() => {
+    if (!showQuizBanner) return;
+    setBannerDismissing(false);
+    quizBannerTimerRef.current = setTimeout(() => {
+      dismissQuizBanner();
+    }, 8000);
+    return () => {
+      if (quizBannerTimerRef.current) {
+        clearTimeout(quizBannerTimerRef.current);
+        quizBannerTimerRef.current = null;
+      }
+    };
+  }, [showQuizBanner]);
 
   const { isAuthenticated, isStudent } = useAuth();
   const { toast } = useToast();
@@ -1860,6 +1888,14 @@ export default function PublicCourses() {
               {showQuizBanner && (
                 <div
                   className="flex items-start gap-3 rounded-md border border-primary/20 bg-primary/5 px-4 py-3 text-sm"
+                  style={{
+                    transition: "opacity 0.4s ease, max-height 0.4s ease, padding 0.4s ease",
+                    opacity: bannerDismissing ? 0 : 1,
+                    maxHeight: bannerDismissing ? 0 : "10rem",
+                    overflow: "hidden",
+                    paddingTop: bannerDismissing ? 0 : undefined,
+                    paddingBottom: bannerDismissing ? 0 : undefined,
+                  }}
                   role="status"
                   data-testid="banner-quiz-confirmation"
                 >
@@ -1871,7 +1907,7 @@ export default function PublicCourses() {
                     Here are your matches. We'll also reach out to help you find the right course.
                   </p>
                   <button
-                    onClick={() => setShowQuizBanner(false)}
+                    onClick={dismissQuizBanner}
                     aria-label="Dismiss confirmation"
                     className="ml-1 flex-shrink-0 text-muted-foreground opacity-70 hover:opacity-100"
                     data-testid="button-dismiss-quiz-banner"
