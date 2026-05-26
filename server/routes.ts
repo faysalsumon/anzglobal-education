@@ -7730,6 +7730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: universities.id,
             name: universities.name,
             logo: universities.logo,
+            country: universities.country,
           },
         })
         .from(applicationCourses)

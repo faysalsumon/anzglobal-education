@@ -67,6 +67,7 @@ interface ApplicationCourse {
     id: string;
     name: string;
     logo: string | null;
+    country: string | null;
   } | null;
 }
 
@@ -700,12 +701,20 @@ export function ApplicationDetailsPanel({
                             <Building className="h-3 w-3 shrink-0" />{displayInstitution}
                           </p>
                         )}
-                        {isExternal && appCourse.externalCountry && (
-                          <p className="text-xs text-muted-foreground/70 mt-0.5">{appCourse.externalCountry}</p>
-                        )}
-                        {!isExternal && appCourse.course?.level && (
-                          <p className="text-xs text-muted-foreground/70 mt-0.5">{appCourse.course.level}</p>
-                        )}
+                        {(() => {
+                          const country = isExternal ? appCourse.externalCountry : appCourse.university?.country;
+                          const level = !isExternal ? appCourse.course?.level : null;
+                          return (
+                            <>
+                              {country && (
+                                <p className="text-xs text-muted-foreground/70 mt-0.5">{country}</p>
+                              )}
+                              {level && (
+                                <p className="text-xs text-muted-foreground/70 mt-0.5">{level}</p>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                       {applicationCourses.length > 1 && (
                         <Button
