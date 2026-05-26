@@ -148,7 +148,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
       setContactFirstName("");
       setContactLastName("");
       setContactEmail("");
-      setContactPhone("+880 ");
+      setContactPhone(isBD ? "+880 " : "+61 ");
       setContactErrors({});
       setSubmittingLead(false);
       document.body.style.overflow = "hidden";
