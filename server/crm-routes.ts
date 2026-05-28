@@ -907,6 +907,7 @@ router.post("/contacts", requireAdmin, async (req: any, res) => {
       ...clientOnlyOverride,
       email: validated.email.toLowerCase().trim(),
       linkedUserId,
+      assignedTo: validated.assignedTo || userId,
       contactOwner: validated.contactOwner || userId,
       createdByUserId: userId,
     }).returning();
@@ -1886,16 +1887,6 @@ router.get("/leads", requireAdmin, async (req: any, res) => {
       );
     }
 
-    if (req.accessContext) {
-      const regionFilter = buildRegionScopedFilter(req.accessContext, {
-        regionIdColumn: crmContacts.regionId,
-        branchIdColumn: crmContacts.branchId,
-        assignedToColumn: crmContacts.assignedTo,
-        createdByColumn: crmContacts.createdByUserId,
-      });
-      if (regionFilter) conditions.push(regionFilter);
-    }
-
     const whereClause = and(...conditions);
 
     const ownerUsers = aliasedTable(users, "lead_owner_u");
@@ -2050,7 +2041,7 @@ router.post("/leads", requireAdmin, async (req: any, res) => {
       budgetMax: budgetMax !== undefined ? budgetMax.toString() : null,
       notes: notes || null,
       referrer: referrer || null,
-      assignedTo: assignedTo || null,
+      assignedTo: assignedTo || userId,
       contactOwner: leadOwner || userId,
       createdByUserId: userId || undefined,
     } as any).returning();
