@@ -2121,7 +2121,15 @@ router.patch("/leads/:id", requireAdmin, async (req: any, res) => {
     if (budgetMax !== undefined) updates.budgetMax = budgetMax !== null ? budgetMax.toString() : null;
     if (notes !== undefined) updates.notes = notes;
     if (referrer !== undefined) updates.referrer = referrer;
-    if (assignedTo !== undefined) updates.assignedTo = assignedTo;
+    if (assignedTo !== undefined) {
+      // Business rule: once a lead has an assignee, it cannot be cleared back to null.
+      // Only system-generated (website/auto) leads that were never assigned can remain null.
+      if (assignedTo === null && existing.assignedTo) {
+        // Keep the existing assignee — do not allow unassigning
+      } else {
+        updates.assignedTo = assignedTo;
+      }
+    }
     if (leadOwner !== undefined) updates.contactOwner = leadOwner;
 
     const [updated] = await db

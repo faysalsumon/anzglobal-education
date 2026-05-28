@@ -765,7 +765,6 @@ export function ApplicationDetailsPanel({
                       <SelectValue placeholder="Assign consultant" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="_unassigned">Unassigned</SelectItem>
                       {assignableUsers.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           <div className="flex items-center gap-2">

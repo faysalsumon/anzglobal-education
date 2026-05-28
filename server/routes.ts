@@ -7968,13 +7968,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Update the assignment
-      console.log("[Assign Consultant] Updating assignment to:", assignedConsultantId || null);
+      // Business rule: once an application has an assignee, it cannot be cleared back to null.
+      // Only system-generated applications that were never assigned may remain unassigned.
+      const resolvedConsultantId = (!assignedConsultantId && application.assignedConsultantId)
+        ? application.assignedConsultantId  // keep existing — don't allow clearing
+        : (assignedConsultantId || null);
+
+      console.log("[Assign Consultant] Updating assignment to:", resolvedConsultantId);
       const [updated] = await db
         .update(applications)
         .set({
-          assignedConsultantId: assignedConsultantId || null,
-          assignedAt: assignedConsultantId ? new Date() : null,
+          assignedConsultantId: resolvedConsultantId,
+          assignedAt: resolvedConsultantId ? new Date() : null,
           updatedAt: new Date(),
         })
         .where(eq(applications.id, req.params.id))

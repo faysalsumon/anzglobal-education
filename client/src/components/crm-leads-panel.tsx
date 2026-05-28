@@ -1750,13 +1750,6 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
                         <CommandList>
                           <CommandEmpty>No team members found.</CommandEmpty>
                           <CommandGroup>
-                            <CommandItem value="unassigned" onSelect={() => assignMutation.mutate(null)} className="cursor-pointer">
-                              <div className="flex items-center gap-2">
-                                <User className="h-4 w-4 text-muted-foreground" />
-                                <span>Unassigned</span>
-                              </div>
-                              {!lead.assignedTo && <Check className="ml-auto h-4 w-4" />}
-                            </CommandItem>
                             {teamMembers?.map((member) => (
                               <CommandItem
                                 key={member.id}
