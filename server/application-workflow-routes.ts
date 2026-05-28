@@ -444,12 +444,22 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           // Self scope: only see applications assigned to you
           conditions.push(eq(applications.assignedConsultantId, userId));
         } else if (accessContext.defaultScope === 'branch' && accessContext.allowedBranchIds.length > 0) {
-          // Branch scope: only see applications belonging to this branch
-          conditions.push(inArray(applications.branchId, accessContext.allowedBranchIds));
+          // Branch scope: see applications in their branch OR assigned directly to them
+          conditions.push(
+            or(
+              inArray(applications.branchId, accessContext.allowedBranchIds),
+              eq(applications.assignedConsultantId, userId)
+            )
+          );
         } else if (accessContext.defaultScope === 'region' && accessContext.regionId) {
-          // Region scope: filter by branches in this region (via allowedBranchIds)
+          // Region scope: filter by branches in this region (via allowedBranchIds), or assigned to them
           if (accessContext.allowedBranchIds.length > 0) {
-            conditions.push(inArray(applications.branchId, accessContext.allowedBranchIds));
+            conditions.push(
+              or(
+                inArray(applications.branchId, accessContext.allowedBranchIds),
+                eq(applications.assignedConsultantId, userId)
+              )
+            );
           }
         }
         // global scope: no filter, sees all

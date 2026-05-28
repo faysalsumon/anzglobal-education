@@ -4201,21 +4201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const { getUserAccessContext, buildRegionScopedFilter } = await import("./access-policy-service");
-      const accessContext = await getUserAccessContext(userId);
-
       let conditions: any[] = [eq(crmContacts.contactType, 'clients')];
-      if (accessContext) {
-        const regionFilter = buildRegionScopedFilter(accessContext, {
-          regionIdColumn: crmContacts.regionId,
-          branchIdColumn: crmContacts.branchId,
-          assignedToColumn: crmContacts.assignedTo,
-          createdByColumn: crmContacts.createdByUserId,
-        });
-        if (regionFilter) {
-          conditions.push(regionFilter);
-        }
-      }
       
       const allContacts = await db.select().from(crmContacts)
         .where(and(...conditions));

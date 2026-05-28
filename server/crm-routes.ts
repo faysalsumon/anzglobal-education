@@ -1588,6 +1588,9 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
     }
     const applicationNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
 
+    // Resolve the creating admin's ID for auto-assignment
+    const creatingAdminId = req.user?.claims?.sub || req.supabaseUser?.id || null;
+
     // Create ONE application — primary courseId is the first platform course or null for external-only
     const [newApplication] = await db
       .insert(applications)
@@ -1598,6 +1601,10 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
         currentStage: 'Assessment',
         additionalInfo: notes || null,
         applicationNumber,
+        // Auto-assign consultant: use the lead's assignedTo, fall back to creating admin
+        assignedConsultantId: contact.assignedTo || creatingAdminId || null,
+        // Inherit branch from the contact/lead; fall back to creating admin's branch
+        branchId: contact.branchId || null,
       })
       .returning();
     
