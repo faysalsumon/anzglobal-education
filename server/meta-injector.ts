@@ -5,9 +5,11 @@ interface MetaTags {
   description: string;
   ogImage?: string;
   ogUrl?: string;
+  canonical?: string;
+  ogLocale?: string;
 }
 
-const STATIC_METAS: Record<string, Omit<MetaTags, "ogImage" | "ogUrl">> = {
+const STATIC_METAS: Record<string, Omit<MetaTags, "ogImage" | "ogUrl" | "canonical" | "ogLocale">> = {
   "/courses": {
     title: "Find Courses in Australia, UK & Canada | ANZ Global Education",
     description: "Browse 1000+ courses from top universities in Australia, UK, Canada and New Zealand. Filter by subject, level, and location. Compare programs and apply directly.",
@@ -73,7 +75,7 @@ function getCanonicalOrigin(hostname: string): { origin: string; isBD: boolean }
 }
 
 function replaceMeta(html: string, tags: MetaTags): string {
-  const { title, description, ogImage, ogUrl } = tags;
+  const { title, description, ogImage, ogUrl, canonical, ogLocale } = tags;
 
   if (title) {
     html = html.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`);
@@ -124,6 +126,41 @@ function replaceMeta(html: string, tags: MetaTags): string {
     );
   }
 
+  if (canonical) {
+    html = html.replace(
+      /(<link\s+rel="canonical"\s+href=")[^"]*(")/,
+      `$1${canonical}$2`,
+    );
+  }
+
+  if (ogLocale) {
+    html = html.replace(
+      /(<meta\s+property="og:locale"\s+content=")[^"]*(")/,
+      `$1${ogLocale}$2`,
+    );
+  }
+
+  return html;
+}
+
+/** Replace the static hreflang block in index.html with path-specific tags */
+function injectHreflang(html: string, pathname: string): string {
+  const auHref = `https://anzglobal.com.au${pathname}`;
+  const bdHref = `https://anzglobal.com.bd${pathname}`;
+
+  const newHreflang = [
+    `<link rel="alternate" hreflang="en-BD" href="${bdHref}" />`,
+    `    <link rel="alternate" hreflang="bn-BD" href="${bdHref}" />`,
+    `    <link rel="alternate" hreflang="en-AU" href="${auHref}" />`,
+    `    <link rel="alternate" hreflang="x-default" href="${auHref}" />`,
+  ].join("\n    ");
+
+  // Replace the existing static hreflang block
+  html = html.replace(
+    /<link\s+rel="alternate"\s+hreflang="en-BD"[^>]*>\s*\n\s*<link\s+rel="alternate"\s+hreflang="en-AU"[^>]*>\s*\n\s*<link\s+rel="alternate"\s+hreflang="x-default"[^>]*>/,
+    newHreflang,
+  );
+
   return html;
 }
 
@@ -141,9 +178,14 @@ export async function injectPageMeta(
       ? `${origin}/og-image-bd.png`
       : `${origin}/og-image.png`;
     const ogUrl = `${origin}${pathname}`;
+    const canonical = `${origin}${pathname}`;
+    const ogLocale = isBD ? "bn_BD" : "en_AU";
 
-    // Inject domain-level OG tags into every page
-    html = replaceMeta(html, { title: "", description: "", ogImage, ogUrl });
+    // Inject domain-level canonical, OG tags, and locale into every page
+    html = replaceMeta(html, { title: "", description: "", ogImage, ogUrl, canonical, ogLocale });
+
+    // Inject path-specific hreflang tags for every page
+    html = injectHreflang(html, pathname);
 
     const courseMatch = pathname.match(/^\/courses\/([^/]+)$/);
     if (courseMatch) {

@@ -16331,10 +16331,29 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
 
       // Fetch all active courses
       const courses = await storage.getAllCourses();
-      const activeCourses = courses.filter(c => c.isActive !== false);
+      const host = req.get('host') || '';
+      const isBDDomain = host.includes('anzglobal.com.bd') || host.endsWith('.bd');
+
+      // Only include fully published + approved + active courses
+      const activeCourses = courses.filter(c =>
+        c.isActive &&
+        c.publishStatus === 'published' &&
+        c.approvalStatus === 'approved' &&
+        // On BD domain, only include courses available in BD market
+        (!isBDDomain || !c.availableMarkets || c.availableMarkets.length === 0 || c.availableMarkets.includes('BD'))
+      );
 
       // Fetch all universities
-      const universities = await storage.getAllUniversities();
+      const allUniversities = await storage.getAllUniversities();
+
+      // Only include fully published + approved + active universities
+      const universities = allUniversities.filter(u =>
+        u.isActive &&
+        u.publishStatus === 'published' &&
+        u.approvalStatus === 'approved' &&
+        // On BD domain, only include institutions available in BD market
+        (!isBDDomain || !u.availableMarkets || u.availableMarkets.length === 0 || u.availableMarkets.includes('BD'))
+      );
 
       const blogs = blogResult.blogs;
       const baseUrl = `${req.protocol}://${req.get('host')}`;
