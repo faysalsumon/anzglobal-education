@@ -341,5 +341,23 @@
     "bangladesh": "Bangladesh",
     "india": "India",
     "pakistan": "Pakistan"
+  },
+  "faq": {
+    "heading": "Frequently Asked Questions",
+    "subheading": "Everything Bangladeshi students need to know about studying abroad",
+    "q1": "How do I apply for an Australian student visa from Bangladesh?",
+    "a1": "To apply for an Australian student visa (Subclass 500) from Bangladesh, you need a Confirmation of Enrolment (CoE) from a registered Australian institution, proof of sufficient funds, health insurance (OSHC), English proficiency results (IELTS/PTE), and a valid passport. ANZ Global Education's counsellors guide you through every step — from course selection to lodging your visa application online through ImmiAccount. Our 98% visa success rate reflects our hands-on support.",
+    "q2": "What IELTS score is required to study in Australia from Bangladesh?",
+    "a2": "Most Australian universities require an overall IELTS Academic band score of 6.0–7.0, with no individual band below 6.0. Undergraduate programmes typically ask for 6.0–6.5, while postgraduate and research degrees often require 6.5–7.0. Some institutions accept PTE Academic, TOEFL iBT, or Cambridge English as alternatives. ANZ Global Education can match you with courses that fit your current English score.",
+    "q3": "How much does it cost to study abroad from Bangladesh?",
+    "a3": "The total cost varies by country and course. In Australia, annual tuition ranges from BDT 8–20 lakh (AUD 15,000–40,000) depending on the institution and programme. In the UK, expect BDT 10–25 lakh per year; Canada is typically BDT 7–18 lakh. Living expenses add roughly BDT 6–12 lakh per year. ANZ Global Education helps you find scholarships and affordable pathways to reduce your overall investment.",
+    "q4": "Are there scholarships available for Bangladeshi students?",
+    "a4": "Yes — many Australian, UK, and Canadian universities offer merit-based and need-based scholarships specifically open to Bangladeshi students. These range from 10% to 100% tuition waivers. Government programmes such as Australia Awards and Commonwealth Scholarships also accept Bangladeshi applicants. Our counsellors identify scholarships you qualify for and assist with application essays and documentation.",
+    "q5": "Where is the ANZ Global Education Dhaka office?",
+    "a5": "Our Dhaka office is located at 4th Floor, Plot-01, Road 10, Sector 6, Uttara, Dhaka-1230. You can visit us Monday to Saturday, 10 AM – 7 PM, for a free in-person counselling session. Call us or book an appointment online through our website.",
+    "q6": "How long does it take to get an Australian student visa from Bangladesh?",
+    "a6": "Australian student visa (Subclass 500) processing from Bangladesh typically takes 4–8 weeks, though it can be faster or slower depending on your individual circumstances and the volume of applications. We recommend applying at least 3 months before your intended start date. ANZ Global Education monitors your application and follows up with the Department of Home Affairs on your behalf.",
+    "q7": "What documents do I need to apply for a course through ANZ Global Education?",
+    "a7": "You will typically need: academic transcripts and certificates (SSC, HSC, Bachelor's), English language test results (IELTS/PTE), a valid passport, a statement of purpose (SOP), reference letters, proof of funds (bank statements), and a CV/resume for postgraduate applications. Our team provides detailed document checklists and reviews each document before submission to maximise your chances of acceptance."
   }
 }

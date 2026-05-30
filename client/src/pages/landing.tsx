@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight, DollarSign, Play, Newspaper, FileText, Radio, Inbox, Phone, Clock, BookOpen } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link } from "wouter";
 import { getFlagUrl } from "@/lib/country-flags";
 import type { Course, University, Blog, Testimonial } from "@shared/schema";
@@ -360,6 +361,74 @@ export default function Landing() {
             }
           })}
         </script>
+
+        {/* JSON-LD FAQPage Schema — BD only */}
+        {isBD && (
+          <script type="application/ld+json">
+            {JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              "mainEntity": [
+                {
+                  "@type": "Question",
+                  "name": "How do I apply for an Australian student visa from Bangladesh?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "To apply for an Australian student visa (Subclass 500) from Bangladesh, you need a Confirmation of Enrolment (CoE) from a registered Australian institution, proof of sufficient funds, health insurance (OSHC), English proficiency results (IELTS/PTE), and a valid passport. ANZ Global Education's counsellors guide you through every step — from course selection to lodging your visa application online through ImmiAccount. Our 98% visa success rate reflects our hands-on support."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "What IELTS score is required to study in Australia from Bangladesh?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Most Australian universities require an overall IELTS Academic band score of 6.0–7.0, with no individual band below 6.0. Undergraduate programmes typically ask for 6.0–6.5, while postgraduate and research degrees often require 6.5–7.0. Some institutions accept PTE Academic, TOEFL iBT, or Cambridge English as alternatives. ANZ Global Education can match you with courses that fit your current English score."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "How much does it cost to study abroad from Bangladesh?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "The total cost varies by country and course. In Australia, annual tuition ranges from BDT 8–20 lakh (AUD 15,000–40,000) depending on the institution and programme. In the UK, expect BDT 10–25 lakh per year; Canada is typically BDT 7–18 lakh. Living expenses add roughly BDT 6–12 lakh per year. ANZ Global Education helps you find scholarships and affordable pathways to reduce your overall investment."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "Are there scholarships available for Bangladeshi students?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Yes — many Australian, UK, and Canadian universities offer merit-based and need-based scholarships specifically open to Bangladeshi students. These range from 10% to 100% tuition waivers. Government programmes such as Australia Awards and Commonwealth Scholarships also accept Bangladeshi applicants. Our counsellors identify scholarships you qualify for and assist with application essays and documentation."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "Where is the ANZ Global Education Dhaka office?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Our Dhaka office is located at 4th Floor, Plot-01, Road 10, Sector 6, Uttara, Dhaka-1230. You can visit us Monday to Saturday, 10 AM – 7 PM, for a free in-person counselling session. Call us or book an appointment online through our website."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "How long does it take to get an Australian student visa from Bangladesh?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Australian student visa (Subclass 500) processing from Bangladesh typically takes 4–8 weeks, though it can be faster or slower depending on your individual circumstances and the volume of applications. We recommend applying at least 3 months before your intended start date. ANZ Global Education monitors your application and follows up with the Department of Home Affairs on your behalf."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "What documents do I need to apply for a course through ANZ Global Education?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "You will typically need: academic transcripts and certificates (SSC, HSC, Bachelor's), English language test results (IELTS/PTE), a valid passport, a statement of purpose (SOP), reference letters, proof of funds (bank statements), and a CV/resume for postgraduate applications. Our team provides detailed document checklists and reviews each document before submission to maximise your chances of acceptance."
+                  }
+                }
+              ]
+            })}
+          </script>
+        )}
 
         {/* JSON-LD SiteNavigationElement (signals key pages to Google for sitelinks) */}
         <script type="application/ld+json">
@@ -1802,6 +1871,73 @@ export default function Landing() {
               </Button>
             </div>
 
+          </div>
+        </section>
+      )}
+
+      {/* BD-only FAQ Section */}
+      {isBD && (
+        <section className="py-16 md:py-24 bg-muted/30" data-testid="section-bd-faq">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto">
+              <div className="text-center mb-10">
+                <h2 className="text-3xl font-bold text-foreground md:text-4xl mb-3" data-testid="heading-faq">
+                  {t("faq.heading")}
+                </h2>
+                <p className="text-lg text-muted-foreground">
+                  {t("faq.subheading")}
+                </p>
+              </div>
+
+              <Accordion type="single" collapsible className="space-y-3" data-testid="accordion-faq">
+                {[
+                  { q: t("faq.q1"), a: t("faq.a1"), value: "faq-1" },
+                  { q: t("faq.q2"), a: t("faq.a2"), value: "faq-2" },
+                  { q: t("faq.q3"), a: t("faq.a3"), value: "faq-3" },
+                  { q: t("faq.q4"), a: t("faq.a4"), value: "faq-4" },
+                  { q: t("faq.q5"), a: t("faq.a5"), value: "faq-5" },
+                  { q: t("faq.q6"), a: t("faq.a6"), value: "faq-6" },
+                  { q: t("faq.q7"), a: t("faq.a7"), value: "faq-7" },
+                ].map(({ q, a, value }) => (
+                  <AccordionItem
+                    key={value}
+                    value={value}
+                    className="bg-background rounded-md border border-border px-1"
+                    data-testid={`accordion-item-${value}`}
+                  >
+                    <AccordionTrigger
+                      className="text-left font-semibold text-foreground hover:no-underline px-5 py-4"
+                      data-testid={`accordion-trigger-${value}`}
+                    >
+                      {q}
+                    </AccordionTrigger>
+                    <AccordionContent
+                      className="text-muted-foreground leading-relaxed px-5 pb-5"
+                      data-testid={`accordion-content-${value}`}
+                    >
+                      {a}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+
+              <div className="text-center mt-10">
+                <p className="text-muted-foreground mb-4">
+                  {t("landing.bdStudyAbroad.officeDesc") || "Have more questions? Our Dhaka counsellors are ready to help."}
+                </p>
+                <Button
+                  asChild
+                  size="lg"
+                  className="px-8 bg-primary text-white border-0"
+                  data-testid="button-faq-contact"
+                >
+                  <Link href="/contact">
+                    <Phone className="mr-2 h-5 w-5" />
+                    {t("landing.bdStudyAbroad.officeContact") || "Contact Our Dhaka Office"}
+                  </Link>
+                </Button>
+              </div>
+            </div>
           </div>
         </section>
       )}
