@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -268,6 +268,17 @@ export function ApplicationDetailsPanel({
     isRequired: false,
   });
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadFolderId, setUploadFolderId] = useState<string | null>(null);
+
+  // Map application stage → student's default folder name
+  const STAGE_FOLDER_MAP: Record<string, string> = {
+    "Offer-Letter": "Offer-Letter",
+    "COE": "COE",
+    "GS-Clearance": "GS/GTE",
+    "Visa Lodgment": "Visa",
+    "Collect Docs": "Academics",
+    "Documents Verification": "Academics",
+  };
 
   const [verifyNotes, setVerifyNotes] = useState("");
   const [rejectReason, setRejectReason] = useState("");
@@ -345,6 +356,20 @@ export function ApplicationDetailsPanel({
   });
   const studentLibrary = studentLibraryData?.documents || [];
 
+  // Fetch student's document folders for the upload dialog
+  const { data: studentFolders = [] } = useQuery<{ id: string; name: string; color: string }[]>({
+    queryKey: ["/api/admin/applications", application.id, "student-folders"],
+    enabled: uploadDocDialogOpen,
+  });
+
+  // Auto-suggest folder when dialog opens or folders load
+  useEffect(() => {
+    if (!uploadDocDialogOpen) return;
+    const folderName = STAGE_FOLDER_MAP[newDocUpload.stage];
+    const matched = folderName ? studentFolders.find(f => f.name === folderName) : undefined;
+    setUploadFolderId(matched?.id ?? null);
+  }, [uploadDocDialogOpen, studentFolders]);
+
   const documents = documentsData?.documents || [];
   const history = historyData?.history || [];
 
@@ -418,6 +443,7 @@ export function ApplicationDetailsPanel({
       formData.append("documentType", newDocUpload.documentType);
       formData.append("documentName", newDocUpload.documentName);
       formData.append("isRequired", String(newDocUpload.isRequired));
+      if (uploadFolderId) formData.append("folderId", uploadFolderId);
       return apiRequest("POST", `/api/admin/applications/${application.id}/upload-document`, formData);
     },
     onSuccess: () => {
@@ -427,6 +453,7 @@ export function ApplicationDetailsPanel({
       setUploadDocDialogOpen(false);
       setNewDocUpload({ stage: application.currentStage, documentType: "", documentName: "", isRequired: false });
       setUploadFile(null);
+      setUploadFolderId(null);
     },
     onError: (error: any) => {
       toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
@@ -1304,7 +1331,12 @@ export function ApplicationDetailsPanel({
               <Label htmlFor="upload-stage">Stage</Label>
               <Select
                 value={newDocUpload.stage}
-                onValueChange={(v) => setNewDocUpload({ ...newDocUpload, stage: v as ApplicationStage })}
+                onValueChange={(v) => {
+                  setNewDocUpload({ ...newDocUpload, stage: v as ApplicationStage });
+                  const folderName = STAGE_FOLDER_MAP[v];
+                  const matched = folderName ? studentFolders.find(f => f.name === folderName) : undefined;
+                  setUploadFolderId(matched?.id ?? null);
+                }}
               >
                 <SelectTrigger id="upload-stage" data-testid="select-upload-stage">
                   <SelectValue />
@@ -1317,6 +1349,29 @@ export function ApplicationDetailsPanel({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="upload-folder">Student Folder</Label>
+              <Select
+                value={uploadFolderId ?? "__none__"}
+                onValueChange={(v) => setUploadFolderId(v === "__none__" ? null : v)}
+              >
+                <SelectTrigger id="upload-folder" data-testid="select-upload-folder">
+                  <SelectValue placeholder="Unfiled (no folder)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Unfiled (no folder)</SelectItem>
+                  {studentFolders.map((folder) => (
+                    <SelectItem key={folder.id} value={folder.id} data-testid={`folder-option-${folder.id}`}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: folder.color }} />
+                        {folder.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">Auto-suggested from stage. You can change this.</p>
             </div>
             <div>
               <Label htmlFor="upload-type">Document Type</Label>

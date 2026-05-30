@@ -1205,7 +1205,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         return res.status(400).json({ error: "No file provided" });
       }
 
-      const { stage, documentType, documentName, isRequired } = req.body;
+      const { stage, documentType, documentName, isRequired, folderId: bodyFolderId } = req.body;
 
       if (!stage || !documentType || !documentName) {
         return res.status(400).json({ error: "stage, documentType, and documentName are required" });
@@ -1239,6 +1239,9 @@ export function registerApplicationWorkflowRoutes(app: Express) {
       await fs.mkdir(uploadsDir, { recursive: true });
       await fs.writeFile(filePath, req.file.buffer);
 
+      // Use the folder explicitly chosen by the consultant (null = unfiled)
+      const resolvedFolderId = bodyFolderId || null;
+
       // Insert into the shared `documents` table (senderType = 'admin')
       const docRecord = await dbStorage.createDocument({
         type: documentType,
@@ -1249,7 +1252,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         senderType: 'admin',
         studentProfileId: application.studentId || null,
         applicationId,
-        folderId: null,
+        folderId: resolvedFolderId,
         fileSize: req.file.size,
         mimeType: req.file.mimetype,
         status: 'pending',
@@ -1284,6 +1287,42 @@ export function registerApplicationWorkflowRoutes(app: Express) {
     } catch (error: any) {
       console.error("Error uploading admin document:", error);
       res.status(500).json({ error: error.message || "Failed to upload document" });
+    }
+  });
+
+  // Get the student's document folders for a given application (used by the admin upload dialog)
+  app.get("/api/admin/applications/:id/student-folders", isAuthenticated, async (req: any, res) => {
+    try {
+      const adminAccess = await checkAdminAccess(req);
+      if (!adminAccess) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { id: applicationId } = req.params;
+
+      const application = await db.query.applications.findFirst({
+        where: eq(applications.id, applicationId),
+        columns: { id: true, studentId: true },
+      });
+
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      if (!application.studentId) {
+        return res.json([]);
+      }
+
+      const studentProfile = await dbStorage.getStudentProfileById(application.studentId);
+      if (!studentProfile?.userId) {
+        return res.json([]);
+      }
+
+      const folders = await dbStorage.getFoldersByOwnerId(studentProfile.userId);
+      res.json(folders);
+    } catch (error: any) {
+      console.error("Error fetching student folders for admin:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch folders" });
     }
   });
 
