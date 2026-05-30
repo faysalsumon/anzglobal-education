@@ -467,13 +467,13 @@ export default function AdminContactForm() {
   });
 
   const { data: teamMembers = [] } = useQuery<{ id: string; firstName: string; lastName: string; userType: string; profileImageUrl?: string | null }[]>({
-    queryKey: ["/api/admin/users"],
+    queryKey: ["/api/crm/team-members"],
     queryFn: async () => {
       const headers = await getAuthHeaders();
-      const response = await fetch("/api/admin/users", { credentials: 'include', headers });
+      const response = await fetch("/api/crm/team-members", { credentials: 'include', headers });
       if (!response.ok) return [];
       const data = await response.json();
-      return Array.isArray(data) ? data : (data.users ?? []);
+      return Array.isArray(data) ? data : [];
     },
   });
 
