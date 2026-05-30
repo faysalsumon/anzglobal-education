@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight, DollarSign, Play, Newspaper, FileText, Radio, Inbox } from "lucide-react";
+import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight, DollarSign, Play, Newspaper, FileText, Radio, Inbox, Phone, Clock, BookOpen } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "wouter";
 import { getFlagUrl } from "@/lib/country-flags";
@@ -1645,6 +1645,166 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* BD-Specific: Study Abroad from Bangladesh Section */}
+      {isBD && (
+        <section className="py-16 md:py-24 bg-muted/30" data-testid="section-bd-study-abroad">
+          <div className="container mx-auto px-4">
+
+            {/* Section header */}
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6 border border-primary/20">
+                <GraduationCap className="h-4 w-4" />
+                <span className="text-sm font-semibold">{t("landing.bdStudyAbroad.label")}</span>
+              </div>
+              <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
+                {t("landing.bdStudyAbroad.heading")}
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                {t("landing.bdStudyAbroad.desc")}
+              </p>
+            </div>
+
+            {/* Stats strip */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-12">
+              {[
+                { value: t("landing.bdStudyAbroad.stat1Value"), label: t("landing.bdStudyAbroad.stat1Label") },
+                { value: t("landing.bdStudyAbroad.stat2Value"), label: t("landing.bdStudyAbroad.stat2Label") },
+                { value: t("landing.bdStudyAbroad.stat3Value"), label: t("landing.bdStudyAbroad.stat3Label") },
+                { value: t("landing.bdStudyAbroad.stat4Value"), label: t("landing.bdStudyAbroad.stat4Label") },
+              ].map((stat, i) => (
+                <div key={i} className="text-center py-6 px-4 rounded-xl bg-background border" data-testid={`stat-bd-${i}`}>
+                  <p className="text-3xl font-bold text-primary mb-1">{stat.value}</p>
+                  <p className="text-sm text-muted-foreground font-medium">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Three info cards */}
+            <div className="grid gap-6 md:grid-cols-3 max-w-6xl mx-auto mb-10">
+
+              {/* Visa Requirements */}
+              <Card data-testid="card-bd-visa">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+                      <FileCheck className="h-5 w-5 text-primary" />
+                    </div>
+                    <CardTitle className="text-lg">{t("landing.bdStudyAbroad.visaTitle")}</CardTitle>
+                  </div>
+                  <CardDescription>{t("landing.bdStudyAbroad.visaDesc")}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2.5">
+                  {[
+                    t("landing.bdStudyAbroad.visaReq1"),
+                    t("landing.bdStudyAbroad.visaReq2"),
+                    t("landing.bdStudyAbroad.visaReq3"),
+                    t("landing.bdStudyAbroad.visaReq4"),
+                    t("landing.bdStudyAbroad.visaReq5"),
+                  ].map((req, i) => (
+                    <div key={i} className="flex items-start gap-2.5">
+                      <CheckCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-sm text-muted-foreground">{req}</span>
+                    </div>
+                  ))}
+                  <div className="pt-2">
+                    <Button asChild variant="outline" size="sm" data-testid="button-bd-visa-learn-more">
+                      <Link href="/blog">
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        {t("landing.bdStudyAbroad.visaLearnMore")}
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Dhaka Office */}
+              <Card data-testid="card-bd-office">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-accent/10">
+                      <MapPin className="h-5 w-5 text-accent" />
+                    </div>
+                    <CardTitle className="text-lg">{t("landing.bdStudyAbroad.officeTitle")}</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-start gap-2.5">
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">{t("landing.bdStudyAbroad.officeAddress")}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">{t("landing.bdStudyAbroad.officePhone")}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">{t("landing.bdStudyAbroad.officeHours")}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground italic border-t pt-3">
+                    {t("landing.bdStudyAbroad.officeNote")}
+                  </p>
+                  <Button asChild size="sm" className="w-full bg-accent text-white border-accent-border" data-testid="button-bd-office-contact">
+                    <Link href="/contact">
+                      <Phone className="h-4 w-4 mr-2" />
+                      {t("landing.bdStudyAbroad.officeContact")}
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Scholarships */}
+              <Card data-testid="card-bd-scholarship">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+                      <Award className="h-5 w-5 text-primary" />
+                    </div>
+                    <CardTitle className="text-lg">{t("landing.bdStudyAbroad.scholarshipTitle")}</CardTitle>
+                  </div>
+                  <CardDescription>{t("landing.bdStudyAbroad.scholarshipDesc")}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2.5">
+                  {[
+                    t("landing.bdStudyAbroad.scholarshipPoint1"),
+                    t("landing.bdStudyAbroad.scholarshipPoint2"),
+                    t("landing.bdStudyAbroad.scholarshipPoint3"),
+                  ].map((point, i) => (
+                    <div key={i} className="flex items-start gap-2.5">
+                      <CheckCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-sm text-muted-foreground">{point}</span>
+                    </div>
+                  ))}
+                  <div className="pt-2">
+                    <Button asChild variant="outline" size="sm" data-testid="button-bd-scholarship-explore">
+                      <Link href="/courses">
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        {t("landing.bdStudyAbroad.scholarshipCTA")}
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+            </div>
+
+            {/* Section CTA */}
+            <div className="text-center">
+              <Button
+                size="lg"
+                className="px-10 bg-gradient-to-r from-[#3465A5] to-[#5a9fd4] text-white border-0"
+                onClick={() => window.dispatchEvent(new CustomEvent("open-course-quiz"))}
+                data-testid="button-bd-book-consultation"
+              >
+                <Sparkles className="mr-2 h-5 w-5" />
+                {t("landing.bdStudyAbroad.bookConsultation")}
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
+
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="py-16 md:py-24">
