@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight, DollarSign, Play, Newspaper, FileText, Radio, Inbox, Phone, Clock, BookOpen } from "lucide-react";
+import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight, DollarSign, Play, Newspaper, FileText, Radio, Inbox, Phone, Clock, BookOpen, Mail } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link } from "wouter";
@@ -1805,6 +1805,12 @@ export default function Landing() {
                   <div className="flex items-center gap-2.5">
                     <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <span className="text-sm text-muted-foreground">{t("landing.bdStudyAbroad.officePhone")}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <a href={`mailto:${t("landing.bdStudyAbroad.officeEmail")}`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                      {t("landing.bdStudyAbroad.officeEmail")}
+                    </a>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
