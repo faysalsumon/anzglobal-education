@@ -1318,7 +1318,36 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         return res.json([]);
       }
 
-      const folders = await dbStorage.getFoldersByOwnerId(studentProfile.userId);
+      let folders = await dbStorage.getFoldersByOwnerId(studentProfile.userId);
+
+      // If the student has never visited their Documents page, no folders exist yet.
+      // Auto-create the same defaults the student-facing endpoint would create.
+      if (folders.length === 0) {
+        const defaultStudentFolders = [
+          { name: "Academics",       color: "#3b82f6", sortOrder: 1 },
+          { name: "Personal",        color: "#8b5cf6", sortOrder: 2 },
+          { name: "Visa",            color: "#ec4899", sortOrder: 3 },
+          { name: "Job",             color: "#f59e0b", sortOrder: 4 },
+          { name: "English Language",color: "#10b981", sortOrder: 5 },
+          { name: "Payments",        color: "#ef4444", sortOrder: 6 },
+          { name: "Offer-Letter",    color: "#06b6d4", sortOrder: 7 },
+          { name: "COE",             color: "#84cc16", sortOrder: 8 },
+          { name: "GS/GTE",          color: "#6366f1", sortOrder: 9 },
+        ];
+        for (const f of defaultStudentFolders) {
+          await dbStorage.createFolder({
+            name: f.name,
+            color: f.color,
+            sortOrder: f.sortOrder,
+            ownerId: studentProfile.userId,
+            ownerType: "student",
+            studentProfileId: studentProfile.id,
+            isDefault: true,
+          });
+        }
+        folders = await dbStorage.getFoldersByOwnerId(studentProfile.userId);
+      }
+
       res.json(folders);
     } catch (error: any) {
       console.error("Error fetching student folders for admin:", error);
