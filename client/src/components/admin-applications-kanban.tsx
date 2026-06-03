@@ -386,41 +386,43 @@ function DraggableApplicationCard({
       data-testid={`application-card-${app.application.id}`}
       onClick={onViewDetails}
     >
-      <CardContent className="p-3 space-y-2">
+      <CardContent className="p-2.5 space-y-1.5 overflow-hidden">
         {/* Row 1: Drag handle + Checkbox + Student avatar + Name + SLA */}
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-1.5 w-full min-w-0">
           <div
             {...attributes}
             {...listeners}
             className="cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
             onClick={(e) => e.stopPropagation()}
           >
-            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50" />
+            <GripVertical className="h-3 w-3 text-muted-foreground/40" />
           </div>
           <Checkbox
             checked={isSelected}
             onCheckedChange={onToggleSelection}
             onClick={(e) => e.stopPropagation()}
-            className="flex-shrink-0"
+            className="flex-shrink-0 h-3.5 w-3.5"
             data-testid={`checkbox-application-${app.application.id}`}
           />
-          <Avatar className="h-6 w-6 flex-shrink-0">
+          <Avatar className="h-5 w-5 flex-shrink-0">
             <AvatarImage src={app.student.profileImageUrl || undefined} />
-            <AvatarFallback className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+            <AvatarFallback className="text-[9px] bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
               {studentInitials}
             </AvatarFallback>
           </Avatar>
-          <p className="text-xs font-semibold truncate flex-1 min-w-0">
+          <p className="text-xs font-semibold truncate flex-1 min-w-0 leading-tight">
             {app.student.firstName} {app.student.lastName}
           </p>
-          <SLABadge status={slaStatus} />
+          <div className="flex-shrink-0">
+            <SLABadge status={slaStatus} />
+          </div>
         </div>
 
         {/* Row 2: Course name */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <p className="text-xs text-foreground truncate leading-snug pl-[52px] cursor-default">
+              <p className="text-xs text-foreground truncate w-full leading-snug cursor-default">
                 {courseName || <span className="text-muted-foreground italic">No course</span>}
               </p>
             </TooltipTrigger>
@@ -432,27 +434,27 @@ function DraggableApplicationCard({
           </Tooltip>
         </TooltipProvider>
 
-        {/* Row 3: Institution · Date · Consultant avatar */}
-        <div className="flex items-center gap-2 pl-[52px] min-w-0">
+        {/* Row 3: Institution + Date */}
+        <div className="flex items-center gap-1.5 w-full min-w-0">
           <p className="text-[11px] text-muted-foreground truncate flex-1 min-w-0">
             {institutionName || <span className="italic">External</span>}
           </p>
-          <span className="text-[10px] text-muted-foreground/70 flex-shrink-0">
+          <span className="text-[10px] text-muted-foreground/60 flex-shrink-0 whitespace-nowrap">
             {format(new Date(app.application.createdAt), 'MMM d')}
           </span>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 {app.consultant ? (
-                  <Avatar className="h-5 w-5 flex-shrink-0">
+                  <Avatar className="h-4 w-4 flex-shrink-0">
                     <AvatarImage src={app.consultant.profileImageUrl || undefined} />
-                    <AvatarFallback className="text-[8px] bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                    <AvatarFallback className="text-[7px] bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
                       {consultantInitials}
                     </AvatarFallback>
                   </Avatar>
                 ) : (
-                  <div className="h-5 w-5 rounded-full border-dashed border border-amber-400 flex items-center justify-center flex-shrink-0">
-                    <UserPlus className="h-2.5 w-2.5 text-amber-500" />
+                  <div className="h-4 w-4 rounded-full border-dashed border border-amber-400 flex items-center justify-center flex-shrink-0">
+                    <UserPlus className="h-2 w-2 text-amber-500" />
                   </div>
                 )}
               </TooltipTrigger>
@@ -466,22 +468,22 @@ function DraggableApplicationCard({
         </div>
 
         {/* Action row */}
-        <div className="flex gap-1.5 pt-0.5">
+        <div className="flex gap-1 pt-0.5 w-full">
           <Button
             size="sm"
             variant="ghost"
-            className="flex-1 h-7 text-xs"
+            className="flex-1 h-6 text-xs px-1"
             onClick={(e) => { e.stopPropagation(); onViewDetails(); }}
             data-testid={`button-view-details-${app.application.id}`}
           >
-            <Eye className="h-3 w-3 mr-1" />
+            <Eye className="h-3 w-3 mr-0.5" />
             View
           </Button>
           {nextStage && (
             <Button
               size="sm"
               variant="outline"
-              className="h-7 text-xs px-2"
+              className="h-6 w-6 p-0 flex-shrink-0"
               onClick={(e) => { e.stopPropagation(); onAdvanceStage(); }}
               data-testid={`button-next-stage-${app.application.id}`}
             >
