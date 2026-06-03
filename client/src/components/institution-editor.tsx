@@ -380,6 +380,12 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
     },
   });
 
+  // `defaultValues` only hydrates the form on initial mount. When the `institution` prop
+  // changes (e.g. after a save that refetches data, or when opening a different record),
+  // React Hook Form does NOT re-read `defaultValues`. We must call `form.reset()` explicitly
+  // so every field reflects the latest server state. If a new field is added to
+  // `institutionSchema`, it MUST also be added to both `defaultValues` above and this
+  // `form.reset()` call, otherwise it will appear blank after the first save.
   useEffect(() => {
     if (institution) {
       form.reset({
