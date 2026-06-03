@@ -213,6 +213,8 @@ interface Institution {
     postcode: string;
     country: string;
   }> | null;
+  cricosProviderCode: string | null;
+  rtoNumber: string | null;
   approvalStatus: string | null;
   publishStatus: 'draft' | 'published';
   isActive: boolean;

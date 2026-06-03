@@ -380,6 +380,29 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
     },
   });
 
+  useEffect(() => {
+    if (institution) {
+      form.reset({
+        name: institution.name || "",
+        country: institution.country || "",
+        description: institution.description || "",
+        contactEmail: institution.contactEmail || "",
+        contactPhone: institution.contactPhone || "",
+        website: institution.website || "",
+        providerType: institution.providerType || "",
+        numberOfCampuses: institution.numberOfCampuses as any,
+        establishedYear: institution.establishedYear as any,
+        logo: institution.logo || "",
+        topDisciplines: institution.topDisciplines || [],
+        topCourses: institution.topCourses?.join(", ") || "",
+        institutionGallery: institution.institutionGallery || [],
+        campusAddresses: institution.campusAddresses || [],
+        rtoNumber: institution.rtoNumber || "",
+        cricosProviderCode: institution.cricosProviderCode || "",
+      });
+    }
+  }, [institution?.id]);
+
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await apiRequest("POST", "/api/super-admin/institutions", data);
