@@ -1600,7 +1600,7 @@ export function AdminApplicationsKanban() {
                       {/* Cards Container — transparent, full column width */}
                       <div className="flex-1 overflow-hidden">
                         <ScrollArea className="h-full">
-                          <div className="pt-1 pb-3 space-y-2">
+                          <div className="pt-1 pb-3 pr-1 space-y-2">
                             {stageCount === 0 ? (
                               <p className="text-xs text-muted-foreground text-center py-6">
                                 No applications
