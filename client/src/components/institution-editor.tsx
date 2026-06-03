@@ -156,6 +156,19 @@ interface ActivityLogItem {
 
 export function InstitutionEditor({ institution, onBack, userId }: InstitutionEditorProps) {
   const { toast } = useToast();
+
+  // Always fetch the latest institution data from the server so the form
+  // is never populated from a stale parent-state object.  The prop is only
+  // used as the initial seed while the query loads.
+  const { data: freshInstitution } = useQuery<any>({
+    queryKey: ["/api/super-admin/institutions", institution?.id],
+    enabled: !!institution?.id,
+    staleTime: 0, // always re-validate when the editor opens
+  });
+
+  // effectiveInstitution: server-fresh data wins; prop is the fallback while loading
+  const effectiveInstitution = freshInstitution ?? institution;
+
   const [logoPreview, setLogoPreview] = useState<string | null>(institution?.logo || null);
   const [logoDisplayError, setLogoDisplayError] = useState(false);
   useEffect(() => { setLogoDisplayError(false); }, [logoPreview]);
@@ -361,31 +374,29 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
   const form = useForm<z.infer<typeof institutionSchema>>({
     resolver: zodResolver(institutionSchema),
     defaultValues: {
-      name: institution?.name || "",
-      country: institution?.country || "",
-      description: institution?.description || "",
-      contactEmail: institution?.contactEmail || "",
-      contactPhone: institution?.contactPhone || "",
-      website: institution?.website || "",
-      providerType: institution?.providerType || "",
-      numberOfCampuses: institution?.numberOfCampuses ?? ("" as any),
-      establishedYear: institution?.establishedYear ?? ("" as any),
-      logo: institution?.logo || "",
-      topDisciplines: institution?.topDisciplines || [],
-      topCourses: institution?.topCourses?.join(", ") || "",
-      institutionGallery: institution?.institutionGallery || [],
-      campusAddresses: institution?.campusAddresses || [],
-      rtoNumber: institution?.rtoNumber || "",
-      cricosProviderCode: institution?.cricosProviderCode || "",
+      name: effectiveInstitution?.name || "",
+      country: effectiveInstitution?.country || "",
+      description: effectiveInstitution?.description || "",
+      contactEmail: effectiveInstitution?.contactEmail || "",
+      contactPhone: effectiveInstitution?.contactPhone || "",
+      website: effectiveInstitution?.website || "",
+      providerType: effectiveInstitution?.providerType || "",
+      numberOfCampuses: effectiveInstitution?.numberOfCampuses ?? ("" as any),
+      establishedYear: effectiveInstitution?.establishedYear ?? ("" as any),
+      logo: effectiveInstitution?.logo || "",
+      topDisciplines: effectiveInstitution?.topDisciplines || [],
+      topCourses: effectiveInstitution?.topCourses?.join(", ") || "",
+      institutionGallery: effectiveInstitution?.institutionGallery || [],
+      campusAddresses: effectiveInstitution?.campusAddresses || [],
+      rtoNumber: effectiveInstitution?.rtoNumber || "",
+      cricosProviderCode: effectiveInstitution?.cricosProviderCode || "",
     },
   });
 
-  // `defaultValues` only hydrates the form on initial mount. When the `institution` prop
-  // changes (e.g. after a save that refetches data, or when opening a different record),
-  // React Hook Form does NOT re-read `defaultValues`. We must call `form.reset()` explicitly
-  // so every field reflects the latest server state. If a new field is added to
-  // `institutionSchema`, it MUST also be added to both `defaultValues` above and this
-  // `form.reset()` call, otherwise it will appear blank after the first save.
+  // Effect 1: Initial hydration from the parent prop.
+  // Fires on mount (or when switching to a different institution ID) and does a
+  // full unconditional reset so the form starts populated even before the detail
+  // query has returned.  keepDirtyValues is false — there is nothing dirty yet.
   useEffect(() => {
     if (institution) {
       form.reset({
@@ -411,6 +422,37 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
     }
   }, [institution?.id]);
 
+  // Effect 2: Re-hydration when the server detail query arrives (or re-fetches
+  // after a save).  keepDirtyValues: true means fields the user has already typed
+  // into are never overwritten — only pristine fields receive the server value.
+  // This fires independently of Effect 1: even if id/updatedAt match the prop,
+  // the transition from freshInstitution=undefined → freshInstitution=data triggers
+  // it, guaranteeing CRICOS, RTO, Featured On etc. always show the server state.
+  useEffect(() => {
+    if (freshInstitution) {
+      form.reset({
+        name: freshInstitution.name || "",
+        country: freshInstitution.country || "",
+        description: freshInstitution.description || "",
+        contactEmail: freshInstitution.contactEmail || "",
+        contactPhone: freshInstitution.contactPhone || "",
+        website: freshInstitution.website || "",
+        providerType: freshInstitution.providerType || "",
+        numberOfCampuses: freshInstitution.numberOfCampuses ?? ("" as any),
+        establishedYear: freshInstitution.establishedYear ?? ("" as any),
+        logo: freshInstitution.logo || "",
+        topDisciplines: freshInstitution.topDisciplines || [],
+        topCourses: freshInstitution.topCourses?.join(", ") || "",
+        institutionGallery: freshInstitution.institutionGallery || [],
+        campusAddresses: freshInstitution.campusAddresses || [],
+        rtoNumber: freshInstitution.rtoNumber || "",
+        cricosProviderCode: freshInstitution.cricosProviderCode || "",
+      }, { keepDirtyValues: true });
+      setSelectedMarkets(freshInstitution.availableMarkets || ['AU', 'BD']);
+      setSelectedFeaturedMarkets(freshInstitution.featuredMarkets || []);
+    }
+  }, [freshInstitution?.id, freshInstitution?.updatedAt]);
+
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await apiRequest("POST", "/api/super-admin/institutions", data);
@@ -435,6 +477,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
     onSuccess: ({ stayOnPage }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions", institution?.id] });
       toast({ title: "Success", description: "Institution updated successfully" });
       if (!stayOnPage) {
         onBack();
