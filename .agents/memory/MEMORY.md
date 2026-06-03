@@ -1,0 +1,1 @@
+- [Editor self-fetch pattern](editor-self-fetch.md) — form editors must own their own useQuery, not rely on parent list cache, to avoid stale-data on reopen
