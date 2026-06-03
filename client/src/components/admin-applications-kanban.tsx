@@ -520,7 +520,7 @@ export function AdminApplicationsKanban() {
   const PAGE_SIZE = 20;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
-  const [filterSidebarOpen, setFilterSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
+  const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
   const [batchStageDialogOpen, setBatchStageDialogOpen] = useState(false);
   const [batchTargetStage, setBatchTargetStage] = useState<ApplicationStage | undefined>();
 
@@ -704,11 +704,10 @@ export function AdminApplicationsKanban() {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      if (!mobile && !filterSidebarOpen) setFilterSidebarOpen(true);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [filterSidebarOpen]);
+  }, []);
 
   // Check if any filters are active
   const hasActiveFilters = consultantFilter !== "all" || branchFilter !== "all" || countryFilter !== "all" || stageFilter !== "all" || statusFilter !== "all" || slaFilter !== "all";
@@ -948,7 +947,7 @@ export function AdminApplicationsKanban() {
     <div className="flex flex-col h-full">
       {/* Top Header Bar — two rows */}
       <div className="flex flex-col gap-2 mb-3">
-        {/* Row 1: Filter toggle + Stats + View toggle */}
+        {/* Row 1: Filter toggle + Search + Sort + Export + View toggle */}
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -960,19 +959,16 @@ export function AdminApplicationsKanban() {
           >
             {filterSidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
           </Button>
-          {/* Stats — compact on mobile, full on sm+ */}
-          <div className="flex items-center gap-2 text-sm min-w-0 flex-1">
-            <span className="font-medium shrink-0">{stats.total} Applications</span>
-            <span className="hidden sm:flex items-center gap-2 text-sm flex-wrap">
-              <span className="text-muted-foreground">|</span>
-              <span className="text-amber-600 shrink-0">{stats.unassigned} Unassigned</span>
-              <span className="text-muted-foreground">|</span>
-              <span className="text-blue-600 shrink-0">{stats.inProgress} In Progress</span>
-              <span className="text-muted-foreground">|</span>
-              <span className="text-green-600 shrink-0">{stats.completed} Completed</span>
-            </span>
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 w-full"
+              data-testid="input-search-applications"
+            />
           </div>
-          {/* Sort control */}
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
             <SelectTrigger className="h-8 w-auto text-sm gap-1.5 shrink-0 border-dashed" data-testid="select-sort-applications">
               <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
@@ -987,11 +983,10 @@ export function AdminApplicationsKanban() {
               <SelectItem value="sla">By SLA urgency</SelectItem>
             </SelectContent>
           </Select>
-          {/* Export CSV button */}
           <Button
             variant="outline"
             size="sm"
-            className="h-7 shrink-0"
+            className="h-8 shrink-0"
             onClick={() => {
               const rows = filteredApplications.map(app => {
                 const isExternal = !app.application.courseId;
@@ -1023,7 +1018,6 @@ export function AdminApplicationsKanban() {
             <Download className="h-3.5 w-3.5 mr-1.5" />
             Export
           </Button>
-          {/* View toggle — right side */}
           <div className="flex items-center gap-1 border rounded-lg p-0.5 shrink-0">
             <Button
               variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -1045,18 +1039,9 @@ export function AdminApplicationsKanban() {
             </Button>
           </div>
         </div>
-        {/* Row 2: Search + My Applications */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 w-full"
-              data-testid="input-search-applications"
-            />
-          </div>
+
+        {/* Row 2: My Apps + Stage/Status/Consultant + SLA chips + Select All — single scrollable line */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 flex-nowrap">
           {user?.id && (
             <Button
               variant="outline"
@@ -1066,92 +1051,139 @@ export function AdminApplicationsKanban() {
               data-testid="button-my-applications-topbar"
             >
               <User className="h-3.5 w-3.5 mr-1.5" />
-              My Applications
+              Mine
             </Button>
           )}
-        </div>
-      </div>
-
-      {/* Inline Filter Row */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-3 flex-nowrap">
-        <Select value={stageFilter} onValueChange={setStageFilter}>
-          <SelectTrigger className="min-w-[130px] w-[150px] h-8 text-sm shrink-0" data-testid="select-stage-filter-inline">
-            <SelectValue placeholder="All Stages" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Stages</SelectItem>
-            {ALL_STAGES.map((stage) => (
-              <SelectItem key={stage} value={stage}>{stage}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="min-w-[130px] w-[150px] h-8 text-sm shrink-0" data-testid="select-status-filter-inline">
-            <SelectValue placeholder="All Statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="withdrawn">Withdrawn</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
-            <SelectItem value="deferred">Deferred</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={consultantFilter} onValueChange={setConsultantFilter}>
-          <SelectTrigger className="min-w-[140px] w-[180px] h-8 text-sm shrink-0" data-testid="select-consultant-filter-inline">
-            <SelectValue placeholder="All Consultants" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Consultants</SelectItem>
-            <SelectItem value="unassigned">Unassigned</SelectItem>
-            {consultants.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.firstName} {c.lastName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" className="h-8 shrink-0" onClick={clearAllFilters} data-testid="button-clear-filters-inline">
-            <X className="h-3.5 w-3.5 mr-1.5" />
-            Clear All
-          </Button>
-        )}
-        {hasActiveFilters && (
-          <Popover open={saveFilterOpen} onOpenChange={setSaveFilterOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 shrink-0" data-testid="button-save-filter-apps">
-                <Bookmark className="h-3.5 w-3.5 mr-1.5" />
-                Save Filter
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-3" align="end">
-              <p className="text-sm font-medium mb-2">Name this filter</p>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="e.g. Active BD Apps"
-                  value={saveFilterName}
-                  onChange={(e) => setSaveFilterName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && saveFilterName.trim()) createSavedFilterMutation.mutate(saveFilterName.trim()); }}
-                  className="h-8 text-sm"
-                  data-testid="input-save-filter-name-apps"
-                  autoFocus
-                />
-                <Button
-                  size="sm"
-                  className="h-8 shrink-0"
-                  disabled={!saveFilterName.trim() || createSavedFilterMutation.isPending}
-                  onClick={() => createSavedFilterMutation.mutate(saveFilterName.trim())}
-                  data-testid="button-confirm-save-filter-apps"
-                >
-                  <Save className="h-3.5 w-3.5" />
+          <Select value={stageFilter} onValueChange={setStageFilter}>
+            <SelectTrigger className="min-w-[120px] w-[140px] h-8 text-sm shrink-0" data-testid="select-stage-filter-inline">
+              <SelectValue placeholder="All Stages" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Stages</SelectItem>
+              {ALL_STAGES.map((stage) => (
+                <SelectItem key={stage} value={stage}>{stage}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="min-w-[120px] w-[140px] h-8 text-sm shrink-0" data-testid="select-status-filter-inline">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="withdrawn">Withdrawn</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="deferred">Deferred</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={consultantFilter} onValueChange={setConsultantFilter}>
+            <SelectTrigger className="min-w-[130px] w-[160px] h-8 text-sm shrink-0" data-testid="select-consultant-filter-inline">
+              <SelectValue placeholder="All Consultants" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Consultants</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {consultants.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.firstName} {c.lastName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" className="h-8 shrink-0" onClick={clearAllFilters} data-testid="button-clear-filters-inline">
+              <X className="h-3.5 w-3.5 mr-1.5" />
+              Clear
+            </Button>
+          )}
+          {hasActiveFilters && (
+            <Popover open={saveFilterOpen} onOpenChange={setSaveFilterOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 shrink-0" data-testid="button-save-filter-apps">
+                  <Bookmark className="h-3.5 w-3.5 mr-1.5" />
+                  Save
                 </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-3" align="end">
+                <p className="text-sm font-medium mb-2">Name this filter</p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. Active BD Apps"
+                    value={saveFilterName}
+                    onChange={(e) => setSaveFilterName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && saveFilterName.trim()) createSavedFilterMutation.mutate(saveFilterName.trim()); }}
+                    className="h-8 text-sm"
+                    data-testid="input-save-filter-name-apps"
+                    autoFocus
+                  />
+                  <Button
+                    size="sm"
+                    className="h-8 shrink-0"
+                    disabled={!saveFilterName.trim() || createSavedFilterMutation.isPending}
+                    onClick={() => createSavedFilterMutation.mutate(saveFilterName.trim())}
+                    data-testid="button-confirm-save-filter-apps"
+                  >
+                    <Save className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+          <Separator orientation="vertical" className="h-5 mx-1 shrink-0" />
+          <Button
+            variant={slaFilter === 'all' ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-8 text-xs shrink-0"
+            onClick={() => setSlaFilter('all')}
+            data-testid="chip-sla-all"
+          >
+            All
+          </Button>
+          <Button
+            variant={slaFilter === 'on-track' ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-8 text-xs shrink-0"
+            onClick={() => setSlaFilter('on-track')}
+            data-testid="chip-sla-on-track"
+          >
+            <CheckCircle className="h-3 w-3 mr-1 text-green-500" />
+            On Track ({slaCounts['on-track']})
+          </Button>
+          <Button
+            variant={slaFilter === 'at-risk' ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-8 text-xs shrink-0"
+            onClick={() => setSlaFilter('at-risk')}
+            data-testid="chip-sla-at-risk"
+          >
+            <Clock className="h-3 w-3 mr-1 text-amber-500" />
+            At Risk ({slaCounts['at-risk']})
+          </Button>
+          <Button
+            variant={slaFilter === 'overdue' ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-8 text-xs shrink-0"
+            onClick={() => setSlaFilter('overdue')}
+            data-testid="chip-sla-overdue"
+          >
+            <AlertTriangle className="h-3 w-3 mr-1 text-red-500" />
+            Overdue ({slaCounts['overdue']})
+          </Button>
+          <Separator orientation="vertical" className="h-5 mx-1 shrink-0" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs shrink-0"
+            onClick={selectAllVisible}
+            data-testid="button-select-all"
+          >
+            <Users className="h-3 w-3 mr-1" />
+            Select All ({filteredApplications.length})
+          </Button>
+        </div>
       </div>
 
       {/* Bulk Actions Bar (when items selected) */}
@@ -1352,62 +1384,6 @@ export function AdminApplicationsKanban() {
 
         {/* Main Content - Kanban or List */}
         <div className="flex-1 min-w-0 flex flex-col min-h-0">
-          {/* Quick Filter Chips */}
-          {selectedApplications.size === 0 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-2 flex-shrink-0">
-              <span className="text-xs text-muted-foreground mr-1 flex-shrink-0">Quick:</span>
-                <Button
-                  variant={slaFilter === 'all' ? 'secondary' : 'outline'}
-                  size="sm"
-                  className="h-7 text-xs flex-shrink-0"
-                  onClick={() => setSlaFilter('all')}
-                  data-testid="chip-sla-all"
-                >
-                  All
-                </Button>
-                <Button
-                  variant={slaFilter === 'on-track' ? 'secondary' : 'outline'}
-                  size="sm"
-                  className="h-7 text-xs flex-shrink-0"
-                  onClick={() => setSlaFilter('on-track')}
-                  data-testid="chip-sla-on-track"
-                >
-                  <CheckCircle className="h-3 w-3 mr-1 text-green-500" />
-                  On Track ({slaCounts['on-track']})
-                </Button>
-                <Button
-                  variant={slaFilter === 'at-risk' ? 'secondary' : 'outline'}
-                  size="sm"
-                  className="h-7 text-xs flex-shrink-0"
-                  onClick={() => setSlaFilter('at-risk')}
-                  data-testid="chip-sla-at-risk"
-                >
-                  <Clock className="h-3 w-3 mr-1 text-amber-500" />
-                  At Risk ({slaCounts['at-risk']})
-                </Button>
-                <Button
-                  variant={slaFilter === 'overdue' ? 'secondary' : 'outline'}
-                  size="sm"
-                  className="h-7 text-xs flex-shrink-0"
-                  onClick={() => setSlaFilter('overdue')}
-                  data-testid="chip-sla-overdue"
-                >
-                  <AlertTriangle className="h-3 w-3 mr-1 text-red-500" />
-                  Overdue ({slaCounts['overdue']})
-                </Button>
-                <Separator orientation="vertical" className="h-5 mx-1 hidden sm:block" />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs flex-shrink-0"
-                  onClick={selectAllVisible}
-                  data-testid="button-select-all"
-                >
-                  <Users className="h-3 w-3 mr-1" />
-                  Select All ({filteredApplications.length})
-                </Button>
-              </div>
-            )}
 
           {/* Loading State */}
       {isLoading ? (
@@ -1597,11 +1573,9 @@ export function AdminApplicationsKanban() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-2 overflow-x-auto pb-4 flex-1 min-h-0">
+          <div className="flex gap-3 overflow-x-auto pb-4 flex-1 min-h-0">
             {ALL_STAGES.map((stage) => {
               const stageCount = applicationsByStage[stage].length;
-              const totalCount = sortedApplications.length || 1;
-              const percentage = Math.round((stageCount / totalCount) * 100);
               const isTerminal = TERMINAL_STAGES.includes(stage);
               
               return (
@@ -1611,33 +1585,22 @@ export function AdminApplicationsKanban() {
                     items={applicationsByStage[stage].map(app => app.application.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="w-56 flex-shrink-0 flex flex-col h-full">
-                      {/* Colored Stage Header */}
-                      <div className={`rounded-t-md px-2 py-2 border-b ${STAGE_HEADER_COLORS[stage]}`}>
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-xs font-semibold truncate text-foreground" title={stage}>
-                            {stage}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                            {percentage}%
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold">{stageCount}</span>
-                          {/* Progress bar */}
-                          <div className="flex-1 h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-foreground/60 rounded-full transition-all"
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                        </div>
+                    <div className="w-[230px] min-w-[230px] flex-shrink-0 flex flex-col h-full">
+                      {/* Minimal Stage Header */}
+                      <div className="flex items-center gap-2 px-1 pb-2">
+                        <span className="text-xs font-semibold truncate flex-1 text-foreground" title={stage}>
+                          {stage}
+                        </span>
+                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 shrink-0 no-default-active-elevate">
+                          {stageCount}
+                        </Badge>
                       </div>
-                      
-                      {/* Cards Container with individual scroll */}
-                      <div className="flex-1 bg-muted/30 rounded-b-md border border-t-0 overflow-hidden">
+                      <div className="h-px bg-border mb-2 w-full" />
+
+                      {/* Cards Container — transparent, full column width */}
+                      <div className="flex-1 overflow-hidden">
                         <ScrollArea className="h-full">
-                          <div className="p-2 space-y-2">
+                          <div className="pt-1 pb-3 space-y-2">
                             {stageCount === 0 ? (
                               <p className="text-xs text-muted-foreground text-center py-6">
                                 No applications

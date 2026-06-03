@@ -2038,7 +2038,7 @@ export default function AdminDashboard() {
 
           {/* Main Content - Full-height for Applications and Messages, scrollable for all others */}
           {activeTab === "applications" ? (
-            <div className="flex flex-col flex-1 min-h-0 overflow-hidden px-4 md:px-6 py-4 pb-20 lg:pb-4">
+            <div className="flex flex-col flex-1 min-h-0 overflow-hidden py-4 pb-20 lg:pb-4">
               <AdminApplicationsKanban />
             </div>
           ) : activeTab === "messages" ? (
