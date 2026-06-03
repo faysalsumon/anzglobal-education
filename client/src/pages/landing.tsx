@@ -406,7 +406,7 @@ export default function Landing() {
                   "name": "Where is the ANZ Global Education Dhaka office?",
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Our Dhaka office is located at 4th Floor, Plot-01, Road 10, Sector 6, Uttara, Dhaka-1230. You can visit us Monday to Saturday, 10 AM – 7 PM, for a free in-person counselling session. Call us or book an appointment online through our website."
+                    "text": "Our Dhaka office is located at Block E, NI Tower, Level 4, Road 10, Banani, Dhaka 1213. You can visit us Monday to Saturday, 10 AM – 7 PM, for a free in-person counselling session. Call us or book an appointment online through our website."
                   }
                 },
                 {
