@@ -428,7 +428,7 @@ function DraggableApplicationCard({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Avatar className="h-5 w-5 flex-shrink-0 mt-0.5">
-                  <AvatarImage src={app.university.logo || undefined} />
+                  <AvatarImage src={app.university?.logo || undefined} />
                   <AvatarFallback className="text-[8px] bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
                     {institutionInitials}
                   </AvatarFallback>
@@ -443,11 +443,11 @@ function DraggableApplicationCard({
             <Tooltip>
               <TooltipTrigger asChild>
                 <p className="text-[11px] text-muted-foreground flex-1 min-w-0 line-clamp-2 leading-tight cursor-default">
-                  {app.course.title}
+                  {app.externalCourseName || app.course?.title || ''}
                 </p>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs max-w-[280px]">
-                {app.course.title}
+                {app.externalCourseName || app.course?.title || ''}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -646,7 +646,7 @@ export function AdminApplicationsKanban() {
     const matchesSearch =
       !searchLower ||
       `${app.student.firstName || ""} ${app.student.lastName || ""}`.toLowerCase().includes(searchLower) ||
-      app.course.title.toLowerCase().includes(searchLower) ||
+      (app.course?.title || '').toLowerCase().includes(searchLower) ||
       (app.university?.name ?? "").toLowerCase().includes(searchLower);
 
     const matchesConsultant =
@@ -663,7 +663,7 @@ export function AdminApplicationsKanban() {
 
     const matchesCountry =
       countryFilter === "all" ||
-      app.university.country === countryFilter;
+      (app.university?.country ?? null) === countryFilter;
 
     const matchesStage =
       stageFilter === "all" ||
@@ -885,7 +885,7 @@ export function AdminApplicationsKanban() {
   });
 
   // Get unique countries
-  const countries = Array.from(new Set(applications.map(app => app.university.country).filter(Boolean)));
+  const countries = Array.from(new Set(applications.map(app => app.university?.country).filter(Boolean)));
 
   // Toggle selection
   const toggleSelection = (id: string) => {
@@ -1025,7 +1025,7 @@ export function AdminApplicationsKanban() {
                 return [
                   `${app.student.firstName || ''} ${app.student.lastName || ''}`.trim(),
                   app.student.email || '',
-                  isExternal ? (app.externalCourseName || app.course.title) : app.course.title,
+                  isExternal ? (app.externalCourseName || app.course?.title || '') : (app.course?.title || ''),
                   isExternal ? (app.externalInstitutionName || app.university?.name || '') : (app.university?.name || ''),
                   isExternal ? (app.externalCountry || '') : (app.university?.country || ''),
                   isExternal ? 'External' : 'Platform',
@@ -1526,7 +1526,7 @@ export function AdminApplicationsKanban() {
                       <div className="flex-1 min-w-0 lg:text-center">
                         <div className="flex items-center gap-2 lg:justify-center flex-wrap">
                           <GraduationCap className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <span className="text-sm font-medium truncate">{app.course.title}</span>
+                          <span className="text-sm font-medium truncate">{app.externalCourseName || app.course?.title || ''}</span>
                           {app.externalCourseName && !app.application.courseId && (
                             <Badge variant="outline" className="text-[10px] px-1.5 no-default-active-elevate shrink-0">External</Badge>
                           )}
