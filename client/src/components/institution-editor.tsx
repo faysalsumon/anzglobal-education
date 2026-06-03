@@ -368,8 +368,8 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
       contactPhone: institution?.contactPhone || "",
       website: institution?.website || "",
       providerType: institution?.providerType || "",
-      numberOfCampuses: institution?.numberOfCampuses as any,
-      establishedYear: institution?.establishedYear as any,
+      numberOfCampuses: institution?.numberOfCampuses ?? ("" as any),
+      establishedYear: institution?.establishedYear ?? ("" as any),
       logo: institution?.logo || "",
       topDisciplines: institution?.topDisciplines || [],
       topCourses: institution?.topCourses?.join(", ") || "",
@@ -396,8 +396,8 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
         contactPhone: institution.contactPhone || "",
         website: institution.website || "",
         providerType: institution.providerType || "",
-        numberOfCampuses: institution.numberOfCampuses as any,
-        establishedYear: institution.establishedYear as any,
+        numberOfCampuses: institution.numberOfCampuses ?? ("" as any),
+        establishedYear: institution.establishedYear ?? ("" as any),
         logo: institution.logo || "",
         topDisciplines: institution.topDisciplines || [],
         topCourses: institution.topCourses?.join(", ") || "",
@@ -406,6 +406,8 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
         rtoNumber: institution.rtoNumber || "",
         cricosProviderCode: institution.cricosProviderCode || "",
       });
+      setSelectedMarkets(institution.availableMarkets || ['AU', 'BD']);
+      setSelectedFeaturedMarkets(institution.featuredMarkets || []);
     }
   }, [institution?.id]);
 
@@ -432,6 +434,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
     },
     onSuccess: ({ stayOnPage }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
       toast({ title: "Success", description: "Institution updated successfully" });
       if (!stayOnPage) {
         onBack();
