@@ -373,21 +373,29 @@ function DraggableApplicationCard({
     ? getInitials(app.consultant.firstName, app.consultant.lastName)
     : null;
 
+  const courseName = app.externalCourseName || app.course?.title || '';
+  const institutionName = app.externalInstitutionName || app.university?.name || '';
+
   return (
     <Card
       ref={setNodeRef}
       style={style}
-      className={`hover-elevate cursor-move transition-all ${
+      className={`cursor-move transition-all select-none ${
         isSelected ? 'ring-2 ring-primary ring-offset-1' : ''
-      } ${slaStatus === 'overdue' ? 'border-red-300 dark:border-red-800' : ''}`}
+      } ${slaStatus === 'overdue' ? 'border-red-300 dark:border-red-800' : slaStatus === 'at-risk' ? 'border-amber-300 dark:border-amber-700' : ''}`}
       data-testid={`application-card-${app.application.id}`}
       onClick={onViewDetails}
     >
-      <CardContent className="p-2 space-y-1">
-        {/* Row 1: Drag handle, Checkbox, Student Avatar & Name, Progress */}
-        <div className="flex items-center gap-1.5">
-          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-            <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+      <CardContent className="p-3 space-y-2">
+        {/* Row 1: Drag handle + Checkbox + Student avatar + Name + SLA */}
+        <div className="flex items-center gap-2 min-w-0">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50" />
           </div>
           <Checkbox
             checked={isSelected}
@@ -402,119 +410,82 @@ function DraggableApplicationCard({
               {studentInitials}
             </AvatarFallback>
           </Avatar>
-          <p className="text-xs font-medium truncate flex-1 min-w-0">
+          <p className="text-xs font-semibold truncate flex-1 min-w-0">
             {app.student.firstName} {app.student.lastName}
           </p>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex-shrink-0">
-                  <CircularProgress progress={progress} size={24} strokeWidth={2} />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="left" className="text-xs">
-                <p className="font-medium">{progress}% Complete</p>
-                <p className="text-muted-foreground">
-                  {app.documentProgress.requiredUploaded}/{app.documentProgress.requiredDocs} docs
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <SLABadge status={slaStatus} />
         </div>
 
-        {/* Row 2: Institution Logo + Course Title (2-line with tooltip) */}
-        <div className="flex items-start gap-1.5 min-w-0">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Avatar className="h-5 w-5 flex-shrink-0 mt-0.5">
-                  <AvatarImage src={app.university?.logo || undefined} />
-                  <AvatarFallback className="text-[8px] bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
-                    {institutionInitials}
-                  </AvatarFallback>
-                </Avatar>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-xs">
-                {app.university?.name}
+        {/* Row 2: Course name */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <p className="text-xs text-foreground truncate leading-snug pl-[52px] cursor-default">
+                {courseName || <span className="text-muted-foreground italic">No course</span>}
+              </p>
+            </TooltipTrigger>
+            {courseName && (
+              <TooltipContent side="bottom" className="text-xs max-w-[260px]">
+                {courseName}
               </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <p className="text-[11px] text-muted-foreground flex-1 min-w-0 line-clamp-2 leading-tight cursor-default">
-                  {app.externalCourseName || app.course?.title || ''}
-                </p>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-xs max-w-[280px]">
-                {app.externalCourseName || app.course?.title || ''}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
-        {/* Row 3: Consultant Avatar + SLA Badge + Date */}
-        <div className="flex items-center justify-between gap-1">
-          <div className="flex items-center gap-1 min-w-0">
-            {app.consultant ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Avatar className="h-5 w-5 flex-shrink-0">
-                      <AvatarImage src={app.consultant.profileImageUrl || undefined} />
-                      <AvatarFallback className="text-[8px] bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                        {consultantInitials}
-                      </AvatarFallback>
-                    </Avatar>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    {app.consultant.firstName} {app.consultant.lastName}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ) : (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="h-5 w-5 rounded-full border-2 border-dashed border-amber-400 flex items-center justify-center flex-shrink-0">
-                      <UserPlus className="h-2.5 w-2.5 text-amber-500" />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    Unassigned
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
             )}
-            <SLABadge status={slaStatus} />
-          </div>
-          <span className="text-[10px] text-muted-foreground flex-shrink-0">
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Row 3: Institution · Date · Consultant avatar */}
+        <div className="flex items-center gap-2 pl-[52px] min-w-0">
+          <p className="text-[11px] text-muted-foreground truncate flex-1 min-w-0">
+            {institutionName || <span className="italic">External</span>}
+          </p>
+          <span className="text-[10px] text-muted-foreground/70 flex-shrink-0">
             {format(new Date(app.application.createdAt), 'MMM d')}
           </span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {app.consultant ? (
+                  <Avatar className="h-5 w-5 flex-shrink-0">
+                    <AvatarImage src={app.consultant.profileImageUrl || undefined} />
+                    <AvatarFallback className="text-[8px] bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                      {consultantInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="h-5 w-5 rounded-full border-dashed border border-amber-400 flex items-center justify-center flex-shrink-0">
+                    <UserPlus className="h-2.5 w-2.5 text-amber-500" />
+                  </div>
+                )}
+              </TooltipTrigger>
+              <TooltipContent side="left" className="text-xs">
+                {app.consultant
+                  ? `${app.consultant.firstName} ${app.consultant.lastName}`
+                  : 'Unassigned'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
-        {/* Row 4: Action Buttons - compact */}
-        <div className="flex gap-1 pt-0.5">
+        {/* Action row */}
+        <div className="flex gap-1.5 pt-0.5">
           <Button
             size="sm"
             variant="ghost"
-            className="flex-1 text-xs"
+            className="flex-1 h-7 text-xs"
             onClick={(e) => { e.stopPropagation(); onViewDetails(); }}
             data-testid={`button-view-details-${app.application.id}`}
           >
-            <Eye className="h-3 w-3 mr-0.5" />
+            <Eye className="h-3 w-3 mr-1" />
             View
           </Button>
           {nextStage && (
             <Button
               size="sm"
               variant="outline"
-              className="flex-1 text-xs"
+              className="h-7 text-xs px-2"
               onClick={(e) => { e.stopPropagation(); onAdvanceStage(); }}
               data-testid={`button-next-stage-${app.application.id}`}
             >
-              <ChevronRight className="h-3 w-3 mr-0.5" />
-              Next
+              <ChevronRight className="h-3 w-3" />
             </Button>
           )}
         </div>
