@@ -1,101 +1,158 @@
-# ANZ Global Education - Robots.txt
-# Block AI crawlers and scrapers from copying platform content
-
-# Block OpenAI crawlers
-User-agent: GPTBot
-Disallow: /
-
-User-agent: ChatGPT-User
-Disallow: /
-
-# Block Anthropic crawlers
-User-agent: Claude-Web
-Disallow: /
-
-User-agent: ClaudeBot
-Disallow: /
-
-User-agent: anthropic-ai
-Disallow: /
-
-# Block Google AI crawlers
-User-agent: Google-Extended
-Disallow: /
-
-# Block Common Crawl (used by many AI training datasets)
-User-agent: CCBot
-Disallow: /
-
-# Block Perplexity AI
-User-agent: PerplexityBot
-Disallow: /
-
-# Block Cohere AI
-User-agent: cohere-ai
-Disallow: /
-
-# Block Meta AI
-User-agent: FacebookBot
-Disallow: /
-
-User-agent: Meta-ExternalAgent
-Disallow: /
-
-# Block Bytedance/TikTok AI
-User-agent: Bytespider
-Disallow: /
-
-# Block other AI training bots
-User-agent: Diffbot
-Disallow: /
-
-User-agent: Omgilibot
-Disallow: /
-
-User-agent: Amazonbot
-Disallow: /
-
-User-agent: YouBot
-Disallow: /
-
-# Block generic scrapers
-User-agent: ia_archiver
-Disallow: /
-
-User-agent: archive.org_bot
-Disallow: /
-
-# Allow legitimate search engines (Google, Bing, etc.)
 User-agent: Googlebot
 Allow: /
-Disallow: /api/
 Disallow: /admin/
+Disallow: /api/
 Disallow: /student/
-Disallow: /institution/
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /auth/callback
+Disallow: /force-password-reset
+Disallow: /user-type
+Disallow: /accept-invitation
+Disallow: /reset-password
 
 User-agent: Bingbot
 Allow: /
-Disallow: /api/
 Disallow: /admin/
+Disallow: /api/
 Disallow: /student/
-Disallow: /institution/
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /auth/callback
+Disallow: /force-password-reset
+Disallow: /user-type
+Disallow: /accept-invitation
+Disallow: /reset-password
 
 User-agent: DuckDuckBot
 Allow: /
-Disallow: /api/
 Disallow: /admin/
+Disallow: /api/
 Disallow: /student/
-Disallow: /institution/
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /auth/callback
+Disallow: /force-password-reset
+Disallow: /user-type
+Disallow: /accept-invitation
+Disallow: /reset-password
 
-# Default rule for all other bots
+User-agent: GPTBot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /student/
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /auth/callback
+Disallow: /force-password-reset
+Disallow: /user-type
+Disallow: /accept-invitation
+Disallow: /reset-password
+
+User-agent: Claude-Web
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /student/
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /auth/callback
+Disallow: /force-password-reset
+Disallow: /user-type
+Disallow: /accept-invitation
+Disallow: /reset-password
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /student/
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /auth/callback
+Disallow: /force-password-reset
+Disallow: /user-type
+Disallow: /accept-invitation
+Disallow: /reset-password
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /student/
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /auth/callback
+Disallow: /force-password-reset
+Disallow: /user-type
+Disallow: /accept-invitation
+Disallow: /reset-password
+
+User-agent: anthropic-ai
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /student/
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /auth/callback
+Disallow: /force-password-reset
+Disallow: /user-type
+Disallow: /accept-invitation
+Disallow: /reset-password
+
+User-agent: Applebot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /student/
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /auth/callback
+Disallow: /force-password-reset
+Disallow: /user-type
+Disallow: /accept-invitation
+Disallow: /reset-password
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /student/
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /auth/callback
+Disallow: /force-password-reset
+Disallow: /user-type
+Disallow: /accept-invitation
+Disallow: /reset-password
+
+User-agent: Google-CloudVertexBot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /student/
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /auth/callback
+Disallow: /force-password-reset
+Disallow: /user-type
+Disallow: /accept-invitation
+Disallow: /reset-password
+
 User-agent: *
 Allow: /
-Disallow: /api/
 Disallow: /admin/
+Disallow: /api/
 Disallow: /student/
-Disallow: /institution/
-Disallow: /dashboard/
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /auth/callback
+Disallow: /force-password-reset
+Disallow: /user-type
+Disallow: /accept-invitation
+Disallow: /reset-password
 
-# Sitemap locations
-Sitemap: https://anzglobal.com.bd/sitemap_index.xml
-Sitemap: https://anzglobal.com.au/sitemap_index.xml
+Sitemap: https://anz-g-lobal-education.replit.app/sitemap_index.xml
+Sitemap: https://anz-g-lobal-education.replit.app/sitemap.xml

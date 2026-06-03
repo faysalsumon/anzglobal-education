@@ -16473,60 +16473,67 @@ ${universities.map((uni) => `  <url>
   // Generate dynamic robots.txt with environment-aware sitemap URL
   app.get("/robots.txt", (req, res) => {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    
-    const robotsTxt = `# ANZ Global Education - Robots.txt
-# Allow all crawlers including AI bots
+    const privateRoutes = [
+      'Disallow: /admin/',
+      'Disallow: /api/',
+      'Disallow: /student/',
+      'Disallow: /dashboard',
+      'Disallow: /auth',
+      'Disallow: /auth/callback',
+      'Disallow: /force-password-reset',
+      'Disallow: /user-type',
+      'Disallow: /accept-invitation',
+      'Disallow: /reset-password',
+    ].join('\n');
 
-# Google and traditional search engines
-User-agent: Googlebot
+    const robotsTxt = `User-agent: Googlebot
 Allow: /
+${privateRoutes}
 
 User-agent: Bingbot
 Allow: /
+${privateRoutes}
 
-# AI crawlers (GPTBot, Claude, Perplexity, etc.)
+User-agent: DuckDuckBot
+Allow: /
+${privateRoutes}
+
 User-agent: GPTBot
 Allow: /
+${privateRoutes}
 
 User-agent: Claude-Web
 Allow: /
+${privateRoutes}
 
 User-agent: ClaudeBot
 Allow: /
+${privateRoutes}
 
 User-agent: PerplexityBot
 Allow: /
+${privateRoutes}
 
 User-agent: anthropic-ai
 Allow: /
+${privateRoutes}
 
 User-agent: Applebot
 Allow: /
+${privateRoutes}
 
 User-agent: ChatGPT-User
 Allow: /
+${privateRoutes}
 
-# Google's new AI crawler for Vertex AI
 User-agent: Google-CloudVertexBot
 Allow: /
+${privateRoutes}
 
-# Allow all other crawlers
 User-agent: *
 Allow: /
+${privateRoutes}
 
-# Disallow admin, API, and private/utility routes
-Disallow: /admin/
-Disallow: /api/
-Disallow: /student/
-Disallow: /dashboard
-Disallow: /auth
-Disallow: /auth/callback
-Disallow: /force-password-reset
-Disallow: /user-type
-Disallow: /accept-invitation
-Disallow: /reset-password
-
-# Sitemap locations
 Sitemap: ${baseUrl}/sitemap_index.xml
 Sitemap: ${baseUrl}/sitemap.xml
 `;
