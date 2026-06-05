@@ -598,6 +598,23 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
 }
 
 /**
+ * Run a scraping job inline without BullMQ (used when Redis is unavailable).
+ * Fires asynchronously — callers should .catch() to avoid unhandled rejections.
+ */
+export async function runScrapingJobInline(jobData: ScrapingJobData): Promise<void> {
+  // Mock the BullMQ Job interface with direct console logging for progress
+  const mockJob = {
+    id: jobData.jobId,
+    data: jobData,
+    updateProgress: async (data: unknown) => {
+      console.log(`[Inline Job ${jobData.jobId}] Progress:`, JSON.stringify(data));
+    },
+  } as unknown as Job<ScrapingJobData>;
+
+  await processScrapingJob(mockJob);
+}
+
+/**
  * Create and start the scraping worker
  * Only call this after Redis availability has been confirmed
  */

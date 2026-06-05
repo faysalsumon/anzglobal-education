@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { MessageCircle, X, Send, Minimize2, ExternalLink, Search, UserPlus, Building2, Mail, ArrowRight } from "lucide-react";
 import { ZanThinkingIndicator } from "@/components/zan-thinking-indicator";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,6 @@ import remarkGfm from "remark-gfm";
 import { useLocation } from "wouter";
 import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.webp";
 
-// CTA button icon mapping based on link path
 const getCTAIcon = (href: string) => {
   if (href.includes('/courses')) return Search;
   if (href.includes('/register')) return UserPlus;
@@ -47,18 +46,23 @@ export function ChatWidget() {
   const [message, setMessage] = useState("");
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Streaming state — builds up the assistant reply token-by-token
+  const [streamingContent, setStreamingContent] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  // Optimistic local messages shown while streaming
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const handleOpenChat = () => {
-      setIsOpen((prev) => {
-        if (!prev) {
-          setIsMinimized(false);
-          setUnreadCount(0);
-        }
+      setIsOpen(prev => {
+        if (!prev) { setIsMinimized(false); setUnreadCount(0); }
         return true;
       });
     };
@@ -66,28 +70,21 @@ export function ChatWidget() {
     return () => window.removeEventListener("open-chat-widget", handleOpenChat);
   }, []);
 
-  // Create a conversation whenever the chat is opened, regardless of how it was opened
   useEffect(() => {
     if (isOpen && !conversationId && !createConversationMutation.isPending) {
       createConversationMutation.mutate();
     }
   }, [isOpen]);
 
-  // Custom markdown components for CTA buttons
   const markdownComponents: Components = useMemo(() => ({
     a: ({ href, children }) => {
       if (!href) return <span>{children}</span>;
-      
       const isInternalLink = href.startsWith('/');
       const Icon = getCTAIcon(href);
-      
       if (isInternalLink) {
         return (
           <button
-            onClick={() => {
-              setLocation(href);
-              setIsOpen(false);
-            }}
+            onClick={() => { setLocation(href); setIsOpen(false); }}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 my-1 text-xs font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
             data-testid={`cta-link-${href.replace(/\//g, '-')}`}
           >
@@ -96,15 +93,9 @@ export function ChatWidget() {
           </button>
         );
       }
-      
-      // External link
       return (
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-primary underline hover:text-primary/80"
-        >
+        <a href={href} target="_blank" rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-primary underline hover:text-primary/80">
           {children}
           <ExternalLink className="h-3 w-3" />
         </a>
@@ -117,7 +108,6 @@ export function ChatWidget() {
     strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
   }), [setLocation]);
 
-  // Create or get conversation mutation
   const createConversationMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/chat/conversations", {});
@@ -125,112 +115,151 @@ export function ChatWidget() {
     },
     onSuccess: (data: Conversation) => {
       setConversationId(data.id);
+      setLocalMessages([]);
     },
     onError: (error: any) => {
-      toast({
-        title: "Failed to create conversation",
-        description: error.message || "Please try again",
-        variant: "destructive",
-      });
+      toast({ title: "Failed to create conversation", description: error.message || "Please try again", variant: "destructive" });
     },
   });
 
-  // Get messages for conversation
-  const { data: messages = [], isLoading: messagesLoading } = useQuery<Message[]>({
+  const { data: serverMessages = [], isLoading: messagesLoading } = useQuery<Message[]>({
     queryKey: ["/api/chat/conversations", conversationId, "messages"],
-    enabled: !!conversationId,
+    enabled: !!conversationId && !isStreaming,
     queryFn: async () => {
       const response = await apiRequest("GET", `/api/chat/conversations/${conversationId}/messages`);
       return response.json();
     },
   });
 
-  // Send message mutation
-  const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
-      if (!conversationId) throw new Error("No conversation ID");
-      
-      return apiRequest("POST", `/api/chat/conversations/${conversationId}/messages`, {
-        content,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ["/api/chat/conversations", conversationId, "messages"] 
-      });
-      setMessage("");
-      scrollToBottom();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error sending message",
-        description: error.message || "Failed to send message",
-        variant: "destructive",
-      });
-    },
-  });
+  // Merge server messages with any optimistic local ones (dedup by id)
+  const messages = useMemo(() => {
+    if (localMessages.length === 0) return serverMessages;
+    const serverIds = new Set(serverMessages.map(m => m.id));
+    const extras = localMessages.filter(m => !serverIds.has(m.id));
+    return [...serverMessages, ...extras];
+  }, [serverMessages, localMessages]);
 
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
-  // Track unread messages when minimized
+  useEffect(() => { scrollToBottom(); }, [messages, streamingContent]);
+
   useEffect(() => {
     if (!isOpen && messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === "assistant") {
-        setUnreadCount((prev) => prev + 1);
-      }
+      const last = messages[messages.length - 1];
+      if (last.role === "assistant") setUnreadCount(p => p + 1);
     } else {
       setUnreadCount(0);
     }
   }, [messages, isOpen]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  // ── Streaming send ─────────────────────────────────────────────────────────
+  const sendMessage = useCallback(async (content: string) => {
+    if (!conversationId || isStreaming || !content.trim()) return;
+
+    // Abort any previous stream
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    // Optimistic user message
+    const tempUserMsg: Message = {
+      id: Date.now(),
+      conversationId,
+      role: "user",
+      content,
+      sources: null,
+      createdAt: new Date().toISOString(),
+    };
+    setLocalMessages(prev => [...prev, tempUserMsg]);
+    setStreamingContent("");
+    setIsStreaming(true);
+    setMessage("");
+
+    try {
+      const resp = await fetch(`/api/chat/conversations/${conversationId}/messages/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+        signal: controller.signal,
+        credentials: "include",
+      });
+
+      if (!resp.ok || !resp.body) throw new Error(`Server error ${resp.status}`);
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const evt = JSON.parse(line.slice(6));
+            if (evt.token) {
+              setStreamingContent(prev => prev + evt.token);
+            }
+            if (evt.error) {
+              throw new Error(evt.error);
+            }
+            if (evt.done) {
+              // Refresh from server — clears streaming state
+              await queryClient.invalidateQueries({
+                queryKey: ["/api/chat/conversations", conversationId, "messages"],
+              });
+              setLocalMessages([]);
+              setStreamingContent("");
+              setIsStreaming(false);
+            }
+          } catch (parseErr) {
+            // ignore malformed SSE line
+          }
+        }
+      }
+    } catch (err: any) {
+      if (err.name === "AbortError") return;
+      console.error("[ChatWidget] Stream error:", err);
+      toast({ title: "Error sending message", description: err.message || "Failed to send message", variant: "destructive" });
+      setLocalMessages(prev => prev.filter(m => m.id !== tempUserMsg.id));
+      setStreamingContent("");
+      setIsStreaming(false);
+    }
+  }, [conversationId, isStreaming, toast]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || sendMessageMutation.isPending) return;
-    sendMessageMutation.mutate(message.trim());
+    sendMessage(message.trim());
   };
 
   const toggleOpen = () => {
     const willBeOpen = !isOpen;
     setIsOpen(willBeOpen);
     setIsMinimized(false);
-    if (willBeOpen) {
-      setUnreadCount(0);
-    }
+    if (willBeOpen) setUnreadCount(0);
   };
 
-  const toggleMinimize = () => {
-    setIsMinimized(!isMinimized);
-  };
+  const toggleMinimize = () => setIsMinimized(!isMinimized);
 
-  // Floating chat button with human avatar - collapsible design
   if (!isOpen) {
     return (
-      <div 
+      <div
         className="fixed bottom-20 right-3 md:bottom-8 md:right-4 z-40 hidden md:block"
         data-testid="chat-widget-trigger"
         onMouseEnter={() => setIsCollapsed(false)}
         onMouseLeave={() => setIsCollapsed(true)}
       >
-        {/* Combined avatar + button container */}
-        <div 
-          className={`
-            flex items-center gap-2 bg-card border border-border rounded-full shadow-lg 
-            transition-all duration-300 ease-in-out overflow-hidden
-            ${isCollapsed ? 'p-1' : 'p-1 pr-4'}
-          `}
-          style={{
-            animation: "float 3s ease-in-out infinite",
-          }}
+        <div
+          className={`flex items-center gap-2 bg-card border border-border rounded-full shadow-lg transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'p-1' : 'p-1 pr-4'}`}
+          style={{ animation: "float 3s ease-in-out infinite" }}
         >
-          {/* Avatar button */}
           <button
             onClick={toggleOpen}
             className="relative group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full flex-shrink-0"
@@ -238,59 +267,33 @@ export function ChatWidget() {
             aria-label="Open chat assistant"
           >
             <div className="relative transition-transform duration-300 group-hover:scale-105">
-              <img
-                src={chatAvatarImage}
-                alt="Zan - Education Assistant"
-                className="w-12 h-12 md:w-14 md:h-14 rounded-full object-cover border-2 border-primary/20"
-              />
-              
-              {/* Online indicator */}
+              <img src={chatAvatarImage} alt="Zan - Education Assistant" className="w-12 h-12 md:w-14 md:h-14 rounded-full object-cover border-2 border-primary/20" />
               <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 border-2 border-card rounded-full" />
-              
-              {/* Unread badge */}
               {unreadCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]"
-                  data-testid="badge-unread-count"
-                >
+                <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]" data-testid="badge-unread-count">
                   {unreadCount}
                 </Badge>
               )}
             </div>
           </button>
-          
-          {/* Ask Zan text - only visible when expanded */}
           <button
             onClick={toggleOpen}
-            className={`
-              flex flex-col items-start transition-all duration-300 ease-in-out
-              ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}
-            `}
+            className={`flex flex-col items-start transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}
             data-testid="button-ask-chat"
           >
             <span className="text-xs text-muted-foreground whitespace-nowrap">Need help?</span>
             <span className="text-sm font-semibold text-foreground whitespace-nowrap">Ask Zan</span>
           </button>
         </div>
-        
-        {/* CSS for floating animation */}
-        <style>{`
-          @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-4px); }
-          }
-        `}</style>
+        <style>{`@keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-4px); } }`}</style>
       </div>
     );
   }
 
-  // Chat window
   return (
-    <div className="fixed bottom-14 right-3 md:bottom-8 md:right-4 z-50 flex flex-col bg-card border border-border rounded-xl shadow-2xl w-[calc(100vw-1.5rem)] max-w-[340px] md:max-w-[380px]"
-      style={{ 
-        height: isMinimized ? "60px" : "min(500px, calc(100vh - 64px))",
-      }}
+    <div
+      className="fixed bottom-14 right-3 md:bottom-8 md:right-4 z-50 flex flex-col bg-card border border-border rounded-xl shadow-2xl w-[calc(100vw-1.5rem)] max-w-[340px] md:max-w-[380px]"
+      style={{ height: isMinimized ? "60px" : "min(500px, calc(100vh - 64px))" }}
       data-testid="chat-widget"
     >
       {/* Header */}
@@ -309,22 +312,10 @@ export function ChatWidget() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={toggleMinimize}
-            className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
-            data-testid="button-minimize-chat"
-          >
+          <Button size="icon" variant="ghost" onClick={toggleMinimize} className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20" data-testid="button-minimize-chat">
             <Minimize2 className="h-4 w-4" />
           </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={toggleOpen}
-            className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
-            data-testid="button-close-chat"
-          >
+          <Button size="icon" variant="ghost" onClick={toggleOpen} className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20" data-testid="button-close-chat">
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -338,7 +329,7 @@ export function ChatWidget() {
               <div className="flex items-center justify-center h-full">
                 <p className="text-muted-foreground text-sm">Loading messages...</p>
               </div>
-            ) : messages.length === 0 ? (
+            ) : messages.length === 0 && !isStreaming ? (
               <div className="flex flex-col items-center justify-start pt-8 h-full text-center px-4">
                 <Avatar className="h-16 w-16 mb-3 border-2 border-primary/20">
                   <AvatarImage src={chatAvatarImage} alt="Zan" />
@@ -357,32 +348,19 @@ export function ChatWidget() {
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`flex gap-3 ${
-                      msg.role === "user" ? "justify-end" : "justify-start"
-                    }`}
+                    className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                     data-testid={`message-${msg.role}-${msg.id}`}
                   >
                     {msg.role === "assistant" && (
                       <Avatar className="h-8 w-8 flex-shrink-0 border border-border">
                         <AvatarImage src={chatAvatarImage} alt="Assistant" />
-                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                          AI
-                        </AvatarFallback>
+                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">AI</AvatarFallback>
                       </Avatar>
                     )}
-                    <div
-                      className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${
-                        msg.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
-                      }`}
-                    >
+                    <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
                       {msg.role === "assistant" ? (
                         <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>p:last-child]:mb-0">
-                          <ReactMarkdown 
-                            remarkPlugins={[remarkGfm]}
-                            components={markdownComponents}
-                          >
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                             {msg.content}
                           </ReactMarkdown>
                         </div>
@@ -392,9 +370,7 @@ export function ChatWidget() {
                     </div>
                     {msg.role === "user" && (
                       <Avatar className="h-8 w-8 flex-shrink-0 border border-border">
-                        {isAuthenticated && user?.profileImageUrl && (
-                          <AvatarImage src={user.profileImageUrl} alt={user.firstName || "User"} />
-                        )}
+                        {isAuthenticated && user?.profileImageUrl && <AvatarImage src={user.profileImageUrl} alt={user.firstName || "User"} />}
                         <AvatarFallback className="bg-accent text-accent-foreground text-xs">
                           {isAuthenticated && user?.firstName ? user.firstName.charAt(0).toUpperCase() : "U"}
                         </AvatarFallback>
@@ -402,8 +378,27 @@ export function ChatWidget() {
                     )}
                   </div>
                 ))}
-                {sendMessageMutation.isPending && (
-                  <ZanThinkingIndicator variant="student" size="md" />
+
+                {/* Live streaming bubble — shows while Zan is typing */}
+                {isStreaming && (
+                  <div className="flex gap-3 justify-start">
+                    <Avatar className="h-8 w-8 flex-shrink-0 border border-border">
+                      <AvatarImage src={chatAvatarImage} alt="Assistant" />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">AI</AvatarFallback>
+                    </Avatar>
+                    <div className="max-w-[75%] rounded-lg px-3 py-2 text-sm bg-muted">
+                      {streamingContent ? (
+                        <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>p:last-child]:mb-0">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                            {streamingContent}
+                          </ReactMarkdown>
+                          <span className="inline-block w-1.5 h-3.5 bg-foreground/60 ml-0.5 animate-pulse rounded-sm" />
+                        </div>
+                      ) : (
+                        <ZanThinkingIndicator variant="student" size="md" />
+                      )}
+                    </div>
+                  </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -417,16 +412,11 @@ export function ChatWidget() {
                 placeholder="Ask about courses, universities..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                disabled={sendMessageMutation.isPending}
+                disabled={isStreaming}
                 className="flex-1"
                 data-testid="input-chat-message"
               />
-              <Button
-                type="submit"
-                size="icon"
-                disabled={!message.trim() || sendMessageMutation.isPending}
-                data-testid="button-send-message"
-              >
+              <Button type="submit" size="icon" disabled={!message.trim() || isStreaming} data-testid="button-send-message">
                 <Send className="h-4 w-4" />
               </Button>
             </div>

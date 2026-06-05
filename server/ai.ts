@@ -1,7 +1,86 @@
 import OpenAI from "openai";
 import { promises as dns } from 'dns';
 import { chromium } from "playwright";
+import { z } from "zod";
 import { storage } from "./storage";
+
+// ── Structured output helpers ──────────────────────────────────────────────────
+// Replaces raw JSON.parse() calls with schema-validated parsing so malformed AI
+// responses return safe defaults instead of silently corrupting downstream data.
+
+function safeParseJson<T>(
+  content: string | null,
+  schema: z.ZodSchema<T>,
+  fallback: T,
+  label: string
+): T {
+  const raw = content?.trim() || "{}";
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    console.error(`[AI structured] ${label}: JSON.parse failed on: ${raw.slice(0, 120)}`);
+    return fallback;
+  }
+  const result = schema.safeParse(parsed);
+  if (result.success) return result.data;
+  console.warn(
+    `[AI structured] ${label}: schema mismatch — using fallback. Issues: ` +
+    result.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).slice(0, 3).join("; ")
+  );
+  // Return what we can: merge parsed object into fallback for partial data
+  if (typeof parsed === "object" && parsed !== null && typeof fallback === "object" && fallback !== null) {
+    return { ...(fallback as object), ...(parsed as object) } as T;
+  }
+  return fallback;
+}
+
+// Reusable Zod schemas for AI response shapes
+const EntryRequirementItemSchema = z.object({
+  qualificationName: z.string().catch(""),
+  qualificationCountry: z.string().catch(""),
+  minGrade: z.string().catch(""),
+  isRequired: z.boolean().optional(),
+  isSelected: z.boolean().optional(),
+});
+const EntryRequirementsResponseSchema = z.object({
+  requirements: z.array(EntryRequirementItemSchema).default([]),
+});
+
+const EquivalencyItemSchema = z.object({
+  sourceCountry: z.string().catch(""),
+  sourceQualification: z.string().catch(""),
+  equivalentGrade: z.string().catch(""),
+  isApproved: z.boolean().default(false),
+});
+const QualificationEquivalenciesSchema = z.record(z.array(EquivalencyItemSchema)).catch({});
+
+const CareerContentSchema = z.object({
+  careerOutcomes: z.array(z.string()).default([]),
+  careerPath: z.string().default(""),
+}).passthrough();
+
+const SearchParamsSchema = z.object({
+  subject: z.string().optional(),
+  discipline: z.string().optional(),
+  level: z.string().optional(),
+  country: z.string().optional(),
+  city: z.string().optional(),
+  minFee: z.number().optional(),
+  maxFee: z.number().optional(),
+  duration: z.string().optional(),
+  keywords: z.array(z.string()).optional(),
+  originalQuery: z.string().optional(),
+}).passthrough();
+
+const InstitutionSearchParamsSchema = z.object({
+  name: z.string().optional(),
+  country: z.string().optional(),
+  city: z.string().optional(),
+  providerType: z.string().optional(),
+  keywords: z.array(z.string()).optional(),
+  originalQuery: z.string().optional(),
+}).passthrough();
 
 // Node.js 18+ has built-in fetch, but TypeScript needs to know about it
 declare const fetch: typeof global.fetch;
@@ -2038,18 +2117,8 @@ Discipline categories available:
 Return ONLY a JSON object with the extracted parameters. If a parameter cannot be determined, omit it from the response.`;
 
   const content = await createAiCompletion(prompt, { maxTokens: 500, json: true, jobKey: AI_JOB_KEYS.DATA_EXTRACTION });
-  
-  try {
-    const parsed = JSON.parse(content || "{}");
-    return {
-      ...parsed,
-      originalQuery: query,
-    } as ParsedSearchParams;
-  } catch (error) {
-    console.error("Failed to parse natural language query:", error);
-    // Return just the original query if parsing fails
-    return { originalQuery: query };
-  }
+  const parsed = safeParseJson(content, SearchParamsSchema, { originalQuery: query }, "parseNaturalLanguageQuery");
+  return { ...parsed, originalQuery: query } as ParsedSearchParams;
 }
 
 /**
@@ -2080,18 +2149,8 @@ Examples:
 Return ONLY a JSON object with the extracted parameters. If a parameter cannot be determined, omit it from the response.`;
 
   const content = await createAiCompletion(prompt, { maxTokens: 500, json: true, jobKey: AI_JOB_KEYS.DATA_EXTRACTION });
-  
-  try {
-    const parsed = JSON.parse(content || "{}");
-    return {
-      ...parsed,
-      originalQuery: query,
-    } as ParsedInstitutionSearchParams;
-  } catch (error) {
-    console.error("Failed to parse natural language institution query:", error);
-    // Return just the original query if parsing fails
-    return { originalQuery: query };
-  }
+  const parsed = safeParseJson(content, InstitutionSearchParamsSchema, { originalQuery: query }, "parseNaturalLanguageInstitutionQuery");
+  return { ...parsed, originalQuery: query } as ParsedInstitutionSearchParams;
 }
 
 /**
@@ -2140,14 +2199,8 @@ Consider the course level when setting requirements:
 
   console.log(`[AI] Generating entry requirements using configured model`);
   const content = await createAiCompletion(prompt, { maxTokens: 500, json: true, jobKey: AI_JOB_KEYS.QUALIFICATION_MATCHING });
-  
-  try {
-    const parsed = JSON.parse(content || "{}");
-    return parsed.requirements || [];
-  } catch (error) {
-    console.error("Failed to parse AI entry requirements:", error);
-    return [];
-  }
+  const parsed = safeParseJson(content, EntryRequirementsResponseSchema, { requirements: [] }, "generateEntryRequirements");
+  return parsed.requirements;
 }
 
 /**
@@ -2212,13 +2265,7 @@ Return ONLY a JSON object where keys are the destination qualification names:
 
   console.log(`[AI] Generating qualification equivalencies using configured model`);
   const content = await createAiCompletion(prompt, { maxTokens: 1000, json: true, jobKey: AI_JOB_KEYS.QUALIFICATION_MATCHING });
-  
-  try {
-    return JSON.parse(content || "{}");
-  } catch (error) {
-    console.error("Failed to parse AI equivalencies:", error);
-    return {};
-  }
+  return safeParseJson(content, QualificationEquivalenciesSchema, {}, "generateQualificationEquivalencies");
 }
 
 /**
@@ -2399,14 +2446,9 @@ Return a JSON object with these fields. For the description, rewrite it to be en
     console.log(`[AI] Extracting course data using configured model`);
     const content = await createAiCompletion(prompt, { maxTokens: 3000, json: true, jobKey: AI_JOB_KEYS.WEB_SCRAPING });
     
-    try {
-      const parsed = JSON.parse(content || "{}");
-      console.log(`[AI] Successfully extracted course data with ${Object.keys(parsed).filter(k => parsed[k] != null).length} fields`);
-      return parsed;
-    } catch (parseError) {
-      console.error("Failed to parse AI course extraction:", parseError);
-      return {} as ExtractedCourseData;
-    }
+    const parsed = safeParseJson(content, z.record(z.unknown()).catch({}), {}, "extractCourseDataFromUrl");
+    console.log(`[AI] Successfully extracted course data with ${Object.keys(parsed).filter(k => parsed[k] != null).length} fields`);
+    return parsed as ExtractedCourseData;
   } catch (fetchError: any) {
     clearTimeout(timeout);
     if (fetchError.name === 'AbortError') {
@@ -2568,14 +2610,9 @@ Guidelines:
   console.log(`[AI] Generating career content for: ${params.title}`);
   const content = await createAiCompletion(prompt, { maxTokens: 600, json: true, jobKey: AI_JOB_KEYS.CONTENT_GENERATION });
 
-  try {
-    const parsed = JSON.parse(content || "{}");
-    return {
-      careerOutcomes: Array.isArray(parsed.careerOutcomes) ? parsed.careerOutcomes : [],
-      careerPath: typeof parsed.careerPath === 'string' ? parsed.careerPath : "",
-    };
-  } catch (error) {
-    console.error("Failed to parse AI career content:", error);
-    return { careerOutcomes: [], careerPath: "" };
-  }
+  const parsed = safeParseJson(content, CareerContentSchema, { careerOutcomes: [], careerPath: "" }, "generateCourseCareerContent");
+  return {
+    careerOutcomes: parsed.careerOutcomes,
+    careerPath: parsed.careerPath,
+  };
 }

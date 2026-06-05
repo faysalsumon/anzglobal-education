@@ -71,19 +71,24 @@ router.post("/trigger", async (req, res) => {
       })
       .returning();
 
-    // Add to queue for processing (gracefully handle Redis unavailability)
-    try {
-      await addScrapingJob({
-        jobId: job.id,
-        institutionId: institutionId || undefined,
-        institutionUrl,
-        institutionName: institutionName || undefined,
-        templateId: templateId || undefined,
-      });
-      console.log(`Scraping job ${job.id} queued successfully`);
-    } catch (queueError: any) {
-      console.warn(`Could not queue job ${job.id} (Redis unavailable):`, queueError.message);
-      console.log("Job persisted to database and will be processed when queue is available");
+    // Add to queue for processing; fall back to inline execution when Redis is unavailable
+    const jobData = {
+      jobId: job.id,
+      institutionId: institutionId || undefined,
+      institutionUrl,
+      institutionName: institutionName || undefined,
+      templateId: templateId || undefined,
+    };
+
+    const queuedJob = await addScrapingJob(jobData);
+    if (queuedJob) {
+      console.log(`Scraping job ${job.id} queued successfully (Redis)`);
+    } else {
+      console.warn(`Redis unavailable — running scraping job ${job.id} inline`);
+      const { runScrapingJobInline } = await import("./scraping-worker");
+      runScrapingJobInline(jobData).catch((err: Error) =>
+        console.error(`Inline scraping job ${job.id} failed:`, err.message)
+      );
     }
 
     res.json({

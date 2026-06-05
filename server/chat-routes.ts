@@ -7,6 +7,17 @@ import OpenAI from "openai";
 import { queryKnowledgeBase } from "./knowledge-base";
 import { getJobAiSettings, AI_JOB_KEYS } from "./ai";
 
+function buildFormattedSources(relevantDocs: Awaited<ReturnType<typeof queryKnowledgeBase>>) {
+  return relevantDocs.map(doc => {
+    let title = 'Unknown Source';
+    const id = doc.metadata.id || '';
+    if (doc.metadata.type === 'course') title = doc.metadata.courseName || 'Course';
+    else if (doc.metadata.type === 'institution') title = doc.metadata.institutionName || 'Institution';
+    else if (doc.metadata.type === 'guide') title = doc.metadata.topic ? `Guide: ${doc.metadata.topic}` : 'Guide';
+    return { type: doc.metadata.type || 'unknown', id, title };
+  });
+}
+
 // Extend Express Session to include chat properties
 declare module "express-session" {
   interface SessionData {
@@ -382,55 +393,139 @@ STAFF BEHAVIOUR RULES:
 
       const assistantContent = completion.choices[0]?.message?.content || "I apologize, but I couldn't generate a response. Please try again.";
 
-      // Format sources for frontend display
-      const formattedSources = relevantDocs.map(doc => {
-        let title = 'Unknown Source';
-        let id = doc.metadata.id || '';
-        
-        if (doc.metadata.type === 'course') {
-          title = doc.metadata.courseName || 'Course';
-        } else if (doc.metadata.type === 'institution') {
-          title = doc.metadata.institutionName || 'Institution';
-        } else if (doc.metadata.type === 'guide') {
-          title = doc.metadata.topic ? `Guide: ${doc.metadata.topic}` : 'Guide';
-        }
-        
-        return {
-          type: doc.metadata.type || 'unknown',
-          id,
-          title,
-        };
-      });
+      const formattedSources = buildFormattedSources(relevantDocs);
 
-      // Save assistant message with sources
       const [assistantMessage] = await db
         .insert(chatMessages)
-        .values({
-          conversationId: id,
-          role: "assistant",
-          content: assistantContent,
-          sources: formattedSources,
-        })
+        .values({ conversationId: id, role: "assistant", content: assistantContent, sources: formattedSources })
         .returning();
 
-      // Update conversation title if this is the first message
       if (previousMessages.length === 1) {
         const title = content.length > 50 ? content.substring(0, 47) + '...' : content;
-        await db
-          .update(chatConversations)
-          .set({ title, updatedAt: new Date() })
-          .where(eq(chatConversations.id, id));
+        await db.update(chatConversations).set({ title, updatedAt: new Date() }).where(eq(chatConversations.id, id));
       }
 
-      res.json({
-        userMessage,
-        assistantMessage,
-      });
+      res.json({ userMessage, assistantMessage });
     } catch (error: any) {
       console.error("Error processing chat message:", error);
       res.status(500).json({ error: "Failed to process message" });
     }
   });
+
+  // ── Streaming SSE endpoint ──────────────────────────────────────────────────
+  // Same logic as above but pushes tokens as they arrive via Server-Sent Events.
+  // Frontend reads the stream with a ReadableStream reader so users see Zan
+  // "typing" in real time instead of waiting for the full response.
+  app.post("/api/chat/conversations/:id/messages/stream",
+    async (req: Request, res: Response, next: NextFunction) => {
+      await ensureAnonymousSession(req);
+      return verifyConversationOwnership(req, res, next);
+    },
+    async (req: Request, res: Response) => {
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+      res.flushHeaders();
+
+      const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
+      try {
+        const { id } = req.params;
+        const validation = z.object({ content: z.string().min(1).max(5000) }).safeParse(req.body);
+        if (!validation.success) { send({ error: "Invalid message" }); return res.end(); }
+        const { content } = validation.data;
+
+        const userId = getAuthenticatedUserId(req);
+        const userFirstName = getAuthenticatedUserFirstName(req);
+        const isLoggedIn = !!userId;
+
+        const [userMessage] = await db
+          .insert(chatMessages)
+          .values({ conversationId: id, role: "user", content })
+          .returning();
+        send({ userMessageId: userMessage.id });
+
+        // Staff detection (mirrors the non-streaming route)
+        const supabaseUser = (req as any).supabaseUser as { id: string; userType?: string; role?: string; firstName?: string } | undefined;
+        const ADMIN_SET = new Set(["platform_admin", "super_admin", "admin", "cto"]);
+        let staffInfo: { isStaff: boolean; role: string | null; firstName: string | null };
+        if (supabaseUser && (ADMIN_SET.has(supabaseUser.userType ?? "") || ADMIN_SET.has(supabaseUser.role ?? ""))) {
+          staffInfo = { isStaff: true, role: supabaseUser.userType ?? supabaseUser.role ?? "team member", firstName: supabaseUser.firstName ?? null };
+        } else if (userId) {
+          const member = await db.select({ role: adminTeamMembers.role }).from(adminTeamMembers)
+            .where(and(eq(adminTeamMembers.userId, userId), eq(adminTeamMembers.isActive, true))).limit(1).then(r => r[0]);
+          staffInfo = member
+            ? { isStaff: true, role: member.role, firstName: supabaseUser?.firstName ?? null }
+            : { isStaff: false, role: null, firstName: supabaseUser?.firstName ?? null };
+        } else {
+          staffInfo = { isStaff: false, role: null, firstName: null };
+        }
+
+        const [relevantDocs, allPrev] = await Promise.all([
+          queryKnowledgeBase(content, 5),
+          db.query.chatMessages.findMany({ where: eq(chatMessages.conversationId, id), orderBy: chatMessages.createdAt }),
+        ]);
+        const previousMessages = allPrev.slice(0, -1).slice(-10);
+        const context = relevantDocs.map((doc, i) => `[Source ${i + 1}]:\n${doc.content}`).join("\n\n");
+
+        let systemPromptWithContext = SYSTEM_PROMPT;
+        if (staffInfo.isStaff) {
+          const name = staffInfo.firstName || userFirstName || "there";
+          const roleLabel = staffInfo.role ?? "team member";
+          systemPromptWithContext += `\n\n=== STAFF OVERRIDE ===\nThe person is "${name}", role: ${roleLabel}. NOT a student. Topic restrictions SUSPENDED. Greet as a colleague. Do NOT pitch courses. For data entry, direct them to the Admin ZAN assistant.\n=== END STAFF OVERRIDE ===`;
+        } else if (isLoggedIn && userFirstName) {
+          systemPromptWithContext += `\n\nUSER PERSONALIZATION:\n- User is logged in, first name: "${userFirstName}". Address them personally.`;
+        }
+        systemPromptWithContext += `\n\nCONTEXT FROM KNOWLEDGE BASE:\n${context}`;
+
+        const aiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+          { role: "system", content: systemPromptWithContext },
+          ...previousMessages.filter(m => m.role === "user" || m.role === "assistant")
+            .map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
+          { role: "user", content },
+        ];
+
+        const jobKey = isLoggedIn ? AI_JOB_KEYS.STUDENT_CHAT : AI_JOB_KEYS.GUEST_CHAT;
+        const chatSettings = await getJobAiSettings(jobKey);
+        const chatClient = getChatAiClient();
+
+        const stream = await chatClient.chat.completions.create({
+          model: chatSettings.model,
+          messages: aiMessages,
+          temperature: chatSettings.temperature,
+          max_tokens: chatSettings.maxTokens,
+          stream: true,
+        });
+
+        let fullContent = "";
+        for await (const chunk of stream) {
+          const token = chunk.choices[0]?.delta?.content ?? "";
+          if (token) { fullContent += token; send({ token }); }
+        }
+
+        if (!fullContent) fullContent = "I apologize, but I couldn't generate a response. Please try again.";
+
+        const formattedSources = buildFormattedSources(relevantDocs);
+        const [assistantMessage] = await db
+          .insert(chatMessages)
+          .values({ conversationId: id, role: "assistant", content: fullContent, sources: formattedSources })
+          .returning();
+
+        if (previousMessages.length === 1) {
+          const title = content.length > 50 ? content.substring(0, 47) + "..." : content;
+          await db.update(chatConversations).set({ title, updatedAt: new Date() }).where(eq(chatConversations.id, id));
+        }
+
+        send({ done: true, assistantMessageId: assistantMessage.id, sources: formattedSources });
+        res.end();
+      } catch (error: any) {
+        console.error("[Chat stream] Error:", error);
+        send({ error: "Failed to process message" });
+        res.end();
+      }
+    }
+  );
 
   // Build/rebuild knowledge base (admin only)
   app.post("/api/chat/admin/build-knowledge-base", async (req: Request, res: Response) => {
