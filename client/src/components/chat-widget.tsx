@@ -10,6 +10,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { getCsrfToken } from "@/hooks/useCsrf";
 import ReactMarkdown, { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useLocation } from "wouter";
@@ -178,9 +179,13 @@ export function ChatWidget() {
     setMessage("");
 
     try {
+      const csrfToken = await getCsrfToken();
       const resp = await fetch(`/api/chat/conversations/${conversationId}/messages/stream`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
         body: JSON.stringify({ content }),
         signal: controller.signal,
         credentials: "include",
