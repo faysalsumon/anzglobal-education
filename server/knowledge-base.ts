@@ -670,15 +670,10 @@ export async function queryKnowledgeBase(query: string, topK = 5): Promise<Array
       const isStale = await isKnowledgeBaseStale();
       
       if (isStale) {
-        console.log('[Knowledge Base] Stale or empty knowledge base detected, rebuilding with fresh platform data...');
-        try {
-          await buildKnowledgeBase();
-          lastBuildTime = new Date();
-          console.log('[Knowledge Base] Auto-initialization completed successfully');
-        } catch (error) {
-          console.error('[Knowledge Base] Auto-initialization failed:', error);
-          // Continue anyway - the query will return empty results
-        }
+        console.log('[Knowledge Base] Stale — rebuilding in background, continuing with current index...');
+        buildKnowledgeBase()
+          .then(() => { lastBuildTime = new Date(); console.log('[Knowledge Base] Background rebuild completed'); })
+          .catch((err: Error) => console.error('[Knowledge Base] Background rebuild failed:', err.message));
       }
     }
 
