@@ -1,21 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Bot, Save, Loader2, Sparkles, Zap, Brain, Check } from "lucide-react";
+import {
+  Bot,
+  Save,
+  Loader2,
+  MessageSquare,
+  GraduationCap,
+  FileSearch,
+  Image,
+  Globe,
+  Sparkles,
+  Database,
+  ShieldCheck,
+  RefreshCw,
+  Check,
+} from "lucide-react";
 
 interface AiModel {
   id: string;
   name: string;
   provider: string;
-  description: string;
+  isFree: boolean;
+  contextLength: number | null;
+  description: string | null;
 }
 
 interface AiSetting {
@@ -31,269 +45,449 @@ interface AiSetting {
   updatedAt: string;
 }
 
+type AiSettingsMap = Record<string, AiSetting>;
+
+interface JobConfig {
+  key: string;
+  label: string;
+  description: string;
+  icon: React.ElementType;
+  defaultModel: string;
+  defaultMaxTokens: number;
+  defaultTemperature: number;
+}
+
+const JOB_CONFIGS: JobConfig[] = [
+  {
+    key: "guest_chat",
+    label: "Guest Chat (Zan)",
+    description: "Public chatbot for unregistered visitors — cost-sensitive, free models preferred.",
+    icon: Bot,
+    defaultModel: "meta-llama/llama-3.1-8b-instruct:free",
+    defaultMaxTokens: 800,
+    defaultTemperature: 0.7,
+  },
+  {
+    key: "student_chat",
+    label: "Student Chat (Zan)",
+    description: "Authenticated student conversations — richer context, higher quality preferred.",
+    icon: MessageSquare,
+    defaultModel: "openai/gpt-4o-mini",
+    defaultMaxTokens: 1000,
+    defaultTemperature: 0.7,
+  },
+  {
+    key: "qualification_matching",
+    label: "Qualification Matching",
+    description: "Academic equivalency generation and entry requirements suggestions.",
+    icon: GraduationCap,
+    defaultModel: "anthropic/claude-3.5-sonnet",
+    defaultMaxTokens: 1000,
+    defaultTemperature: 0.3,
+  },
+  {
+    key: "document_verification",
+    label: "Document Verification",
+    description: "Student document analysis and authenticity checks.",
+    icon: ShieldCheck,
+    defaultModel: "openai/gpt-4o",
+    defaultMaxTokens: 2000,
+    defaultTemperature: 0.2,
+  },
+  {
+    key: "image_generation",
+    label: "Image Generation",
+    description: "Course thumbnail prompt creation and visual content descriptions.",
+    icon: Image,
+    defaultModel: "openai/gpt-4o",
+    defaultMaxTokens: 1000,
+    defaultTemperature: 0.7,
+  },
+  {
+    key: "web_scraping",
+    label: "Web Scraping & ZAN Data Entry",
+    description: "Course/institution extraction from websites and ZAN agentic data entry.",
+    icon: Globe,
+    defaultModel: "openai/gpt-4o-mini",
+    defaultMaxTokens: 3000,
+    defaultTemperature: 0.2,
+  },
+  {
+    key: "content_generation",
+    label: "Content Generation",
+    description: "Marketing copy, course descriptions, bios, and career narratives.",
+    icon: Sparkles,
+    defaultModel: "anthropic/claude-3.5-sonnet",
+    defaultMaxTokens: 1000,
+    defaultTemperature: 0.7,
+  },
+  {
+    key: "data_extraction",
+    label: "Data Extraction",
+    description: "Natural language search query parsing and structured data extraction.",
+    icon: Database,
+    defaultModel: "openai/gpt-4o-mini",
+    defaultMaxTokens: 500,
+    defaultTemperature: 0.2,
+  },
+];
+
+interface RowState {
+  modelId: string;
+  maxTokens: number;
+  temperature: number;
+}
+
+function groupModelsByProvider(models: AiModel[]): Record<string, AiModel[]> {
+  const groups: Record<string, AiModel[]> = {};
+  for (const m of models) {
+    const p = m.provider || "other";
+    if (!groups[p]) groups[p] = [];
+    groups[p].push(m);
+  }
+  return groups;
+}
+
+function providerLabel(slug: string): string {
+  const map: Record<string, string> = {
+    "anthropic": "Anthropic",
+    "openai": "OpenAI",
+    "google": "Google",
+    "meta-llama": "Meta Llama",
+    "mistralai": "Mistral AI",
+    "cohere": "Cohere",
+    "perplexity": "Perplexity",
+    "nvidia": "NVIDIA",
+    "qwen": "Qwen (Alibaba)",
+    "deepseek": "DeepSeek",
+    "x-ai": "xAI (Grok)",
+  };
+  return map[slug] ?? slug;
+}
+
 export function AdminAiSettingsPanel() {
   const { toast } = useToast();
-  const [selectedModel, setSelectedModel] = useState<string>("");
-  const [maxTokens, setMaxTokens] = useState<number>(4096);
-  const [temperature, setTemperature] = useState<number>(0.7);
+  const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
+  const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
 
-  const { data: models, isLoading: modelsLoading } = useQuery<AiModel[]>({
+  const { data: models, isLoading: modelsLoading, refetch: refetchModels } = useQuery<AiModel[]>({
     queryKey: ["/api/admin/ai-models"],
   });
 
-  const { data: settings, isLoading: settingsLoading } = useQuery<AiSetting[]>({
+  const { data: settings, isLoading: settingsLoading } = useQuery<AiSettingsMap>({
     queryKey: ["/api/admin/ai-settings"],
     staleTime: 0,
   });
 
-  const currentSetting = settings?.find(s => s.settingKey === "default_model");
-  
-  const updateSettingsMutation = useMutation({
-    mutationFn: async (data: { modelId: string; maxTokens: number; temperature: number }) => {
-      const model = models?.find(m => m.id === data.modelId);
-      return apiRequest("PUT", "/api/admin/ai-settings/default_model", {
-        modelId: data.modelId,
-        provider: model?.provider || "openrouter",
-        modelDisplayName: model?.name || data.modelId,
-        maxTokens: data.maxTokens,
-        temperature: data.temperature,
-      });
+  // Initialise row states from DB settings (keyed map) or job defaults
+  useEffect(() => {
+    if (!settings) return;
+    const initial: Record<string, RowState> = {};
+    for (const job of JOB_CONFIGS) {
+      const saved = settings[job.key];
+      initial[job.key] = {
+        modelId: saved?.modelId || job.defaultModel,
+        maxTokens: saved?.maxTokens ?? job.defaultMaxTokens,
+        temperature: saved?.temperature ?? job.defaultTemperature,
+      };
+    }
+    setRowStates(initial);
+  }, [settings]);
+
+  const bulkSaveMutation = useMutation({
+    mutationFn: async (payload: Record<string, RowState>) => {
+      const settingsPayload: Record<string, any> = {};
+      for (const [key, state] of Object.entries(payload)) {
+        const model = models?.find((m) => m.id === state.modelId);
+        settingsPayload[key] = {
+          modelId: state.modelId,
+          provider: model?.provider || "openrouter",
+          modelDisplayName: model?.name || state.modelId,
+          maxTokens: state.maxTokens,
+          temperature: state.temperature,
+        };
+      }
+      return apiRequest("PUT", "/api/admin/ai-settings/bulk", { settings: settingsPayload });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/ai-settings"] });
+      setSavedKeys(new Set(JOB_CONFIGS.map((j) => j.key)));
+      setTimeout(() => setSavedKeys(new Set()), 2500);
       toast({
-        title: "Settings Updated",
-        description: "AI model configuration has been saved successfully.",
+        title: "AI settings saved",
+        description: "All job model configurations have been updated.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Update Failed",
-        description: error.message || "Failed to update AI settings.",
+        title: "Save failed",
+        description: error.message || "Failed to save AI settings.",
         variant: "destructive",
       });
     },
   });
 
-  const effectiveModel = selectedModel || currentSetting?.modelId || "anthropic/claude-3.5-sonnet";
-  const effectiveMaxTokens = maxTokens;
-  const effectiveTemperature = temperature;
-
-  const handleSave = () => {
-    updateSettingsMutation.mutate({
-      modelId: effectiveModel,
-      maxTokens: effectiveMaxTokens,
-      temperature: effectiveTemperature,
-    });
+  const updateRow = (jobKey: string, patch: Partial<RowState>) => {
+    setRowStates((prev) => ({
+      ...prev,
+      [jobKey]: { ...prev[jobKey], ...patch },
+    }));
   };
 
-  if (modelsLoading || settingsLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  const currentModelInfo = models?.find(m => m.id === effectiveModel);
+  const isLoading = modelsLoading || settingsLoading;
+  const groupedModels = models ? groupModelsByProvider(models) : {};
+  const providerSlugs = Object.keys(groupedModels).sort();
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <Bot className="h-5 w-5 text-primary" />
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <Bot className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">AI Model Router</h2>
+            <p className="text-muted-foreground text-sm">
+              Assign an independent model to each AI task type — powered by the live OpenRouter catalog.
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">AI Settings</h2>
-          <p className="text-muted-foreground">
-            Configure the AI model used for generating qualification equivalencies and entry requirements
-          </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="default"
+            onClick={() => refetchModels()}
+            disabled={modelsLoading}
+            data-testid="button-refresh-models"
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${modelsLoading ? "animate-spin" : ""}`} />
+            Refresh Catalog
+          </Button>
+          <Button
+            onClick={() => bulkSaveMutation.mutate(rowStates)}
+            disabled={bulkSaveMutation.isPending || isLoading}
+            data-testid="button-save-all-ai-settings"
+          >
+            {bulkSaveMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save All
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5" />
-              Model Selection
-            </CardTitle>
-            <CardDescription>
-              Choose the AI model for academic qualification matching
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="model-select">AI Model</Label>
-              <Select 
-                value={effectiveModel} 
-                onValueChange={setSelectedModel}
-              >
-                <SelectTrigger id="model-select" data-testid="select-ai-model">
-                  <SelectValue placeholder="Select a model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {models?.map((model) => (
-                    <SelectItem key={model.id} value={model.id} data-testid={`select-item-${model.id}`}>
-                      <div className="flex items-center gap-2">
-                        <span>{model.name}</span>
-                        <Badge className="text-xs bg-[#6366f1] text-white border-[#6366f1]">
-                          {model.provider}
-                        </Badge>
+      {/* Stats strip */}
+      {models && (
+        <div className="flex flex-wrap gap-3">
+          <Badge variant="secondary" className="gap-1 text-xs">
+            {models.length} models in catalog
+          </Badge>
+          <Badge variant="secondary" className="gap-1 text-xs">
+            {models.filter((m) => m.isFree).length} free models
+          </Badge>
+          <Badge variant="secondary" className="gap-1 text-xs">
+            {providerSlugs.length} providers
+          </Badge>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {JOB_CONFIGS.map((job) => {
+            const row = rowStates[job.key] ?? {
+              modelId: job.defaultModel,
+              maxTokens: job.defaultMaxTokens,
+              temperature: job.defaultTemperature,
+            };
+            const Icon = job.icon;
+            const isSaved = savedKeys.has(job.key);
+            const activeModel = models?.find((m) => m.id === row.modelId);
+
+            return (
+              <Card key={job.key} data-testid={`card-ai-job-${job.key}`}>
+                <CardHeader className="pb-3 flex flex-row items-start justify-between gap-4 flex-wrap">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">{job.label}</CardTitle>
+                      <CardDescription className="text-xs mt-0.5">{job.description}</CardDescription>
+                    </div>
+                  </div>
+                  {isSaved && (
+                    <Badge variant="secondary" className="gap-1 text-xs shrink-0">
+                      <Check className="h-3 w-3" /> Saved
+                    </Badge>
+                  )}
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    {/* Model dropdown */}
+                    <div className="sm:col-span-2 space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Model</Label>
+                      <Select
+                        value={row.modelId}
+                        onValueChange={(val) => updateRow(job.key, { modelId: val })}
+                      >
+                        <SelectTrigger data-testid={`select-model-${job.key}`} className="text-xs">
+                          <SelectValue>
+                            <span className="flex items-center gap-2 text-xs">
+                              {activeModel?.name || row.modelId}
+                              {activeModel?.isFree && (
+                                <Badge variant="secondary" className="text-[10px] py-0 px-1">Free</Badge>
+                              )}
+                            </span>
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="max-h-72">
+                          {providerSlugs.map((slug) => (
+                            <SelectGroup key={slug}>
+                              <SelectLabel className="text-xs">{providerLabel(slug)}</SelectLabel>
+                              {groupedModels[slug].map((m) => (
+                                <SelectItem
+                                  key={m.id}
+                                  value={m.id}
+                                  data-testid={`option-${job.key}-${m.id}`}
+                                >
+                                  <span className="flex items-center gap-2 text-xs">
+                                    <span className="truncate max-w-[220px]">{m.name}</span>
+                                    {m.isFree && (
+                                      <Badge variant="secondary" className="text-[10px] py-0 px-1 shrink-0">Free</Badge>
+                                    )}
+                                    {m.contextLength && (
+                                      <span className="text-muted-foreground shrink-0">
+                                        {m.contextLength >= 1000000
+                                          ? `${(m.contextLength / 1000000).toFixed(0)}M ctx`
+                                          : m.contextLength >= 1000
+                                          ? `${Math.round(m.contextLength / 1000)}k ctx`
+                                          : `${m.contextLength} ctx`}
+                                      </span>
+                                    )}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {activeModel?.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">{activeModel.description}</p>
+                      )}
+                    </div>
+
+                    {/* Temperature + Max tokens side-by-side */}
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">
+                          Temperature: <span className="font-medium text-foreground">{row.temperature.toFixed(1)}</span>
+                        </Label>
+                        <input
+                          type="range"
+                          min={0}
+                          max={1}
+                          step={0.1}
+                          value={row.temperature}
+                          onChange={(e) => updateRow(job.key, { temperature: parseFloat(e.target.value) })}
+                          className="w-full accent-primary"
+                          data-testid={`slider-temp-${job.key}`}
+                        />
+                        <div className="flex justify-between text-[10px] text-muted-foreground">
+                          <span>Precise</span>
+                          <span>Creative</span>
+                        </div>
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {currentModelInfo && (
-                <p className="text-sm text-muted-foreground">{currentModelInfo.description}</p>
-              )}
-            </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">
+                          Max tokens: <span className="font-medium text-foreground">{row.maxTokens.toLocaleString()}</span>
+                        </Label>
+                        <input
+                          type="range"
+                          min={256}
+                          max={8192}
+                          step={256}
+                          value={row.maxTokens}
+                          onChange={(e) => updateRow(job.key, { maxTokens: parseInt(e.target.value) })}
+                          className="w-full accent-primary"
+                          data-testid={`slider-tokens-${job.key}`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
-            <div className="space-y-2">
-              <Label htmlFor="max-tokens">Max Tokens: {maxTokens}</Label>
-              <Slider
-                id="max-tokens"
-                value={[maxTokens]}
-                onValueChange={(value) => setMaxTokens(value[0])}
-                min={1024}
-                max={8192}
-                step={512}
-                className="py-2"
-                data-testid="slider-max-tokens"
-              />
-              <p className="text-xs text-muted-foreground">
-                Maximum response length for AI generations
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="temperature">Temperature: {temperature.toFixed(1)}</Label>
-              <Slider
-                id="temperature"
-                value={[temperature]}
-                onValueChange={(value) => setTemperature(value[0])}
-                min={0}
-                max={1}
-                step={0.1}
-                className="py-2"
-                data-testid="slider-temperature"
-              />
-              <p className="text-xs text-muted-foreground">
-                Higher values = more creative, lower = more precise
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5" />
-              Current Configuration
-            </CardTitle>
-            <CardDescription>
-              Active AI settings for the platform
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-lg border p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Active Model</span>
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Zap className="h-3 w-3" />
-                  {currentSetting?.modelDisplayName || currentSetting?.modelId || "Not configured"}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Provider</span>
-                <span className="text-sm text-muted-foreground capitalize">
-                  {currentSetting?.provider || "OpenRouter"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Max Tokens</span>
-                <span className="text-sm text-muted-foreground">
-                  {currentSetting?.maxTokens || 4096}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Temperature</span>
-                <span className="text-sm text-muted-foreground">
-                  {currentSetting?.temperature || 0.7}
-                </span>
-              </div>
-              {currentSetting?.updatedAt && (
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <span className="text-xs text-muted-foreground">Last updated</span>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(currentSetting.updatedAt).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <Button 
-              onClick={handleSave} 
-              className="w-full" 
-              disabled={updateSettingsMutation.isPending}
-              data-testid="button-save-ai-settings"
-            >
-              {updateSettingsMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Configuration
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+      {/* Footer save button (convenience) */}
+      <div className="flex justify-end">
+        <Button
+          onClick={() => bulkSaveMutation.mutate(rowStates)}
+          disabled={bulkSaveMutation.isPending || isLoading}
+          data-testid="button-save-all-ai-settings-footer"
+        >
+          {bulkSaveMutation.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving…
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              Save All Configurations
+            </>
+          )}
+        </Button>
       </div>
 
+      {/* Info footer */}
       <Card>
-        <CardHeader>
-          <CardTitle>About OpenRouter</CardTitle>
-          <CardDescription>
-            How AI model access works in StudyMatch
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+        <CardContent className="pt-4 pb-4">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
                 <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <h4 className="font-medium">Multiple Models</h4>
-                <p className="text-sm text-muted-foreground">
-                  Access Claude, GPT-4, Gemini and more through one API
+                <p className="text-sm font-medium">Live OpenRouter Catalog</p>
+                <p className="text-xs text-muted-foreground">
+                  Models fetched from OpenRouter API and cached for 1 hour. Use Refresh Catalog to update.
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
                 <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <h4 className="font-medium">Automatic Fallback</h4>
-                <p className="text-sm text-muted-foreground">
-                  If one model is unavailable, the system tries alternatives
+                <p className="text-sm font-medium">Per-Job Routing</p>
+                <p className="text-xs text-muted-foreground">
+                  Each task type uses its own independently configured model — no more one-size-fits-all.
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
                 <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <h4 className="font-medium">Cost Effective</h4>
-                <p className="text-sm text-muted-foreground">
-                  Pay only for what you use with unified billing
+                <p className="text-sm font-medium">Free Tier Support</p>
+                <p className="text-xs text-muted-foreground">
+                  Guest Chat defaults to a free Llama model — saving costs for anonymous traffic.
                 </p>
               </div>
             </div>

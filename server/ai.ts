@@ -28,33 +28,84 @@ function getAiClient(): OpenAI {
   throw new Error("No AI API key configured");
 }
 
-// Default fallback model if settings not configured
-const DEFAULT_MODEL = "anthropic/claude-3.5-sonnet";
+// Job type keys for per-job AI model routing
+export const AI_JOB_KEYS = {
+  GUEST_CHAT: 'guest_chat',
+  STUDENT_CHAT: 'student_chat',
+  QUALIFICATION_MATCHING: 'qualification_matching',
+  DOCUMENT_VERIFICATION: 'document_verification',
+  IMAGE_GENERATION: 'image_generation',
+  WEB_SCRAPING: 'web_scraping',
+  CONTENT_GENERATION: 'content_generation',
+  DATA_EXTRACTION: 'data_extraction',
+} as const;
 
-// Cache AI settings to avoid repeated DB queries
-let cachedModelId: string | null = null;
-let cachedTemperature: number | null = null;
-let cachedMaxTokens: number | null = null;
-let settingsCacheTimestamp = 0;
+export type AiJobKey = typeof AI_JOB_KEYS[keyof typeof AI_JOB_KEYS];
+
+// Per-job default models and parameters
+const JOB_DEFAULTS: Record<string, { model: string; temperature: number; maxTokens: number }> = {
+  guest_chat:             { model: 'meta-llama/llama-3.1-8b-instruct:free', temperature: 0.7, maxTokens: 800 },
+  student_chat:           { model: 'openai/gpt-4o-mini', temperature: 0.7, maxTokens: 800 },
+  qualification_matching: { model: 'anthropic/claude-3.5-sonnet', temperature: 0.3, maxTokens: 2048 },
+  document_verification:  { model: 'openai/gpt-4o', temperature: 0.1, maxTokens: 2048 },
+  image_generation:       { model: 'openai/gpt-4o', temperature: 0.7, maxTokens: 1000 },
+  web_scraping:           { model: 'openai/gpt-4o-mini', temperature: 0.1, maxTokens: 2048 },
+  content_generation:     { model: 'anthropic/claude-3.5-sonnet', temperature: 0.7, maxTokens: 2048 },
+  data_extraction:        { model: 'openai/gpt-4o-mini', temperature: 0.1, maxTokens: 2048 },
+};
+
 const SETTINGS_CACHE_TTL = 60000; // 1 minute cache
 
-async function getAiSettings(): Promise<{ model: string; temperature: number; maxTokens: number }> {
+// Per-job settings cache
+const jobSettingsCache = new Map<string, { model: string; temperature: number; maxTokens: number; timestamp: number }>();
+
+export async function getJobAiSettings(jobKey: string): Promise<{ model: string; temperature: number; maxTokens: number }> {
   const now = Date.now();
-  if (cachedModelId && cachedTemperature !== null && cachedMaxTokens !== null && (now - settingsCacheTimestamp) < SETTINGS_CACHE_TTL) {
-    return { model: cachedModelId, temperature: cachedTemperature, maxTokens: cachedMaxTokens };
+  const cached = jobSettingsCache.get(jobKey);
+  if (cached && (now - cached.timestamp) < SETTINGS_CACHE_TTL) {
+    return { model: cached.model, temperature: cached.temperature, maxTokens: cached.maxTokens };
   }
-  
+
+  const defaults = JOB_DEFAULTS[jobKey] ?? JOB_DEFAULTS.content_generation;
+
   try {
-    const allSettings = await storage.getAllAiSettings();
-    const defaultSettings = allSettings.find(s => s.settingKey === "default_model");
-    cachedModelId = defaultSettings?.modelId || DEFAULT_MODEL;
-    cachedTemperature = parseFloat(String(defaultSettings?.temperature ?? "0.7"));
-    cachedMaxTokens = parseInt(String(defaultSettings?.maxTokens ?? "2048"));
-    settingsCacheTimestamp = now;
-    return { model: cachedModelId, temperature: cachedTemperature, maxTokens: cachedMaxTokens };
+    const setting = await storage.getAiSetting(jobKey);
+    if (setting?.modelId) {
+      const result = {
+        model: setting.modelId,
+        temperature: parseFloat(String(setting.temperature ?? defaults.temperature)),
+        maxTokens: parseInt(String(setting.maxTokens ?? defaults.maxTokens)),
+      };
+      jobSettingsCache.set(jobKey, { ...result, timestamp: now });
+      return result;
+    }
   } catch (error) {
-    console.error("Error fetching AI settings, using defaults:", error);
-    return { model: DEFAULT_MODEL, temperature: 0.7, maxTokens: 2048 };
+    console.error(`[AI] Error fetching settings for job ${jobKey}, using defaults:`, error);
+  }
+
+  jobSettingsCache.set(jobKey, { ...defaults, timestamp: now });
+  return defaults;
+}
+
+// Seed default job-type rows if they don't exist yet
+export async function seedAiJobDefaults(): Promise<void> {
+  try {
+    for (const [jobKey, defaults] of Object.entries(JOB_DEFAULTS)) {
+      const existing = await storage.getAiSetting(jobKey);
+      if (!existing) {
+        await storage.upsertAiSetting(jobKey, {
+          settingKey: jobKey,
+          modelId: defaults.model,
+          provider: 'openrouter',
+          modelDisplayName: defaults.model,
+          maxTokens: defaults.maxTokens,
+          temperature: defaults.temperature,
+        });
+        console.log(`[AI] Seeded default settings for job: ${jobKey}`);
+      }
+    }
+  } catch (error) {
+    console.error('[AI] Failed to seed AI job defaults:', error);
   }
 }
 
@@ -67,13 +118,14 @@ function checkAIConfigured() {
   }
 }
 
-// Helper to create AI completion using configured settings from database
-async function createAiCompletion(prompt: string, options?: { maxTokens?: number; temperature?: number; json?: boolean }): Promise<string> {
+// Helper to create AI completion using per-job configured settings from database
+async function createAiCompletion(prompt: string, options?: { maxTokens?: number; temperature?: number; json?: boolean; jobKey?: string }): Promise<string> {
   checkAIConfigured();
   const client = getAiClient();
-  const settings = await getAiSettings();
+  const jobKey = options?.jobKey ?? AI_JOB_KEYS.CONTENT_GENERATION;
+  const settings = await getJobAiSettings(jobKey);
   
-  console.log(`[AI] Using model: ${settings.model}, temp: ${settings.temperature}, maxTokens: ${options?.maxTokens || settings.maxTokens}`);
+  console.log(`[AI] job=${jobKey} model=${settings.model} temp=${settings.temperature} maxTokens=${options?.maxTokens || settings.maxTokens}`);
   
   const response = await client.chat.completions.create({
     model: settings.model,
@@ -96,7 +148,7 @@ The description should be 2-3 paragraphs and highlight:
 
 Write in a professional, welcoming tone suitable for prospective students.`;
 
-  return createAiCompletion(prompt, { maxTokens: 500 });
+  return createAiCompletion(prompt, { maxTokens: 500, jobKey: AI_JOB_KEYS.CONTENT_GENERATION });
 }
 
 
@@ -203,7 +255,7 @@ The bio should be 1-2 paragraphs and include:
 
 Write in first person, professional yet personable tone. Make it genuine and specific based on the provided information.`;
 
-  return createAiCompletion(prompt, { maxTokens: 400 });
+  return createAiCompletion(prompt, { maxTokens: 400, jobKey: AI_JOB_KEYS.CONTENT_GENERATION });
 }
 
 export async function generateCareerGoals(
@@ -258,7 +310,7 @@ The goals should be 1-2 paragraphs and include:
 
 Write in first person, ambitious yet realistic tone. Make it specific based on the provided information, especially leveraging any work experience mentioned.`;
 
-  return createAiCompletion(prompt, { maxTokens: 400 });
+  return createAiCompletion(prompt, { maxTokens: 400, jobKey: AI_JOB_KEYS.CONTENT_GENERATION });
 }
 
 export async function generateInstitutionSmallDescription(
@@ -277,7 +329,7 @@ The description should:
 
 Write in a professional, engaging tone.`;
 
-  return createAiCompletion(prompt, { maxTokens: 150 });
+  return createAiCompletion(prompt, { maxTokens: 150, jobKey: AI_JOB_KEYS.CONTENT_GENERATION });
 }
 
 export async function generateInstitutionFullDescription(
@@ -303,7 +355,7 @@ The description should be 4-5 paragraphs and include:
 
 Write in a professional, inspiring tone suitable for prospective students and their families.`;
 
-  return createAiCompletion(prompt, { maxTokens: 800 });
+  return createAiCompletion(prompt, { maxTokens: 800, jobKey: AI_JOB_KEYS.CONTENT_GENERATION });
 }
 
 export async function generateInstitutionDescriptionFromWebsite(url: string): Promise<string> {
@@ -397,7 +449,7 @@ ${htmlContent}
 
 Generate a professional institution description:`;
 
-  return createAiCompletion(prompt, { maxTokens: 600 });
+  return createAiCompletion(prompt, { maxTokens: 600, jobKey: AI_JOB_KEYS.WEB_SCRAPING });
 }
 
 /**
@@ -505,7 +557,7 @@ WRITING REQUIREMENTS:
 
 Generate the course description now:`;
 
-  return createAiCompletion(prompt, { maxTokens: 800 });
+  return createAiCompletion(prompt, { maxTokens: 800, jobKey: AI_JOB_KEYS.CONTENT_GENERATION });
 }
 
 export async function generateInstitutionGalleryImages(
@@ -1678,7 +1730,7 @@ Extract the following fields and return as JSON:
   "scholarshipPercentageMax": 50
 }`;
 
-  const content = await createAiCompletion(prompt, { maxTokens: 2000, json: true });
+  const content = await createAiCompletion(prompt, { maxTokens: 2000, json: true, jobKey: AI_JOB_KEYS.WEB_SCRAPING });
   
   try {
     const extractedData = JSON.parse(content || "{}") as ExtractedInstitutionData;
@@ -1898,7 +1950,7 @@ Extract the following fields and return as JSON:
   "minimumAge": 18
 }`;
 
-  const content = await createAiCompletion(prompt, { maxTokens: 2500, json: true });
+  const content = await createAiCompletion(prompt, { maxTokens: 2500, json: true, jobKey: AI_JOB_KEYS.WEB_SCRAPING });
   
   try {
     const extractedData = JSON.parse(content || "{}") as ExtractedCourseData;
@@ -1985,7 +2037,7 @@ Discipline categories available:
 
 Return ONLY a JSON object with the extracted parameters. If a parameter cannot be determined, omit it from the response.`;
 
-  const content = await createAiCompletion(prompt, { maxTokens: 500, json: true });
+  const content = await createAiCompletion(prompt, { maxTokens: 500, json: true, jobKey: AI_JOB_KEYS.DATA_EXTRACTION });
   
   try {
     const parsed = JSON.parse(content || "{}");
@@ -2027,7 +2079,7 @@ Examples:
 
 Return ONLY a JSON object with the extracted parameters. If a parameter cannot be determined, omit it from the response.`;
 
-  const content = await createAiCompletion(prompt, { maxTokens: 500, json: true });
+  const content = await createAiCompletion(prompt, { maxTokens: 500, json: true, jobKey: AI_JOB_KEYS.DATA_EXTRACTION });
   
   try {
     const parsed = JSON.parse(content || "{}");
@@ -2087,7 +2139,7 @@ Consider the course level when setting requirements:
 - Foundation: Lower high school requirements`;
 
   console.log(`[AI] Generating entry requirements using configured model`);
-  const content = await createAiCompletion(prompt, { maxTokens: 500, json: true });
+  const content = await createAiCompletion(prompt, { maxTokens: 500, json: true, jobKey: AI_JOB_KEYS.QUALIFICATION_MATCHING });
   
   try {
     const parsed = JSON.parse(content || "{}");
@@ -2159,7 +2211,7 @@ Return ONLY a JSON object where keys are the destination qualification names:
 }`;
 
   console.log(`[AI] Generating qualification equivalencies using configured model`);
-  const content = await createAiCompletion(prompt, { maxTokens: 1000, json: true });
+  const content = await createAiCompletion(prompt, { maxTokens: 1000, json: true, jobKey: AI_JOB_KEYS.QUALIFICATION_MATCHING });
   
   try {
     return JSON.parse(content || "{}");
@@ -2345,7 +2397,7 @@ Extract the following fields if available (return null for fields not found):
 Return a JSON object with these fields. For the description, rewrite it to be engaging and student-focused for an education platform, not just a copy from the source.`;
 
     console.log(`[AI] Extracting course data using configured model`);
-    const content = await createAiCompletion(prompt, { maxTokens: 3000, json: true });
+    const content = await createAiCompletion(prompt, { maxTokens: 3000, json: true, jobKey: AI_JOB_KEYS.WEB_SCRAPING });
     
     try {
       const parsed = JSON.parse(content || "{}");
@@ -2406,10 +2458,11 @@ Important notes:
 Return ONLY a valid JSON object with these fields.`;
 
   try {
-    console.log(`[AI] Extracting passport data from image using GPT-4o vision`);
+    const docVerifySettings = await getJobAiSettings(AI_JOB_KEYS.DOCUMENT_VERIFICATION);
+    console.log(`[AI] Extracting passport data from image using ${docVerifySettings.model}`);
     
     const response = await client.chat.completions.create({
-      model: "openai/gpt-4o", // Use GPT-4o for vision capabilities
+      model: docVerifySettings.model,
       messages: [
         {
           role: "user",
@@ -2425,8 +2478,8 @@ Return ONLY a valid JSON object with these fields.`;
           ]
         }
       ],
-      max_tokens: 1000,
-      temperature: 0.1, // Low temperature for more accurate extraction
+      max_tokens: docVerifySettings.maxTokens,
+      temperature: docVerifySettings.temperature,
     });
 
     const content = response.choices[0]?.message?.content || "{}";
@@ -2513,7 +2566,7 @@ Guidelines:
 - Both should be relevant to the specific course level and discipline`;
 
   console.log(`[AI] Generating career content for: ${params.title}`);
-  const content = await createAiCompletion(prompt, { maxTokens: 600, json: true });
+  const content = await createAiCompletion(prompt, { maxTokens: 600, json: true, jobKey: AI_JOB_KEYS.CONTENT_GENERATION });
 
   try {
     const parsed = JSON.parse(content || "{}");

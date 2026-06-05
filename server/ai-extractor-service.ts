@@ -6,10 +6,21 @@ import {
   generateJSONSchema,
   type SchemaMetadata,
 } from "./schema-introspection";
+import { getJobAiSettings, AI_JOB_KEYS } from "./ai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+function getExtractorClient(): OpenAI {
+  if (process.env.OPENROUTER_API_KEY) {
+    return new OpenAI({
+      baseURL: "https://openrouter.ai/api/v1",
+      apiKey: process.env.OPENROUTER_API_KEY,
+      defaultHeaders: {
+        "HTTP-Referer": process.env.REPLIT_DEPLOYMENT_URL || "https://replit.com",
+        "X-Title": "StudyMatch - ANZ Global Education Platform",
+      },
+    });
+  }
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+}
 
 /**
  * Extraction result with source attribution
@@ -177,8 +188,10 @@ Return the extracted course data as JSON.`;
   }
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+    const wsSettings = await getJobAiSettings(AI_JOB_KEYS.WEB_SCRAPING);
+    const extClient = getExtractorClient();
+    const completion = await extClient.chat.completions.create({
+      model: wsSettings.model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -310,8 +323,10 @@ ${htmlContent.substring(0, 35000)} ${htmlContent.length > 35000 ? "\n\n[Content 
 Return the extracted institution data as JSON.`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+    const wsSettings2 = await getJobAiSettings(AI_JOB_KEYS.WEB_SCRAPING);
+    const extClient2 = getExtractorClient();
+    const completion = await extClient2.chat.completions.create({
+      model: wsSettings2.model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -399,8 +414,10 @@ ${htmlContent.substring(0, 15000)}
 Return up to 5 candidates ranked by confidence.`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+    const wsSettings3 = await getJobAiSettings(AI_JOB_KEYS.WEB_SCRAPING);
+    const extClient3 = getExtractorClient();
+    const completion = await extClient3.chat.completions.create({
+      model: wsSettings3.model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -496,8 +513,10 @@ ${htmlContent.substring(0, 10000)}
 Return a JSON array of course URLs.`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+    const wsSettings4 = await getJobAiSettings(AI_JOB_KEYS.WEB_SCRAPING);
+    const extClient4 = getExtractorClient();
+    const completion = await extClient4.chat.completions.create({
+      model: wsSettings4.model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

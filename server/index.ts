@@ -171,6 +171,10 @@ app.use((req, res, next) => {
 (async () => {
   await runMigrations();
 
+  // Seed default AI job settings after migrations
+  const { seedAiJobDefaults } = await import("./ai");
+  await seedAiJobDefaults();
+
   const server = await registerRoutes(app);
 
   // Initialize Pinecone index in background (non-blocking)

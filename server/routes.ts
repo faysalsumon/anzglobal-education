@@ -155,6 +155,8 @@ import {
   extractCourseDataFromUrl,
   extractPassportFromImage,
   generateCareerContent,
+  getJobAiSettings,
+  AI_JOB_KEYS,
 } from "./ai";
 import { buildKnowledgeBase } from "./knowledge-base";
 import multer from "multer";
@@ -8744,8 +8746,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "CTO access required to view AI settings" });
       }
 
-      const settings = await storage.getAllAiSettings();
-      res.json(settings);
+      const settingsArray = await storage.getAllAiSettings();
+      // Return as keyed object for easier frontend consumption
+      const settingsMap: Record<string, any> = {};
+      for (const s of settingsArray) {
+        settingsMap[s.settingKey] = s;
+      }
+      res.json(settingsMap);
     } catch (error) {
       console.error("Error fetching AI settings:", error);
       res.status(500).json({ message: "Failed to fetch AI settings" });
@@ -8772,6 +8779,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk update all AI job settings in one request — MUST be before /:key to avoid route collision
+  app.put("/api/admin/ai-settings/bulk", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto']);
+      if (!access) {
+        return res.status(403).json({ message: "CTO access required to modify AI settings" });
+      }
+
+      const { settings } = req.body;
+      if (!settings || typeof settings !== 'object') {
+        return res.status(400).json({ message: "settings object is required" });
+      }
+
+      const results: Record<string, any> = {};
+      for (const [key, data] of Object.entries(settings as Record<string, any>)) {
+        if (!data || typeof data !== 'object') continue;
+        const { modelId, provider, modelDisplayName, maxTokens, temperature } = data as any;
+        if (!modelId) continue;
+        results[key] = await storage.upsertAiSetting(key, {
+          modelId,
+          provider: provider || 'openrouter',
+          modelDisplayName: modelDisplayName || modelId,
+          maxTokens,
+          temperature,
+          updatedByUserId: userId,
+        });
+      }
+
+      res.json({ updated: Object.keys(results).length, settings: results });
+    } catch (error) {
+      console.error("Error bulk-updating AI settings:", error);
+      res.status(500).json({ message: "Failed to bulk update AI settings" });
+    }
+  });
+
+  // Single-key update — must be AFTER /bulk to avoid `:key` swallowing "bulk"
   app.put("/api/admin/ai-settings/:key", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -8782,7 +8826,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { modelId, provider, modelDisplayName, maxTokens, temperature } = req.body;
-      
+
       if (!modelId) {
         return res.status(400).json({ message: "Model ID is required" });
       }
@@ -8803,6 +8847,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // OpenRouter model catalog cache (1 hour TTL)
+  let openRouterModelsCache: any[] | null = null;
+  let openRouterModelsCacheTime = 0;
+  const OPENROUTER_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
   // Get available AI models for the settings dropdown
   app.get("/api/admin/ai-models", isAuthenticated, async (req: any, res) => {
     try {
@@ -8813,19 +8862,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "CTO access required" });
       }
 
-      // Available models via OpenRouter
-      const models = [
-        { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'openrouter', description: 'Best for complex reasoning and code' },
-        { id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus', provider: 'openrouter', description: 'Most capable Claude model' },
-        { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'openrouter', description: 'OpenAI flagship model' },
-        { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openrouter', description: 'Fast and cost-effective' },
-        { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5', provider: 'openrouter', description: 'Google long-context model' },
-        { id: 'google/gemini-flash-1.5', name: 'Gemini Flash 1.5', provider: 'openrouter', description: 'Fast Google model' },
-        { id: 'meta-llama/llama-3.1-70b-instruct', name: 'Llama 3.1 70B', provider: 'openrouter', description: 'Open source, capable' },
-        { id: 'mistralai/mixtral-8x7b-instruct', name: 'Mixtral 8x7B', provider: 'openrouter', description: 'Open source, fast' },
-      ];
+      // Return cached models if still fresh
+      const now = Date.now();
+      if (openRouterModelsCache && (now - openRouterModelsCacheTime) < OPENROUTER_CACHE_TTL) {
+        return res.json(openRouterModelsCache);
+      }
 
-      res.json(models);
+      // Fetch live catalog from OpenRouter
+      if (process.env.OPENROUTER_API_KEY) {
+        try {
+          const orRes = await fetch("https://openrouter.ai/api/v1/models", {
+            headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` },
+          });
+          if (orRes.ok) {
+            const orData = await orRes.json() as { data: any[] };
+            const models = (orData.data || []).map((m: any) => {
+              const parts = (m.id as string).split("/");
+              const providerSlug = parts[0] ?? "other";
+              const isFree = (m.id as string).endsWith(":free") || m.pricing?.prompt === "0";
+              return {
+                id: m.id,
+                name: m.name || m.id,
+                provider: providerSlug,
+                contextLength: m.context_length ?? null,
+                isFree,
+                description: m.description || null,
+              };
+            });
+            openRouterModelsCache = models;
+            openRouterModelsCacheTime = now;
+            return res.json(models);
+          }
+        } catch (fetchErr) {
+          console.warn("[AI Models] OpenRouter fetch failed, returning fallback list:", fetchErr);
+        }
+      }
+
+      // Fallback hardcoded list
+      const fallback = [
+        { id: 'meta-llama/llama-3.1-8b-instruct:free', name: 'Llama 3.1 8B (Free)', provider: 'meta-llama', isFree: true, contextLength: 131072, description: 'Free open-source model from Meta' },
+        { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'anthropic', isFree: false, contextLength: 200000, description: 'Best for complex reasoning and code' },
+        { id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus', provider: 'anthropic', isFree: false, contextLength: 200000, description: 'Most capable Claude model' },
+        { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'openai', isFree: false, contextLength: 128000, description: 'OpenAI flagship model' },
+        { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai', isFree: false, contextLength: 128000, description: 'Fast and cost-effective' },
+        { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5', provider: 'google', isFree: false, contextLength: 2000000, description: 'Google long-context model' },
+        { id: 'google/gemini-flash-1.5', name: 'Gemini Flash 1.5', provider: 'google', isFree: false, contextLength: 1000000, description: 'Fast Google model' },
+        { id: 'meta-llama/llama-3.1-70b-instruct', name: 'Llama 3.1 70B', provider: 'meta-llama', isFree: false, contextLength: 131072, description: 'Open source, capable' },
+        { id: 'mistralai/mixtral-8x7b-instruct', name: 'Mixtral 8x7B', provider: 'mistralai', isFree: false, contextLength: 32768, description: 'Open source, fast' },
+      ];
+      res.json(fallback);
     } catch (error) {
       console.error("Error fetching AI models:", error);
       res.status(500).json({ message: "Failed to fetch AI models" });
@@ -15660,8 +15745,6 @@ ANZ Global Education provides pre-departure orientations and ongoing support for
 
       // Generate SEO content using AI
       const OpenAI = (await import('openai')).default;
-      const openai = new OpenAI();
-      
       const systemPrompt = `You are an expert SEO copywriter for ANZ Global Education, an international education platform. 
 Generate optimized meta title and description for better search engine rankings and click-through rates.
 
@@ -15693,14 +15776,28 @@ Description: ${entityData.description || 'No description available'}
 
 Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeywords": ["keyword1", "keyword2", "keyword3"]}`;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      const seoJobSettings = await getJobAiSettings(AI_JOB_KEYS.CONTENT_GENERATION);
+      const seoAiClient = (() => {
+        if (process.env.OPENROUTER_API_KEY) {
+          return new OpenAI({
+            baseURL: "https://openrouter.ai/api/v1",
+            apiKey: process.env.OPENROUTER_API_KEY,
+            defaultHeaders: {
+              "HTTP-Referer": process.env.REPLIT_DEPLOYMENT_URL || "https://replit.com",
+              "X-Title": "StudyMatch - ANZ Global Education Platform",
+            },
+          });
+        }
+        return new OpenAI();
+      })();
+      const completion = await seoAiClient.chat.completions.create({
+        model: seoJobSettings.model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
         response_format: { type: "json_object" },
-        temperature: 0.7,
+        temperature: seoJobSettings.temperature,
       });
 
       const generatedContent = JSON.parse(completion.choices[0].message.content || '{}');

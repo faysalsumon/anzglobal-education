@@ -17,7 +17,24 @@ import OpenAI from "openai";
 import { scrapeWebsite, deepScrapeInstitution } from "./web-scraper-service";
 import { extractInstitutionData, extractCourseData } from "./ai-extractor-service";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { getJobAiSettings, AI_JOB_KEYS } from "./ai";
+
+// Dedicated native OpenAI client for Responses API (web_search_preview tool - not available via OpenRouter)
+const nativeOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+function getAdminChatAiClient(): OpenAI {
+  if (process.env.OPENROUTER_API_KEY) {
+    return new OpenAI({
+      baseURL: "https://openrouter.ai/api/v1",
+      apiKey: process.env.OPENROUTER_API_KEY,
+      defaultHeaders: {
+        "HTTP-Referer": process.env.REPLIT_DEPLOYMENT_URL || "https://replit.com",
+        "X-Title": "StudyMatch - ANZ Global Education Platform",
+      },
+    });
+  }
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 function getUserId(req: any): string | null {
   return req.supabaseUser?.id || req.user?.id || null;
@@ -598,7 +615,7 @@ async function executeToolCall(
 
       case "search_web": {
         try {
-          const response = await openai.responses.create({
+          const response = await nativeOpenAI.responses.create({
             model: "gpt-4o-mini",
             tools: [{ type: "web_search_preview" }],
             input: args.query,
@@ -770,7 +787,7 @@ async function executeToolCall(
           let cricosText = "";
 
           try {
-            const rtoResponse = await openai.responses.create({
+            const rtoResponse = await nativeOpenAI.responses.create({
               model: "gpt-4o-mini",
               tools: [{ type: "web_search_preview" }],
               input: rtoQuery,
@@ -787,7 +804,7 @@ async function executeToolCall(
           }
 
           try {
-            const cricosResponse = await openai.responses.create({
+            const cricosResponse = await nativeOpenAI.responses.create({
               model: "gpt-4o-mini",
               tools: [{ type: "web_search_preview" }],
               input: cricosQuery,
@@ -814,8 +831,10 @@ ${cricosText.substring(0, 3000)}
 Return JSON with: rtoNumber (string or null), cricosProviderCode (string or null), confidence (0-1), notes (string with any caveats).
 Only return numbers you are confident are correct for this specific institution. If unsure, return null.`;
 
-          const extraction = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+          const dataExtrSettings = await getJobAiSettings(AI_JOB_KEYS.DATA_EXTRACTION);
+          const adminAiClient = getAdminChatAiClient();
+          const extraction = await adminAiClient.chat.completions.create({
+            model: dataExtrSettings.model,
             messages: [{ role: "user", content: extractionPrompt }],
             response_format: {
               type: "json_schema",
@@ -1379,15 +1398,17 @@ export function registerAdminChatRoutes(app: Express) {
           let lastExtractedData: any = null;
           let lastExtractedType: string = "";
 
+          const webScrapingSettings = await getJobAiSettings(AI_JOB_KEYS.WEB_SCRAPING);
+          const zanClient = getAdminChatAiClient();
           while (iterations < MAX_TOOL_ITERATIONS) {
             iterations++;
-            const completion = await openai.chat.completions.create({
-              model: "gpt-4o",
+            const completion = await zanClient.chat.completions.create({
+              model: webScrapingSettings.model,
               messages: openaiMessages,
               tools: TOOL_DEFINITIONS,
               tool_choice: "auto",
-              max_tokens: 2000,
-              temperature: 0.3,
+              max_tokens: webScrapingSettings.maxTokens,
+              temperature: webScrapingSettings.temperature,
             });
 
             const msg = completion.choices[0]?.message;
@@ -1468,11 +1489,13 @@ export function registerAdminChatRoutes(app: Express) {
           });
         }
 
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
+        const nonDataEntrySettings = await getJobAiSettings(AI_JOB_KEYS.WEB_SCRAPING);
+        const nonDataEntryClient = getAdminChatAiClient();
+        const completion = await nonDataEntryClient.chat.completions.create({
+          model: nonDataEntrySettings.model,
           messages: openaiMessages,
           max_tokens: 500,
-          temperature: 0.4,
+          temperature: nonDataEntrySettings.temperature,
         });
 
         const assistantContent = completion.choices[0]?.message?.content ?? "I'm not sure how to help with that. Could you rephrase?";

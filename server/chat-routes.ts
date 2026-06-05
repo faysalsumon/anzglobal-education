@@ -5,6 +5,7 @@ import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
 import OpenAI from "openai";
 import { queryKnowledgeBase } from "./knowledge-base";
+import { getJobAiSettings, AI_JOB_KEYS } from "./ai";
 
 // Extend Express Session to include chat properties
 declare module "express-session" {
@@ -13,9 +14,19 @@ declare module "express-session" {
   }
 }
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getChatAiClient(): OpenAI {
+  if (process.env.OPENROUTER_API_KEY) {
+    return new OpenAI({
+      baseURL: "https://openrouter.ai/api/v1",
+      apiKey: process.env.OPENROUTER_API_KEY,
+      defaultHeaders: {
+        "HTTP-Referer": process.env.REPLIT_DEPLOYMENT_URL || "https://replit.com",
+        "X-Title": "StudyMatch - ANZ Global Education Platform",
+      },
+    });
+  }
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 // Helper to get user ID from either auth system
 function getAuthenticatedUserId(req: Request): string | null {
@@ -358,12 +369,15 @@ STAFF BEHAVIOUR RULES:
         content,
       });
 
-      // Get AI response
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      // Get AI response using per-job configured model
+      const jobKey = isLoggedIn ? AI_JOB_KEYS.STUDENT_CHAT : AI_JOB_KEYS.GUEST_CHAT;
+      const chatSettings = await getJobAiSettings(jobKey);
+      const chatClient = getChatAiClient();
+      const completion = await chatClient.chat.completions.create({
+        model: chatSettings.model,
         messages,
-        temperature: 0.7,
-        max_tokens: 800,
+        temperature: chatSettings.temperature,
+        max_tokens: chatSettings.maxTokens,
       });
 
       const assistantContent = completion.choices[0]?.message?.content || "I apologize, but I couldn't generate a response. Please try again.";
