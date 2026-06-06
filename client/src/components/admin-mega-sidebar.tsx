@@ -115,6 +115,7 @@ export function AdminMegaSidebar({
         { icon: TrendingUp, label: "Leads", value: "crm-leads", show: true },
         { icon: Contact, label: "Contacts", value: "crm-contacts", show: adminRole !== 'junior_consultant' && adminRole !== 'support_staff' },
         { icon: ClipboardList, label: "Applications", value: "applications", show: true },
+        { icon: Building2, label: "Accounts", value: "accounts", show: true },
       ],
     },
     {
