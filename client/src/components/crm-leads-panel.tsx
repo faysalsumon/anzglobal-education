@@ -220,7 +220,7 @@ const statusLabels: Record<string, string> = {
 
 export function CrmLeadsPanel() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isAccountsOfficer } = useAuth();
   const [, navigate] = useLocation();
   const searchString = useSearch();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -391,6 +391,7 @@ export function CrmLeadsPanel() {
         onDelete={() => setIsDeleteOpen(true)}
         activeTab={initialTab}
         onTabChange={setInitialTab}
+        isAccountsOfficer={isAccountsOfficer}
       />
     );
   }
@@ -461,10 +462,12 @@ export function CrmLeadsPanel() {
               <LayoutGrid className="h-4 w-4" />
             </Button>
           </div>
-          <Button onClick={() => navigate("/admin/leads/new")} data-testid="button-create-lead">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Lead
-          </Button>
+          {!isAccountsOfficer && (
+            <Button onClick={() => navigate("/admin/leads/new")} data-testid="button-create-lead">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Lead
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1083,11 +1086,12 @@ interface LeadDetailViewProps {
   onDelete: () => void;
   activeTab: string;
   onTabChange: (tab: string) => void;
+  isAccountsOfficer?: boolean;
 }
 
 type LeadEditSection = 'contact_info' | 'address' | 'emergency' | null;
 
-function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps) {
+function LeadDetailView({ lead, onBack, onEdit, onDelete, isAccountsOfficer = false }: LeadDetailViewProps) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -1287,12 +1291,16 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
               <ChevronLeft className="h-4 w-4" />Back
             </Button>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-lead">
-                <Edit className="h-3.5 w-3.5 mr-1" />Edit
-              </Button>
-              <Button type="button" variant="destructive" size="sm" onClick={onDelete} data-testid="button-delete-lead">
-                <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
-              </Button>
+              {!isAccountsOfficer && (
+                <>
+                  <Button type="button" variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-lead">
+                    <Edit className="h-3.5 w-3.5 mr-1" />Edit
+                  </Button>
+                  <Button type="button" variant="destructive" size="sm" onClick={onDelete} data-testid="button-delete-lead">
+                    <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
@@ -1374,7 +1382,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
                   <Phone className="h-4 w-4 text-muted-foreground" />
                   Contact Information
                 </span>
-                {editingSection !== 'contact_info' && (
+                {editingSection !== 'contact_info' && !isAccountsOfficer && (
                   <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                     data-testid="button-edit-contact_info"
                     onClick={() => startEdit('contact_info', { email: lead.email, mobile: lead.mobile, whatsapp: lead.whatsapp, phone: lead.phone })}>
@@ -1453,7 +1461,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   Address
                 </span>
-                {editingSection !== 'address' && (
+                {editingSection !== 'address' && !isAccountsOfficer && (
                   <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                     data-testid="button-edit-address"
                     onClick={() => startEdit('address', { unitNo: lead.unitNo, street: lead.street, suburb: lead.suburb, city: lead.city, state: lead.state, postcode: lead.postcode, country: lead.country })}>
@@ -1785,7 +1793,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete }: LeadDetailViewProps)
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold flex items-center justify-between gap-2">
                 <span>Emergency Contact</span>
-                {editingSection !== 'emergency' && (
+                {editingSection !== 'emergency' && !isAccountsOfficer && (
                   <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                     data-testid="button-edit-emergency"
                     onClick={() => startEdit('emergency', { emergencyContactName: lead.emergencyContactName, emergencyContactMobile: lead.emergencyContactMobile, emergencyContactRelationship: lead.emergencyContactRelationship, emergencyContactAddress: lead.emergencyContactAddress })}>

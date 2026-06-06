@@ -3807,6 +3807,7 @@ export default function AdminDashboard() {
                   <SelectItem value="branch_manager">Branch Manager</SelectItem>
                   <SelectItem value="support_staff">Support Staff</SelectItem>
                   <SelectItem value="operations_staff">Operations Staff</SelectItem>
+                  <SelectItem value="accounts_officer">Accounts Officer</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">

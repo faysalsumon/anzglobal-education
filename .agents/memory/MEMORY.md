@@ -1,1 +1,2 @@
 - [Editor self-fetch pattern](editor-self-fetch.md) — form editors must own their own useQuery, not rely on parent list cache, to avoid stale-data on reopen
+- [Adding new AdminRole](adding-admin-role.md) — checklist for adding a new admin role across the RBAC stack (routes, accounting, CRM, frontend nav, UI guards)

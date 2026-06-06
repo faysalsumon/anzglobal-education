@@ -38,10 +38,10 @@ import {
 import { eq, desc, sql, and, gte, lte, lt, ilike, or } from "drizzle-orm";
 import { sendInvoiceEmail, sendPaymentReceiptEmail, sendInvoiceReminderEmail } from "./email-service";
 
-const FINANCE_ADMIN_ROLES: Array<'cto' | 'platform_admin'> = ['cto', 'platform_admin'];
+const FINANCE_ADMIN_ROLES: Array<'cto' | 'platform_admin' | 'accounts_officer'> = ['cto', 'platform_admin', 'accounts_officer'];
 
 async function requireFinanceAdmin(req: Request, res: Response): Promise<string | null> {
-  const userId = (req as any).user?.id;
+  const userId = (req as any).supabaseUser?.id || (req as any).user?.claims?.sub || (req as any).user?.id;
   if (!userId) { res.status(401).json({ message: "Not authenticated" }); return null; }
   const access = await checkAdminAccess(userId, FINANCE_ADMIN_ROLES);
   if (!access) { res.status(403).json({ message: "Finance admin access required" }); return null; }

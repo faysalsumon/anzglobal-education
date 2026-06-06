@@ -316,15 +316,15 @@ async function triggerKnowledgeBaseRebuild(operation: string): Promise<void> {
 }
 
 type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
-type AdminRole = 'cto' | 'platform_admin' | 'branch_manager' | 'support_staff' | 'operations_staff';
+type AdminRole = 'cto' | 'platform_admin' | 'branch_manager' | 'support_staff' | 'operations_staff' | 'accounts_officer';
 
 const addAdminTeamMemberSchema = z.object({
   email: z.string().email(),
-  role: z.enum(['cto', 'branch_manager', 'support_staff', 'operations_staff']),
+  role: z.enum(['cto', 'branch_manager', 'support_staff', 'operations_staff', 'accounts_officer']),
 });
 
 const updateAdminTeamMemberRoleSchema = z.object({
-  role: z.enum(['cto', 'branch_manager', 'support_staff', 'operations_staff']),
+  role: z.enum(['cto', 'branch_manager', 'support_staff', 'operations_staff', 'accounts_officer']),
 });
 
 async function checkUniversityAccess(
@@ -397,6 +397,7 @@ export async function checkAdminAccess(
           'cto': 'cto',
           'ceo': 'cto',
           'cfo': 'operations_staff',
+          'accounts_officer': 'accounts_officer',
           'branch_manager': 'branch_manager',
           'marketing_executive': 'support_staff',
           'senior_consultant': 'support_staff',
@@ -406,7 +407,7 @@ export async function checkAdminAccess(
       }
     }
     // LEGACY: Check users.role column
-    else if (user.role && ['cto', 'platform_admin', 'branch_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
+    else if (user.role && ['cto', 'platform_admin', 'branch_manager', 'support_staff', 'operations_staff', 'accounts_officer'].includes(user.role)) {
       determinedRole = user.role as AdminRole;
     }
     // LEGACY: Check admin_team_members table
@@ -442,6 +443,7 @@ export async function checkAdminAccess(
         
         // Operations level - finance, reports
         'cfo': 'operations_staff',
+        'accounts_officer': 'accounts_officer',
         
         // Manager level - team management, application assignment
         'branch_manager': 'branch_manager',
@@ -488,7 +490,7 @@ export async function checkAdminAccess(
   }
   
   // TIER 2: LEGACY - Check users.role column
-  if (user.role && ['cto', 'platform_admin', 'branch_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
+  if (user.role && ['cto', 'platform_admin', 'branch_manager', 'support_staff', 'operations_staff', 'accounts_officer'].includes(user.role)) {
     const userRole = user.role as AdminRole;
     if (requiredRoles.includes(userRole)) {
       return { role: userRole, userType };

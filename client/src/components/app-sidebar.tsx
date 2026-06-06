@@ -45,6 +45,7 @@ export function AppSidebar() {
       if (adminRole === "branch_manager") return "Branch Manager Portal";
       if (adminRole === "support_staff") return "Support Staff Portal";
       if (adminRole === "operations_staff") return "Operations Staff Portal";
+      if (adminRole === "accounts_officer") return "Accounts Officer Portal";
       return "Admin Portal";
     }
     return "Student Portal";

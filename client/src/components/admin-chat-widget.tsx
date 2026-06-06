@@ -242,6 +242,7 @@ function buildGreeting(ctx: AdminContext): string {
     branch_manager: "Branch Manager",
     support_staff: "Support Staff",
     operations_staff: "Operations Staff",
+    accounts_officer: "Accounts Officer",
     super_admin: "Super Admin",
     platform_admin: "Platform Admin",
     admin: "Admin",

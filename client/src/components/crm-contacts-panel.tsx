@@ -412,7 +412,7 @@ function AssignPopover({
 
 export function CrmContactsPanel() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isAccountsOfficer } = useAuth();
   const [, navigate] = useLocation();
   const searchString = useSearch();
   const [searchQuery, setSearchQuery] = useState("");
@@ -750,6 +750,7 @@ export function CrmContactsPanel() {
         onDelete={() => setIsDeleteOpen(true)}
         admins={admins || []}
         onAssign={(contactId, adminId) => updateMutation.mutate({ id: contactId, data: { assignedTo: adminId } })}
+        isAccountsOfficer={isAccountsOfficer}
       />
     );
   }
@@ -803,10 +804,12 @@ export function CrmContactsPanel() {
               </SelectContent>
             </Select>
           )}
-          <Button type="button" onClick={() => navigate("/admin/contacts/new")} data-testid="button-create-contact">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Contact
-          </Button>
+          {!isAccountsOfficer && (
+            <Button type="button" onClick={() => navigate("/admin/contacts/new")} data-testid="button-create-contact">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Contact
+            </Button>
+          )}
         </div>
       </div>
 
@@ -2077,6 +2080,7 @@ interface ContactDetailViewProps {
   onDelete: () => void;
   admins: { id: string; firstName: string; lastName: string; userType: string; profileImageUrl: string | null }[];
   onAssign: (contactId: string, adminId: string | null) => void;
+  isAccountsOfficer?: boolean;
 }
 
 const CONTACT_ROLES = [
@@ -2094,7 +2098,7 @@ const roleNeedsInstitution = (contactType: ContactType) =>
 
 type EditSection = 'contact_info' | 'address' | 'inquiry' | 'ownership' | 'emergency' | null;
 
-function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign }: ContactDetailViewProps) {
+function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign, isAccountsOfficer = false }: ContactDetailViewProps) {
   const { toast } = useToast();
   const [isAddInstitutionOpen, setIsAddInstitutionOpen] = useState(false);
   const [institutionSearch, setInstitutionSearch] = useState("");
@@ -2332,12 +2336,16 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
               <ChevronLeft className="h-4 w-4" />Back
             </Button>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-contact">
-                <Edit className="h-3.5 w-3.5 mr-1" />Edit
-              </Button>
-              <Button type="button" variant="destructive" size="sm" onClick={onDelete} data-testid="button-delete-contact">
-                <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
-              </Button>
+              {!isAccountsOfficer && (
+                <>
+                  <Button type="button" variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-contact">
+                    <Edit className="h-3.5 w-3.5 mr-1" />Edit
+                  </Button>
+                  <Button type="button" variant="destructive" size="sm" onClick={onDelete} data-testid="button-delete-contact">
+                    <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
@@ -2417,7 +2425,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 <Phone className="h-4 w-4 text-muted-foreground" />
                 Contact Information
               </span>
-              {editingSection !== 'contact_info' && (
+              {editingSection !== 'contact_info' && !isAccountsOfficer && (
                 <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                   data-testid="button-edit-contact_info"
                   onClick={() => startEdit('contact_info', { email: contact.email, mobile: contact.mobile, whatsapp: contact.whatsapp, phone: contact.phone })}>
@@ -2496,7 +2504,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 <MapPin className="h-4 w-4 text-muted-foreground" />
                 Address
               </span>
-              {editingSection !== 'address' && (
+              {editingSection !== 'address' && !isAccountsOfficer && (
                 <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                   data-testid="button-edit-address"
                   onClick={() => startEdit('address', { unitNo: contact.unitNo, street: contact.street, suburb: contact.suburb, city: contact.city, state: contact.state, postcode: contact.postcode, country: contact.country })}>
@@ -2579,7 +2587,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 <FileText className="h-4 w-4 text-muted-foreground" />
                 Inquiry Details
               </span>
-              {editingSection !== 'inquiry' && (
+              {editingSection !== 'inquiry' && !isAccountsOfficer && (
                 <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                   data-testid="button-edit-inquiry"
                   onClick={() => startEdit('inquiry', {
@@ -2915,7 +2923,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
           <CardHeader>
             <CardTitle className="text-lg flex items-center justify-between gap-2">
               Emergency Contact
-              {editingSection !== 'emergency' && (
+              {editingSection !== 'emergency' && !isAccountsOfficer && (
                 <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                   data-testid="button-edit-emergency"
                   onClick={() => startEdit('emergency', { emergencyContactName: contact.emergencyContactName, emergencyContactMobile: contact.emergencyContactMobile, emergencyContactRelationship: contact.emergencyContactRelationship, emergencyContactAddress: contact.emergencyContactAddress })}>

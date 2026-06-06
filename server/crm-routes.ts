@@ -95,6 +95,30 @@ async function requireAdmin(req: any, res: any, next: any) {
   }
 }
 
+// Returns the admin_team_members role for the requesting user
+async function getAdminRoleFromReq(req: any): Promise<string | null> {
+  const userId = getUserId(req);
+  if (!userId) return null;
+  const adminMember = await storage.getAdminTeamMemberByUserId(userId);
+  if (adminMember?.isActive) return adminMember.role;
+  const user = await storage.getUser(userId);
+  return user?.role || null;
+}
+
+// Middleware that prevents read-only roles (accounts_officer) from mutating CRM records.
+// Notes routes intentionally bypass this — all admin roles may add/edit notes.
+async function requireCrmWriteAccess(req: any, res: any, next: any) {
+  try {
+    const role = await getAdminRoleFromReq(req);
+    if (role === 'accounts_officer') {
+      return res.status(403).json({ message: "Accounts Officer role has read-only access to CRM records. Notes can still be added." });
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
 // ============================================
 // CRM CONTACTS ROUTES
 // ============================================
@@ -848,7 +872,7 @@ router.delete("/contacts/:contactId/institutions/:linkId", requireAdmin, async (
 });
 
 // Create new contact
-router.post("/contacts", requireAdmin, async (req: any, res) => {
+router.post("/contacts", requireAdmin, requireCrmWriteAccess, async (req: any, res) => {
   try {
     const userId = getUserId(req);
     if (!userId) {
@@ -933,7 +957,7 @@ router.post("/contacts", requireAdmin, async (req: any, res) => {
 });
 
 // Update contact
-router.patch("/contacts/:id", requireAdmin, async (req: any, res) => {
+router.patch("/contacts/:id", requireAdmin, requireCrmWriteAccess, async (req: any, res) => {
   try {
     const { id } = req.params;
     const userId = getUserId(req);
@@ -1093,7 +1117,7 @@ router.patch("/contacts/:id", requireAdmin, async (req: any, res) => {
 });
 
 // Delete contact
-router.delete("/contacts/:id", requireAdmin, async (req: any, res) => {
+router.delete("/contacts/:id", requireAdmin, requireCrmWriteAccess, async (req: any, res) => {
   try {
     const { id } = req.params;
     const userId = getUserId(req);
@@ -2007,7 +2031,7 @@ router.get("/leads/:id", requireAdmin, async (req, res) => {
 });
 
 // POST /leads - create new lead
-router.post("/leads", requireAdmin, async (req: any, res) => {
+router.post("/leads", requireAdmin, requireCrmWriteAccess, async (req: any, res) => {
   try {
     const userId = getUserId(req);
     const {
@@ -2061,7 +2085,7 @@ router.post("/leads", requireAdmin, async (req: any, res) => {
 });
 
 // PATCH /leads/:id - update lead
-router.patch("/leads/:id", requireAdmin, async (req: any, res) => {
+router.patch("/leads/:id", requireAdmin, requireCrmWriteAccess, async (req: any, res) => {
   try {
     const { id } = req.params;
     const userId = getUserId(req);
@@ -2146,7 +2170,7 @@ router.patch("/leads/:id", requireAdmin, async (req: any, res) => {
 });
 
 // DELETE /leads/:id - delete lead
-router.delete("/leads/:id", requireAdmin, async (req, res) => {
+router.delete("/leads/:id", requireAdmin, requireCrmWriteAccess, async (req, res) => {
   try {
     const { id } = req.params;
     await db.delete(crmContacts).where(eq(crmContacts.id, id));
@@ -2158,7 +2182,7 @@ router.delete("/leads/:id", requireAdmin, async (req, res) => {
 });
 
 // POST /leads/:id/convert - convert lead to a full contact
-router.post("/leads/:id/convert", requireAdmin, async (req: any, res) => {
+router.post("/leads/:id/convert", requireAdmin, requireCrmWriteAccess, async (req: any, res) => {
   try {
     const { id } = req.params;
     const { contactType } = req.body;
