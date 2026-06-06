@@ -40,8 +40,8 @@ interface ApplicationInternalNotesProps {
 export function ApplicationInternalNotes({
   applicationId,
   currentUserId,
-  compact = false,
-  branchId,
+  compact: _compact = false,
+  branchId: _branchId,
 }: ApplicationInternalNotesProps) {
   const { toast } = useToast();
 

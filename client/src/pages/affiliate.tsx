@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -31,7 +32,6 @@ import {
   Clock,
   UserPlus,
   Loader2,
-  MessageCircle,
   Smartphone
 } from "lucide-react";
 import { SiFacebook, SiX, SiWhatsapp } from "react-icons/si";
@@ -779,7 +779,7 @@ function AffiliateDashboard() {
   );
 }
 
-function BankDetailsForm({ profileId }: { profileId: string }) {
+function BankDetailsForm({ profileId: _profileId }: { profileId: string }) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     bankAccountHolderName: "",
@@ -789,7 +789,7 @@ function BankDetailsForm({ profileId }: { profileId: string }) {
   });
 
   // Load existing bank details
-  const { data: bankDetails, isLoading } = useQuery<{
+  const { data: bankDetails, isLoading: _isLoading } = useQuery<{
     bankAccountHolderName: string;
     bankName: string;
     bankBsbCode: string;

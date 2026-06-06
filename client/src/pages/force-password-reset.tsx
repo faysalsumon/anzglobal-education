@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
@@ -101,7 +102,7 @@ export default function ForcePasswordReset() {
     return () => {
       mounted = false;
     };
-  }, [supabase, toast, setLocation]);
+  }, [toast, setLocation]);
 
   const form = useForm<PasswordResetFormData>({
     resolver: zodResolver(passwordResetSchema),

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";

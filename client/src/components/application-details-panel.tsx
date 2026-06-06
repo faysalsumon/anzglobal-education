@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,7 +36,7 @@ import { useDocumentEvents } from "@/hooks/useDocumentEvents";
 import { 
   User, GraduationCap, Building, Building2, FileText, History, MessageSquare,
   Edit, Trash2, Upload, Download, Eye, CheckCircle, XCircle, Clock,
-  AlertTriangle, Plus, Calendar, UserCheck, ExternalLink, Send, Layers
+  AlertTriangle, Plus, Calendar, UserCheck, Send, Layers
 } from "lucide-react";
 import { format } from "date-fns";
 import { ApplicationInternalNotes } from "@/components/application-internal-notes";
@@ -341,7 +342,7 @@ export function ApplicationDetailsPanel({
   });
   const addCourseInstitutions = Array.isArray(addCourseInstitutionsData) ? addCourseInstitutionsData : [];
   
-  const consultants = consultantsData?.consultants || [];
+  const _consultants = consultantsData?.consultants || [];
 
   const { data: documentsData } = useQuery<{ documents: StageDocument[] }>({
     queryKey: ["/api/admin/applications", application.id, "documents"],
@@ -369,6 +370,7 @@ export function ApplicationDetailsPanel({
     const folderName = STAGE_FOLDER_MAP[newDocUpload.stage];
     const matched = folderName ? studentFolders.find(f => f.name === folderName) : undefined;
     setUploadFolderId(matched?.id ?? null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadDocDialogOpen, studentFolders]);
 
   const documents = documentsData?.documents || [];

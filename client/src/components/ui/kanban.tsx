@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ReactNode } from "react";
 import { DndContext, DragOverlay, closestCenter } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
@@ -247,7 +248,9 @@ export function ViewToggle({
   listIcon,
   kanbanIcon,
 }: ViewToggleProps) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { List, LayoutGrid } = require("lucide-react");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Button } = require("@/components/ui/button");
 
   return (

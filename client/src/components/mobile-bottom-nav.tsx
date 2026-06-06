@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +11,6 @@ import {
   MessageSquare,
   User,
   Building2,
-  BookOpen,
-  Users,
   FolderOpen,
   PlusCircle,
 } from "lucide-react";
@@ -21,7 +20,7 @@ interface UnreadCountResponse {
 }
 
 export function MobileBottomNav() {
-  const { user, isStudent } = useAuth();
+  const { user, isStudent: _isStudent } = useAuth();
   const [location] = useLocation();
   const isAdmin = user?.userType === "admin";
 

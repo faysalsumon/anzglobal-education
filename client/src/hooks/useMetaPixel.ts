@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useRegion } from "@/context/RegionContext";

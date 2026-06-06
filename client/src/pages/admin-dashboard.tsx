@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Helmet } from "react-helmet";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -10,8 +11,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
@@ -39,7 +38,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X, UserPlus, Eye, ChevronsUpDown, Check, RefreshCw, ChevronRight, ChevronLeft, Lock, Globe } from "lucide-react";
+import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, CheckCircle2, Clock, XCircle, Sparkles, User, LogOut, Menu, X, UserPlus, Eye, ChevronsUpDown, Check, RefreshCw, ChevronRight, ChevronLeft, Lock, Globe } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -51,12 +50,9 @@ import { useLocation, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { AdminCsvImportPanel } from "@/pages/admin-csv-import";
-import { GoogleAddressAutocomplete, AddressComponents } from "@/components/ui/google-address-autocomplete";
 import { AIInstitutionExtractor } from "@/components/ai-institution-extractor";
 import { AICourseExtractor } from "@/components/ai-course-extractor";
-import { GalleryImageManager } from "@/components/gallery-image-manager";
 import { AdminMegaSidebar } from "@/components/admin-mega-sidebar";
 import { AdminBlogManagement } from "@/components/admin-blog-management";
 import { AdminScrapingPanel } from "@/components/admin-scraping-panel";
@@ -252,43 +248,6 @@ interface Course {
   campusLocations: string[] | null;
 }
 
-interface StudentLead {
-  userId: string;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  phone: string | null;
-  nationality: string | null;
-  country: string | null;
-  educationLevel: string | null;
-  fieldOfStudy: string | null;
-  createdAt: string | null;
-  profileComplete: boolean;
-}
-
-interface InquiryLead {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  visaStatus: string;
-  courseId: string;
-  universityId: string;
-  status: string;
-  notes: string | null;
-  createdAt: string | null;
-  course: {
-    id: string;
-    title: string;
-    level: string | null;
-    subject: string | null;
-  } | null;
-  university: {
-    id: string;
-    name: string;
-  } | null;
-}
 
 interface Application {
   id: string;
@@ -327,11 +286,6 @@ const formatUserType = (userType: string): string => {
   };
   return labels[userType] || userType;
 };
-
-const optionalNumber = z.preprocess(
-  (val) => (val === "" || val === null || val === undefined ? undefined : val),
-  z.coerce.number().optional()
-);
 
 const optionalPositiveInt = z.preprocess(
   (val) => (val === "" || val === null || val === undefined ? undefined : val),
@@ -436,7 +390,6 @@ const courseSchema = z.object({
   careerPath: z.string().optional(),
 });
 
-const PROVIDER_TYPES = ["Institution", "TAFE", "University", "College", "School"];
 
 export default function AdminDashboard() {
   const { toast } = useToast();
@@ -485,7 +438,7 @@ export default function AdminDashboard() {
     const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'crm-leads', 'applications', 'accounts', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'seo-metadata', 'tags', 'qualification-types', 'entry-requirement-templates', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
     const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
     const financeTabsForAccountsOfficer = ['finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting'];
-    const ctoOnlyTabs = ['ai-settings'];
+    const _ctoOnlyTabs = ['ai-settings'];
     const superAdminOnlyTabs = ['role-management', 'profile-management'];
     const marketingExecutiveTabs = ['institutions'];
     
@@ -594,6 +547,7 @@ export default function AdminDashboard() {
         setActiveTab(isContactsRestricted ? 'crm-leads' : tabFromQuery);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchString]);
   
   // User state
@@ -610,7 +564,7 @@ export default function AdminDashboard() {
   const [institutionSearchQuery, setInstitutionSearchQuery] = useState("");
   const [institutionPublishFilter, setInstitutionPublishFilter] = useState<string>("all");
   const [showInstitutionEditor, setShowInstitutionEditor] = useState(false);
-  const [institutionDialogOpen, setInstitutionDialogOpen] = useState(false);
+  const [_institutionDialogOpen, setInstitutionDialogOpen] = useState(false);
   const [aiExtractorDialogOpen, setAiExtractorDialogOpen] = useState(false);
   const [editingInstitution, setEditingInstitution] = useState<Institution | null>(null);
   const [deletingInstitution, setDeletingInstitution] = useState<Institution | null>(null);
@@ -629,7 +583,7 @@ export default function AdminDashboard() {
   const [coursePublishFilter, setCoursePublishFilter] = useState<string>("all");
   const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set());
   const [showCourseEditor, setShowCourseEditor] = useState(false);
-  const [courseDialogOpen, setCourseDialogOpen] = useState(false);
+  const [_courseDialogOpen, setCourseDialogOpen] = useState(false);
   const [aiCourseExtractorDialogOpen, setAiCourseExtractorDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
@@ -652,13 +606,9 @@ export default function AdminDashboard() {
 
   // (Student leads state removed - consolidated into CRM Leads)
 
-  // Applications state
-  const [applicationSearchQuery, setApplicationSearchQuery] = useState("");
-  const [applicationStatusFilter, setApplicationStatusFilter] = useState<string>("all");
-
   // Logo upload state
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const logoFileInputRef = useRef<HTMLInputElement>(null);
+  const [_logoPreview, _setLogoPreview] = useState<string | null>(null);
+  const _logoFileInputRef = useRef<HTMLInputElement>(null);
   const coursesTableScrollRef = useRef<HTMLDivElement>(null);
   const [showCourseScrollLeft, setShowCourseScrollLeft] = useState(false);
   const [showCourseScrollRight, setShowCourseScrollRight] = useState(true);
@@ -779,7 +729,7 @@ export default function AdminDashboard() {
 
   // (studentLeads query removed - consolidated into CRM Leads)
 
-  const { data: applications, isLoading: applicationsLoading } = useQuery<Application[]>({
+  const { data: _applications, isLoading: _applicationsLoading } = useQuery<Application[]>({
     queryKey: ["/api/super-admin/applications"],
   });
 
@@ -808,7 +758,7 @@ export default function AdminDashboard() {
   });
 
   // Fetch single user details for view/edit dialog
-  const { data: userDetails, isLoading: userDetailsLoading, refetch: refetchUserDetails } = useQuery<User>({
+  const { data: userDetails, isLoading: userDetailsLoading } = useQuery<User>({
     queryKey: ["/api/super-admin/users", selectedUserForEdit?.id],
     enabled: !!selectedUserForEdit?.id && viewEditUserDialogOpen,
   });
@@ -816,7 +766,7 @@ export default function AdminDashboard() {
   // (inquiryLeads query removed - consolidated into CRM Leads)
 
   // Fetch selected institution to get its campusAddresses
-  const { data: selectedInstitution, isLoading: institutionDetailsLoading } = useQuery<Institution>({
+  const { data: _selectedInstitution, isLoading: _institutionDetailsLoading } = useQuery<Institution>({
     queryKey: ["/api/institutions", selectedInstitutionId],
     enabled: !!selectedInstitutionId,
   });
@@ -831,6 +781,7 @@ export default function AdminDashboard() {
       );
       institutionForm.setValue("campusAddresses", newAddresses);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [institutionForm.watch("numberOfCampuses")]);
 
   // Watch for changes to the selected institution and update state
@@ -866,7 +817,7 @@ export default function AdminDashboard() {
         description: "User has been deleted successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -888,25 +839,25 @@ export default function AdminDashboard() {
       const linked = stats.linked || 0;
       const updated = stats.updated || 0;
       
-      let description = "";
+      let _description: string;
       if (created > 0 || linked > 0 || updated > 0) {
         const parts: string[] = [];
         if (created > 0) parts.push(`Created: ${created}`);
         if (linked > 0) parts.push(`Linked: ${linked}`);
         if (updated > 0) parts.push(`Updated: ${updated}`);
-        description = parts.join(", ");
+        _description = parts.join(", ");
       } else if (total > 0) {
-        description = `All ${total} users processed`;
+        _description = `All ${total} users processed`;
       } else {
-        description = "No eligible users found to sync";
+        _description = "No eligible users found to sync";
       }
       
       toast({
         title: "Sync completed",
-        description,
+        description: _description,
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error syncing users",
         description: error.message,
@@ -926,7 +877,7 @@ export default function AdminDashboard() {
         description: "User role has been updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -946,7 +897,7 @@ export default function AdminDashboard() {
         description: "User status has been updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -973,7 +924,7 @@ export default function AdminDashboard() {
         description: "User has been updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -983,7 +934,7 @@ export default function AdminDashboard() {
   });
 
   // Institution mutations
-  const createInstitutionMutation = useMutation({
+  const _createInstitutionMutation = useMutation({
     mutationFn: async (data: z.infer<typeof institutionSchema>) => {
       return await apiRequest("POST", "/api/super-admin/institutions", data);
     },
@@ -997,7 +948,7 @@ export default function AdminDashboard() {
         description: "Institution has been created successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1006,7 +957,7 @@ export default function AdminDashboard() {
     },
   });
 
-  const updateInstitutionMutation = useMutation({
+  const _updateInstitutionMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<z.infer<typeof institutionSchema>> }) => {
       return await apiRequest("PATCH", `/api/super-admin/institutions/${id}`, data);
     },
@@ -1021,7 +972,7 @@ export default function AdminDashboard() {
         description: "Institution has been updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1043,7 +994,7 @@ export default function AdminDashboard() {
         description: "Institution has been deleted successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1064,7 +1015,7 @@ export default function AdminDashboard() {
         description: "Institution status has been updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1091,7 +1042,7 @@ export default function AdminDashboard() {
         description: data?.message || "Institution has been successfully transferred to the selected user",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1122,7 +1073,7 @@ export default function AdminDashboard() {
         description: "Institution and all its courses have been reassigned",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to update assignment",
@@ -1146,7 +1097,7 @@ export default function AdminDashboard() {
         description: "Course has been successfully transferred to the selected user",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1223,7 +1174,7 @@ export default function AdminDashboard() {
         description: `Institution has been ${variables.publishStatus === 'published' ? 'published' : 'saved as draft'}`,
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1233,7 +1184,7 @@ export default function AdminDashboard() {
   });
 
   // Course mutations
-  const createCourseMutation = useMutation({
+  const _createCourseMutation = useMutation({
     mutationFn: async (data: z.infer<typeof courseSchema>) => {
       // Include campusLocations in the course data
       const courseData = {
@@ -1254,7 +1205,7 @@ export default function AdminDashboard() {
         description: "Course has been created successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1263,7 +1214,7 @@ export default function AdminDashboard() {
     },
   });
 
-  const updateCourseMutation = useMutation({
+  const _updateCourseMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<z.infer<typeof courseSchema>> }) => {
       // Include campusLocations in the update data
       const courseData = {
@@ -1272,7 +1223,7 @@ export default function AdminDashboard() {
       };
       return await apiRequest("PATCH", `/api/super-admin/courses/${id}`, courseData);
     },
-    onSuccess: async (_, variables) => {
+    onSuccess: async (_result, _variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
       setCourseDialogOpen(false);
@@ -1285,7 +1236,7 @@ export default function AdminDashboard() {
         description: "Course has been updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1307,7 +1258,7 @@ export default function AdminDashboard() {
         description: "Course has been deleted successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1329,7 +1280,7 @@ export default function AdminDashboard() {
         description: data.message || `Successfully deleted ${data.count} user(s)`,
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1351,29 +1302,7 @@ export default function AdminDashboard() {
         description: data.message || `Successfully deleted ${data.count} institution(s)`,
       });
     },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const bulkUpdateInstitutionStatusMutation = useMutation({
-    mutationFn: async ({ institutionIds, status }: { institutionIds: string[]; status: string }) => {
-      return await apiRequest("POST", "/api/super-admin/institutions/bulk-update-status", { institutionIds, status });
-    },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
-      setSelectedInstitutions(new Set());
-      toast({
-        title: "Status updated",
-        description: data.message || `Successfully updated ${data.count} institution(s)`,
-      });
-    },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1395,29 +1324,7 @@ export default function AdminDashboard() {
         description: data.message || `Successfully deleted ${data.count} course(s)`,
       });
     },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const bulkUpdateCourseStatusMutation = useMutation({
-    mutationFn: async ({ courseIds, status }: { courseIds: string[]; status: string }) => {
-      return await apiRequest("POST", "/api/super-admin/courses/bulk-update-status", { courseIds, status });
-    },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
-      setSelectedCourses(new Set());
-      toast({
-        title: "Status updated",
-        description: data.message || `Successfully updated ${data.count} course(s)`,
-      });
-    },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1438,7 +1345,7 @@ export default function AdminDashboard() {
         description: "Course status has been updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1469,7 +1376,7 @@ export default function AdminDashboard() {
         description: `Course has been ${variables.publishStatus === 'published' ? (variables.visibility === 'private' ? 'published privately' : 'published publicly') : 'saved as draft'}`,
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1490,7 +1397,7 @@ export default function AdminDashboard() {
         description: "The institution has been approved and is now publicly visible",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1513,7 +1420,7 @@ export default function AdminDashboard() {
         description: "The institution has been rejected and will remain hidden from public",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1575,7 +1482,7 @@ export default function AdminDashboard() {
         description: "The course has been rejected and will remain hidden from public",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1598,7 +1505,7 @@ export default function AdminDashboard() {
         description: "The admin user has been approved and notified via email",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1621,7 +1528,7 @@ export default function AdminDashboard() {
         description: "The admin signup request has been rejected and the user notified",
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -1724,7 +1631,7 @@ export default function AdminDashboard() {
   };
 
   // Institution stats
-  const institutionStats = {
+  const _institutionStats = {
     total: institutions?.length || 0,
     active: institutions?.filter(i => i.isActive).length || 0,
     inactive: institutions?.filter(i => !i.isActive).length || 0,
@@ -1827,63 +1734,6 @@ export default function AdminDashboard() {
     setEditingInstitution(null);
   };
 
-  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append("logo", file);
-
-    try {
-      // Use apiRequest which handles CSRF tokens and auth headers automatically
-      const response = await apiRequest("POST", "/api/university/upload-logo", formData);
-      const data = await response.json();
-      institutionForm.setValue("logo", data.logoPath);
-      setLogoPreview(data.logoPath);
-      
-      toast({
-        title: "Logo uploaded",
-        description: "Institution logo has been uploaded successfully.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSubmitInstitution = (data: z.infer<typeof institutionSchema>, publishStatus: 'draft' | 'published' = 'draft') => {
-    // Transform form data to API format
-    const apiData: any = {
-      ...data,
-      topDisciplines: data.topDisciplines 
-        ? data.topDisciplines.split(',').map(d => d.trim()).filter(Boolean)
-        : undefined,
-      topCourses: data.topCourses
-        ? data.topCourses.split(',').map(c => c.trim()).filter(Boolean)
-        : undefined,
-      scholarshipPercentageMin: data.hasScholarship ? data.scholarshipPercentageMin : undefined,
-      scholarshipPercentageMax: data.hasScholarship ? data.scholarshipPercentageMax : undefined,
-      publishStatus,
-      // Track who published and when for audit trail
-      ...(publishStatus === 'published' && {
-        publishedAt: new Date().toISOString(),
-        publishedByUserId: user?.id,
-      }),
-    };
-    
-    // Remove hasScholarship as it's not a database field
-    delete apiData.hasScholarship;
-    
-    if (editingInstitution) {
-      updateInstitutionMutation.mutate({ id: editingInstitution.id, data: apiData });
-    } else {
-      createInstitutionMutation.mutate(apiData);
-    }
-  };
-
   // Course handlers
   const handleCreateCourse = () => {
     setEditingCourse(null);
@@ -1902,32 +1752,8 @@ export default function AdminDashboard() {
     setSelectedCampusIds([]);
   };
 
-  const handleSubmitCourse = (data: z.infer<typeof courseSchema>, publishStatus: 'draft' | 'published' = 'draft') => {
-    // Transform comma-separated strings to arrays for backend
-    const transformedData: any = {
-      ...data,
-      intakes: data.intakes ? data.intakes.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-      images: data.images ? data.images.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-      pathways: data.pathways ? data.pathways.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-      studyAreas: data.studyAreas ? data.studyAreas.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-      careerOutcomes: data.careerOutcomes ? data.careerOutcomes.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-      publishStatus,
-      // Track who published and when for audit trail
-      ...(publishStatus === 'published' && {
-        publishedAt: new Date().toISOString(),
-        publishedByUserId: user?.id,
-      }),
-    };
-
-    if (editingCourse) {
-      updateCourseMutation.mutate({ id: editingCourse.id, data: transformedData });
-    } else {
-      createCourseMutation.mutate(transformedData);
-    }
-  };
-
   // Sidebar styling - compact and responsive
-  const sidebarStyle = {
+  const _sidebarStyle = {
     "--sidebar-width": "14rem",        // Compact: 224px (was 256px)
     "--sidebar-width-icon": "3.5rem",  // Icon mode: 56px (was 72px)
   } as React.CSSProperties;

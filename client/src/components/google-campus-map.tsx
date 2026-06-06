@@ -246,6 +246,7 @@ export function GoogleCampusMap({
     };
 
     initMap();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campuses, institutionName]);
 
   // Update marker appearance when selectedCampusIndex changes

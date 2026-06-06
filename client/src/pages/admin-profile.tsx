@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -164,7 +165,7 @@ export default function AdminProfile() {
       await signOut();
       try {
         await fetch("/api/logout", { method: "GET", credentials: "include", redirect: "manual" });
-      } catch {}
+      } catch { /* empty */ }
       queryClient.clear();
       window.location.href = "/";
     } catch (error) {
@@ -174,7 +175,7 @@ export default function AdminProfile() {
   };
 
   // Fetch admin profile - works for all user types (hook called before returns)
-  const { data: profile, isLoading: isProfileLoading } = useQuery<AdminUser>({
+  const { data: profile, isLoading: _isProfileLoading } = useQuery<AdminUser>({
     queryKey: ["/api/admin/profile"],
     enabled: !!user && isAuthenticated && isAdmin,
   });

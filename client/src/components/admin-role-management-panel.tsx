@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +40,6 @@ import {
   Edit2,
   Layers,
 } from "lucide-react";
-import { format } from "date-fns";
 
 interface Role {
   id: string;

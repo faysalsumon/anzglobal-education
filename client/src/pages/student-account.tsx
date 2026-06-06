@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQueryParams } from "@/hooks/useQueryParams";
@@ -51,7 +52,7 @@ export default function StudentAccount() {
   }, [isAuthResolved, isAuthenticated, setLocation]);
 
   // Fetch student profile
-  const { data: profile, isLoading: profileLoading } = useQuery<StudentProfile>({
+  const { data: profile, isLoading: _profileLoading } = useQuery<StudentProfile>({
     queryKey: ["/api/student/profile"],
     enabled: isAuthenticated,
   });

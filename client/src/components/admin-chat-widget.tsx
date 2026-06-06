@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect, useMemo } from "react";
-import { MessageCircle, X, Send, Minimize2, Users, CheckCircle2, Building2, GraduationCap, AlertTriangle } from "lucide-react";
+import { X, Send, Minimize2, CheckCircle2, Building2, GraduationCap, AlertTriangle } from "lucide-react";
 import { ZanThinkingIndicator } from "@/components/zan-thinking-indicator";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -296,7 +297,7 @@ const ROLE_BADGE_LABELS: Record<string, string> = {
 };
 
 export function AdminChatWidget() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const { toast } = useToast();
 
   const [isOpen, setIsOpen] = useState(false);

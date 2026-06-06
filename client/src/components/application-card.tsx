@@ -3,16 +3,12 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Calendar, Building2, Upload, AlertTriangle, FolderOpen, CheckCircle, Clock, MessageSquare, Send, ChevronDown, User, Library } from "lucide-react";
+import { Calendar, Building2, Upload, AlertTriangle, FolderOpen, CheckCircle, Clock, MessageSquare, Send, ChevronDown } from "lucide-react";
 import { StudentDocumentPicker } from "./student-document-picker";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -59,6 +55,8 @@ type ApplicationStage =
   | "Refusal/Refunds"
   | "Application Lost";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface StageHistory {
   id: string;
   applicationId: string;
@@ -71,7 +69,7 @@ interface StageHistory {
   metadata: any;
 }
 
-interface StageDocument {
+interface _StageDocument {
   id: string;
   applicationId: string;
   stage: ApplicationStage;
@@ -301,7 +299,7 @@ export function ApplicationCard({ application, course, university, consultant }:
     });
   };
 
-  const getStageIcon = (stage: ApplicationStage) => {
+  const _getStageIcon = (stage: ApplicationStage) => {
     const currentIndex = STAGE_ORDER.indexOf(application.currentStage);
     const stageIndex = STAGE_ORDER.indexOf(stage);
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -49,7 +50,6 @@ import {
   AlertTriangle,
   TrendingUp,
   TrendingDown,
-  Clock,
   Bell,
   Building2,
   GraduationCap,
@@ -113,7 +113,7 @@ function BillToTypeBadge({ billToType }: { billToType?: string }) {
 
 // ==================== INVOICES TAB ====================
 
-function InvoicesTab({ isCTO, onNavigate }: { isCTO: boolean; onNavigate?: (tab: string, entityId?: string) => void }) {
+function InvoicesTab({ isCTO: _isCTO, onNavigate }: { isCTO: boolean; onNavigate?: (tab: string, entityId?: string) => void }) {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);

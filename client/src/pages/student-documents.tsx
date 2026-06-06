@@ -46,7 +46,6 @@ import {
   MoreVertical,
   Download,
   Trash2,
-  Edit,
   File,
   Plus,
   Search,
@@ -153,7 +152,7 @@ function StudentDocumentsContent() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
 
-  const { data: folders = [], isLoading: foldersLoading } = useQuery<DocumentFolder[]>({
+  const { data: folders = [], isLoading: _foldersLoading } = useQuery<DocumentFolder[]>({
     queryKey: ["/api/student/documents/folders"],
   });
 

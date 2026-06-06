@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import zanAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.webp";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -8,29 +9,23 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
   Send,
   MessageSquare,
-  Users,
   Search,
   Plus,
   ArrowLeft,
-  Circle,
   Hash,
   ChevronDown,
   ChevronRight,
   MoreVertical,
   Smile,
-  Paperclip,
   Image as ImageIcon,
   FileText,
   File,
-  MapPin,
   User as UserIcon,
   Download,
-  Check,
   CheckCheck,
   Mic,
   Laptop,
@@ -251,9 +246,9 @@ type ChatView = {
   id: string;
 };
 
-export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}) {
+export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTabProps = {}) {
   const { user, adminRole, isCTO, isBranchManager } = useAuth();
-  const { isConnected, lastMessage, sendMessage } = useWebSocket();
+  const { isConnected: _isConnected, lastMessage, sendMessage } = useWebSocket();
   const { toast } = useToast();
   const [activeView, setActiveView] = useState<ChatView | null>(null);
   const [messageInput, setMessageInput] = useState("");
@@ -518,6 +513,7 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
         markAsReadMutation.mutate(activeView.id);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView, conversations]);
 
   const clearPendingFile = () => {

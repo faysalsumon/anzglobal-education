@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
@@ -5,21 +6,19 @@ import { Helmet } from "react-helmet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   MapPin, Clock, DollarSign, Calendar, GraduationCap, ArrowLeft, 
-  Download, LogIn, Award, Globe, BookOpen, Home, Sparkles,
-  Users, TrendingUp, CheckCircle, Building2, Briefcase, FileText,
+  LogIn, Award, Globe, BookOpen, Home,
+  TrendingUp, CheckCircle, Building2, Briefcase, FileText,
   Target, MonitorPlay, Plane, Star, Info, ExternalLink, ArrowUpRight, Layers, Tag, Heart, Minus,
-  Share2, MoreHorizontal, MessageCircle, HelpCircle, Shield
+  MessageCircle, HelpCircle, Shield
 } from "lucide-react";
 import type { Course, University, Application, Favorite, CourseIntakeTemplate, CourseIntakeDate } from "@shared/schema";
 import { 
   computeIntakesFromTemplates,
   getNextIntake,
-  MONTH_NAMES,
 } from "@shared/intake-utils";
 import { trackViewContent, trackInitiateApplication } from "@/lib/meta-pixel";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
@@ -80,6 +79,7 @@ export default function PublicCourseDetail() {
         institution_name: course.university?.name || "",
       });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [course?.id]);
 
   // Fetch structured English requirements

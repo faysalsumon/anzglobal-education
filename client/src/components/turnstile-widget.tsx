@@ -27,7 +27,7 @@ export function TurnstileWidget({ onSuccess, onExpire, onError, className }: Tur
   const renderWidget = useCallback(() => {
     if (!containerRef.current || !window.turnstile || !SITE_KEY) return;
     if (widgetIdRef.current) {
-      try { window.turnstile.remove(widgetIdRef.current); } catch {}
+      try { window.turnstile.remove(widgetIdRef.current); } catch { /* empty */ }
       widgetIdRef.current = null;
     }
     widgetIdRef.current = window.turnstile.render(containerRef.current, {
@@ -59,7 +59,7 @@ export function TurnstileWidget({ onSuccess, onExpire, onError, className }: Tur
 
     return () => {
       if (widgetIdRef.current && window.turnstile) {
-        try { window.turnstile.remove(widgetIdRef.current); } catch {}
+        try { window.turnstile.remove(widgetIdRef.current); } catch { /* empty */ }
         widgetIdRef.current = null;
       }
     };

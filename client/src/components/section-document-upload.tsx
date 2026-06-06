@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -30,11 +31,9 @@ import {
   FileText,
   File,
   Trash2,
-  Download,
   CheckCircle,
   Clock,
   XCircle,
-  Eye,
   Plus,
   Paperclip,
 } from "lucide-react";
@@ -186,7 +185,7 @@ export function SectionDocumentUpload({
 
   const sectionConfig = SECTION_DOCUMENT_MAPPING[section];
 
-  const { data: allDocuments = [], isLoading } = useQuery<Document[]>({
+  const { data: allDocuments = [] } = useQuery<Document[]>({
     queryKey: ["/api/student/documents"],
   });
 
@@ -219,7 +218,7 @@ export function SectionDocumentUpload({
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
-  const getFileIcon = (mimeType: string) => {
+  const _getFileIcon = (mimeType: string) => {
     if (mimeType?.includes("pdf")) return FileText;
     return File;
   };

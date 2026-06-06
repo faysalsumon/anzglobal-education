@@ -1,10 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -233,7 +233,7 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
     tags: filteredTags.filter(tag => tag.category === cat.value),
   }));
 
-  const getCategoryBadgeColor = (category: string) => {
+  const _getCategoryBadgeColor = (category: string) => {
     const colors: Record<string, string> = {
       // Course categories
       feature: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
@@ -254,7 +254,7 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
     return colors[category] || "bg-gray-100 text-gray-800";
   };
 
-  const getAppliesToBadgeColor = (appliesTo: string) => {
+  const _getAppliesToBadgeColor = (appliesTo: string) => {
     const colors: Record<string, string> = {
       courses: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
       institutions: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",

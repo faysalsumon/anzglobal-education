@@ -8,13 +8,8 @@ import {
   ClipboardList, 
   BookOpen, 
   Building2,
-  TrendingUp, 
   Sparkles,
-  ArrowRight, 
   Clock, 
-  CheckCircle,
-  AlertCircle,
-  Users,
   Target
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,8 +33,8 @@ interface LeadStats {
   converted: number;
 }
 
-export function AdminDashboardOverview({ onNavigate, hasFullAdminAccess = false }: AdminDashboardOverviewProps) {
-  const { user } = useAuth();
+export function AdminDashboardOverview({ onNavigate, hasFullAdminAccess: _hasFullAdminAccess = false }: AdminDashboardOverviewProps) {
+  const { user: _user } = useAuth();
 
   const { data: taskStats } = useQuery<TaskStats>({
     queryKey: ["/api/crm/tasks/stats"],

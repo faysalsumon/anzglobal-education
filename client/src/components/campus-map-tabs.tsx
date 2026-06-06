@@ -13,7 +13,7 @@ interface CampusMapTabsProps {
 export function CampusMapTabs({ 
   campusLocations, 
   institutionName = "Campus",
-  institutionLogo
+  institutionLogo: _institutionLogo
 }: CampusMapTabsProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -233,6 +233,7 @@ export function CampusMapTabs({
       isMounted = false;
       cleanupMap();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campusLocations, institutionName, cleanupMap, createInfoWindowContent]);
 
   // Update markers when selection changes

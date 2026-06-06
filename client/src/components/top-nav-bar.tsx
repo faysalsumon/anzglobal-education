@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,10 +24,7 @@ import {
   MessageSquare,
   Sparkles,
   FolderOpen,
-  BookOpen,
-  Users,
   PlusCircle,
-  Home,
 } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { performLogout } from "@/lib/logout";

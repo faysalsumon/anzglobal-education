@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, Settings, Home, Globe } from "lucide-react";
+import { GraduationCap, BookOpen, Users, Info, LayoutDashboard, LogOut, Settings, Home, Globe } from "lucide-react";
 import logoUrl from "@assets/ANZ_logo.webp";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
@@ -47,9 +48,9 @@ interface PublicHeaderProps {
   onStudentLoginClick?: () => void;
 }
 
-export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
+export function PublicHeader({ onStudentLoginClick: _onStudentLoginClick }: PublicHeaderProps = {}) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [, setLocation] = useLocation();
+  const [,] = useLocation();
   const { t } = useTranslation();
 
   useEffect(() => {

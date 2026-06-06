@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Globe, MapPin, Plane, Plus, Edit, Trash2, DollarSign, Languages, Clock } from "lucide-react";
+import { Globe, Plane, Plus, Edit, Trash2, DollarSign, Languages } from "lucide-react";
 
 interface Region {
   id: string;
@@ -73,7 +73,7 @@ export function AdminRegionsPanel() {
   const [editingRegion, setEditingRegion] = useState<Region | null>(null);
   const [editingPathway, setEditingPathway] = useState<Pathway | null>(null);
   const [editingVariant, setEditingVariant] = useState<CourseVariant | null>(null);
-  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [_selectedCourseId, _setSelectedCourseId] = useState<string>("");
   
   // State for region form switches
   const [regionIsActive, setRegionIsActive] = useState(true);

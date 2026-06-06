@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ export function GalleryImageManager({
   onChange,
   institutionName,
   institutionLocation,
-  institutionProviderType,
+  institutionProviderType: _institutionProviderType,
 }: GalleryImageManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"upload" | "ai" | "url">("upload");

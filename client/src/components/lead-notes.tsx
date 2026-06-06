@@ -38,7 +38,7 @@ interface LeadNotesProps {
   branchId?: string | null;
 }
 
-export function LeadNotes({ leadId, leadName, branchId }: LeadNotesProps) {
+export function LeadNotes({ leadId, leadName: _leadName, branchId }: LeadNotesProps) {
   const { toast } = useToast();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 

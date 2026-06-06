@@ -45,12 +45,12 @@ export function InstitutionCrawlerDialog({
   const { toast } = useToast();
 
   // Get institutions list for dropdown
-  const { data: institutions } = useQuery<{ id: string; name: string; websiteUrl?: string }[]>({
+  const { data: _institutions } = useQuery<{ id: string; name: string; websiteUrl?: string }[]>({
     queryKey: ["/api/institutions"],
     enabled: open && !institutionId,
   });
 
-  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | undefined>(institutionId);
+  const [_selectedInstitutionId, _setSelectedInstitutionId] = useState<string | undefined>(institutionId);
 
   const createJobMutation = useMutation({
     mutationFn: async (data: { 

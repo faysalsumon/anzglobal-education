@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { 
   Popover, 
   PopoverContent, 
@@ -17,8 +16,7 @@ import {
   CommandItem, 
   CommandList 
 } from "@/components/ui/command";
-import { X, Plus, GraduationCap, Search, Loader2, Check, ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { X, GraduationCap, Search, Loader2, Check, ChevronDown } from "lucide-react";
 
 interface Course {
   id: string;

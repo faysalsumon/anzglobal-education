@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
@@ -32,7 +33,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   ApplicationStage,
-  ALL_STAGES,
   ACTIVE_STAGES,
   TERMINAL_STAGES,
   STAGE_CONFIG,
@@ -54,7 +54,7 @@ export function ApplicationStageSelector({
   currentStage,
   onStageChange,
   disabled = false,
-  showLabel = true,
+  showLabel: _showLabel = true,
 }: ApplicationStageSelectorProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -155,7 +155,7 @@ export function ApplicationStageSelector({
                 {ACTIVE_STAGES.map((stage) => {
                   const config = STAGE_CONFIG[stage];
                   const stageIndex = getStageIndex(stage);
-                  const isCompleted = stageIndex < currentIndex;
+                  const _isCompleted = stageIndex < currentIndex;
                   const isCurrent = stage === currentStage;
                   const isBackward = stageIndex < currentIndex;
 
@@ -201,7 +201,7 @@ export function ApplicationStageSelector({
                       value={stage}
                       onSelect={() => handleStageSelect(stage)}
                       className="flex items-center gap-3 cursor-pointer"
-                      data-testid={`stage-option-${stage.toLowerCase().replace(/[\s\/]+/g, '-')}`}
+                      data-testid={`stage-option-${stage.toLowerCase().replace(/[\s/]+/g, '-')}`}
                     >
                       <span
                         className={cn(

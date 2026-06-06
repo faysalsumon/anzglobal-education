@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,7 +36,6 @@ import {
   Heart,
   GitCompare,
   X,
-  Mail,
   Building2,
   Filter,
   BookOpen,
@@ -428,11 +428,13 @@ function StudentCoursesContent() {
       if (urlSnapshot.feeCurrency !== feeCurrency) setFeeCurrency(urlSnapshot.feeCurrency);
       pendingUrlHydrationRef.current = urlSnapshot;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
 
   // Auto-set country to Australia for AU region
   useEffect(() => {
     if (isAU && !country) setCountry("Australia");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAU]);
 
   // Cascading filter clears

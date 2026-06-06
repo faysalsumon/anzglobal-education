@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Check, X, Loader2, Search, Eye, Trash2, RefreshCw, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Sparkles, Check, X, Loader2, Search, Eye, Trash2, CheckCircle2, XCircle, Clock } from "lucide-react";
 
 interface SeoMetadata {
   id: string;

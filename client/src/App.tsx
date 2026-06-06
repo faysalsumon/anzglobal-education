@@ -18,7 +18,6 @@ import { useGoogleAnalytics } from "@/hooks/useGoogleAnalytics";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Landing = lazy(() => import("@/pages/landing"));
-const CourseForm = lazy(() => import("@/pages/course-form"));
 const StudentCourses = lazy(() => import("@/pages/student-courses"));
 const CourseDetail = lazy(() => import("@/pages/course-detail"));
 const StudentProfilePage = lazy(() => import("@/pages/student-profile"));
@@ -79,12 +78,12 @@ function PageLoader() {
 }
 
 interface RouterProps {
-  user: any;
+  user: unknown;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
 
-function Router({ user, isAuthenticated, isLoading }: RouterProps) {
+function Router({ user: _user, isAuthenticated: _isAuthenticated, isLoading: _isLoading }: RouterProps) {
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
@@ -150,7 +149,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
 
 function AppContent() {
   const { user, isAuthenticated, isLoading, isAuthResolved, isStaff } = useAuth();
-  const [location, setLocation] = useLocation();
+  const [location, _setLocation] = useLocation();
   useMetaPixel();
   useGoogleAnalytics();
   

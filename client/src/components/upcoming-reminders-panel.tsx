@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Bell,
   CheckCircle2,
@@ -12,7 +11,6 @@ import {
   Trash2,
   FileText,
   ListTodo,
-  AlertCircle,
   ExternalLink,
 } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
@@ -55,7 +53,7 @@ export function UpcomingRemindersPanel({
     }
   };
 
-  const { data: reminders = [], isLoading, isError, error } = useQuery<Reminder[]>({
+  const { data: reminders = [], isLoading, isError } = useQuery<Reminder[]>({
     queryKey: ["/api/reminders/upcoming"],
     retry: false,
   });

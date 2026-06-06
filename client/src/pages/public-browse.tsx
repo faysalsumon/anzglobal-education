@@ -3,7 +3,6 @@ import { Link } from "wouter";
 import { Helmet } from "react-helmet";
 import { PublicLayout } from "@/components/public-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Breadcrumb,

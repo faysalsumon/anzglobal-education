@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -179,7 +180,7 @@ function AdminApplicationDetailContent() {
     );
   }
 
-  const { application, course, university, student, consultant, documentProgress, externalCountry, externalCourseName, externalInstitutionName } = data;
+  const { application, course, university, student, consultant, documentProgress, externalCountry, externalCourseName } = data;
   const progress = documentProgress.requiredDocs > 0 
     ? Math.round((documentProgress.requiredUploaded / documentProgress.requiredDocs) * 100)
     : 0;

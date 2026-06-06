@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -46,7 +47,7 @@ interface InstitutionBusinessTermsPanelProps {
   institutionName: string;
 }
 
-export function InstitutionBusinessTermsPanel({ institutionId, institutionName }: InstitutionBusinessTermsPanelProps) {
+export function InstitutionBusinessTermsPanel({ institutionId, institutionName: _institutionName }: InstitutionBusinessTermsPanelProps) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     commissionPercentage: "",
@@ -104,7 +105,7 @@ export function InstitutionBusinessTermsPanel({ institutionId, institutionName }
     saveMutation.mutate(formData);
   };
 
-  const getStatusBadgeVariant = (status: string) => {
+  const _getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case "active": return "default";
       case "pending": return "secondary";

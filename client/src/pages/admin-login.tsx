@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { Helmet } from "react-helmet";
@@ -54,7 +55,7 @@ export default function AdminLogin() {
         throw new Error("Authentication service not available");
       }
 
-      const { data: authData, error } = await supabase.auth.signInWithPassword({
+      const { data: _authData, error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });

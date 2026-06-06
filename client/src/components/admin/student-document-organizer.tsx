@@ -11,12 +11,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -93,7 +87,7 @@ const statusConfig = {
 
 export function StudentDocumentOrganizer({ studentProfileId, compact = false }: StudentDocumentOrganizerProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSection, setSelectedSection] = useState<ProfileSection | "all">("all");
+  const [_selectedSection, _setSelectedSection] = useState<ProfileSection | "all">("all");
   const [expandedSections, setExpandedSections] = useState<string[]>(SECTION_ORDER);
 
   const { data: documents = [], isLoading } = useQuery<Document[]>({

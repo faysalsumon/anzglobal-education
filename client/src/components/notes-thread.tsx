@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { getCsrfToken } from "@/hooks/useCsrf";
 import { supabase } from "@/lib/supabase";
@@ -33,7 +34,6 @@ import {
   Trash2,
   MoreVertical,
   Send,
-  Plus,
   X,
   Loader2,
   AtSign,

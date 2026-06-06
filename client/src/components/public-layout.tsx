@@ -11,7 +11,7 @@ interface PublicLayoutProps {
   onMatchClick?: () => void;
 }
 
-export function PublicLayout({ children, onStudentLoginClick, onMatchClick }: PublicLayoutProps) {
+export function PublicLayout({ children, onStudentLoginClick: _onStudentLoginClick, onMatchClick }: PublicLayoutProps) {
   const { isStaff } = useAuth();
   const [quizOpen, setQuizOpen] = useState(false);
 

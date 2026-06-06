@@ -17,7 +17,7 @@ interface PublicMobileNavProps {
 }
 
 export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
-  const [location, setLocation] = useLocation();
+  const [location, _setLocation] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, isAuthenticated, isAdmin, isStudent, isStaff } = useAuth();
   const { t } = useTranslation();
@@ -61,7 +61,7 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
       await signOut();
       try {
         await fetch("/api/logout", { method: "GET", credentials: "include", redirect: "manual" });
-      } catch {}
+      } catch { /* empty */ }
       queryClient.clear();
       window.location.href = "/";
     } catch {

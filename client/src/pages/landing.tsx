@@ -1,12 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight, DollarSign, Play, Newspaper, FileText, Radio, Inbox, Phone, Clock, BookOpen, Mail } from "lucide-react";
+import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight, DollarSign, Play, Newspaper, FileText, Radio, Inbox, Phone, Clock, BookOpen, Mail } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link } from "wouter";
@@ -14,7 +14,6 @@ import { getFlagUrl } from "@/lib/country-flags";
 import type { Course, University, Blog, Testimonial } from "@shared/schema";
 import { TypingText } from "@/components/typing-text";
 import { PublicLayout } from "@/components/public-layout";
-import { NaturalLanguageSearch } from "@/components/natural-language-search";
 import { DisciplineCards } from "@/components/discipline-cards";
 import { useRegion } from "@/context/RegionContext";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -65,8 +64,8 @@ type CourseWithUniversity = Course & { university?: University };
 
 export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [searchType, setSearchType] = useState<"courses" | "institutions">("courses");
+  const [_showSuggestions, setShowSuggestions] = useState(false);
+  const [_searchType, _setSearchType] = useState<"courses" | "institutions">("courses");
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [reviewIndex, setReviewIndex] = useState(0);
   const [videoActive, setVideoActive] = useState(false);
@@ -137,7 +136,7 @@ export default function Landing() {
         .slice(0, 5)
     : [];
 
-  const suggestions = searchType === "courses" ? courseSuggestions : institutionSuggestions;
+  const _suggestions = _searchType === "courses" ? courseSuggestions : institutionSuggestions;
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -167,20 +166,20 @@ export default function Landing() {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const _handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearch();
       setShowSuggestions(false);
     }
   };
 
-  const handleCourseSuggestionClick = (course: CourseWithUniversity) => {
+  const _handleCourseSuggestionClick = (course: CourseWithUniversity) => {
     setSearchQuery(course.title);
     setShowSuggestions(false);
     handleSearch(course.title, String(course.id));
   };
 
-  const handleInstitutionSuggestionClick = (institution: University) => {
+  const _handleInstitutionSuggestionClick = (institution: University) => {
     setSearchQuery(institution.name);
     setShowSuggestions(false);
     handleSearch(institution.name);
@@ -253,7 +252,7 @@ export default function Landing() {
       ? [t("hero.typingWord1"), t("hero.typingWord2"), t("hero.typingWord3")]
       : ["Dream Course", "Perfect University", "Future Career"];
 
-  const heroSubtitle = isAU
+  const _heroSubtitle = isAU
     ? "Your gateway to world-class Australian education — search courses, compare universities, and apply with confidence."
     : isBD
       ? t("hero.subtitle")

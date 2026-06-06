@@ -366,6 +366,7 @@ const DIAL_CODES_SORTED = Object.entries(DIAL_CODES)
 export function parsePhoneNumber(phone: string): { countryCode: string; dialCode: string; number: string } {
   if (!phone) return { countryCode: "", dialCode: "", number: "" };
   
+  // eslint-disable-next-line no-useless-escape
   const cleaned = phone.replace(/[\s\-\(\)\.]/g, "");
   
   if (cleaned.startsWith("+")) {

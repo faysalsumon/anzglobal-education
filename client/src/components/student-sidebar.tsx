@@ -2,7 +2,6 @@ import { useState, useEffect, createContext, useContext, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Search,
   FileText,
@@ -76,7 +75,7 @@ interface StudentSidebarProps {
   onMobileMenuClose?: () => void;
 }
 
-export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose }: StudentSidebarProps) {
+export function StudentSidebar({ className: _className, isMobileMenuOpen, onMobileMenuClose }: StudentSidebarProps) {
   const [location, setLocation] = useLocation();
   const [activeSection, setActiveSection] = useState<string | null>("profile");
   const { isSubmenuOpen, setIsSubmenuOpen } = useStudentSidebar();
@@ -161,6 +160,7 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
     if (sectionId) {
       setActiveSection(sectionId);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location]);
 
   const handleSectionClick = (sectionId: string) => {

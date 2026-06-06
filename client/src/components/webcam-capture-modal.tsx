@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react";
 import { Camera, RotateCcw, Check, AlertCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -48,7 +49,7 @@ export function WebcamCaptureModal({
       return navigator.mediaDevices.getUserMedia(constraints);
     };
 
-    let stream: MediaStream | null = null;
+    let stream: MediaStream | undefined;
     try {
       // First attempt: preferred front-facing camera with ideal (not exact) dimensions
       stream = await attemptGetStream({

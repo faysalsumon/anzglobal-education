@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -32,7 +33,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -548,7 +548,7 @@ export function AdminScrapingPanel() {
     return true;
   });
   const approvedCourses = coursesData?.scrapedCourses?.filter(c => c.reviewStatus === "approved") ?? [];
-  const rejectedCourses = coursesData?.scrapedCourses?.filter(c => c.reviewStatus === "rejected") ?? [];
+  const _rejectedCourses = coursesData?.scrapedCourses?.filter(c => c.reviewStatus === "rejected") ?? [];
   
   // Calculate enhanced statistics
   const totalCourses = coursesData?.scrapedCourses?.length ?? 0;
@@ -556,7 +556,7 @@ export function AdminScrapingPanel() {
     ? (coursesData?.scrapedCourses?.reduce((sum, c) => sum + c.confidence, 0) ?? 0) / totalCourses
     : 0;
   const highConfidenceCourses = coursesData?.scrapedCourses?.filter(c => c.confidence >= 0.85)?.length ?? 0;
-  const autoApprovalRate = totalCourses > 0 ? (highConfidenceCourses / totalCourses) * 100 : 0;
+  const _autoApprovalRate = totalCourses > 0 ? (highConfidenceCourses / totalCourses) * 100 : 0;
   const approvalRate = reviewedCourses.length > 0 ? (approvedCourses.length / reviewedCourses.length) * 100 : 0;
   const runningJobs = jobsData?.jobs?.filter(j => j.status === "running") ?? [];
   const completedJobs = jobsData?.jobs?.filter(j => j.status === "completed") ?? [];

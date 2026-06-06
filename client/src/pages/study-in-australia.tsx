@@ -5,19 +5,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { 
   GraduationCap,
-  Building2,
   Globe,
   Users,
   FileCheck,
-  MessageSquare,
-  TrendingUp,
   CheckCircle2,
   ArrowRight,
   BookOpen,
   Target,
   Shield,
-  Award,
-  Clock
+  Award
 } from "lucide-react";
 import { PublicLayout } from "@/components/public-layout";
 import { StudentAuthModal } from "@/components/student-auth-modal";
@@ -34,7 +30,7 @@ interface PlatformStats {
 export default function StudyInAustralia() {
   const [showStudentAuthModal, setShowStudentAuthModal] = useState(false);
 
-  const { data: stats } = useQuery<PlatformStats>({
+  const { data: _stats } = useQuery<PlatformStats>({
     queryKey: ["/api/platform/stats"],
   });
 
@@ -400,11 +396,11 @@ export default function StudyInAustralia() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-8 md:gap-12">
-              {howItWorks.map((step, index) => {
-                const Icon = step.icon;
+              {howItWorks.map((step, stepIdx) => {
+                const _Icon = step.icon;
                 return (
-                  <div key={index} className="relative text-center" data-testid={`step-${index}`}>
-                    {index < howItWorks.length - 1 && (
+                  <div key={stepIdx} className="relative text-center" data-testid={`step-${stepIdx}`}>
+                    {stepIdx < howItWorks.length - 1 && (
                       <div className="hidden md:block absolute top-12 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-primary/50 to-primary/20" />
                     )}
                     <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary text-white text-2xl font-bold mb-6">

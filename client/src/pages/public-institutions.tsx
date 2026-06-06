@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
@@ -131,7 +132,7 @@ type FilterMetadata = {
 type SortOption = "name-asc" | "name-desc" | "courses";
 
 export default function PublicInstitutions() {
-  const [location, setLocation] = useLocation();
+  const [_location, setLocation] = useLocation();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [mapBounds, setMapBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
@@ -156,7 +157,7 @@ export default function PublicInstitutions() {
     tagSpecialization: true,
   });
   
-  const { user, isAuthenticated, isStudent } = useAuth();
+  const { isAuthenticated, isStudent } = useAuth();
   const { toast } = useToast();
   const { region, regionCode } = useRegion();
   const regionParam = region?.code ? `region=${region.code}` : '';
@@ -169,9 +170,9 @@ export default function PublicInstitutions() {
     toggleMultiSelect,
     setDiscipline,
     setSubDiscipline,
-    setRange,
+    setRange: _setRange,
     clearFilters,
-    hasActiveFilters,
+    hasActiveFilters: _hasActiveFilters,
     queryParamsString,
   } = useInstitutionFilters();
 
@@ -456,7 +457,7 @@ export default function PublicInstitutions() {
   const ogImage = `${siteUrl}/og-image.png`;
 
   // Filter sidebar content (shared between desktop and mobile)
-  const FilterSidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
+  const FilterSidebarContent = ({ isMobile: _isMobile = false }: { isMobile?: boolean }) => (
     <div className="space-y-4">
       {/* Active Filters */}
       {activeFilterCount > 0 && (

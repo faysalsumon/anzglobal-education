@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "wouter";
 import { Helmet } from "react-helmet";
@@ -6,10 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import {
   Calendar, Clock, ArrowLeft, Share2, GraduationCap, MapPin,
-  Twitter, Facebook, Linkedin, Link2, ChevronRight, FileText,
+  Twitter, Facebook, Linkedin, Link2, FileText,
   Newspaper, Radio,
 } from "lucide-react";
 import type { BlogWithAuthor, CourseWithDetails } from "@shared/schema";

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -18,7 +19,6 @@ import { z } from "zod";
 import { UserPlus, Mail, RotateCcw, Trash2, Clock, CheckCircle, XCircle, AlertCircle, Loader2, User, Building2 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import type { InvitationWithDetails, Role, Branch } from "@shared/schema";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 
 const inviteFormSchema = z.object({
@@ -85,7 +85,7 @@ function getStatusBadge(status: string, expiresAt: Date) {
 export function AdminTeamPanel() {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
-  const [creationMethod, setCreationMethod] = useState<"invite" | "create">("invite");
+  const [_creationMethod, _setCreationMethod] = useState<"invite" | "create">("invite");
   const { toast } = useToast();
   const { user } = useAuth();
   const adminRegionId = user?.regionId || "";

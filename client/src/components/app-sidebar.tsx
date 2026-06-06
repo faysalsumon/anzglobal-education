@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Building2, LayoutDashboard, GraduationCap, FileText, User, LogOut, Sparkles, Search, BookOpen, Users, MessageSquare, PlusCircle, FolderOpen, Camera, Home as HomeIcon } from "lucide-react";
+import { Building2, LayoutDashboard, FileText, User, LogOut, Sparkles, Search, MessageSquare, PlusCircle, FolderOpen, Camera } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

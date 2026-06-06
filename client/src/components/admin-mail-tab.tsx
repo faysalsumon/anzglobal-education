@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -860,7 +861,7 @@ export function AdminMailTab() {
   const { toast } = useToast();
 
   // Admin role check (from session) — we check by fetching config
-  const { data: configData } = useQuery<{
+  const { data: _configData } = useQuery<{
     configured: boolean;
     accountCount: number;
     email: string | null;

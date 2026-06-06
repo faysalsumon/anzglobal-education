@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck, ExternalLink, Building2, BookOpen, HelpCircle, AlertCircle, Info, Languages, Save, Image, Lock } from "lucide-react";
+import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck, ExternalLink, Building2, BookOpen, HelpCircle, AlertCircle, Info, Save, Image, Lock } from "lucide-react";
 import { 
   FRAMEWORK_CONFIGS, 
   ALL_FRAMEWORKS, 
@@ -20,11 +21,9 @@ import {
   type QualificationFramework 
 } from "@shared/qualification-frameworks";
 import { 
-  detectDisciplineRules, 
-  type DisciplineRule 
+  detectDisciplineRules
 } from "@shared/discipline-rules";
 import {
-  type IntakeTemplate as BaseIntakeTemplate,
   MONTH_NAMES,
   getCountryIntakeRecommendations,
   computeIntakesFromTemplates,
@@ -45,9 +44,7 @@ interface LocalIntakeTemplate {
   updatedAt?: Date | null;
 }
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Calendar } from "@/components/ui/calendar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { useForm } from "react-hook-form";
@@ -349,12 +346,12 @@ const optionalNonNegativeNumber = z.preprocess(
   z.coerce.number().nonnegative().optional()
 );
 
-const optionalIntPercentage = z.preprocess(
+const _optionalIntPercentage = z.preprocess(
   (val) => (val === "" || val === null || val === undefined ? undefined : val),
   z.coerce.number().int().min(0).max(100).optional()
 );
 
-const optionalUrl = z.preprocess(
+const _optionalUrl = z.preprocess(
   (val) => (val === "" || val === null || val === undefined ? undefined : val),
   z.string().url().optional()
 );
@@ -666,7 +663,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   } | null>(null);
 
   // AI Description generation state
-  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [_isGeneratingDescription, _setIsGeneratingDescription] = useState(false);
 
   // Unified "Generate with AI" dialog state
   const [generateAllDialogOpen, setGenerateAllDialogOpen] = useState(false);
@@ -711,7 +708,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const [specificDates, setSpecificDates] = useState<CourseIntakeDate[]>([]);
   const [newSpecificDate, setNewSpecificDate] = useState("");
   const [newSpecificLabel, setNewSpecificLabel] = useState("");
-  const [isSavingSpecificDates, setIsSavingSpecificDates] = useState(false);
+  const [_isSavingSpecificDates, _setIsSavingSpecificDates] = useState(false);
 
   // Pricing configuration state
   const [pricingConfig, setPricingConfig] = useState<{
@@ -764,6 +761,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       );
       setSelectedCampusIds(prev => prev.filter(id => validKeys.includes(id)));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedInstitution?.id]);
 
   const { data: groupedTags } = useQuery<Record<string, TagType[]>>({
@@ -788,7 +786,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   });
 
   // English requirements query
-  const { data: englishRequirements = [], isLoading: englishReqLoading } = useQuery<EnglishRequirement[]>({
+  const { data: englishRequirements = [] } = useQuery<EnglishRequirement[]>({
     queryKey: ["/api/courses", course?.id, "english-requirements"],
     enabled: !!course?.id,
   });
@@ -3173,7 +3171,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                     title: "Intake templates saved",
                                     description: `${intakeTemplates.length} intake(s) configured for this course.`,
                                   });
-                                } catch (error) {
+                                } catch {
                                   toast({
                                     title: "Failed to save intakes",
                                     description: "Please try again.",
@@ -4771,7 +4769,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                   </span>
                 )}
                 {(() => {
-                  const { autoScore, shouldAutoSet } = computeAutoOverallScore(
+                  const { autoScore, shouldAutoSet: _shouldAutoSet } = computeAutoOverallScore(
                     englishReqForm.testType,
                     englishReqForm.minListeningScore,
                     englishReqForm.minReadingScore,

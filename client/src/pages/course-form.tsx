@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -16,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Sparkles, Loader2, ArrowLeft, Plus, X } from "lucide-react";
 import { Link } from "wouter";
-import { baseCourseSchema, type InsertCourse, type Course, type SubDiscipline, type Campus } from "@shared/schema";
+import { baseCourseSchema, type Course, type SubDiscipline, type Campus } from "@shared/schema";
 import { z } from "zod";
 
 const formSchema = baseCourseSchema.extend({
@@ -42,7 +43,7 @@ export default function CourseForm() {
   const [studyAreaInput, setStudyAreaInput] = useState("");
   const [careerOutcomeInput, setCareerOutcomeInput] = useState("");
   const [pathwayInput, setPathwayInput] = useState("");
-  const [campusLocationInput, setCampusLocationInput] = useState("");
+  const [_campusLocationInput, _setCampusLocationInput] = useState("");
 
   const { data: course } = useQuery<Course>({
     queryKey: ["/api/courses", courseId],

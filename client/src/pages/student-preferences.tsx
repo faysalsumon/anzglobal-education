@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -17,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, Sparkles, Target, BookOpen } from "lucide-react";
 import { COUNTRIES, getFlagUrl } from "@/lib/countries";
-import { insertStudentProfileSchema, type StudentProfile, type StudentEducation, type StudentLanguageScore, type StudentEmployment } from "@shared/schema";
+import { type StudentProfile, type StudentEducation, type StudentLanguageScore, type StudentEmployment } from "@shared/schema";
 
 const DISCIPLINES = [
   "Accounting, Business & Finance",
@@ -172,6 +173,7 @@ function StudentPreferencesContent() {
         previousEducation: profile.previousEducation || "",
       });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
 
   const savePreferencesMutation = useMutation({

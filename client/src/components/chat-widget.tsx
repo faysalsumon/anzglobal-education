@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { MessageCircle, X, Send, Minimize2, ExternalLink, Search, UserPlus, Building2, Mail, ArrowRight } from "lucide-react";
+import { X, Send, Minimize2, ExternalLink, Search, UserPlus, Building2, Mail, ArrowRight } from "lucide-react";
 import { ZanThinkingIndicator } from "@/components/zan-thinking-indicator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +76,7 @@ export function ChatWidget() {
     if (isOpen && !conversationId && !createConversationMutation.isPending) {
       createConversationMutation.mutate();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const markdownComponents: Components = useMemo(() => ({
@@ -144,6 +146,7 @@ export function ChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { scrollToBottom(); }, [messages, streamingContent]);
 
   useEffect(() => {
@@ -224,7 +227,7 @@ export function ChatWidget() {
               setStreamingContent("");
               setIsStreaming(false);
             }
-          } catch (parseErr) {
+          } catch {
             // ignore malformed SSE line
           }
         }

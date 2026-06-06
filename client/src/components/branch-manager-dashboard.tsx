@@ -6,9 +6,6 @@ import {
   Users,
   Clock,
   FileText,
-  CheckCircle2,
-  XCircle,
-  Loader2,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";

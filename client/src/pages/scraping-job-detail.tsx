@@ -123,7 +123,7 @@ export default function ScrapingJobDetail() {
             audio.play().catch(() => {
               // Ignore errors if audio playback is blocked
             });
-          } catch (e) {
+          } catch {
             // Ignore audio errors
           }
         }

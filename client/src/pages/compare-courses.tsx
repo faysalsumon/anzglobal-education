@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Helmet } from "react-helmet";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,14 +11,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
   X, DollarSign, Clock, MapPin, BookOpen, Award, Globe, GitCompare, 
-  Search, Building2, GraduationCap, Mail, Plus, Heart, Check, 
-  ChevronRight, ArrowRight, Calendar, Users, Briefcase, FileText
+  Search, Building2, GraduationCap, Mail, Plus, Heart,
+  ArrowRight, Calendar, Users, Briefcase, FileText
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { Course } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { PublicLayout } from "@/components/public-layout";
-import { queryClient, apiRequest } from "@/lib/queryClient";
 
 interface CourseWithUniversity extends Course {
   university?: {
@@ -74,7 +73,7 @@ export default function CompareCourses() {
   useEffect(() => {
     try {
       localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
-    } catch {}
+    } catch { /* empty */ }
   }, [favorites]);
 
   // Fetch all courses
@@ -115,7 +114,7 @@ export default function CompareCourses() {
     setCourseIds(newIds);
     try {
       localStorage.setItem(COMPARISON_STORAGE_KEY, JSON.stringify(newIds));
-    } catch {}
+    } catch { /* empty */ }
     navigate(`/compare-courses?courses=${newIds.join(',')}`);
     setAddCourseDialogOpen(false);
     toast({
@@ -130,7 +129,7 @@ export default function CompareCourses() {
     setCourseIds(newIds);
     try {
       localStorage.setItem(COMPARISON_STORAGE_KEY, JSON.stringify(newIds));
-    } catch {}
+    } catch { /* empty */ }
     if (newIds.length > 0) {
       navigate(`/compare-courses?courses=${newIds.join(',')}`);
     } else {

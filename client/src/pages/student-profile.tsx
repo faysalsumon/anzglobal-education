@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useMemo } from "react";
 import { useRegion } from "@/context/RegionContext";
 import { useQueryParams } from "@/hooks/useQueryParams";
@@ -5,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,8 +21,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Heart, MapPin, Eye, Briefcase, Mail, Phone, FileText, Wallet, Upload, Globe, Contact } from "lucide-react";
-import { insertStudentProfileSchema, insertStudentEducationSchema, insertStudentLanguageScoreSchema, insertStudentEmploymentSchema, type StudentProfile, type StudentEducation, type StudentLanguageScore, type StudentEmployment, type University, type Course } from "@shared/schema";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Heart, MapPin, Briefcase, Mail, Phone, FileText, Wallet } from "lucide-react";
+import { insertStudentProfileSchema, type StudentProfile, type StudentEducation, type StudentLanguageScore, type StudentEmployment } from "@shared/schema";
 import { z } from "zod";
 import { StudentLayout } from "@/components/student-layout";
 import { COUNTRIES, NATIONALITIES_SORTED, getFlagUrl, getCountryByName, getCountryByNationality } from "@/lib/countries";
@@ -30,7 +30,6 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { AddressAutocomplete, AddressComponents } from "@/components/ui/address-autocomplete";
 import { Switch } from "@/components/ui/switch";
 import { FormDescription } from "@/components/ui/form";
-import { Target } from "lucide-react";
 import { SectionDocumentUpload } from "@/components/section-document-upload";
 
 const personalDetailsSchema = insertStudentProfileSchema.pick({
@@ -522,6 +521,7 @@ function StudentProfileContent() {
   const initialSection = useMemo(() => {
     const s = params.get("section");
     return s && VALID_SECTIONS.includes(s) ? s : "personal";
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [openSections, setOpenSections] = useState<string[]>([initialSection]);
   const { regionCode } = useRegion();
@@ -787,6 +787,7 @@ function StudentProfileContent() {
       setHasEnglishTest(profile.hasEnglishTest ?? null);
       setHasWorkExperience(profile.hasWorkExperience ?? null);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
 
   // Helper type for form data that uses strings for enum fields
@@ -1322,7 +1323,7 @@ function StudentProfileContent() {
           setPhotoFile(null);
           setPhotoPreview(null);
           return;
-        } catch (error) {
+        } catch {
           // Error already handled by mutation
           return;
         }

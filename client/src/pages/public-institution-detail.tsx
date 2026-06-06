@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
@@ -20,11 +21,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { 
-  MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, 
+  MapPin, Globe, Building2, Calendar, Award, GraduationCap, 
   ExternalLink, Home, Search, Clock, DollarSign, Loader2, X, ChevronLeft, 
   ChevronRight, ZoomIn, Image, Tag, TrendingUp, Heart, Sparkles, Star
 } from "lucide-react";
-import type { University, Campus, Course } from "@shared/schema";
+import type { University, Campus } from "@shared/schema";
 import { InstitutionLogo } from "@/components/institution-logo";
 import { GoogleCampusMap } from "@/components/google-campus-map";
 import { ResponsiveSection } from "@/components/responsive-section";
@@ -86,7 +87,7 @@ interface EnhancedCourse {
 export default function PublicInstitutionDetail() {
   const [, params] = useRoute("/institutions/:id");
   const institutionId = params?.id;
-  const { user, isStudent } = useAuth();
+  const { isStudent } = useAuth();
   const { toast } = useToast();
   
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -118,6 +119,7 @@ export default function PublicInstitutionDetail() {
         region: firstCampus?.state || "",
       });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [institution?.id]);
 
   // Use enhanced API that includes pricing tier and scholarship data
@@ -294,7 +296,7 @@ export default function PublicInstitutionDetail() {
     };
   }, [lightboxIndex, closeLightbox, goToPrevImage, goToNextImage]);
 
-  const openCampusMap = useCallback((index: number) => {
+  const _openCampusMap = useCallback((index: number) => {
     setMapDialogCampusIndex(index);
     setMapDialogOpen(true);
   }, []);

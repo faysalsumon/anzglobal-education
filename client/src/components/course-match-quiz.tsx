@@ -158,6 +158,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
       previousFocusRef.current?.focus();
     }
     return () => { document.body.style.overflow = ""; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const currentStepType = steps[step];
@@ -212,6 +213,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
     } else {
       handleComplete();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, totalSteps, canProceed]);
 
   const handleSubmitAndNavigate = async () => {

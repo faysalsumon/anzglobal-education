@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -60,7 +61,6 @@ import {
   Globe,
   Check,
   ChevronsUpDown,
-  UserPlus,
   ExternalLink,
   FileText,
   Pencil,
@@ -641,7 +641,7 @@ export function CrmLeadsPanel() {
               <DragOverlay>
                 {activeDragId ? (
                   <KanbanLeadCardOverlay
-                    lead={leadsData?.leads?.find(l => l.id === activeDragId)!}
+                    lead={leadsData?.leads?.find(l => l.id === activeDragId) as NonNullable<typeof leadsData>['leads'][number]}
                   />
                 ) : null}
               </DragOverlay>

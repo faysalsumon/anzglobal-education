@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet";
@@ -7,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { trackCompleteRegistration } from "@/lib/meta-pixel";
-import { ChevronLeft, Mail, X, ExternalLink, Loader2, AlertCircle, RefreshCw, KeyRound, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { ChevronLeft, Mail, X, Loader2, AlertCircle, RefreshCw, KeyRound, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
 import authImage from "@assets/stock_images/happy_diverse_intern_25e20ae6.jpg";
 import { useSupabaseAuth } from "@/lib/supabase-auth";

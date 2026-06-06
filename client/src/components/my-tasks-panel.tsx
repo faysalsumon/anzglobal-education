@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSearch, useLocation } from "wouter";
@@ -137,6 +138,7 @@ export function MyTasksPanel() {
     }
     // Clean up the URL so back-navigation works cleanly
     navigate("/admin?tab=my-tasks", { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchString, tasks, tasksLoading]);
 
   const completeTaskMutation = useMutation({

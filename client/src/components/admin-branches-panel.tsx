@@ -16,7 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { MapPin, Plus, Edit, Trash2, Phone, Building2, Search, Loader2, Globe, QrCode, Download, Printer, Copy } from "lucide-react";
+import { Plus, Edit, Trash2, Phone, Building2, Search, Loader2, Globe, QrCode, Download, Printer, Copy } from "lucide-react";
 
 interface Region {
   id: string;

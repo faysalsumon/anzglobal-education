@@ -66,7 +66,7 @@ export async function performLogout(signOutFromSupabase?: () => Promise<unknown>
           localStorage.removeItem(key);
         }
       });
-    } catch {}
+    } catch { /* empty */ }
     window.location.href = "/";
   }
 }

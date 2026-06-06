@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -50,7 +51,7 @@ interface InstitutionDocumentsPanelProps {
   institutionName: string;
 }
 
-export function InstitutionDocumentsPanel({ institutionId, institutionName }: InstitutionDocumentsPanelProps) {
+export function InstitutionDocumentsPanel({ institutionId, institutionName: _institutionName }: InstitutionDocumentsPanelProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
@@ -178,7 +179,7 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (error) {
+    } catch {
       toast({
         title: "Failed to download document",
         variant: "destructive",

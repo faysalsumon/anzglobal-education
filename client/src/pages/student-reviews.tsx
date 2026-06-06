@@ -225,7 +225,7 @@ export default function StudentReviews() {
                     </CardContent>
                   </Card>
                 ))
-              ) : reviews.map((review, index) => (
+              ) : reviews.map((review) => (
                 <Card 
                   key={review.id} 
                   className="border-primary/20 hover-elevate"
