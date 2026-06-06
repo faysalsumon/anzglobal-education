@@ -75,7 +75,7 @@ interface CrmContact {
   assignedTo: string | null;
   sourceLeadId: string | null;
   branchId: string | null;
-  subAgentAccountId: number | null;
+  subAgentAccountId: string | null;
   referenceSource: string | null;
   utmSource: string | null;
   utmMedium: string | null;
@@ -370,9 +370,9 @@ function PreferenceSlot({ rank, pref, institutions, onChange, onRemove, canRemov
 
 // ─── Sub-Agent Account Picker ─────────────────────────────────────────────────
 
-interface AccountOption { id: number; name: string; }
+interface AccountOption { id: string; name: string; }
 
-function SubAgentPicker({ value, onChange }: { value: number | null; onChange: (id: number | null) => void }) {
+function SubAgentPicker({ value, onChange }: { value: string | null; onChange: (id: string | null) => void }) {
   const { data: accounts = [] } = useQuery<AccountOption[]>({
     queryKey: ["/api/admin/accounts/by-type/sub_agent"],
   });
@@ -380,15 +380,15 @@ function SubAgentPicker({ value, onChange }: { value: number | null; onChange: (
     <div className="space-y-2">
       <Label>Referring Sub Agent</Label>
       <Select
-        value={value ? String(value) : ""}
-        onValueChange={(v) => onChange(v ? Number(v) : null)}
+        value={value || ""}
+        onValueChange={(v) => onChange(v || null)}
       >
         <SelectTrigger data-testid="select-sub-agent-account">
           <SelectValue placeholder="Select sub agent…" />
         </SelectTrigger>
         <SelectContent>
           {accounts.map((a) => (
-            <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>
+            <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
           ))}
         </SelectContent>
       </Select>

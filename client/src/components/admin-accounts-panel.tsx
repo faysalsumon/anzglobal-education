@@ -185,6 +185,18 @@ export function AdminAccountsPanel() {
     },
   });
 
+  // Institutions from CMS for linking
+  interface CmsInstitution { id: number; name: string; country: string | null; }
+  const { data: cmsInstitutions = [] } = useQuery<CmsInstitution[]>({
+    queryKey: ["/api/institutions"],
+    queryFn: async () => {
+      const res = await fetch("/api/institutions");
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: dialogOpen && formData.accountType === "institution",
+  });
+
   // Partners for indirect dropdown (super_agent + pathway_provider)
   const { data: partnerAccounts = [] } = useQuery<Account[]>({
     queryKey: ["/api/admin/accounts", "partners"],
@@ -226,7 +238,7 @@ export function AdminAccountsPanel() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       const body = { ...formData };
-      if (!body.contractType || formData.accountType !== "institution") {
+      if (formData.accountType !== "institution") {
         body.contractType = null;
         body.indirectPartnerId = null;
         body.providerType = null;
@@ -506,6 +518,27 @@ export function AdminAccountsPanel() {
                 {/* Institution-specific fields */}
                 {formData.accountType === "institution" && (
                   <>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Link to Institution (CMS)</Label>
+                      <Select
+                        value={formData.institutionCmsId || ""}
+                        onValueChange={v => setFormData({ ...formData, institutionCmsId: v || null })}
+                      >
+                        <SelectTrigger data-testid="select-institution-cms">
+                          <SelectValue placeholder="Search and select institution…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">— None —</SelectItem>
+                          {cmsInstitutions.map(inst => (
+                            <SelectItem key={inst.id} value={String(inst.id)}>
+                              {inst.name}{inst.country ? ` (${inst.country})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">Optionally links this account to an institution in the course catalogue.</p>
+                    </div>
+
                     <div className="space-y-1.5">
                       <Label>Provider Type</Label>
                       <Select
