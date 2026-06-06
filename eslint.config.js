@@ -42,7 +42,7 @@ export default tseslint.config(
       "no-empty": "warn",
       "no-useless-escape": "warn",
       "no-useless-assignment": "warn",
-      "react-hooks/rules-of-hooks": "warn",
+      "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
     },
   },

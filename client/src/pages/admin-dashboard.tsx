@@ -477,23 +477,6 @@ export default function AdminDashboard() {
     }
   }, [isAuthResolved, isAuthenticated, isAdmin, setLocation]);
 
-  // Show loading state while auth is being resolved
-  if (isLoading || !isAuthResolved) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render dashboard content until authentication is confirmed
-  if (!isAuthenticated || !isAdmin) {
-    return null;
-  }
-  
   // Default tab based on role: all users start with overview
   const defaultTab = "overview";
   
@@ -1978,6 +1961,23 @@ export default function AdminDashboard() {
     setLocation(`/admin/dashboard?tab=${tab}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Show loading state while auth is being resolved
+  if (isLoading || !isAuthResolved) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render dashboard content until authentication is confirmed
+  if (!isAuthenticated || !isAdmin) {
+    return null;
+  }
 
   return (
     <>
