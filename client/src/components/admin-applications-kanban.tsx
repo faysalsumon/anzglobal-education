@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -279,7 +278,7 @@ function DroppableStageColumn({
   });
 
   return (
-    <div ref={setNodeRef} className="h-full">
+    <div ref={setNodeRef} className="w-[240px] min-w-[240px] flex-shrink-0 flex flex-col">
       {children}
     </div>
   );
@@ -1562,7 +1561,7 @@ export function AdminApplicationsKanban() {
                     items={applicationsByStage[stage].map(app => app.application.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="w-[230px] min-w-[230px] flex-shrink-0 flex flex-col h-full">
+                    <div className="flex flex-col grow">
                       {/* Minimal Stage Header */}
                       <div className="flex items-center gap-2 px-1 pb-2">
                         <span className="text-xs font-semibold truncate flex-1 text-foreground" title={stage}>
@@ -1574,36 +1573,34 @@ export function AdminApplicationsKanban() {
                       </div>
                       <div className="h-px bg-border mb-2 w-full" />
 
-                      {/* Cards Container — transparent, full column width */}
-                      <div className="flex-1 overflow-hidden">
-                        <ScrollArea className="h-full">
-                          <div className="pt-1 pb-3 pr-1 space-y-2">
-                            {stageCount === 0 ? (
-                              <p className="text-xs text-muted-foreground text-center py-6">
-                                No applications
-                              </p>
-                            ) : (
-                              applicationsByStage[stage].map((app) => (
-                                <DraggableApplicationCard
-                                  key={app.application.id}
-                                  app={app}
-                                  isSelected={selectedApplications.has(app.application.id)}
-                                  onToggleSelection={() => toggleSelection(app.application.id)}
-                                  onViewDetails={() => {
-                                    setLocation(`/admin/applications/${app.application.id}`);
-                                  }}
-                                  onAdvanceStage={() => {
-                                    if (!isTerminal) {
-                                      const next = getNextStage(stage);
-                                      if (next) handleStageTransition(app.application.id, next);
-                                    }
-                                  }}
-                                  nextStage={isTerminal ? null : getNextStage(stage)}
-                                />
-                              ))
-                            )}
-                          </div>
-                        </ScrollArea>
+                      {/* Cards Container — scrolls independently per column */}
+                      <div className="flex-1 min-h-0 overflow-y-auto">
+                        <div className="pt-1 pb-3 pr-1 space-y-2">
+                          {stageCount === 0 ? (
+                            <p className="text-xs text-muted-foreground text-center py-6">
+                              No applications
+                            </p>
+                          ) : (
+                            applicationsByStage[stage].map((app) => (
+                              <DraggableApplicationCard
+                                key={app.application.id}
+                                app={app}
+                                isSelected={selectedApplications.has(app.application.id)}
+                                onToggleSelection={() => toggleSelection(app.application.id)}
+                                onViewDetails={() => {
+                                  setLocation(`/admin/applications/${app.application.id}`);
+                                }}
+                                onAdvanceStage={() => {
+                                  if (!isTerminal) {
+                                    const next = getNextStage(stage);
+                                    if (next) handleStageTransition(app.application.id, next);
+                                  }
+                                }}
+                                nextStage={isTerminal ? null : getNextStage(stage)}
+                              />
+                            ))
+                          )}
+                        </div>
                       </div>
                     </div>
                   </SortableContext>
