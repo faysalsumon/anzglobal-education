@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Save, Loader2, Plus, X, Check,
@@ -153,6 +154,53 @@ interface ContactPickerProps {
 function ContactPicker({ value, onChange }: ContactPickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newContactForm, setNewContactForm] = useState({
+    firstName: "", lastName: "", email: "", mobile: "", contactType: "providers_rep",
+  });
+  const [createError, setCreateError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const createContactMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/crm/contacts", {
+        firstName: newContactForm.firstName.trim(),
+        lastName: newContactForm.lastName.trim(),
+        email: newContactForm.email.trim(),
+        mobile: newContactForm.mobile.trim() || null,
+        contactType: newContactForm.contactType,
+      });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      const c = data.contact ?? data;
+      const created: CrmContactSummary = {
+        id: c.id,
+        firstName: c.firstName ?? "",
+        lastName: c.lastName ?? "",
+        email: c.email ?? "",
+        contactType: c.contactType ?? newContactForm.contactType,
+        photo: c.photo ?? null,
+      };
+      onChange(created);
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
+      setCreateOpen(false);
+      setNewContactForm({ firstName: "", lastName: "", email: "", mobile: "", contactType: "providers_rep" });
+      setCreateError(null);
+      toast({ title: "Contact created", description: `${created.firstName} ${created.lastName} has been added.` });
+    },
+    onError: (err: any) => {
+      setCreateError(err.message || "Failed to create contact. Please try again.");
+    },
+  });
+
+  const handleCreate = () => {
+    setCreateError(null);
+    if (!newContactForm.firstName.trim()) { setCreateError("First name is required."); return; }
+    if (!newContactForm.lastName.trim()) { setCreateError("Last name is required."); return; }
+    if (!newContactForm.email.trim()) { setCreateError("Email is required."); return; }
+    createContactMutation.mutate();
+  };
 
   const contactsUrl = search
     ? `/api/crm/contacts?search=${encodeURIComponent(search)}&limit=20`
@@ -175,119 +223,221 @@ function ContactPicker({ value, onChange }: ContactPickerProps) {
     };
   });
 
+  const createDialog = (
+    <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) { setCreateError(null); } }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>New Contact</DialogTitle>
+          <DialogDescription>Fill in the basics — you can add more details from the CRM later.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-1">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="nc-first">First Name *</Label>
+              <Input
+                id="nc-first"
+                value={newContactForm.firstName}
+                onChange={e => setNewContactForm(f => ({ ...f, firstName: e.target.value }))}
+                placeholder="Jane"
+                data-testid="input-new-contact-first-name"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="nc-last">Last Name *</Label>
+              <Input
+                id="nc-last"
+                value={newContactForm.lastName}
+                onChange={e => setNewContactForm(f => ({ ...f, lastName: e.target.value }))}
+                placeholder="Smith"
+                data-testid="input-new-contact-last-name"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="nc-email">Email *</Label>
+            <Input
+              id="nc-email"
+              type="email"
+              value={newContactForm.email}
+              onChange={e => setNewContactForm(f => ({ ...f, email: e.target.value }))}
+              placeholder="jane@example.com"
+              data-testid="input-new-contact-email"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="nc-mobile">Mobile</Label>
+            <Input
+              id="nc-mobile"
+              value={newContactForm.mobile}
+              onChange={e => setNewContactForm(f => ({ ...f, mobile: e.target.value }))}
+              placeholder="+61 400 000 000"
+              data-testid="input-new-contact-mobile"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Contact Type</Label>
+            <Select
+              value={newContactForm.contactType}
+              onValueChange={v => setNewContactForm(f => ({ ...f, contactType: v }))}
+            >
+              <SelectTrigger data-testid="select-new-contact-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(CONTACT_TYPE_LABELS)
+                  .filter(([v]) => v !== "none")
+                  .map(([v, label]) => (
+                    <SelectItem key={v} value={v}>{label}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {createError && (
+            <p className="text-sm text-destructive" data-testid="text-create-contact-error">{createError}</p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button
+            type="button" variant="outline"
+            onClick={() => { setCreateOpen(false); setCreateError(null); }}
+            data-testid="button-cancel-new-contact"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleCreate}
+            disabled={createContactMutation.isPending}
+            data-testid="button-save-new-contact"
+          >
+            {createContactMutation.isPending
+              ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Saving…</>
+              : "Save Contact"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (value) {
     const initials = `${value.firstName[0] ?? ""}${value.lastName[0] ?? ""}`.toUpperCase();
     return (
-      <div className="flex items-center gap-3 p-3 rounded-md border bg-muted/30" data-testid="contact-picker-selected">
-        <Avatar className="h-9 w-9 shrink-0">
-          <AvatarImage src={value.photo || ""} alt={`${value.firstName} ${value.lastName}`} />
-          <AvatarFallback className="text-xs font-semibold">{initials || <UserRound className="h-4 w-4" />}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium leading-tight">{value.firstName} {value.lastName}</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs text-muted-foreground truncate">{value.email}</span>
-            {value.contactType && value.contactType !== "none" && (
-              <Badge variant="secondary" className="text-xs shrink-0">
-                {CONTACT_TYPE_LABELS[value.contactType] ?? value.contactType}
-              </Badge>
-            )}
+      <>
+        <div className="flex items-center gap-3 p-3 rounded-md border bg-muted/30" data-testid="contact-picker-selected">
+          <Avatar className="h-9 w-9 shrink-0">
+            <AvatarImage src={value.photo || ""} alt={`${value.firstName} ${value.lastName}`} />
+            <AvatarFallback className="text-xs font-semibold">{initials || <UserRound className="h-4 w-4" />}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium leading-tight">{value.firstName} {value.lastName}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-xs text-muted-foreground truncate">{value.email}</span>
+              {value.contactType && value.contactType !== "none" && (
+                <Badge variant="secondary" className="text-xs shrink-0">
+                  {CONTACT_TYPE_LABELS[value.contactType] ?? value.contactType}
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              type="button" size="icon" variant="ghost"
+              onClick={() => window.open(`/admin?tab=crm&contactId=${value.id}`, "_blank")}
+              title="Open contact"
+              data-testid="button-open-contact"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              type="button" size="icon" variant="ghost"
+              onClick={() => onChange(null)}
+              title="Unlink contact"
+              data-testid="button-unlink-contact"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <Button
-            type="button" size="icon" variant="ghost"
-            onClick={() => window.open(`/admin?tab=crm&contactId=${value.id}`, "_blank")}
-            title="Open contact"
-            data-testid="button-open-contact"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            type="button" size="icon" variant="ghost"
-            onClick={() => onChange(null)}
-            title="Unlink contact"
-            data-testid="button-unlink-contact"
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
+        {createDialog}
+      </>
     );
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button" variant="outline"
-          className="w-full justify-between font-normal"
-          data-testid="button-open-contact-picker"
-        >
-          <span className="text-muted-foreground">Search or select a contact…</span>
-          <ChevronsUpDown className="h-4 w-4 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="Search by name or email…"
-            value={search}
-            onValueChange={setSearch}
-            data-testid="input-contact-search"
-          />
-          <CommandList>
-            {isLoading && (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              </div>
-            )}
-            {!isLoading && contacts.length === 0 && (
-              <CommandEmpty>No contacts found.</CommandEmpty>
-            )}
-            {!isLoading && contacts.length > 0 && (
-              <CommandGroup heading={search ? "Results" : "Provider's Reps"}>
-                {contacts.map(c => {
-                  const initials = `${c.firstName[0] ?? ""}${c.lastName[0] ?? ""}`.toUpperCase();
-                  return (
-                    <CommandItem
-                      key={c.id}
-                      value={c.id}
-                      onSelect={() => { onChange(c); setOpen(false); setSearch(""); }}
-                      data-testid={`contact-option-${c.id}`}
-                    >
-                      <Avatar className="h-7 w-7 mr-2 shrink-0">
-                        <AvatarImage src={c.photo || ""} alt={`${c.firstName} ${c.lastName}`} />
-                        <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm leading-tight">{c.firstName} {c.lastName}</p>
-                        <p className="text-xs text-muted-foreground truncate">{c.email}</p>
-                      </div>
-                      {c.contactType && c.contactType !== "none" && (
-                        <Badge variant="secondary" className="text-xs ml-2 shrink-0">
-                          {CONTACT_TYPE_LABELS[c.contactType] ?? c.contactType}
-                        </Badge>
-                      )}
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            )}
-          </CommandList>
-          <div className="border-t p-2">
-            <Button
-              type="button" variant="ghost" size="sm"
-              className="w-full justify-start text-muted-foreground"
-              onClick={() => { window.open("/admin?tab=crm&new=contact&contactType=providers_rep", "_blank"); setOpen(false); }}
-              data-testid="button-new-contact-from-picker"
-            >
-              <Plus className="h-3.5 w-3.5 mr-2" /> Create new contact
-            </Button>
-          </div>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button" variant="outline"
+            className="w-full justify-between font-normal"
+            data-testid="button-open-contact-picker"
+          >
+            <span className="text-muted-foreground">Search or select a contact…</span>
+            <ChevronsUpDown className="h-4 w-4 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Search by name or email…"
+              value={search}
+              onValueChange={setSearch}
+              data-testid="input-contact-search"
+            />
+            <CommandList>
+              {isLoading && (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {!isLoading && contacts.length === 0 && (
+                <CommandEmpty>No contacts found.</CommandEmpty>
+              )}
+              {!isLoading && contacts.length > 0 && (
+                <CommandGroup heading={search ? "Results" : "Provider's Reps"}>
+                  {contacts.map(c => {
+                    const initials = `${c.firstName[0] ?? ""}${c.lastName[0] ?? ""}`.toUpperCase();
+                    return (
+                      <CommandItem
+                        key={c.id}
+                        value={c.id}
+                        onSelect={() => { onChange(c); setOpen(false); setSearch(""); }}
+                        data-testid={`contact-option-${c.id}`}
+                      >
+                        <Avatar className="h-7 w-7 mr-2 shrink-0">
+                          <AvatarImage src={c.photo || ""} alt={`${c.firstName} ${c.lastName}`} />
+                          <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm leading-tight">{c.firstName} {c.lastName}</p>
+                          <p className="text-xs text-muted-foreground truncate">{c.email}</p>
+                        </div>
+                        {c.contactType && c.contactType !== "none" && (
+                          <Badge variant="secondary" className="text-xs ml-2 shrink-0">
+                            {CONTACT_TYPE_LABELS[c.contactType] ?? c.contactType}
+                          </Badge>
+                        )}
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              )}
+            </CommandList>
+            <div className="border-t p-2">
+              <Button
+                type="button" variant="ghost" size="sm"
+                className="w-full justify-start text-muted-foreground"
+                onClick={() => { setOpen(false); setCreateOpen(true); }}
+                data-testid="button-new-contact-from-picker"
+              >
+                <Plus className="h-3.5 w-3.5 mr-2" /> Create new contact
+              </Button>
+            </div>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {createDialog}
+    </>
   );
 }
 
