@@ -20,23 +20,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { LeadNotes } from "@/components/lead-notes";
-
-// Helper to get auth headers for fetch requests
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  if (supabase) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      headers["Authorization"] = `Bearer ${session.access_token}`;
-    }
-  }
-  return headers;
-}
 
 import { 
   Search, 
@@ -482,46 +467,26 @@ export function CrmContactsPanel() {
           params.append("assignedTo", assignedFilter);
         }
       }
-      const headers = await getAuthHeaders();
-      const response = await fetch(`/api/crm/contacts?${params.toString()}`, { 
-        credentials: 'include',
-        headers 
-      });
-      if (!response.ok) throw new Error("Failed to fetch contacts");
-      return response.json();
+      const res = await apiRequest("GET", `/api/crm/contacts?${params.toString()}`);
+      return res.json();
     },
   });
 
   const { data: contactDetail } = useQuery<CrmContact>({
     queryKey: ["/api/crm/contacts", selectedContact?.id],
     queryFn: async () => {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`/api/crm/contacts/${selectedContact?.id}`, { 
-        credentials: 'include',
-        headers 
-      });
-      if (!response.ok) throw new Error("Failed to fetch contact details");
-      return response.json();
+      const res = await apiRequest("GET", `/api/crm/contacts/${selectedContact?.id}`);
+      return res.json();
     },
     enabled: !!selectedContact?.id,
   });
 
-  const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string; userType: string; profileImageUrl: string | null }[]>({
+  const { data: adminsRaw } = useQuery<{ users: { id: string; firstName: string; lastName: string; userType: string; profileImageUrl: string | null }[] }>({
     queryKey: ["/api/admin/users"],
-    queryFn: async () => {
-      const headers = await getAuthHeaders();
-      const response = await fetch("/api/admin/users", { 
-        credentials: 'include',
-        headers 
-      });
-      if (!response.ok) throw new Error("Failed to fetch admins");
-      const data = await response.json();
-      // Filter for admin and platform_admin users
-      return (data.users || []).filter((user: any) => 
-        user.userType === 'admin' || user.userType === 'platform_admin'
-      );
-    },
   });
+  const admins = (adminsRaw?.users || []).filter((user) =>
+    user.userType === 'admin' || user.userType === 'platform_admin'
+  );
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<CrmContact> }) => {
@@ -563,12 +528,6 @@ export function CrmContactsPanel() {
 
   const { data: savedFiltersData } = useQuery<SavedFilter[]>({
     queryKey: ["/api/saved-filters", { panelType: "contacts" }],
-    queryFn: async () => {
-      const headers = await getAuthHeaders();
-      const res = await fetch("/api/saved-filters?panelType=contacts", { credentials: "include", headers });
-      if (!res.ok) throw new Error("Failed to fetch saved filters");
-      return res.json();
-    },
   });
 
   const createSavedFilterMutation = useMutation({
@@ -717,10 +676,8 @@ export function CrmContactsPanel() {
   const { data: branchesData } = useQuery<any[]>({
     queryKey: ["/api/admin/branches"],
     queryFn: async () => {
-      const headers = await getAuthHeaders();
-      const response = await fetch("/api/admin/branches", { headers });
-      if (!response.ok) return [];
-      const data = await response.json();
+      const res = await apiRequest("GET", "/api/admin/branches");
+      const data = await res.json();
       return data.branches || data || [];
     },
   });
@@ -2218,10 +2175,8 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
   const { data: contactPreferences } = useQuery<{ preferenceRank: number; country: string | null; universityId: string | null; universityName: string | null; courseId: string | null; courseName: string | null }[]>({
     queryKey: ["/api/crm/leads", contact.id, "preferences"],
     queryFn: async () => {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`/api/crm/leads/${contact.id}/preferences`, { credentials: 'include', headers });
-      if (!response.ok) return [];
-      return response.json();
+      const res = await apiRequest("GET", `/api/crm/leads/${contact.id}/preferences`);
+      return res.json();
     },
     enabled: !!contact.id,
   });

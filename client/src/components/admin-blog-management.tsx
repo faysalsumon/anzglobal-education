@@ -117,22 +117,11 @@ export function AdminBlogManagement() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
   const { data: blogsData, isLoading } = useQuery<{ blogs: BlogWithAuthor[]; total: number }>({
-    queryKey: ["/api/admin/blogs", statusFilter],
-    queryFn: async () => {
-      const url = statusFilter !== "all" ? `/api/admin/blogs?status=${statusFilter}` : "/api/admin/blogs";
-      const response = await fetch(url, { credentials: "include" });
-      if (!response.ok) throw new Error("Failed to fetch posts");
-      return response.json();
-    },
+    queryKey: ["/api/admin/blogs", statusFilter !== "all" ? { status: statusFilter } : undefined],
   });
 
   const { data: staffList = [] } = useQuery<StaffMember[]>({
     queryKey: ["/api/admin/staff"],
-    queryFn: async () => {
-      const response = await fetch("/api/admin/staff", { credentials: "include" });
-      if (!response.ok) return [];
-      return response.json();
-    },
   });
 
   const allBlogs = blogsData?.blogs || [];
@@ -206,11 +195,7 @@ export function AdminBlogManagement() {
 
   const deleteBlogMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/admin/blogs/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to delete post");
+      const response = await apiRequest("DELETE", `/api/admin/blogs/${id}`);
       return response.json();
     },
     onSuccess: () => {

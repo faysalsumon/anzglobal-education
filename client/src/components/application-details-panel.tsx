@@ -213,6 +213,7 @@ export function ApplicationDetailsPanel({
       }
       
       const response = await fetch(url, {
+        credentials: "include",
         headers: {
           'Authorization': `Bearer ${token}`,
         },

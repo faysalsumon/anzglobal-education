@@ -31,7 +31,6 @@ import {
 import type { SavedFilter } from "@shared/schema";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/lib/supabase";
 import { ApplicationStageSelector } from "@/components/application-stage-selector";
 import { ApplicationDetailsPanel } from "@/components/application-details-panel";
 import { format, differenceInDays } from "date-fns";
@@ -540,19 +539,7 @@ export function AdminApplicationsKanban() {
 
   // Fetch all users and filter admin consultants
   const { data: usersData } = useQuery<{ users: Consultant[] }>({
-    queryKey: ["/api/admin/applications/users"],
-    queryFn: async () => {
-      const headers: Record<string, string> = {};
-      if (supabase) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          headers["Authorization"] = `Bearer ${session.access_token}`;
-        }
-      }
-      const res = await fetch("/api/admin/users", { credentials: "include", headers });
-      if (!res.ok) throw new Error("Failed to fetch users");
-      return res.json();
-    },
+    queryKey: ["/api/admin/users"],
   });
 
   // Fetch branches for branch filter
@@ -729,16 +716,6 @@ export function AdminApplicationsKanban() {
 
   const { data: savedFiltersData } = useQuery<SavedFilter[]>({
     queryKey: ["/api/saved-filters", { panelType: "applications" }],
-    queryFn: async () => {
-      const headers: Record<string, string> = {};
-      if (supabase) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
-      }
-      const res = await fetch("/api/saved-filters?panelType=applications", { credentials: "include", headers });
-      if (!res.ok) throw new Error("Failed to fetch saved filters");
-      return res.json();
-    },
   });
 
   const createSavedFilterMutation = useMutation({
