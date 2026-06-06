@@ -1,2 +1,3 @@
 - [Editor self-fetch pattern](editor-self-fetch.md) — form editors must own their own useQuery, not rely on parent list cache, to avoid stale-data on reopen
 - [Adding new AdminRole](adding-admin-role.md) — checklist for adding a new admin role across the RBAC stack (routes, accounting, CRM, frontend nav, UI guards)
+- [Team management flows](team-management-flows.md) — two provisioning paths (Invite/Create vs self-signup approval) write to different role columns; role resolution must check all three sources
