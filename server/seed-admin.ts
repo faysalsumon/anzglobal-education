@@ -61,7 +61,7 @@ async function seedCTO() {
     const hashedPassword = await hashPassword(password);
     
     // Create CTO user with proper userType and roleId
-    const [newUser] = await db
+    const [newUser] = (await db
       .insert(users)
       .values({
         email,
@@ -73,7 +73,7 @@ async function seedCTO() {
         roleId: ctoRoleId,
         isActive: true,
       })
-      .returning();
+      .returning()) as any[];
     
     console.log("✅ CTO created successfully!");
     console.log("Email:", email);

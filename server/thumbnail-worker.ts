@@ -80,7 +80,7 @@ export function startThumbnailWorker(): Worker<ThumbnailJobData> | null {
       return await processThumbnailJob(job);
     },
     {
-      connection,
+      connection: connection as any,
       concurrency: 2,
       limiter: {
         max: 10,

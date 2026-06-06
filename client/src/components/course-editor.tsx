@@ -1552,8 +1552,8 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     if (data.careerOutcomes && data.careerOutcomes.length > 0) form.setValue("careerOutcomes", data.careerOutcomes.join(", "));
     if (data.careerPath) form.setValue("careerPath", data.careerPath);
     if (data.deliveryMode) form.setValue("deliveryMode", data.deliveryMode);
-    if (data.internshipDetails) form.setValue("internshipDetails", data.internshipDetails);
-    if (data.minimumAge) form.setValue("minimumAge", data.minimumAge);
+    if ((data as any).internshipDetails) form.setValue("internshipDetails", (data as any).internshipDetails);
+    if ((data as any).minimumAge) form.setValue("minimumAge", (data as any).minimumAge);
     if (data.studyAreas && data.studyAreas.length > 0) form.setValue("studyAreas", data.studyAreas.join(", "));
     
     // Apply structured English requirements if available
@@ -5715,6 +5715,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                       : [];
                     const fieldErrors = (bulkData.errors || {}) as Record<string, string>;
                     const genErrors: string[] = Object.values(fieldErrors);
+                    const previews: any[] = [];
 
                     if (bulkData.description && selectedFieldsList.includes('description')) {
                       previews.push({

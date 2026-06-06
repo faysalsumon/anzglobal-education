@@ -1417,10 +1417,10 @@ export function registerAdminChatRoutes(app: Express) {
             if (msg.tool_calls && msg.tool_calls.length > 0) {
               openaiMessages.push(msg);
               for (const toolCall of msg.tool_calls) {
-                const fnName = toolCall.function.name;
+                const fnName = (toolCall as any).function.name;
                 let fnArgs: any = {};
                 try {
-                  fnArgs = JSON.parse(toolCall.function.arguments);
+                  fnArgs = JSON.parse((toolCall as any).function.arguments);
                 } catch {
                   fnArgs = {};
                 }

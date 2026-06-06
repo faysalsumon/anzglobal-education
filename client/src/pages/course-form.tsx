@@ -23,6 +23,8 @@ const formSchema = baseCourseSchema.extend({
   title: z.string().min(1, "Title is required"),
   subject: z.string().min(1, "Subject is required"),
   level: z.string().min(1, "Level is required"),
+  scholarshipPercentageMin: z.number().min(0).max(100).optional(),
+  scholarshipPercentageMax: z.number().min(0).max(100).optional(),
 });
 
 export default function CourseForm() {
@@ -58,7 +60,7 @@ export default function CourseForm() {
     enabled: isEditing && !!courseId,
   });
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<z.infer<typeof formSchema>, any, z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       universityId: "",
@@ -82,8 +84,6 @@ export default function CourseForm() {
       cricosCode: "",
       isCricosRegistered: false,
       prPathway: false,
-      scholarshipPercentageMin: undefined,
-      scholarshipPercentageMax: undefined,
       eligibilityRequirements: "",
       englishRequirements: "",
       curriculumUrl: "",
@@ -120,7 +120,7 @@ export default function CourseForm() {
         duration: course.duration ?? "",
         durationMonths: course.durationMonths ?? undefined,
         durationWeeks: course.durationWeeks ?? undefined,
-        fees: course.fees ?? undefined,
+        fees: course.fees !== null ? parseFloat(course.fees as string) : undefined,
         currency: course.currency ?? "AUD",
         location: course.location ?? "",
         country: course.country ?? "",
@@ -132,12 +132,10 @@ export default function CourseForm() {
         cricosCode: course.cricosCode ?? "",
         isCricosRegistered: course.isCricosRegistered ?? false,
         prPathway: course.prPathway ?? false,
-        scholarshipPercentageMin: course.scholarshipPercentageMin ?? undefined,
-        scholarshipPercentageMax: course.scholarshipPercentageMax ?? undefined,
         eligibilityRequirements: course.eligibilityRequirements ?? "",
         englishRequirements: course.englishRequirements ?? "",
         curriculumUrl: course.curriculumUrl ?? "",
-        applicationFees: course.applicationFees ?? undefined,
+        applicationFees: course.applicationFees !== null ? parseFloat(course.applicationFees as string) : undefined,
         isActive: course.isActive ?? true,
         intakes: course.intakes ?? [],
         studyAreas: course.studyAreas ?? [],
@@ -205,7 +203,7 @@ export default function CourseForm() {
     // Always update selectedCampusIds, even if list is empty
     // This ensures removing all campuses clears the selection
     if (isEditing && courseCampuses !== undefined) {
-      setSelectedCampusIds(courseCampuses.map(c => c.id));
+      setSelectedCampusIds(courseCampuses.map(c => (c as any).id));
     }
   }, [courseCampuses, isEditing]);
 
@@ -700,21 +698,21 @@ export default function CourseForm() {
                 ) : (
                   <div className="space-y-2">
                     {institutionCampuses.map((campus) => (
-                      <div key={campus.id} className="flex items-center space-x-2">
+                      <div key={(campus as any).id} className="flex items-center space-x-2">
                         <Checkbox
-                          id={`campus-${campus.id}`}
-                          checked={selectedCampusIds.includes(campus.id)}
+                          id={`campus-${(campus as any).id}`}
+                          checked={selectedCampusIds.includes((campus as any).id)}
                           onCheckedChange={(checked) => {
                             setSelectedCampusIds(prev =>
                               checked
-                                ? [...prev, campus.id]
-                                : prev.filter(id => id !== campus.id)
+                                ? [...prev, (campus as any).id]
+                                : prev.filter(id => id !== (campus as any).id)
                             );
                           }}
-                          data-testid={`checkbox-campus-${campus.id}`}
+                          data-testid={`checkbox-campus-${(campus as any).id}`}
                         />
                         <label
-                          htmlFor={`campus-${campus.id}`}
+                          htmlFor={`campus-${(campus as any).id}`}
                           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                         >
                           {campus.name}

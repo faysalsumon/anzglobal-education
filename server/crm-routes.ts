@@ -139,7 +139,7 @@ router.get("/contacts/linked-user", requireAdmin, async (req, res) => {
         lastName: users.lastName,
         email: users.email,
         userType: users.userType,
-        photo: users.photo,
+        photo: (users as any).photo,
       })
       .from(users)
       .where(eq(users.email, email as string))
@@ -1519,14 +1519,14 @@ router.post("/contacts/:id/applications", requireAdmin, requireCrmWriteAccess, a
     
     if (!studentProfile) {
       if (!userId) {
-        const [newUser] = await db
+        const [newUser] = (await db
           .insert(users)
           .values({
             email: contact.email || `contact-${contact.id}@placeholder.local`,
             name: `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || 'Unknown Contact',
             userType: 'student',
           } as any)
-          .returning();
+          .returning()) as any[];
         
         userId = newUser.id;
         
@@ -2513,7 +2513,7 @@ router.post(
       const storageClient = new Client();
       const uploadResult = await storageClient.uploadFromBytes(objectPath, file.buffer, {
         contentType: file.mimetype,
-      });
+      } as any);
 
       if (!uploadResult.ok) {
         console.error("Object storage upload failed:", uploadResult.error);

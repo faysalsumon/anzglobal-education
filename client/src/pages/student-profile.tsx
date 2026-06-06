@@ -3823,7 +3823,7 @@ function StudentProfileContent() {
                               </FormControl>
                               <SelectContent>
                                 {NATIONALITIES_SORTED.map((nat) => (
-                                  <SelectItem key={nat} value={nat}>{nat}</SelectItem>
+                                  <SelectItem key={String(nat)} value={String(nat)}>{String(nat)}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>

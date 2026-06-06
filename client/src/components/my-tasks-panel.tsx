@@ -251,7 +251,7 @@ export function MyTasksPanel() {
                 <TooltipTrigger asChild>
                   <span className="inline-flex">
                     <Checkbox
-                      checked={task.status === "completed"}
+                      checked={(task.status as string) === "completed"}
                       disabled
                       data-testid={`checkbox-task-${task.id}`}
                     />
@@ -613,7 +613,7 @@ export function MyTasksPanel() {
           setTaskDialogOpen(open);
           if (!open) setEditingTask(null);
         }}
-        task={editingTask}
+        task={editingTask as any}
       />
     </div>
   );

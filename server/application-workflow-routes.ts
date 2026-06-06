@@ -739,7 +739,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           where: eq(applications.id, appId),
           with: {
             course: {
-              columns: { name: true },
+              columns: { title: true },
             },
             student: {
               columns: { firstName: true, lastName: true },
@@ -748,13 +748,13 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         });
 
         // Handle both single object and array cases for relations
-        const studentData = appDetails?.student as { firstName?: string | null; lastName?: string | null } | null;
-        const courseData = appDetails?.course as { name?: string | null } | null;
+        const studentData = (appDetails as any)?.student as { firstName?: string | null; lastName?: string | null } | null;
+        const courseData = (appDetails as any)?.course as { title?: string | null } | null;
         
         const studentName = studentData 
           ? `${studentData.firstName || ''} ${studentData.lastName || ''}`.trim() || 'Student'
           : 'Student';
-        const courseName = courseData?.name || 'Course';
+        const courseName = courseData?.title || 'Course';
 
         // Log activity
         await logActivity({
@@ -885,7 +885,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           where: eq(studentProfiles.id, application.studentId),
         });
         const course = await db.query.courses.findFirst({
-          where: eq(courses.id, application.courseId),
+          where: eq(courses.id, application.courseId!),
         });
 
         if (student?.userId && course) {
@@ -1458,7 +1458,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         
         res.setHeader('Content-Type', contentType);
         res.setHeader('Content-Disposition', `inline; filename="${document.documentName || 'document'}"`);
-        res.send(Buffer.from(fileBuffer));
+        res.send(fileBuffer as unknown as Buffer);
       } else {
         // Local file path
         try {
@@ -1589,7 +1589,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
 
       // Get course and university info
       const courseInfo = await db.query.courses.findFirst({
-        where: eq(courses.id, application.courseId),
+        where: eq(courses.id, application.courseId!),
       });
 
       const universityInfo = courseInfo ? await db.query.universities.findFirst({
@@ -1832,7 +1832,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
 
       // Verify course belongs to institution
       const course = await db.query.courses.findFirst({
-        where: eq(courses.id, application.courseId),
+        where: eq(courses.id, application.courseId!),
       });
 
       if (!course || course.universityId !== institutionAccess.universityId) {
@@ -1898,7 +1898,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
 
       // Verify course belongs to institution
       const course = await db.query.courses.findFirst({
-        where: eq(courses.id, application.courseId),
+        where: eq(courses.id, application.courseId!),
       });
 
       if (!course || course.universityId !== institutionAccess.universityId) {
@@ -1958,10 +1958,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           where: eq(universities.id, course.universityId),
         });
 
-        if (student?.email) {
+        if ((student as any)?.email) {
           await sendDocumentRequestNotification({
-            studentEmail: student.email,
-            studentName: `${student.firstName} ${student.lastName}`,
+            studentEmail: (student as any).email,
+            studentName: `${student?.firstName} ${student?.lastName}`,
             applicationId,
             courseTitle: course.title,
             universityName: university?.name || 'University',
@@ -1990,7 +1990,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
 
       // Verify application belongs to this student
       const studentProfile = await db.query.studentProfiles.findFirst({
-        where: eq(studentProfiles.userId, userId),
+        where: eq(studentProfiles.userId, userId!),
       });
 
       if (!studentProfile) {
@@ -2050,7 +2050,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
 
       // Verify course belongs to institution
       const course = await db.query.courses.findFirst({
-        where: eq(courses.id, application.courseId),
+        where: eq(courses.id, application.courseId!),
       });
 
       if (!course || course.universityId !== institutionAccess.universityId) {
@@ -2106,10 +2106,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           where: eq(universities.id, course.universityId),
         });
 
-        if (student?.email) {
+        if ((student as any)?.email) {
           await sendStageTransitionNotification({
-            studentEmail: student.email,
-            studentName: `${student.firstName} ${student.lastName}`,
+            studentEmail: (student as any).email,
+            studentName: `${student?.firstName} ${student?.lastName}`,
             applicationId,
             courseTitle: course.title,
             universityName: university?.name || 'University',

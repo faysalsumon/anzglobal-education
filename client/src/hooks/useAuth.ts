@@ -71,7 +71,7 @@ export function useAuth() {
     if (supabaseUser && session) {
       const metadata = supabaseUser.user_metadata;
       return {
-        id: 0,
+        id: "0",
         email: supabaseUser.email || "",
         firstName: metadata?.first_name || null,
         lastName: metadata?.last_name || null,

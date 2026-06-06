@@ -331,7 +331,7 @@ export function ApplicationCard({ application, course, university, consultant }:
               <Building2 className="h-5 w-5 flex-shrink-0" />
               {course?.id ? (
                 <Link 
-                  href={`/courses/${course.slug || course.id}`}
+                  href={`/courses/${(course as any).slug || course.id}`}
                   className="truncate hover:text-primary hover:underline transition-colors cursor-pointer"
                   data-testid={`link-course-${course.id}`}
                 >

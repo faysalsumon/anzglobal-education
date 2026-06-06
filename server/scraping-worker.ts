@@ -483,7 +483,7 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
                 internshipAvailable: courseData.internshipAvailable,
                 internshipDetails: courseData.internshipDetails,
                 approvalStatus: "approved", // Auto-approved, no manual review needed
-              }).returning();
+              } as any).returning();
               
               // Save to scraped courses table with reference to created course (sanitize numeric fields)
               await tx.insert(scrapedCourses).values({
@@ -632,7 +632,7 @@ export function startScrapingWorker(): Worker | null {
       return await processScrapingJob(job);
     },
     {
-      connection,
+      connection: connection as any,
       concurrency: 1,
       limiter: {
         max: 10,

@@ -85,7 +85,7 @@ export async function checkRedisAvailability(): Promise<boolean> {
         
         // Now create the queue
         scrapingQueueInstance = new Queue<ScrapingJobData>("scraping-jobs", {
-          connection: connectionInstance,
+          connection: connectionInstance as any,
           defaultJobOptions: {
             removeOnComplete: { count: 100, age: 7 * 24 * 3600 },
             removeOnFail: { count: 50 },

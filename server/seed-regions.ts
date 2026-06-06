@@ -139,7 +139,6 @@ export async function seedRegions() {
             "Health insurance",
           ],
           applicationUrl: "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/student-500",
-          notes: "Processing times may vary. Ensure all documents are certified translations.",
           isActive: true,
         });
         console.log(`Created visa requirement for Bangladesh offshore students`);
@@ -201,7 +200,6 @@ export async function seedRegions() {
             "Sponsor documents (if applicable)",
           ],
           applicationUrl: "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/student-500",
-          notes: "Enhanced documentation requirements may apply.",
           isActive: true,
         });
         console.log(`Created visa requirement for Pakistan offshore students`);

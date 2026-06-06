@@ -27,7 +27,7 @@ export function getThumbnailQueue(): Queue<ThumbnailJobData> | null {
     if (!connection) return null;
     
     thumbnailQueueInstance = new Queue<ThumbnailJobData>("thumbnail-generation", {
-      connection,
+      connection: connection as any,
       defaultJobOptions: {
         attempts: 3,
         backoff: {

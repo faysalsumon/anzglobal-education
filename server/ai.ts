@@ -1167,7 +1167,7 @@ High quality stock photo style. No text, no watermarks, no logos, no artificial 
         console.log(`[Thumbnail AI] Part type:`, part.type, 'keys:', Object.keys(part));
         if (part.type === "image_url" && part.image_url?.url) {
           imageUrl = part.image_url.url;
-          console.log(`[Thumbnail AI] Found image_url, length: ${imageUrl.length}`);
+          console.log(`[Thumbnail AI] Found image_url, length: ${imageUrl!.length}`);
           break;
         }
         // Also check for inline_data format (Gemini style)
@@ -1189,7 +1189,7 @@ High quality stock photo style. No text, no watermarks, no logos, no artificial 
     // Check for images array in message
     if (!imageUrl && message?.images?.[0]?.image_url?.url) {
       imageUrl = message.images[0].image_url.url;
-      console.log(`[Thumbnail AI] Found in images array, length: ${imageUrl.length}`);
+      console.log(`[Thumbnail AI] Found in images array, length: ${imageUrl!.length}`);
     }
     
     // Check if image data is embedded in content string
@@ -1200,7 +1200,7 @@ High quality stock photo style. No text, no watermarks, no logos, no artificial 
         const match = message.content.match(/data:image\/[a-zA-Z0-9+]+;base64,[A-Za-z0-9+/=]+/);
         if (match) {
           imageUrl = match[0];
-          console.log(`[Thumbnail AI] Extracted from string content, length: ${imageUrl.length}`);
+          console.log(`[Thumbnail AI] Extracted from string content, length: ${imageUrl!.length}`);
         }
       }
     }
@@ -2199,8 +2199,8 @@ Consider the course level when setting requirements:
 
   console.log(`[AI] Generating entry requirements using configured model`);
   const content = await createAiCompletion(prompt, { maxTokens: 500, json: true, jobKey: AI_JOB_KEYS.QUALIFICATION_MATCHING });
-  const parsed = safeParseJson(content, EntryRequirementsResponseSchema, { requirements: [] }, "generateEntryRequirements");
-  return parsed.requirements;
+  const parsed = safeParseJson(content, EntryRequirementsResponseSchema, { requirements: [] } as any, "generateEntryRequirements");
+  return (parsed as any).requirements;
 }
 
 /**
@@ -2265,7 +2265,7 @@ Return ONLY a JSON object where keys are the destination qualification names:
 
   console.log(`[AI] Generating qualification equivalencies using configured model`);
   const content = await createAiCompletion(prompt, { maxTokens: 1000, json: true, jobKey: AI_JOB_KEYS.QUALIFICATION_MATCHING });
-  return safeParseJson(content, QualificationEquivalenciesSchema, {}, "generateQualificationEquivalencies");
+  return safeParseJson(content, QualificationEquivalenciesSchema, {} as any, "generateQualificationEquivalencies");
 }
 
 /**
@@ -2447,7 +2447,8 @@ Return a JSON object with these fields. For the description, rewrite it to be en
     const content = await createAiCompletion(prompt, { maxTokens: 3000, json: true, jobKey: AI_JOB_KEYS.WEB_SCRAPING });
     
     const parsed = safeParseJson(content, z.record(z.unknown()).catch({}), {}, "extractCourseDataFromUrl");
-    console.log(`[AI] Successfully extracted course data with ${Object.keys(parsed).filter(k => parsed[k] != null).length} fields`);
+    const parsedRecord = parsed as Record<string, any>;
+    console.log(`[AI] Successfully extracted course data with ${Object.keys(parsedRecord).filter(k => parsedRecord[k] != null).length} fields`);
     return parsed as ExtractedCourseData;
   } catch (fetchError: any) {
     clearTimeout(timeout);
@@ -2610,7 +2611,7 @@ Guidelines:
   console.log(`[AI] Generating career content for: ${params.title}`);
   const content = await createAiCompletion(prompt, { maxTokens: 600, json: true, jobKey: AI_JOB_KEYS.CONTENT_GENERATION });
 
-  const parsed = safeParseJson(content, CareerContentSchema, { careerOutcomes: [], careerPath: "" }, "generateCourseCareerContent");
+  const parsed: any = safeParseJson(content, CareerContentSchema, { careerOutcomes: [], careerPath: "" }, "generateCourseCareerContent");
   return {
     careerOutcomes: parsed.careerOutcomes,
     careerPath: parsed.careerPath,

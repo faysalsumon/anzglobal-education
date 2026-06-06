@@ -527,7 +527,7 @@ export const users = pgTable("users", {
   requiresPasswordReset: boolean("requires_password_reset").default(false), // Force password change on first login
   tempPasswordIssuedAt: timestamp("temp_password_issued_at"), // When temp password was created (for expiry tracking)
   approvalStatus: approvalStatusEnum("approval_status"), // For platform admin approval workflow (null for students/institutions)
-  approvedBy: varchar("approved_by").references(() => users.id, { onDelete: "set null" }), // Admin who approved
+  approvedBy: varchar("approved_by"), // Admin who approved (FK to self managed via migration)
   approvedAt: timestamp("approved_at"), // When approval was granted
   rejectionReason: text("rejection_reason"), // Reason for rejection if applicable
   createdAt: timestamp("created_at").defaultNow(),
@@ -2977,7 +2977,7 @@ export const leadCoursePreferences = pgTable("lead_course_preferences", {
   rankIdx: index("lead_course_prefs_rank_idx").on(table.leadId, table.preferenceRank),
 }));
 
-export const insertLeadCoursePreferenceSchema = createInsertSchema(leadCoursePreferences).omit({ id: true, createdAt: true });
+export const insertLeadCoursePreferenceSchema = createInsertSchema(leadCoursePreferences).omit({ createdAt: true });
 export type LeadCoursePreference = typeof leadCoursePreferences.$inferSelect;
 export type InsertLeadCoursePreference = z.infer<typeof insertLeadCoursePreferenceSchema>;
 
@@ -5112,7 +5112,7 @@ export interface ResolvedCourseData {
   description: string | null;
   subject: string;
   discipline: string | null;
-  level: string | null;
+  level: string;
   duration: string | null;
   
   // Pricing (from variant or base course)
@@ -5124,7 +5124,7 @@ export interface ResolvedCourseData {
   scholarshipMax: number | null;
   
   // Requirements (from variant or base course)
-  englishRequirements: Record<string, any> | null;
+  englishRequirements: EnglishRequirementsStructured | null;
   academicRequirements: string | null;
   minimumAge: number | null;
   
@@ -5637,7 +5637,7 @@ export const accExpenseCategories = pgTable("acc_expense_categories", {
   name: varchar("name", { length: 255 }).notNull().unique(),
   type: varchar("type", { length: 50 }).notNull().default("expense"),
 });
-export const insertAccExpenseCategorySchema = createInsertSchema(accExpenseCategories).omit({ id: true });
+export const insertAccExpenseCategorySchema = createInsertSchema(accExpenseCategories);
 export type AccExpenseCategory = typeof accExpenseCategories.$inferSelect;
 export type InsertAccExpenseCategory = z.infer<typeof insertAccExpenseCategorySchema>;
 
@@ -5654,7 +5654,7 @@ export const accExpenses = pgTable("acc_expenses", {
   createdBy: varchar("created_by", { length: 255 }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
-export const insertAccExpenseSchema = createInsertSchema(accExpenses).omit({ id: true, createdAt: true });
+export const insertAccExpenseSchema = createInsertSchema(accExpenses).omit({ createdAt: true });
 export type AccExpense = typeof accExpenses.$inferSelect;
 export type InsertAccExpense = z.infer<typeof insertAccExpenseSchema>;
 
@@ -5677,7 +5677,7 @@ export const accBills = pgTable("acc_bills", {
   createdBy: varchar("created_by", { length: 255 }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
-export const insertAccBillSchema = createInsertSchema(accBills).omit({ id: true, createdAt: true });
+export const insertAccBillSchema = createInsertSchema(accBills).omit({ createdAt: true });
 export type AccBill = typeof accBills.$inferSelect;
 export type InsertAccBill = z.infer<typeof insertAccBillSchema>;
 
@@ -5691,7 +5691,7 @@ export const accBillPayments = pgTable("acc_bill_payments", {
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
-export const insertAccBillPaymentSchema = createInsertSchema(accBillPayments).omit({ id: true, createdAt: true });
+export const insertAccBillPaymentSchema = createInsertSchema(accBillPayments).omit({ createdAt: true });
 export type AccBillPayment = typeof accBillPayments.$inferSelect;
 export type InsertAccBillPayment = z.infer<typeof insertAccBillPaymentSchema>;
 

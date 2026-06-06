@@ -65,7 +65,7 @@ export function ItemsPanel() {
 
   const handleSubmit = () => {
     if (!form.code.trim() || !form.description.trim()) { toast({ title: "Code and description are required", variant: "destructive" }); return; }
-    const data = { ...form, incomeAccountId: form.incomeAccountId || null };
+    const data = { ...form, incomeAccountId: form.incomeAccountId || null } as any;
     if (editing) { updateMutation.mutate({ id: editing.id, data }); } else { createMutation.mutate(data); }
   };
 

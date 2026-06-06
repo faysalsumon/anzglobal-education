@@ -204,7 +204,7 @@ function StudentPreferencesContent() {
       preferredIntakes: selectedIntakes,
       budgetMin: budgetRange[0].toString(),
       budgetMax: budgetRange[1].toString(),
-    });
+    } as any);
   });
 
   const handleBioSubmit = bioForm.handleSubmit((data) => {

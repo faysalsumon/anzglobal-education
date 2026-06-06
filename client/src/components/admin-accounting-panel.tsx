@@ -370,7 +370,7 @@ function InvoiceDetail({
             <div className="mt-1">
               <p className="text-xs text-muted-foreground">{invoice.institution.country}</p>
               {onNavigate && (
-                <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => onNavigate("institutions", invoice.institutionId)} data-testid="link-invoice-institution">
+                <Button type="button" variant="ghost" size="sm" className="h-auto p-0 text-xs" onClick={() => onNavigate("institutions", invoice.institutionId)} data-testid="link-invoice-institution">
                   <ExternalLink className="h-3 w-3 mr-1" />View Institution Profile
                 </Button>
               )}
@@ -380,7 +380,7 @@ function InvoiceDetail({
             <div className="mt-1">
               <p className="text-xs text-muted-foreground">{invoice.student.nationality || invoice.student.email}</p>
               {onNavigate && (
-                <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => onNavigate("crm-contacts", invoice.studentId)} data-testid="link-invoice-student">
+                <Button type="button" variant="ghost" size="sm" className="h-auto p-0 text-xs" onClick={() => onNavigate("crm-contacts", invoice.studentId)} data-testid="link-invoice-student">
                   <ExternalLink className="h-3 w-3 mr-1" />View Student Profile
                 </Button>
               )}

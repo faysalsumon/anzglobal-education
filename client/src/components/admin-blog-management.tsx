@@ -690,7 +690,7 @@ export function AdminBlogManagement() {
                     <FormItem>
                       <FormLabel>Featured Image URL</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="https://..." data-testid="input-featured-image" />
+                        <Input {...field} value={field.value ?? ""} placeholder="https://..." data-testid="input-featured-image" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

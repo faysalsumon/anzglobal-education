@@ -207,7 +207,7 @@ router.post("/test", async (req, res) => {
         confidence: extractionResult.confidence.toString(),
         warnings: extractionResult.warnings,
         reviewStatus: "pending",
-      })
+      } as any)
       .returning();
 
     console.log(`[Direct Scraping] Saved to database with ID: ${scrapedCourse.id}`);
@@ -553,7 +553,7 @@ router.put("/scraped-courses/:id/approve", async (req, res) => {
         internshipAvailable: courseData.internshipAvailable,
         internshipDetails: courseData.internshipDetails,
         approvalStatus: "pending", // Still needs platform admin approval
-      })
+      } as any)
       .returning();
 
     // Update scraped course status
@@ -733,8 +733,8 @@ router.post("/scraped-courses/batch-approve", async (req, res) => {
             thumbnailUrl: courseData.thumbnailUrl,
             courseCode: courseData.courseCode,
             prPathway: courseData.prPathway,
-            scholarshipPercentageMin: courseData.scholarshipPercentageMin,
-            scholarshipPercentageMax: courseData.scholarshipPercentageMax,
+            scholarshipPercentageMin: (courseData as any).scholarshipPercentageMin,
+            scholarshipPercentageMax: (courseData as any).scholarshipPercentageMax,
             eligibilityRequirements: courseData.eligibilityRequirements,
             englishRequirements: courseData.englishRequirements,
             curriculumUrl: courseData.curriculumUrl,
@@ -752,7 +752,7 @@ router.post("/scraped-courses/batch-approve", async (req, res) => {
             internshipAvailable: courseData.internshipAvailable,
             internshipDetails: courseData.internshipDetails,
             approvalStatus: "pending",
-          })
+          } as any)
           .returning();
 
         // Update scraped course status

@@ -349,7 +349,7 @@ function extractTextContent(html: string): string {
     blocks.push("[FOOTER]");
     blocks.push(footerEl.text().replace(/\s+/g, " ").trim());
   }
-  return [...new Set(blocks)].join("\n");
+  return Array.from(new Set(blocks)).join("\n");
 }
 
 /**

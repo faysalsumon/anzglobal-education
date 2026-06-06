@@ -347,7 +347,7 @@ export function registerAccountingRoutes(app: Express) {
         .orderBy(desc(applications.createdAt))
         .limit(30);
 
-      const universityIds = [...new Set(results.filter(r => r.universityId).map(r => r.universityId!))];
+      const universityIds = Array.from(new Set(results.filter(r => r.universityId).map(r => r.universityId!)));
       let termsMap: Record<string, any> = {};
       if (universityIds.length > 0) {
         const terms = await db.select().from(institutionBusinessTerms)
@@ -467,8 +467,8 @@ export function registerAccountingRoutes(app: Express) {
     if (!await requireFinanceAdmin(req, res)) return;
     await markOverdueInvoices();
     const { status, customerId, from, to } = req.query;
-    const conditions: ReturnType<typeof eq>[] = [];
-    if (status && status !== 'all') conditions.push(eq(accInvoices.status, status as string));
+    const conditions: any[] = [];
+    if (status && status !== 'all') conditions.push(eq(accInvoices.status, status as any));
     if (customerId) conditions.push(eq(accInvoices.customerId, customerId as string));
     if (from) conditions.push(gte(accInvoices.issueDate, from as string));
     if (to) conditions.push(lte(accInvoices.issueDate, to as string));
@@ -476,13 +476,13 @@ export function registerAccountingRoutes(app: Express) {
     const where = conditions.length > 0 ? and(...conditions) : undefined;
     const invoices = await db.select().from(accInvoices).where(where).orderBy(desc(accInvoices.createdAt));
 
-    const customerIds = [...new Set(invoices.map(i => i.customerId))];
+    const customerIds = Array.from(new Set(invoices.map(i => i.customerId)));
     const customers = customerIds.length > 0
       ? await db.select().from(accCustomers).where(sql`${accCustomers.id} IN (${sql.join(customerIds.map(id => sql`${id}`), sql`, `)})`)
       : [];
     const customerMap = Object.fromEntries(customers.map(c => [c.id, c]));
 
-    const instIds = [...new Set(invoices.filter(i => i.institutionId).map(i => i.institutionId!))];
+    const instIds = Array.from(new Set(invoices.filter(i => i.institutionId).map(i => i.institutionId!)));
     let institutionMap: Record<string, any> = {};
     if (instIds.length > 0) {
       const insts = await db.select({ id: universities.id, name: universities.name, logo: universities.logo })
@@ -490,7 +490,7 @@ export function registerAccountingRoutes(app: Express) {
       institutionMap = Object.fromEntries(insts.map(i => [i.id, i]));
     }
 
-    const studIds = [...new Set(invoices.filter(i => i.studentId).map(i => i.studentId!))];
+    const studIds = Array.from(new Set(invoices.filter(i => i.studentId).map(i => i.studentId!)));
     let studentMap: Record<string, any> = {};
     if (studIds.length > 0) {
       const studs = await db.select({
@@ -755,7 +755,7 @@ export function registerAccountingRoutes(app: Express) {
           description: item.description,
           quantity: String(item.quantity || 1),
           unitPrice: String(item.unitPrice || 0),
-          amount: String((parseFloat(item.quantity || 1) * parseFloat(item.unitPrice || 0)).toFixed(2)),
+          amount: String((parseFloat(String(item.quantity || 1)) * parseFloat(String(item.unitPrice || 0))).toFixed(2)),
         }));
         await db.insert(accInvoiceLineItems).values(items);
       }
@@ -928,7 +928,7 @@ export function registerAccountingRoutes(app: Express) {
 
       const lineItems = await db.select().from(accInvoiceLineItems).where(eq(accInvoiceLineItems.invoiceId, invoice.id));
 
-      await sendInvoiceEmail(customer.email, customer.name, invoice, lineItems, invoice.regionCode || undefined);
+      await sendInvoiceEmail(customer.email, customer.name, invoice as any, lineItems as any, invoice.regionCode || undefined);
 
       if (invoice.status === 'draft') {
         await db.update(accInvoices).set({ status: 'sent', updatedAt: new Date() }).where(eq(accInvoices.id, invoice.id));
@@ -952,7 +952,7 @@ export function registerAccountingRoutes(app: Express) {
       const [customer] = await db.select().from(accCustomers).where(eq(accCustomers.id, invoice.customerId));
       if (!customer?.email) return res.status(400).json({ message: "Customer has no email address" });
 
-      await sendInvoiceReminderEmail(customer.email, customer.name, invoice, invoice.regionCode || undefined);
+      await sendInvoiceReminderEmail(customer.email, customer.name, invoice as any, invoice.regionCode || undefined);
       res.json({ success: true, message: "Reminder sent successfully" });
     } catch (error) {
       console.error("Error sending reminder:", error);

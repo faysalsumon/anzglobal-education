@@ -176,7 +176,7 @@ export default function PublicInstitutionDetail() {
         (f) => f.itemType === "institution" && f.itemId === institutionId
       );
       if (favorite) {
-        removeFavoriteMutation.mutate(favorite.id);
+        removeFavoriteMutation.mutate(parseInt(favorite.id));
       }
     } else if (institutionId) {
       addFavoriteMutation.mutate({ itemType: "institution", itemId: institutionId });
@@ -243,8 +243,8 @@ export default function PublicInstitutionDetail() {
       state: addr.state || "",
       postcode: addr.postcode || "",
       country: addr.country || institution.country || "",
-      latitude: addr.latitude ? parseFloat(addr.latitude) : null,
-      longitude: addr.longitude ? parseFloat(addr.longitude) : null,
+      latitude: addr.latitude ? String(parseFloat(addr.latitude)) : undefined,
+      longitude: addr.longitude ? String(parseFloat(addr.longitude)) : undefined,
     }));
   }, [institution, institutionId]);
 
@@ -1004,7 +1004,7 @@ export default function PublicInstitutionDetail() {
                   <p>{[campuses[mapDialogCampusIndex].city, campuses[mapDialogCampusIndex].state, campuses[mapDialogCampusIndex].postcode].filter(Boolean).join(', ')}</p>
                 </div>
                 <div className="h-[400px] rounded-lg overflow-hidden border">
-                  <GoogleCampusMap campuses={[campuses[mapDialogCampusIndex]]} selectedCampusIndex={0} onCampusSelect={() => {}} />
+                  <GoogleCampusMap campuses={[campuses[mapDialogCampusIndex]]} selectedCampusIndex={0} institutionName={institution?.name || ""} />
                 </div>
               </div>
             )}

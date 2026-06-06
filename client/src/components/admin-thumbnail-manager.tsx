@@ -119,7 +119,7 @@ export function AdminThumbnailManager() {
     } finally {
       setRetryingCourses(prev => { const n = new Set(prev); n.delete(courseId); return n; });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/courses/thumbnail-stats"] });
-      for (const uid of expandedUnis) {
+      for (const uid of Array.from(expandedUnis)) {
         fetchUniversityCourses(uid).then(courses => {
           setCoursesByUni(prev => ({ ...prev, [uid]: courses }));
         });
@@ -171,7 +171,7 @@ export function AdminThumbnailManager() {
     } finally {
       setIsGenerating(false);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/courses/thumbnail-stats"] });
-      for (const uid of expandedUnis) {
+      for (const uid of Array.from(expandedUnis)) {
         fetchUniversityCourses(uid).then(courses => {
           setCoursesByUni(prev => ({ ...prev, [uid]: courses }));
         });

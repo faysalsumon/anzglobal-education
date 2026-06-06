@@ -2099,7 +2099,7 @@ export default function PublicCourseDetail() {
                 <h3 className="font-semibold mb-2" data-testid="faq-question-duration">How long is the {course.title} program?</h3>
                 <p className="text-muted-foreground" data-testid="faq-answer-duration">
                   The {course.title} program takes {course.duration} to complete.
-                  {course.courseLevel && ` This is a ${course.courseLevel} level qualification.`}
+                  {(course as any).courseLevel && ` This is a ${(course as any).courseLevel} level qualification.`}
                 </p>
               </div>
             )}

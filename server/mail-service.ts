@@ -678,9 +678,9 @@ export async function searchEmails(
         { uid: true }
       );
 
-      if (uids.length === 0) return [];
+      if (!Array.isArray(uids) || uids.length === 0) return [];
 
-      const limitedUids = uids.slice(-30);
+      const limitedUids = (uids as number[]).slice(-30);
       const range = limitedUids.join(",");
 
       for await (const msg of client.fetch(range, { uid: true, envelope: true, flags: true }, { uid: true })) {

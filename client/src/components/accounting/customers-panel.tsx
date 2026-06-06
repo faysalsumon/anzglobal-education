@@ -97,7 +97,7 @@ export function CustomersPanel() {
 
   const handleSubmit = () => {
     if (!form.name.trim()) { toast({ title: "Name is required", variant: "destructive" }); return; }
-    const data = { ...form, email: form.email || null, phone: form.phone || null, address: form.address || null, crmContactId: form.crmContactId || null };
+    const data = { ...form, email: form.email || null, phone: form.phone || null, address: form.address || null, crmContactId: form.crmContactId || null } as any;
     if (editing) {
       updateMutation.mutate({ id: editing.id, data });
     } else {

@@ -66,7 +66,7 @@ async function uploadPhotoToStorage(
   const client = new Client();
   const uploadResult = await client.uploadFromBytes(objectPath, buffer, {
     contentType: "image/jpeg",
-  });
+  } as any);
   if (!uploadResult.ok) {
     console.error("[Attendance] Photo upload failed:", uploadResult.error);
     throw new Error("Failed to upload attendance photo to storage");

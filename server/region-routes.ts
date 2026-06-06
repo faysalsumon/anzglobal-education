@@ -565,8 +565,8 @@ export function registerRegionRoutes(router: Router) {
             tuitionFee: course.fees?.toString() || null,
             currency: context.currency,
             applicationFee: course.applicationFees?.toString() || null,
-            scholarshipMin: course.scholarshipPercentageMin ?? null,
-            scholarshipMax: course.scholarshipPercentageMax ?? null,
+            scholarshipMin: (course as any).scholarshipPercentageMin ?? null,
+            scholarshipMax: (course as any).scholarshipPercentageMax ?? null,
             englishRequirements: course.englishRequirementsStructured || null,
             academicRequirements: null, // Available via course variants only
             minimumAge: course.minimumAge ?? null,

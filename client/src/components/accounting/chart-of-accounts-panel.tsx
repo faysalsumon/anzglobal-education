@@ -78,7 +78,7 @@ export function ChartOfAccountsPanel() {
 
   const handleSubmit = () => {
     if (!form.code.trim() || !form.name.trim()) { toast({ title: "Code and name are required", variant: "destructive" }); return; }
-    const data = { ...form, description: form.description || null };
+    const data = { ...form, description: form.description || null } as any;
     if (editing) { updateMutation.mutate({ id: editing.id, data }); } else { createMutation.mutate(data); }
   };
 

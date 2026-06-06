@@ -25,7 +25,7 @@ async function seedGlenInstitute() {
       const hashedPassword = await hashPassword(password);
       
       // Create university admin user
-      const [newUser] = await db
+      const [newUser] = (await db
         .insert(users)
         .values({
           email,
@@ -36,8 +36,8 @@ async function seedGlenInstitute() {
           userType: "university",
           role: "super_admin",
           isActive: true,
-        })
-        .returning();
+        } as any)
+        .returning()) as any[];
       
       userId = newUser.id;
       console.log("✅ University admin user created successfully!");
@@ -94,7 +94,7 @@ Situated in Melbourne, a city known for its thriving hospitality and business se
           ],
           
           isActive: true,
-        })
+        } as any)
         .returning();
       
       console.log("✅ Glen Institute created successfully!");

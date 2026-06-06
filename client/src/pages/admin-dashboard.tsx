@@ -2906,7 +2906,7 @@ export default function AdminDashboard() {
         {activeTab === "courses" && (
           showCourseEditor ? (
             <CourseEditor
-              course={editingCourse}
+              course={editingCourse as any}
               institutions={institutions || []}
               onBack={handleBackFromCourseEditor}
               userId={user?.id}

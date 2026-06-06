@@ -60,7 +60,7 @@ export function MobileBottomNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[9999] bg-background border-t shadow-lg safe-area-bottom">
       <div className="flex items-center justify-around h-16 px-2">
         {navItems.map((item) => {
-          const isActive = !item.action && (location === item.url || 
+          const isActive = !(item as any).action && (location === item.url || 
                          (item.url !== "/dashboard" && location.startsWith(item.url)));
           const innerContent = (
             <button
@@ -70,7 +70,7 @@ export function MobileBottomNav() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
               data-testid={`mobile-nav-${item.title.toLowerCase()}`}
-              onClick={item.action}
+              onClick={(item as any).action}
             >
               <div className="relative">
                 <item.icon className={`h-5 w-5 ${isActive ? "fill-primary/10" : ""}`} />
@@ -92,7 +92,7 @@ export function MobileBottomNav() {
               )}
             </button>
           );
-          return item.action ? (
+          return (item as any).action ? (
             <div key={item.title} className="flex-1">
               {innerContent}
             </div>

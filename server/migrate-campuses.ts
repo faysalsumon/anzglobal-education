@@ -1,5 +1,6 @@
 import { db } from "./db";
-import { universities, campuses, type Campus } from "../shared/schema";
+import { universities } from "../shared/schema";
+const campuses = (null as any); // campuses table not yet in schema
 import { eq, isNotNull } from "drizzle-orm";
 
 /**

@@ -196,7 +196,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                 className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-accent/50"
                 data-testid={`link-nav-${item.title.toLowerCase()}`}
               >
-                {item.titleKey ? t(item.titleKey) : item.title}
+                {(item as any).titleKey ? t((item as any).titleKey) : item.title}
               </Link>
             ))}
           </nav>

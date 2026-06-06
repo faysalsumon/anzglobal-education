@@ -370,7 +370,7 @@ export function registerAccountsRoutes(app: Express) {
       try {
         const { Client: ObjClient } = await import("@replit/object-storage");
         const objClient = new ObjClient();
-        await objClient.uploadFromBytes(`public/account-logos/${filename}`, req.file.buffer, { contentType: req.file.mimetype });
+        await objClient.uploadFromBytes(`public/account-logos/${filename}`, req.file.buffer, { contentType: req.file.mimetype } as any);
       } catch (_) { /* object storage optional */ }
 
       res.json({ logoUrl });

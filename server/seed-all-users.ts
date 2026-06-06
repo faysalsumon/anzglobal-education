@@ -82,7 +82,7 @@ async function seedAllUsers() {
       const hashedPassword = await hashPassword(userData.password);
       
       // Create user with proper userType and roleId
-      const [newUser] = await db
+      const [newUser] = (await db
         .insert(users)
         .values({
           email: userData.email.toLowerCase(),
@@ -94,7 +94,7 @@ async function seedAllUsers() {
           roleId: roleId,
           isActive: true,
         })
-        .returning();
+        .returning()) as any[];
       
       console.log(`✅ ${userData.description} created successfully!`);
       console.log(`   Email: ${userData.email}`);

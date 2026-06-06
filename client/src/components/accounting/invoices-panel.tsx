@@ -594,7 +594,7 @@ function InvoiceDetailView({ invoice, onBack, onSend, onVoid, onReminder, onReco
               </tbody>
               <tfoot>
                 <tr><td colSpan={3} className="p-3 text-right font-medium">Subtotal</td><td className="p-3 text-right">{invoice.currency} {parseFloat(invoice.subtotal).toFixed(2)}</td></tr>
-                {invoice.gstEnabled && <tr><td colSpan={3} className="p-3 text-right">GST (10%)</td><td className="p-3 text-right">{invoice.currency} {parseFloat(invoice.gstAmount).toFixed(2)}</td></tr>}
+                {invoice.gstEnabled && <tr><td colSpan={3} className="p-3 text-right">GST (10%)</td><td className="p-3 text-right">{invoice.currency} {parseFloat(invoice.gstAmount || "0").toFixed(2)}</td></tr>}
                 <tr className="bg-muted/30"><td colSpan={3} className="p-3 text-right font-bold">Total</td><td className="p-3 text-right font-bold">{invoice.currency} {parseFloat(invoice.total).toFixed(2)}</td></tr>
                 <tr><td colSpan={3} className="p-3 text-right text-muted-foreground">Amount Paid</td><td className="p-3 text-right">{invoice.currency} {parseFloat(invoice.amountPaid || "0").toFixed(2)}</td></tr>
                 <tr className="bg-primary/5"><td colSpan={3} className="p-3 text-right font-bold text-primary">Balance Due</td><td className="p-3 text-right font-bold text-primary">{invoice.currency} {balance.toFixed(2)}</td></tr>

@@ -202,7 +202,7 @@ export function GoogleCampusMap({
 
             // Create info window
             const infoWindow = new google.maps.InfoWindow({
-              content: createInfoWindowContent(institutionName, campus.name, addressString),
+              content: createInfoWindowContent(institutionName, campus.name || "", addressString),
             });
 
             // Add click listener

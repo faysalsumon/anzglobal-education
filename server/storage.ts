@@ -507,23 +507,23 @@ export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    return user as User | undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
+    return user as User | undefined;
   }
 
   async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users);
+    return (await db.select().from(users)) as User[];
   }
 
   async createUser(userData: Partial<User>): Promise<User> {
-    const [user] = await db
+    const [user] = (await db
       .insert(users)
       .values(userData as any)
-      .returning();
+      .returning()) as User[];
     return user;
   }
 
@@ -533,7 +533,7 @@ export class DatabaseStorage implements IStorage {
       .set({ ...data, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
-    return user;
+    return user as User;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -541,7 +541,7 @@ export class DatabaseStorage implements IStorage {
     const existingUserByEmail = await db
       .select()
       .from(users)
-      .where(eq(users.email, userData.email))
+      .where(eq(users.email, userData.email!))
       .limit(1);
     
     if (existingUserByEmail.length > 0) {
@@ -556,16 +556,16 @@ export class DatabaseStorage implements IStorage {
           lastLogin: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(users.email, userData.email))
+        .where(eq(users.email, userData.email!))
         .returning();
-      return updatedUser;
+      return updatedUser as User;
     }
     
     // If user doesn't exist, insert new user
-    const [user] = await db
+    const [user] = (await db
       .insert(users)
-      .values(userData)
-      .returning();
+      .values(userData as any)
+      .returning()) as User[];
     return user;
   }
 
@@ -613,7 +613,7 @@ export class DatabaseStorage implements IStorage {
     }
     const [university] = await db
       .insert(universities)
-      .values(universityData)
+      .values(universityData as any)
       .returning();
     return university;
   }
@@ -723,7 +723,7 @@ export class DatabaseStorage implements IStorage {
     }
     const [course] = await db
       .insert(courses)
-      .values(courseData)
+      .values(courseData as any)
       .returning();
     return course;
   }
@@ -982,7 +982,7 @@ export class DatabaseStorage implements IStorage {
     // - Reminder 1: 3+ days after signup, no previous reminder
     // - Reminder 2: 7+ days after signup, 4+ days since last reminder
     // - Reminder 3: 14+ days after signup, 7+ days since last reminder
-    return result.filter(student => {
+    return (result as any[]).filter(student => {
       const reminderCount = student.reminderCount || 0;
       const signupDate = student.createdAt ? new Date(student.createdAt) : now;
       const lastReminder = student.lastReminderSentAt ? new Date(student.lastReminderSentAt) : null;
@@ -1029,7 +1029,7 @@ export class DatabaseStorage implements IStorage {
     if (courseIds.length === 0) return [];
 
     const allApplications = await db.select().from(applications);
-    return allApplications.filter(app => courseIds.includes(app.courseId));
+    return allApplications.filter(app => app.courseId && courseIds.includes(app.courseId)) as any[];
   }
 
   async createApplication(applicationData: InsertApplication): Promise<Application> {
@@ -1870,7 +1870,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBlog(blog: InsertBlog): Promise<Blog> {
-    const [newBlog] = await db.insert(blogs).values(blog).returning();
+    const [newBlog] = await db.insert(blogs).values(blog as any).returning();
     return newBlog;
   }
 
@@ -2090,7 +2090,7 @@ export class DatabaseStorage implements IStorage {
             // Get student name
             const [profile] = await db.select().from(studentProfiles).where(eq(studentProfiles.id, app.studentId));
             // Get course name
-            const [course] = await db.select().from(courses).where(eq(courses.id, app.courseId));
+            const [course] = app.courseId ? await db.select().from(courses).where(eq(courses.id, app.courseId)) : [];
             
             application = {
               id: app.id,
@@ -2370,7 +2370,7 @@ export class DatabaseStorage implements IStorage {
 
         // Count active applications (not completed or cancelled)
         const activeApps = assignedApps.filter(a => 
-          !['enrolled', 'rejected', 'withdrawn', 'cancelled'].includes(a.stage || '')
+          !['enrolled', 'rejected', 'withdrawn', 'cancelled'].includes((a as any).currentStage || '')
         );
 
         return {
@@ -2427,7 +2427,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPublishedTestimonials(page?: string): Promise<Testimonial[]> {
-    let query = db.select().from(testimonials).where(eq(testimonials.status, 'published'));
+    let query: any = db.select().from(testimonials).where(eq(testimonials.status, 'published'));
     
     if (page) {
       query = query.where(
@@ -3056,8 +3056,9 @@ export class DatabaseStorage implements IStorage {
       tuitionFee: variant?.tuitionFee?.toString() || course.fees?.toString() || null,
       currency: variant?.tuitionCurrency || region.defaultCurrency || 'AUD',
       applicationFee: variant?.applicationFee?.toString() || course.applicationFees?.toString() || null,
-      scholarshipMin: variant?.scholarshipMin ?? course.scholarshipPercentageMin ?? null,
-      scholarshipMax: variant?.scholarshipMax ?? course.scholarshipPercentageMax ?? null,
+      costOfLiving: variant?.costOfLiving?.toString() || null,
+      scholarshipMin: variant?.scholarshipMin ?? (course as any).scholarshipPercentageMin ?? null,
+      scholarshipMax: variant?.scholarshipMax ?? (course as any).scholarshipPercentageMax ?? null,
       
       // Requirements: prefer variant, fall back to base course
       englishRequirements: variant?.englishRequirements || course.englishRequirementsStructured || null,
