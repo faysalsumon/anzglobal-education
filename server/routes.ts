@@ -397,7 +397,7 @@ export async function checkAdminAccess(
           'cto': 'cto',
           'ceo': 'cto',
           'cfo': 'operations_staff',
-          'accounts_officer': 'accounts_officer',
+          'accounts_officer': 'operations_staff',
           'branch_manager': 'branch_manager',
           'marketing_executive': 'support_staff',
           'senior_consultant': 'support_staff',
@@ -443,7 +443,7 @@ export async function checkAdminAccess(
         
         // Operations level - finance, reports
         'cfo': 'operations_staff',
-        'accounts_officer': 'accounts_officer',
+        'accounts_officer': 'operations_staff',
         
         // Manager level - team management, application assignment
         'branch_manager': 'branch_manager',

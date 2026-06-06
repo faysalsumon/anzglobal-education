@@ -13,6 +13,7 @@ import {
   studentProfiles,
   courses,
   universities,
+  adminTeamMembers,
   type Application,
   type ApplicationStageHistory,
   type ApplicationStageDocument,
@@ -426,6 +427,14 @@ export function registerApplicationWorkflowRoutes(app: Express) {
 
       // Get user's access context for hierarchy-based filtering
       const accessContext = await getUserAccessContext(userId);
+
+      // Check if user is accounts_officer — they get global read over all applications
+      const [adminMemberRecord] = await db
+        .select({ role: adminTeamMembers.role })
+        .from(adminTeamMembers)
+        .where(eq(adminTeamMembers.userId, userId))
+        .limit(1);
+      const isAccountsOfficerRole = adminMemberRecord?.role === 'accounts_officer';
       
       // Check read permission for applications module
       const canRead = await checkCrudPermission(userId, 'applications', 'read');
@@ -438,8 +447,8 @@ export function registerApplicationWorkflowRoutes(app: Express) {
       // Build query conditions
       const conditions: any[] = [];
 
-      // Apply hierarchy-based visibility filter
-      if (accessContext) {
+      // Apply hierarchy-based visibility filter (accounts_officer always sees all — global scope)
+      if (accessContext && !isAccountsOfficerRole) {
         if (accessContext.defaultScope === 'self') {
           // Self scope: only see applications assigned to you
           conditions.push(eq(applications.assignedConsultantId, userId));

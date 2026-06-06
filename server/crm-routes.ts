@@ -775,7 +775,7 @@ router.get("/contacts/:contactId/institutions", requireAdmin, async (req, res) =
 });
 
 // Add institution link for a contact
-router.post("/contacts/:contactId/institutions", requireAdmin, async (req: any, res) => {
+router.post("/contacts/:contactId/institutions", requireAdmin, requireCrmWriteAccess, async (req: any, res) => {
   try {
     const { contactId } = req.params;
     const userId = getUserId(req);
@@ -821,7 +821,7 @@ router.post("/contacts/:contactId/institutions", requireAdmin, async (req: any, 
 });
 
 // Update institution link for a contact
-router.patch("/contacts/:contactId/institutions/:linkId", requireAdmin, async (req: any, res) => {
+router.patch("/contacts/:contactId/institutions/:linkId", requireAdmin, requireCrmWriteAccess, async (req: any, res) => {
   try {
     const { linkId } = req.params;
     const { contactRole, roleTitle, department, isPrimary, notes } = req.body;
@@ -851,7 +851,7 @@ router.patch("/contacts/:contactId/institutions/:linkId", requireAdmin, async (r
 });
 
 // Delete institution link for a contact
-router.delete("/contacts/:contactId/institutions/:linkId", requireAdmin, async (req: any, res) => {
+router.delete("/contacts/:contactId/institutions/:linkId", requireAdmin, requireCrmWriteAccess, async (req: any, res) => {
   try {
     const { linkId } = req.params;
     
@@ -1155,7 +1155,7 @@ router.delete("/contacts/:id", requireAdmin, requireCrmWriteAccess, async (req: 
 });
 
 // Upload contact photo
-router.post("/contacts/:id/upload-photo", requireAdmin, crmUpload.single('photo'), async (req: any, res) => {
+router.post("/contacts/:id/upload-photo", requireAdmin, requireCrmWriteAccess, crmUpload.single('photo'), async (req: any, res) => {
   try {
     const { id } = req.params;
     const userId = getUserId(req);
@@ -1455,7 +1455,7 @@ router.get("/contacts/:id/applications", requireAdmin, async (req: any, res) => 
 
 // Create application on behalf of a contact (admin only)
 // Accepts courseIds[] — creates ONE application with all courses as line items
-router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) => {
+router.post("/contacts/:id/applications", requireAdmin, requireCrmWriteAccess, async (req: any, res) => {
   try {
     const { id } = req.params;
     const { courseIds, externalEntries, notes } = req.body;
@@ -2404,7 +2404,7 @@ router.get("/leads/:id/preferences", requireAdmin, async (req: any, res) => {
 });
 
 // PUT /api/crm/leads/:id/preferences — bulk replace
-router.put("/leads/:id/preferences", requireAdmin, async (req: any, res) => {
+router.put("/leads/:id/preferences", requireAdmin, requireCrmWriteAccess, async (req: any, res) => {
   try {
     const { id } = req.params;
 

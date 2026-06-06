@@ -38,7 +38,7 @@ import {
 import { eq, desc, sql, and, gte, lte, lt, ilike, or } from "drizzle-orm";
 import { sendInvoiceEmail, sendPaymentReceiptEmail, sendInvoiceReminderEmail } from "./email-service";
 
-const FINANCE_ADMIN_ROLES: Array<'cto' | 'platform_admin' | 'accounts_officer'> = ['cto', 'platform_admin', 'accounts_officer'];
+const FINANCE_ADMIN_ROLES: Array<'cto' | 'platform_admin' | 'accounts_officer' | 'operations_staff'> = ['cto', 'platform_admin', 'accounts_officer', 'operations_staff'];
 
 async function requireFinanceAdmin(req: Request, res: Response): Promise<string | null> {
   const userId = (req as any).supabaseUser?.id || (req as any).user?.claims?.sub || (req as any).user?.id;
