@@ -698,6 +698,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
+      if (!await checkCrudPermission(adminAccess.userId, 'applications', 'update')) {
+        return res.status(403).json({ error: "Your profile does not allow updating applications" });
+      }
+
       const validatedData = assignmentSchema.parse(req.body);
 
       // Verify consultant exists and is admin
@@ -806,6 +810,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
+      if (!await checkCrudPermission(adminAccess.userId, 'applications', 'update')) {
+        return res.status(403).json({ error: "Your profile does not allow updating applications" });
+      }
+
       const validatedData = stageTransitionSchema.parse(req.body);
 
       // Get current application
@@ -908,6 +916,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
+      if (!await checkCrudPermission(adminAccess.userId, 'applications', 'update')) {
+        return res.status(403).json({ error: "Your profile does not allow updating applications" });
+      }
+
       const validatedData = documentVerificationSchema.parse(req.body);
 
       // Update document verification
@@ -948,6 +960,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
       const adminAccess = await checkAdminAccess(req);
       if (!adminAccess) {
         return res.status(403).json({ error: "Admin access required" });
+      }
+
+      if (!await checkCrudPermission(adminAccess.userId, 'applications', 'update')) {
+        return res.status(403).json({ error: "Your profile does not allow updating applications" });
       }
 
       const { id: applicationId } = req.params;
@@ -1103,6 +1119,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
+      if (!await checkCrudPermission(adminAccess.userId, 'applications', 'delete')) {
+        return res.status(403).json({ error: "Your profile does not allow deleting applications" });
+      }
+
       const { id: applicationId } = req.params;
 
       // Get application details for logging
@@ -1166,6 +1186,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
+      if (!await checkCrudPermission(adminAccess.userId, 'applications', 'update')) {
+        return res.status(403).json({ error: "Your profile does not allow updating applications" });
+      }
+
       const { id: applicationId } = req.params;
       const validatedData = stageDocumentUploadSchema.parse({ ...req.body, applicationId });
 
@@ -1213,6 +1237,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
       const adminAccess = await checkAdminAccess(req);
       if (!adminAccess) {
         return res.status(403).json({ error: "Admin access required" });
+      }
+
+      if (!await checkCrudPermission(adminAccess.userId, 'applications', 'update')) {
+        return res.status(403).json({ error: "Your profile does not allow updating applications" });
       }
 
       const { id: applicationId } = req.params;
@@ -1472,6 +1500,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
+      if (!await checkCrudPermission(adminAccess.userId, 'applications', 'delete')) {
+        return res.status(403).json({ error: "Your profile does not allow deleting application documents" });
+      }
+
       const { applicationId, documentId } = req.params;
 
       // Verify document exists
@@ -1512,6 +1544,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
       const adminAccess = await checkAdminAccess(req);
       if (!adminAccess) {
         return res.status(403).json({ error: "Admin access required" });
+      }
+
+      if (!await checkCrudPermission(adminAccess.userId, 'applications', 'update')) {
+        return res.status(403).json({ error: "Your profile does not allow updating applications" });
       }
 
       const { id: applicationId } = req.params;

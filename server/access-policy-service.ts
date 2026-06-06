@@ -349,9 +349,16 @@ export async function getAllProfiles(): Promise<Array<{
   description: string | null;
   isSystemProfile: boolean | null;
   isActive: boolean | null;
+  permissions: Array<{
+    module: string;
+    canCreate: boolean | null;
+    canRead: boolean | null;
+    canUpdate: boolean | null;
+    canDelete: boolean | null;
+  }>;
 }>> {
   try {
-    return await db
+    const allProfiles = await db
       .select({
         id: profiles.id,
         name: profiles.name,
@@ -362,6 +369,28 @@ export async function getAllProfiles(): Promise<Array<{
       })
       .from(profiles)
       .where(eq(profiles.isActive, true));
+
+    const allPerms = await db
+      .select({
+        profileId: profilePermissions.profileId,
+        module: profilePermissions.module,
+        canCreate: profilePermissions.canCreate,
+        canRead: profilePermissions.canRead,
+        canUpdate: profilePermissions.canUpdate,
+        canDelete: profilePermissions.canDelete,
+      })
+      .from(profilePermissions);
+
+    return allProfiles.map(profile => ({
+      ...profile,
+      permissions: allPerms.filter(p => p.profileId === profile.id).map(p => ({
+        module: p.module,
+        canCreate: p.canCreate,
+        canRead: p.canRead,
+        canUpdate: p.canUpdate,
+        canDelete: p.canDelete,
+      })),
+    }));
   } catch (error) {
     console.error("Error getting profiles:", error);
     return [];

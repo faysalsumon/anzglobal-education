@@ -13,6 +13,7 @@ import { supabaseAuthMiddleware } from "./supabase-middleware";
 import { botProtectionMiddleware, securityHeadersMiddleware, protectedPathsMiddleware } from "./middleware/bot-protection";
 import { runMigrations } from "./migrate";
 import { seedDefaultRoles } from "./seed-roles";
+import { seedDefaultProfiles } from "./seed-profiles";
 
 // Intercept process.exit(1) before Vite's error logger can use it to crash the dev server.
 // Vite's custom logger in server/vite.ts calls process.exit(1) on ANY Vite error, which
@@ -174,6 +175,9 @@ app.use((req, res, next) => {
 
   // Seed default roles (idempotent — skips existing rows)
   await seedDefaultRoles();
+
+  // Seed default profiles (idempotent — skips existing rows)
+  await seedDefaultProfiles();
 
   // Seed default AI job settings after migrations
   const { seedAiJobDefaults } = await import("./ai");

@@ -27,6 +27,14 @@ import {
   Shield,
 } from "lucide-react";
 
+interface ProfilePermissionRow {
+  module: string;
+  canCreate: boolean | null;
+  canRead: boolean | null;
+  canUpdate: boolean | null;
+  canDelete: boolean | null;
+}
+
 interface Profile {
   id: string;
   name: string;
@@ -34,6 +42,7 @@ interface Profile {
   description: string | null;
   isSystemProfile: boolean | null;
   isActive: boolean | null;
+  permissions: ProfilePermissionRow[];
 }
 
 interface ProfilePermission {
@@ -249,10 +258,14 @@ export function AdminProfileManagementPanel() {
                       </div>
                     </TableCell>
                     {MODULES.map(module => {
-                      const accessLevel = profile.name === 'full_access' ? 'CRUD' 
-                        : profile.name === 'standard' ? 'CRU' 
-                        : profile.name === 'data_entry' ? 'CR' 
-                        : profile.name === 'read_only' ? 'R' 
+                      const perm = profile.permissions?.find(p => p.module === module);
+                      const accessLevel = perm
+                        ? [
+                            perm.canCreate ? 'C' : '',
+                            perm.canRead ? 'R' : '',
+                            perm.canUpdate ? 'U' : '',
+                            perm.canDelete ? 'D' : '',
+                          ].join('') || '-'
                         : '-';
                       return (
                         <TableCell key={module} className="text-center">

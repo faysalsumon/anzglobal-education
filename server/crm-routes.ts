@@ -21,7 +21,7 @@ import { logActivity } from "./activity-logger";
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
-import { buildRegionScopedFilter } from "./access-policy-service";
+import { buildRegionScopedFilter, checkCrudPermission } from "./access-policy-service";
 
 // Configure multer for CRM photo uploads
 const crmUpload = multer({
@@ -881,6 +881,10 @@ router.post("/contacts", requireAdmin, requireCrmWriteAccess, async (req: any, r
       return res.status(401).json({ message: "User ID not found" });
     }
 
+    if (!await checkCrudPermission(userId, 'leads', 'create')) {
+      return res.status(403).json({ message: "Your profile does not allow creating contacts" });
+    }
+
     const body = { ...req.body };
     for (const [key, value] of Object.entries(body)) {
       if (value && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}(T|\s)/.test(value)) {
@@ -965,6 +969,10 @@ router.patch("/contacts/:id", requireAdmin, requireCrmWriteAccess, async (req: a
     const userId = getUserId(req);
     if (!userId) {
       return res.status(401).json({ message: "User ID not found" });
+    }
+
+    if (!await checkCrudPermission(userId, 'leads', 'update')) {
+      return res.status(403).json({ message: "Your profile does not allow updating contacts" });
     }
 
     const body = { ...req.body };
@@ -1125,6 +1133,10 @@ router.delete("/contacts/:id", requireAdmin, requireCrmWriteAccess, async (req: 
     const userId = getUserId(req);
     if (!userId) {
       return res.status(401).json({ message: "User ID not found" });
+    }
+
+    if (!await checkCrudPermission(userId, 'leads', 'delete')) {
+      return res.status(403).json({ message: "Your profile does not allow deleting contacts" });
     }
 
     const [existingContact] = await db
@@ -2036,6 +2048,9 @@ router.get("/leads/:id", requireAdmin, async (req, res) => {
 router.post("/leads", requireAdmin, requireCrmWriteAccess, async (req: any, res) => {
   try {
     const userId = getUserId(req);
+    if (userId && !await checkCrudPermission(userId, 'leads', 'create')) {
+      return res.status(403).json({ message: "Your profile does not allow creating leads" });
+    }
     const {
       firstName, lastName, email, phone, mobile,
       leadStatus, leadRating, leadCreationMethod, leadSource,
@@ -2091,6 +2106,9 @@ router.patch("/leads/:id", requireAdmin, requireCrmWriteAccess, async (req: any,
   try {
     const { id } = req.params;
     const userId = getUserId(req);
+    if (userId && !await checkCrudPermission(userId, 'leads', 'update')) {
+      return res.status(403).json({ message: "Your profile does not allow updating leads" });
+    }
 
     const existing = await db
       .select()
@@ -2172,9 +2190,13 @@ router.patch("/leads/:id", requireAdmin, requireCrmWriteAccess, async (req: any,
 });
 
 // DELETE /leads/:id - delete lead
-router.delete("/leads/:id", requireAdmin, requireCrmWriteAccess, async (req, res) => {
+router.delete("/leads/:id", requireAdmin, requireCrmWriteAccess, async (req: any, res) => {
   try {
     const { id } = req.params;
+    const userId = getUserId(req);
+    if (userId && !await checkCrudPermission(userId, 'leads', 'delete')) {
+      return res.status(403).json({ message: "Your profile does not allow deleting leads" });
+    }
     await db.delete(crmContacts).where(eq(crmContacts.id, id));
     res.json({ success: true });
   } catch (error) {

@@ -9301,6 +9301,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "CTO access required" });
       }
 
+      const { checkCrudPermission } = await import('./access-policy-service');
+      if (!await checkCrudPermission(userId, 'users', 'update')) {
+        return res.status(403).json({ message: "Your profile does not allow updating users" });
+      }
+
       const { roleId } = req.body;
       const targetUserId = req.params.id;
 
@@ -9555,6 +9560,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { checkCrudPermission } = await import('./access-policy-service');
+      if (!await checkCrudPermission(userId, 'users', 'update')) {
+        return res.status(403).json({ message: "Your profile does not allow updating users" });
       }
 
       const targetUserId = req.params.id;
@@ -10283,6 +10293,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
+      const { checkCrudPermission } = await import('./access-policy-service');
+      if (!await checkCrudPermission(userId, 'users', 'create')) {
+        return res.status(403).json({ message: "Your profile does not allow creating users" });
+      }
+
       const { email, password, firstName, lastName, userType, role } = req.body;
 
       if (!email || !password || !firstName || !lastName || !userType) {
@@ -10411,6 +10426,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
+      const { checkCrudPermission } = await import('./access-policy-service');
+      if (!await checkCrudPermission(userId, 'users', 'update')) {
+        return res.status(403).json({ message: "Your profile does not allow updating users" });
+      }
+
       const targetUserId = req.params.id;
       const { email, firstName, lastName, password, phone, branchId, regionId, profileId, userType, roleId, isActive } = req.body;
 
@@ -10478,6 +10498,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { checkCrudPermission } = await import('./access-policy-service');
+      if (!await checkCrudPermission(userId, 'users', 'delete')) {
+        return res.status(403).json({ message: "Your profile does not allow deleting users" });
       }
 
       const targetUserId = req.params.id;
@@ -11278,6 +11303,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
+      const { checkCrudPermission } = await import('./access-policy-service');
+      if (!await checkCrudPermission(userId, 'institutions', 'create')) {
+        return res.status(403).json({ message: "Your profile does not allow creating institutions" });
+      }
+
       const {
         name,
         description,
@@ -11436,6 +11466,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { checkCrudPermission } = await import('./access-policy-service');
+      if (!await checkCrudPermission(userId, 'institutions', 'update')) {
+        return res.status(403).json({ message: "Your profile does not allow updating institutions" });
       }
 
       const institutionId = req.params.id;
@@ -11720,6 +11755,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
+      const { checkCrudPermission } = await import('./access-policy-service');
+      if (!await checkCrudPermission(userId, 'institutions', 'delete')) {
+        return res.status(403).json({ message: "Your profile does not allow deleting institutions" });
+      }
+
       const institutionId = req.params.id;
 
       // Check if institution exists
@@ -11933,6 +11973,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
+      const { checkCrudPermission } = await import('./access-policy-service');
+      if (!await checkCrudPermission(userId, 'courses', 'create')) {
+        return res.status(403).json({ message: "Your profile does not allow creating courses" });
+      }
+
       // Validate "Other" framework requires customLevel
       if (req.body.qualificationFramework === "Other" && !req.body.customLevel?.trim()) {
         return res.status(400).json({ message: "Custom level description is required when using 'Other' framework" });
@@ -11990,6 +12035,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { checkCrudPermission } = await import('./access-policy-service');
+      if (!await checkCrudPermission(userId, 'courses', 'update')) {
+        return res.status(403).json({ message: "Your profile does not allow updating courses" });
       }
 
       const courseId = req.params.id;
@@ -12102,6 +12152,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { checkCrudPermission } = await import('./access-policy-service');
+      if (!await checkCrudPermission(userId, 'courses', 'delete')) {
+        return res.status(403).json({ message: "Your profile does not allow deleting courses" });
       }
 
       const courseId = req.params.id;
@@ -16615,6 +16670,11 @@ Sitemap: ${baseUrl}/sitemap.xml
         return res.status(403).json({ message: "Super admin or support manager access required" });
       }
 
+      const { checkCrudPermission } = await import('./access-policy-service');
+      if (!await checkCrudPermission(userId, 'reports', 'create')) {
+        return res.status(403).json({ message: "Your profile does not allow uploading import data" });
+      }
+
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
@@ -16751,6 +16811,11 @@ Sitemap: ${baseUrl}/sitemap.xml
 
       if (!access) {
         return res.status(403).json({ message: "Super admin or support manager access required" });
+      }
+
+      const { checkCrudPermission } = await import('./access-policy-service');
+      if (!await checkCrudPermission(userId, 'reports', 'update')) {
+        return res.status(403).json({ message: "Your profile does not allow approving import batches" });
       }
 
       const { batchId } = req.params;

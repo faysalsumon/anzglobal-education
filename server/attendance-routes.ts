@@ -3,6 +3,7 @@ import multer from "multer";
 import { db } from "./db";
 import { isAuthenticated } from "./supabase-middleware";
 import { checkAdminAccess } from "./routes";
+import { checkCrudPermission } from "./access-policy-service";
 import {
   attendanceRecords,
   attendanceBreaks,
@@ -573,6 +574,10 @@ export function registerAttendanceRoutes(app: Express) {
       const userId = req.user.claims.sub;
       const adminAccess = await checkAdminAccess(userId, ["cto"]);
       if (!adminAccess) return res.status(403).json({ message: "CTO access required for cleanup" });
+
+      if (!await checkCrudPermission(userId, 'reports', 'delete')) {
+        return res.status(403).json({ message: "Your profile does not allow deleting report data" });
+      }
 
       const ninetyDaysAgo = new Date();
       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
