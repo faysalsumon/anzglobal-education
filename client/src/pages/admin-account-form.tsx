@@ -154,21 +154,16 @@ function ContactPicker({ value, onChange }: ContactPickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const { data: results = [], isLoading } = useQuery<any[]>({
-    queryKey: ["/api/crm/contacts", "picker", search],
-    queryFn: async () => {
-      const params = new URLSearchParams({ limit: "20" });
-      if (search) params.set("search", search);
-      else params.set("type", "providers_rep");
-      const res = await fetch(`/api/crm/contacts?${params}`);
-      if (!res.ok) return [];
-      const data = await res.json();
-      return data.contacts ?? data;
-    },
+  const contactsUrl = search
+    ? `/api/crm/contacts?search=${encodeURIComponent(search)}&limit=20`
+    : `/api/crm/contacts?type=providers_rep&limit=20`;
+
+  const { data: rawContactData, isLoading } = useQuery<any>({
+    queryKey: [contactsUrl],
     staleTime: 10_000,
   });
 
-  const contacts: CrmContactSummary[] = results.map((r: any) => {
+  const contacts: CrmContactSummary[] = (rawContactData?.contacts ?? rawContactData ?? []).map((r: any) => {
     const c = r.contact ?? r;
     return {
       id: c.id,
