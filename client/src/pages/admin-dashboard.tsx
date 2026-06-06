@@ -656,6 +656,7 @@ export default function AdminDashboard() {
   const [transferringCourse, setTransferringCourse] = useState<Course | null>(null);
   const [selectedTransferCourseUserId, setSelectedTransferCourseUserId] = useState<string>("");
   const [assigningCourseId, setAssigningCourseId] = useState<string | null>(null);
+  const [approvingCourseId, setApprovingCourseId] = useState<string | null>(null);
   const [coursePage, setCoursePage] = useState(1);
   const [coursePageSize, setCoursePageSize] = useState(20);
   
@@ -1176,6 +1177,27 @@ export default function AdminDashboard() {
     mutationFn: async ({ id, assignedToUserId }: { id: string; assignedToUserId: string | null }) => {
       return await apiRequest("PATCH", `/api/super-admin/courses/${id}/transfer`, { assignedToUserId });
     },
+    onMutate: async ({ id, assignedToUserId }) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/super-admin/courses"] });
+      const previousCourses = queryClient.getQueryData(["/api/super-admin/courses"]);
+      // Find the assignee name from cached admin users list
+      const adminUsersData = queryClient.getQueryData<Array<{ id: string; name: string; profileImageUrl: string | null }>>(["/api/super-admin/admin-users"]);
+      const assignee = assignedToUserId ? adminUsersData?.find(u => u.id === assignedToUserId) : null;
+      queryClient.setQueryData(["/api/super-admin/courses"], (old: any) => {
+        if (!old) return old;
+        const updateList = (list: any[]) =>
+          list.map((c: any) => c.id === id ? {
+            ...c,
+            assignedToUserId: assignedToUserId,
+            assignedToName: assignee?.name ?? null,
+            assignedToProfileImage: assignee?.profileImageUrl ?? null,
+          } : c);
+        if (Array.isArray(old)) return updateList(old);
+        if (old?.courses) return { ...old, courses: updateList(old.courses) };
+        return old;
+      });
+      return { previousCourses };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
@@ -1185,7 +1207,10 @@ export default function AdminDashboard() {
         description: "Course has been reassigned",
       });
     },
-    onError: (error: any) => {
+    onError: (error: any, _vars, context: any) => {
+      if (context?.previousCourses) {
+        queryClient.setQueryData(["/api/super-admin/courses"], context.previousCourses);
+      }
       toast({
         title: "Error",
         description: error.message || "Failed to update assignment",
@@ -1518,15 +1543,33 @@ export default function AdminDashboard() {
     mutationFn: async (id: string) => {
       return await apiRequest("PATCH", `/api/admin/courses/${id}/approve`, {});
     },
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/super-admin/courses"] });
+      const previousCourses = queryClient.getQueryData(["/api/super-admin/courses"]);
+      queryClient.setQueryData(["/api/super-admin/courses"], (old: any) => {
+        if (!old) return old;
+        const updateList = (list: any[]) =>
+          list.map((c: any) => c.id === id ? { ...c, approvalStatus: 'approved' } : c);
+        if (Array.isArray(old)) return updateList(old);
+        if (old?.courses) return { ...old, courses: updateList(old.courses) };
+        return old;
+      });
+      return { previousCourses };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
+      setApprovingCourseId(null);
       toast({
         title: "Course approved",
-        description: "The course has been approved and is now publicly visible",
+        description: "Course approved. Set publish status to Published to make it live.",
       });
     },
-    onError: (error: any) => {
+    onError: (error: any, _id, context: any) => {
+      if (context?.previousCourses) {
+        queryClient.setQueryData(["/api/super-admin/courses"], context.previousCourses);
+      }
+      setApprovingCourseId(null);
       toast({
         title: "Error",
         description: error.message,
@@ -3221,7 +3264,7 @@ export default function AdminDashboard() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => approveCourseMutation.mutate(course.id)}
+                                  onClick={() => setApprovingCourseId(course.id)}
                                   disabled={approveCourseMutation.isPending}
                                   data-testid={`button-approve-course-${course.id}`}
                                 >
@@ -4062,6 +4105,27 @@ export default function AdminDashboard() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Approve Course Confirmation */}
+      <AlertDialog open={!!approvingCourseId} onOpenChange={(open) => { if (!open) setApprovingCourseId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve this course?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark the course as approved. You will still need to set the publish status to "Published" to make it publicly visible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-approve-course">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => approvingCourseId && approveCourseMutation.mutate(approvingCourseId)}
+              data-testid="button-confirm-approve-course"
+            >
+              Approve Course
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Course Confirmation */}
       <AlertDialog open={!!deletingCourse} onOpenChange={() => setDeletingCourse(null)}>

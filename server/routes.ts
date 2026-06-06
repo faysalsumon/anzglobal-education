@@ -12221,14 +12221,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const courseId = req.params.id;
       const { assignedToUserId } = req.body;
 
-      if (!assignedToUserId) {
-        return res.status(400).json({ message: "assignedToUserId is required" });
-      }
-
       // Check if course exists
       const course = await storage.getCourseById(courseId);
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
+      }
+
+      // If unassigning (null), clear the assignment directly
+      if (assignedToUserId === null || assignedToUserId === undefined || assignedToUserId === '') {
+        const updatedCourse = await storage.updateCourse(courseId, {
+          assignedToUserId: null,
+          updatedByUserId: userId,
+          updatedAt: new Date(),
+        });
+        return res.json({ ...updatedCourse, message: "Course unassigned" });
       }
 
       // Verify the target user exists, is an admin type, and is active
