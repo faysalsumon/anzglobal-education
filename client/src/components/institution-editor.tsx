@@ -298,9 +298,12 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
     queryKey: ["/api/courses", { universityId: institution?.id }],
     queryFn: async () => {
       if (!institution?.id) return { courses: [] };
-      const res = await fetch(`/api/courses?universityId=${institution.id}&limit=100`);
-      if (!res.ok) return { courses: [] };
-      return res.json();
+      try {
+        const res = await apiRequest("GET", `/api/courses?universityId=${institution.id}&limit=100`);
+        return res.json();
+      } catch {
+        return { courses: [] };
+      }
     },
     enabled: !!institution?.id,
   });
@@ -332,9 +335,12 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
     queryKey: ["/api/admin/activity-logs/entity", "institution", institution?.id],
     queryFn: async () => {
       if (!institution?.id) return { logs: [], total: 0 };
-      const res = await fetch(`/api/admin/activity-logs/entity/institution/${institution.id}?limit=50`);
-      if (!res.ok) return { logs: [], total: 0 };
-      return res.json();
+      try {
+        const res = await apiRequest("GET", `/api/admin/activity-logs/entity/institution/${institution.id}?limit=50`);
+        return res.json();
+      } catch {
+        return { logs: [], total: 0 };
+      }
     },
     enabled: !!institution?.id && activeTab === "history",
   });

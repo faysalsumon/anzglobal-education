@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -77,8 +78,7 @@ export function AdminAccountsPanel() {
       const params = new URLSearchParams();
       if (typeFilter !== "all") params.set("type", typeFilter);
       if (search.trim()) params.set("search", search.trim());
-      const res = await fetch(`/api/admin/accounts?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch accounts");
+      const res = await apiRequest("GET", `/api/admin/accounts?${params.toString()}`);
       return res.json();
     },
   });

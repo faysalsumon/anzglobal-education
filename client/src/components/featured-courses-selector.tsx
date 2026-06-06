@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -57,8 +58,7 @@ export function FeaturedCoursesSelector({
         params.set("search", searchQuery);
       }
       params.set("limit", "50");
-      const res = await fetch(`/api/courses?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch courses");
+      const res = await apiRequest("GET", `/api/courses?${params.toString()}`);
       return res.json();
     },
     enabled: open && !!institutionId,

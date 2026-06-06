@@ -205,10 +205,13 @@ function PreferenceSlot({ rank, pref, institutions, onChange, onRemove, canRemov
     queryKey: ["/api/courses/by-institution", pref.universityId],
     queryFn: async () => {
       if (!pref.universityId) return [];
-      const response = await fetch(`/api/courses?universityId=${pref.universityId}&publishStatus=published&limit=200`);
-      if (!response.ok) return [];
-      const data = await response.json();
-      return Array.isArray(data) ? data : (data.courses ?? []);
+      try {
+        const response = await apiRequest("GET", `/api/courses?universityId=${pref.universityId}&publishStatus=published&limit=200`);
+        const data = await response.json();
+        return Array.isArray(data) ? data : (data.courses ?? []);
+      } catch {
+        return [];
+      }
     },
     enabled: !!pref.universityId,
   });

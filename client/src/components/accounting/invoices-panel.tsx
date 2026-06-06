@@ -115,8 +115,7 @@ export function InvoicesPanel() {
       if (customerFilter !== "all") params.set("customerId", customerFilter);
       if (fromDate) params.set("from", fromDate);
       if (toDate) params.set("to", toDate);
-      const res = await fetch(`/api/accounting/invoices?${params}`);
-      if (!res.ok) throw new Error("Failed to fetch invoices");
+      const res = await apiRequest("GET", `/api/accounting/invoices?${params}`);
       return res.json();
     },
   });
@@ -124,8 +123,7 @@ export function InvoicesPanel() {
   const { data: invoiceDetail } = useQuery<InvoiceDetail>({
     queryKey: ["/api/accounting/invoices", viewingId],
     queryFn: async () => {
-      const res = await fetch(`/api/accounting/invoices/${viewingId}`);
-      if (!res.ok) throw new Error("Failed to fetch invoice");
+      const res = await apiRequest("GET", `/api/accounting/invoices/${viewingId}`);
       return res.json();
     },
     enabled: !!viewingId,

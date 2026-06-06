@@ -333,42 +333,30 @@ export default function AdminAccountForm() {
 
   const { data: account, isLoading: accountLoading } = useQuery<Account>({
     queryKey: ["/api/admin/accounts", id],
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/accounts/${id}`);
-      if (!res.ok) throw new Error("Not found");
-      return res.json();
-    },
     enabled: !isNew,
   });
 
   const { data: restrictedFromApi } = useQuery<RestrictedDetails | null>({
     queryKey: ["/api/admin/accounts", id, "restricted"],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/accounts/${id}/restricted`);
-      if (!res.ok) return null;
-      return res.json();
+      try {
+        const res = await apiRequest("GET", `/api/admin/accounts/${id}/restricted`);
+        return res.json();
+      } catch {
+        return null;
+      }
     },
     enabled: !isNew,
   });
 
   const { data: products = [] } = useQuery<AccountProduct[]>({
     queryKey: ["/api/admin/accounts", id, "products"],
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/accounts/${id}/products`);
-      if (!res.ok) return [];
-      return res.json();
-    },
     enabled: !isNew,
   });
 
   interface CmsInstitution { id: number; name: string; country: string | null; logo: string | null; }
   const { data: cmsInstitutions = [] } = useQuery<CmsInstitution[]>({
     queryKey: ["/api/institutions"],
-    queryFn: async () => {
-      const res = await fetch("/api/institutions");
-      if (!res.ok) return [];
-      return res.json();
-    },
     enabled: formData.accountType === "institution",
   });
 
@@ -376,8 +364,8 @@ export default function AdminAccountForm() {
     queryKey: ["/api/admin/accounts", "partners"],
     queryFn: async () => {
       const [sa, pp] = await Promise.all([
-        fetch("/api/admin/accounts/by-type/super_agent").then(r => r.json()),
-        fetch("/api/admin/accounts/by-type/pathway_provider").then(r => r.json()),
+        apiRequest("GET", "/api/admin/accounts/by-type/super_agent").then(r => r.json()),
+        apiRequest("GET", "/api/admin/accounts/by-type/pathway_provider").then(r => r.json()),
       ]);
       return [...sa, ...pp];
     },

@@ -42,10 +42,13 @@ export function CustomersPanel() {
   const { data: crmContacts = [] } = useQuery<CrmContact[]>({
     queryKey: ["/api/crm/contacts"],
     queryFn: async () => {
-      const res = await fetch("/api/crm/contacts?limit=500");
-      if (!res.ok) return [];
-      const data = await res.json();
-      return Array.isArray(data) ? data : (data.contacts || []);
+      try {
+        const res = await apiRequest("GET", "/api/crm/contacts?limit=500");
+        const data = await res.json();
+        return Array.isArray(data) ? data : (data.contacts || []);
+      } catch {
+        return [];
+      }
     },
   });
 
