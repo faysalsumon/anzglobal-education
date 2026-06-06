@@ -360,16 +360,13 @@ export default function AdminAccountForm() {
     enabled: formData.accountType === "institution",
   });
 
-  const { data: partnerAccounts = [] } = useQuery<Account[]>({
-    queryKey: ["/api/admin/accounts", "partners"],
-    queryFn: async () => {
-      const [sa, pp] = await Promise.all([
-        apiRequest("GET", "/api/admin/accounts/by-type/super_agent").then(r => r.json()),
-        apiRequest("GET", "/api/admin/accounts/by-type/pathway_provider").then(r => r.json()),
-      ]);
-      return [...sa, ...pp];
-    },
+  const { data: superAgentAccounts = [] } = useQuery<Account[]>({
+    queryKey: ["/api/admin/accounts/by-type/super_agent"],
   });
+  const { data: pathwayAccounts = [] } = useQuery<Account[]>({
+    queryKey: ["/api/admin/accounts/by-type/pathway_provider"],
+  });
+  const partnerAccounts = [...superAgentAccounts, ...pathwayAccounts];
 
   // ─── Sync loaded data into form ───────────────────────────────────────────
 

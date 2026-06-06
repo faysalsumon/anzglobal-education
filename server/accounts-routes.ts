@@ -29,7 +29,7 @@ export function registerAccountsRoutes(app: Express) {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
       const adminCheck = await checkAdminAccess(userId);
-      if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
+      if (!adminCheck) return res.status(403).json({ message: "Forbidden" });
 
       const { type, search, active } = req.query as any;
 
@@ -65,7 +65,7 @@ export function registerAccountsRoutes(app: Express) {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
       const adminCheck = await checkAdminAccess(userId);
-      if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
+      if (!adminCheck) return res.status(403).json({ message: "Forbidden" });
 
       const { type } = req.params;
       const rows = await db
@@ -87,7 +87,7 @@ export function registerAccountsRoutes(app: Express) {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
       const adminCheck = await checkAdminAccess(userId);
-      if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
+      if (!adminCheck) return res.status(403).json({ message: "Forbidden" });
 
       const { id } = req.params;
 
@@ -131,7 +131,7 @@ export function registerAccountsRoutes(app: Express) {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
       const adminCheck = await checkAdminAccess(userId);
-      if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
+      if (!adminCheck) return res.status(403).json({ message: "Forbidden" });
 
       const parsed = insertAccountSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.issues });
@@ -150,7 +150,7 @@ export function registerAccountsRoutes(app: Express) {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
       const adminCheck = await checkAdminAccess(userId);
-      if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
+      if (!adminCheck) return res.status(403).json({ message: "Forbidden" });
 
       const { id } = req.params;
       const updateData = { ...req.body, updatedAt: new Date() };
@@ -177,7 +177,7 @@ export function registerAccountsRoutes(app: Express) {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
       const adminCheck = await checkAdminAccess(userId);
-      if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
+      if (!adminCheck) return res.status(403).json({ message: "Forbidden" });
 
       const { id } = req.params;
       const [updated] = await db
@@ -202,7 +202,7 @@ export function registerAccountsRoutes(app: Express) {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
       const adminCheck = await checkAdminAccess(userId);
-      if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
+      if (!adminCheck) return res.status(403).json({ message: "Forbidden" });
 
       const rows = await db
         .select()
@@ -221,7 +221,7 @@ export function registerAccountsRoutes(app: Express) {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
       const adminCheck = await checkAdminAccess(userId);
-      if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
+      if (!adminCheck) return res.status(403).json({ message: "Forbidden" });
 
       const parsed = insertAccountProductSchema.safeParse({ ...req.body, accountId: req.params.id });
       if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.issues });
@@ -240,7 +240,7 @@ export function registerAccountsRoutes(app: Express) {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
       const adminCheck = await checkAdminAccess(userId);
-      if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
+      if (!adminCheck) return res.status(403).json({ message: "Forbidden" });
 
       const updateData = { ...req.body };
       delete updateData.id;
@@ -266,7 +266,7 @@ export function registerAccountsRoutes(app: Express) {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
       const adminCheck = await checkAdminAccess(userId);
-      if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
+      if (!adminCheck) return res.status(403).json({ message: "Forbidden" });
 
       await db
         .delete(accountProducts)
@@ -285,7 +285,7 @@ export function registerAccountsRoutes(app: Express) {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
       const adminCheck = await checkAdminAccess(userId);
-      if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
+      if (!adminCheck) return res.status(403).json({ message: "Forbidden" });
 
       const [row] = await db
         .select()
@@ -305,7 +305,7 @@ export function registerAccountsRoutes(app: Express) {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
       const adminCheck = await checkAdminAccess(userId);
-      if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
+      if (!adminCheck) return res.status(403).json({ message: "Forbidden" });
 
       const accountId = req.params.id;
       const updateData = { ...req.body, accountId, updatedAt: new Date() };
@@ -344,7 +344,7 @@ export function registerAccountsRoutes(app: Express) {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
       const adminCheck = await checkAdminAccess(userId);
-      if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
+      if (!adminCheck) return res.status(403).json({ message: "Forbidden" });
 
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
