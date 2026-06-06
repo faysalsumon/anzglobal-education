@@ -3,3 +3,4 @@
 - [Team management flows](team-management-flows.md) — two provisioning paths (Invite/Create vs self-signup approval) write to different role columns; role resolution must check all three sources
 - [Role Management tab](role-management-tab.md) — CTO-only tab; roles/permissions/role_permissions DB tables; two sections: user-role assignment (writes roleId) + role hierarchy cards (hierarchyLevel + defaultScope)
 - [Profiles tab](profiles-tab.md) — CTO-only; profiles + profile_permissions DB tables; CRUD-per-module axis orthogonal to Roles; enforced in getAccessContext(); tab is read-only (no create/edit UI)
+- [RBAC audit findings](rbac-audit-findings.md) — June 2026 audit; legacy tiers removed; isMarketingExecutive/isConsultant fixed; 4 missing tabs added; profiles still unseeded and unenforced

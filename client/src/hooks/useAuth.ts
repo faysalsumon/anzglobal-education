@@ -93,10 +93,9 @@ export function useAuth() {
   
   const isCTO = adminRole === "cto" || adminRole === "ceo";
   const isBranchManager = adminRole === "branch_manager";
-  const isConsultant = adminRole === "support_staff";
+  const isConsultant = adminRole === "senior_consultant" || adminRole === "junior_consultant";
   const isAccountsOfficer = adminRole === "accounts_officer";
-  // Check both display name and internal name formats for marketing executive
-  const isMarketingExecutive = user?.roleName === "Marketing Executive" || user?.roleName === "marketing_executive";
+  const isMarketingExecutive = adminRole === "marketing_executive";
   
   const hasFullAdminAccess = isCTO || isBranchManager;
 

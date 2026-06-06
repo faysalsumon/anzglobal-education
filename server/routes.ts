@@ -384,11 +384,9 @@ export async function checkAdminAccess(
   
   // If no requiredRoles specified, just check userType (for basic dashboard access)
   if (!requiredRoles || requiredRoles.length === 0) {
-    // Try to determine actual role for informational purposes
     let determinedRole: AdminRole | null = null;
     let roleName: string | undefined;
     
-    // Check new roles table first
     if (user.roleId) {
       const userRole = await getUserRole(userId);
       if (userRole) {
@@ -406,25 +404,9 @@ export async function checkAdminAccess(
         determinedRole = roleToLegacy[roleName] || null;
       }
     }
-    // LEGACY: Check users.role column
-    else if (user.role && ['cto', 'platform_admin', 'branch_manager', 'support_staff', 'operations_staff', 'accounts_officer'].includes(user.role)) {
-      determinedRole = user.role as AdminRole;
-    }
-    // LEGACY: Check admin_team_members table
-    else {
-      const adminMember = await storage.getAdminTeamMemberByUserId(userId);
-      if (adminMember?.isActive) {
-        determinedRole = adminMember.role as AdminRole;
-      }
-    }
     
     return { role: determinedRole, roleName, userType };
   }
-  
-  // When requiredRoles is specified, check using multi-tier approach:
-  // 1. New permission system (via roleId)
-  // 2. Legacy users.role column
-  // 3. Legacy admin_team_members table
   
   // TIER 1: Check new roles table using roleId
   // Complete mapping from new role system to legacy AdminRole types
@@ -486,23 +468,6 @@ export async function checkAdminAccess(
       }
       // If more restrictive role is required, deny access (safe default)
       return null;
-    }
-  }
-  
-  // TIER 2: LEGACY - Check users.role column
-  if (user.role && ['cto', 'platform_admin', 'branch_manager', 'support_staff', 'operations_staff', 'accounts_officer'].includes(user.role)) {
-    const userRole = user.role as AdminRole;
-    if (requiredRoles.includes(userRole)) {
-      return { role: userRole, userType };
-    }
-    return null;
-  }
-  
-  // TIER 3: LEGACY - Check admin_team_members table
-  const adminMember = await storage.getAdminTeamMemberByUserId(userId);
-  if (adminMember?.isActive) {
-    if (requiredRoles.includes(adminMember.role as AdminRole)) {
-      return { role: adminMember.role as AdminRole, userType };
     }
   }
   
@@ -1075,14 +1040,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If admin user, include their role info
       if (user.userType === 'admin' || user.userType === 'platform_admin') {
-        const adminMember = await storage.getAdminTeamMemberByUserId(userId);
-        // Determine adminRole — priority: legacy adminMember > RBAC roleId > legacy user.role (non-default)
-        const rbacAdminRole = user.roleId ? (roleDetails?.name || null) : null;
-        const legacyUserRole = (user.role && user.role !== 'user') ? user.role : null;
-        const resolvedAdminRole = adminMember?.role || rbacAdminRole || legacyUserRole || null;
+        const resolvedAdminRole = user.roleId ? (roleDetails?.name || null) : null;
         res.json({
           ...user,
-          // New role system
           roleDetails: roleDetails || null,
           permissions: permissions,
           adminRole: resolvedAdminRole,
