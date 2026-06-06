@@ -632,7 +632,9 @@ router.get("/contacts", requireAdmin, async (req, res) => {
       );
     }
 
-    if (req.accessContext) {
+    // accounts_officer has global read — bypass region scope filter
+    const reqRole = await getAdminRoleFromReq(req);
+    if (req.accessContext && reqRole !== 'accounts_officer') {
       const regionFilter = buildRegionScopedFilter(req.accessContext, {
         regionIdColumn: crmContacts.regionId,
         branchIdColumn: crmContacts.branchId,

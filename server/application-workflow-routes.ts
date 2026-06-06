@@ -428,13 +428,20 @@ export function registerApplicationWorkflowRoutes(app: Express) {
       // Get user's access context for hierarchy-based filtering
       const accessContext = await getUserAccessContext(userId);
 
-      // Check if user is accounts_officer — they get global read over all applications
+      // Check if user is accounts_officer via either provisioning path — they get global read
       const [adminMemberRecord] = await db
         .select({ role: adminTeamMembers.role })
         .from(adminTeamMembers)
         .where(eq(adminTeamMembers.userId, userId))
         .limit(1);
-      const isAccountsOfficerRole = adminMemberRecord?.role === 'accounts_officer';
+      const [userRoleRecord] = await db
+        .select({ role: users.role })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      const isAccountsOfficerRole =
+        adminMemberRecord?.role === 'accounts_officer' ||
+        userRoleRecord?.role === 'accounts_officer';
       
       // Check read permission for applications module
       const canRead = await checkCrudPermission(userId, 'applications', 'read');
