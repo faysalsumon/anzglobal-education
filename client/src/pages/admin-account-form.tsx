@@ -183,7 +183,12 @@ function ContactPicker({ value, onChange }: ContactPickerProps) {
         photo: c.photo ?? null,
       };
       onChange(created);
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === "string" && key.startsWith("/api/crm/contacts");
+        },
+      });
       setCreateOpen(false);
       setNewContactForm({ firstName: "", lastName: "", email: "", mobile: "", contactType: "providers_rep" });
       setCreateError(null);
@@ -196,8 +201,6 @@ function ContactPicker({ value, onChange }: ContactPickerProps) {
 
   const handleCreate = () => {
     setCreateError(null);
-    if (!newContactForm.firstName.trim()) { setCreateError("First name is required."); return; }
-    if (!newContactForm.lastName.trim()) { setCreateError("Last name is required."); return; }
     if (!newContactForm.email.trim()) { setCreateError("Email is required."); return; }
     createContactMutation.mutate();
   };
