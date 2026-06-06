@@ -1,0 +1,36 @@
+Subject: Institution update returning HTTP 500 — AAHE (ID: 3af18cbb-1a5b-4705-8065-2d933f21d981)
+
+Hi team,
+
+PATCH /api/partner/institutions/3af18cbb-1a5b-4705-8065-2d933f21d981 returns HTTP 500 for any field update — even a single-field request like {"website": "https://aahe.edu.au"}. The logo upload endpoint (POST .../logo) also returns 500. Read operations and course creation work fine with this key.
+
+My guess at the cause: the institution may be in an approved/published state that blocks partner edits, but the API is returning 500 instead of a proper error.
+
+To unblock, I need one of:
+1. Unlock the institution for partner API editing, OR
+2. Apply these fields directly on your end:
+
+{
+  "contactEmail": "info@aahe.edu.au",
+  "contactPhone": "+61 3 9454 2806",
+  "website": "https://aahe.edu.au",
+  "smallDescription": "Australasian Academy of Higher Education (AAHE) is a Melbourne-based institution specialising in cybersecurity education, offering undergraduate and postgraduate programs accredited by TEQSA (PRV14361) and registered on the CRICOS register (04181B).",
+  "campusAddresses": [{ "name": "West Melbourne Campus", "address": "363 King St", "city": "West Melbourne", "state": "VIC", "postcode": "3003", "country": "Australia" }],
+  "numberOfCampuses": 1,
+  "tuitionFeesMin": 7500,
+  "tuitionFeesMax": 39000,
+  "intakePeriods": ["March", "May", "July", "September", "November"],
+  "deliveryModes": ["On Campus", "Online"],
+  "internationalStudentSupport": true,
+  "accreditationStatus": "TEQSA PRV14361, CRICOS 04181B",
+  "providerType": "Institution",
+  "logo": "https://aahe.edu.au/wp-content/uploads/2023/10/AAHE-Logo-Horizontal.png",
+  "tags": ["Cybersecurity", "Higher Education", "CRICOS", "International Students", "Melbourne"]
+}
+
+Also, if the 500 is a bug (rather than a state issue), a proper error message here would help — something like "Cannot update a published institution" would tell me exactly what's happening.
+
+Thanks
+
+---
+Once they either fix the server response or tell you the institution is unlocked, just say "try again" here and I'll re-run the update immediately.
