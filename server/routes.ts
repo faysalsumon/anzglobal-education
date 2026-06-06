@@ -4961,7 +4961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "universityId is required" });
       }
 
-      const university = await storage.getUniversity(universityId);
+      const university = await storage.getUniversityById(universityId);
       const uniName = university?.name || "";
 
       const courseList = await db.select({
@@ -5004,7 +5004,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const id of courseIds.slice(0, maxBatch)) {
           const course = await storage.getCourseById(id);
           if (course) {
-            const university = await storage.getUniversity(course.universityId);
+            const university = await storage.getUniversityById(course.universityId);
             coursesToProcess.push({
               courseId: course.id,
               courseTitle: course.title,
@@ -5045,7 +5045,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .limit(maxBatch);
         
         for (const course of allCourses) {
-          const university = await storage.getUniversity(course.universityId);
+          const university = await storage.getUniversityById(course.universityId);
           coursesToProcess.push({
             courseId: course.id,
             courseTitle: course.title,
@@ -22497,7 +22497,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         });
       }
 
-      const institution = await storage.getUniversity(institutionId);
+      const institution = await storage.getUniversityById(institutionId);
       if (!institution) {
         await logPartnerUsage(req, 404);
         return res.status(404).json({
