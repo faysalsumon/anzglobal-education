@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Edit, Building2, Globe, Phone, Mail } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -33,6 +31,7 @@ interface Account {
   country: string | null;
   logoUrl: string | null;
   isActive: boolean;
+  notes: string | null;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -69,7 +68,6 @@ const FILTER_TABS: { value: string; label: string }[] = [
 
 export function AdminAccountsPanel() {
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
   const [typeFilter, setTypeFilter] = useState("all");
   const [search, setSearch] = useState("");
 

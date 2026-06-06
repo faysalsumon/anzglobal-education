@@ -245,7 +245,7 @@ export default function AdminAccountForm() {
       await apiRequest("PUT", `/api/admin/accounts/${saved.id}/restricted`, restrictedData);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/accounts"] });
       toast({ title: isNew ? "Account created" : "Account updated" });
-      setLocation("/admin#accounts");
+      setLocation("/admin?tab=accounts");
     },
     onError: () => toast({ title: "Failed to save account", variant: "destructive" }),
   });
@@ -255,7 +255,7 @@ export default function AdminAccountForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/accounts"] });
       toast({ title: "Account deactivated" });
-      setLocation("/admin#accounts");
+      setLocation("/admin?tab=accounts");
     },
     onError: () => toast({ title: "Failed to deactivate", variant: "destructive" }),
   });
@@ -323,7 +323,7 @@ export default function AdminAccountForm() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setLocation("/admin#accounts")}
+            onClick={() => setLocation("/admin?tab=accounts")}
             data-testid="button-back-accounts"
           >
             <ArrowLeft className="h-4 w-4 mr-1.5" />
@@ -478,7 +478,7 @@ export default function AdminAccountForm() {
           {/* ── Details tab ──────────────────────────────────────────────── */}
           <TabsContent value="details" className="space-y-5">
 
-            {/* Account type row */}
+            {/* Classification */}
             <Card>
               <CardContent className="pt-5 pb-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Classification</p>
@@ -589,6 +589,7 @@ export default function AdminAccountForm() {
                       data-testid="input-contact-name"
                     />
                   </div>
+
                   <div className="space-y-1.5">
                     <Label>Email</Label>
                     <Input
@@ -599,6 +600,7 @@ export default function AdminAccountForm() {
                       data-testid="input-account-email"
                     />
                   </div>
+
                   <div className="space-y-1.5">
                     <Label>Phone</Label>
                     <Input
@@ -608,6 +610,7 @@ export default function AdminAccountForm() {
                       data-testid="input-account-phone"
                     />
                   </div>
+
                   <div className="space-y-1.5">
                     <Label>Website</Label>
                     <Input
@@ -635,6 +638,7 @@ export default function AdminAccountForm() {
                       data-testid="input-account-country"
                     />
                   </div>
+
                   <div className="space-y-1.5">
                     <Label>City</Label>
                     <Input
@@ -644,6 +648,7 @@ export default function AdminAccountForm() {
                       data-testid="input-account-city"
                     />
                   </div>
+
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label>Address</Label>
                     <Input
@@ -657,7 +662,7 @@ export default function AdminAccountForm() {
               </CardContent>
             </Card>
 
-            {/* Misc */}
+            {/* Other */}
             <Card>
               <CardContent className="pt-5 pb-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Other</p>
@@ -779,7 +784,7 @@ export default function AdminAccountForm() {
               )}
 
               {products.length === 0 && !addingProduct ? (
-                <div className="text-center py-12 text-muted-foreground text-sm">
+                <div className="text-center py-8 text-muted-foreground text-sm">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   No products yet. Click "Add Product" to add one.
                 </div>
@@ -870,10 +875,11 @@ export default function AdminAccountForm() {
           )}
 
           {/* ── Contract & Banking tab ────────────────────────────────────── */}
-          <TabsContent value="banking" className="space-y-5">
+          <TabsContent value="banking" className="space-y-4">
             <Card>
               <CardContent className="pt-5 pb-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Banking Details</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Banking &amp; Contract</p>
+                <p className="text-sm text-muted-foreground mb-5">Banking and contract information for internal reference.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label>Bank Name</Label>
@@ -920,14 +926,6 @@ export default function AdminAccountForm() {
                       data-testid="input-swift"
                     />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-5 pb-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Contract Details</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label>Contract Start Date</Label>
                     <Input
@@ -961,24 +959,6 @@ export default function AdminAccountForm() {
             </Card>
           </TabsContent>
         </Tabs>
-
-        {/* Bottom save bar */}
-        <div className="mt-8 flex items-center justify-between gap-3 pt-5 border-t">
-          <Button variant="outline" onClick={() => setLocation("/admin#accounts")} data-testid="button-cancel-account">
-            Cancel
-          </Button>
-          <Button
-            onClick={() => saveMutation.mutate()}
-            disabled={!formData.name || saveMutation.isPending}
-            data-testid="button-save-account-bottom"
-          >
-            {saveMutation.isPending ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</>
-            ) : (
-              <><Save className="h-4 w-4 mr-2" />{isNew ? "Create Account" : "Save Changes"}</>
-            )}
-          </Button>
-        </div>
       </main>
     </div>
   );
