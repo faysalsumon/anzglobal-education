@@ -1,4 +1,7 @@
 import type { Express, Request, Response } from "express";
+import path from "path";
+import fs from "fs/promises";
+import multer from "multer";
 import { db } from "./db";
 import { isAuthenticated } from "./supabase-middleware";
 import { checkAdminAccess } from "./routes";
@@ -12,6 +15,11 @@ import {
   insertAccountRestrictedDetailsSchema,
 } from "@shared/schema";
 import { eq, and, ilike, or, sql } from "drizzle-orm";
+
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 export function registerAccountsRoutes(app: Express) {
 
@@ -327,6 +335,48 @@ export function registerAccountsRoutes(app: Express) {
     } catch (err: any) {
       console.error("[Accounts] PUT /:id/restricted error:", err);
       res.status(500).json({ message: "Failed to save restricted details" });
+    }
+  });
+
+  // POST /api/admin/accounts/upload-logo — upload account logo to object storage
+  app.post("/api/admin/accounts/upload-logo", isAuthenticated, logoUpload.single("logo"), async (req: any, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user.id || user.claims?.sub;
+      const adminCheck = await checkAdminAccess(userId);
+      if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
+
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+      const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: "Only image files are accepted (JPEG, PNG, GIF, WebP)" });
+      }
+      if (req.file.size > 5 * 1024 * 1024) {
+        return res.status(400).json({ message: "Logo file must be under 5MB" });
+      }
+
+      const ext = req.file.mimetype === "image/png" ? "png"
+        : req.file.mimetype === "image/gif" ? "gif"
+        : req.file.mimetype === "image/webp" ? "webp"
+        : "jpg";
+      const filename = `account-logo-${Date.now()}.${ext}`;
+      const localDir = path.join(process.cwd(), "public", "account-logos");
+      await fs.mkdir(localDir, { recursive: true });
+      await fs.writeFile(path.join(localDir, filename), req.file.buffer);
+
+      const logoUrl = `/account-logos/${filename}`;
+
+      try {
+        const { Client: ObjClient } = await import("@replit/object-storage");
+        const objClient = new ObjClient();
+        await objClient.uploadFromBytes(`public/account-logos/${filename}`, req.file.buffer, { contentType: req.file.mimetype });
+      } catch (_) { /* object storage optional */ }
+
+      res.json({ logoUrl });
+    } catch (err: any) {
+      console.error("[Accounts] POST /upload-logo error:", err);
+      res.status(500).json({ message: "Failed to upload logo" });
     }
   });
 

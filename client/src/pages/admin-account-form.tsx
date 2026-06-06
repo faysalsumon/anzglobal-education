@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -17,7 +17,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Save, Loader2, Plus, X, Check,
-  Package, Trash2, Edit, ImageIcon, UserRound, ChevronsUpDown, ExternalLink
+  Package, Trash2, Edit, ImageIcon, UserRound, ChevronsUpDown, ExternalLink,
+  Upload, Link2
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -324,8 +325,9 @@ export default function AdminAccountForm() {
   const [restrictedData, setRestrictedData] = useState<Partial<RestrictedDetails>>(emptyRestricted());
   const [primaryContact, setPrimaryContact] = useState<CrmContactSummary | null>(null);
   const [activeTab, setActiveTab] = useState("details");
-  const [logoEditMode, setLogoEditMode] = useState(false);
-  const [logoInputVal, setLogoInputVal] = useState("");
+  const [logoUploading, setLogoUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const inheritedLogoRef = useRef<string | null>(null);
 
   // Products state
   const [addingProduct, setAddingProduct] = useState(false);
@@ -364,7 +366,7 @@ export default function AdminAccountForm() {
     enabled: !isNew,
   });
 
-  interface CmsInstitution { id: number; name: string; country: string | null; }
+  interface CmsInstitution { id: number; name: string; country: string | null; logo: string | null; }
   const { data: cmsInstitutions = [] } = useQuery<CmsInstitution[]>({
     queryKey: ["/api/institutions"],
     queryFn: async () => {
@@ -391,7 +393,6 @@ export default function AdminAccountForm() {
   useEffect(() => {
     if (account) {
       setFormData({ ...account });
-      setLogoInputVal(account.logoUrl || "");
       if (account.primaryContact) {
         setPrimaryContact(account.primaryContact);
       }
@@ -403,6 +404,50 @@ export default function AdminAccountForm() {
       setRestrictedData({ ...restrictedFromApi });
     }
   }, [restrictedFromApi]);
+
+  // ─── Institution logo inheritance ─────────────────────────────────────────
+  useEffect(() => {
+    if (formData.accountType !== "institution") return;
+    if (formData.institutionCmsId && cmsInstitutions.length > 0) {
+      const linked = cmsInstitutions.find(i => String(i.id) === String(formData.institutionCmsId));
+      if (linked?.logo) {
+        inheritedLogoRef.current = linked.logo;
+        setFormData(f => ({ ...f, logoUrl: linked.logo }));
+      }
+    } else if (!formData.institutionCmsId && inheritedLogoRef.current) {
+      const prev = inheritedLogoRef.current;
+      inheritedLogoRef.current = null;
+      setFormData(f => f.logoUrl === prev ? { ...f, logoUrl: null } : f);
+    }
+  }, [formData.institutionCmsId, formData.accountType, cmsInstitutions]);
+
+  // ─── Logo upload handler ───────────────────────────────────────────────────
+  async function handleLogoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("logo", file);
+      const res = await fetch("/api/admin/accounts/upload-logo", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Upload failed");
+      }
+      const { logoUrl } = await res.json();
+      setFormData(f => ({ ...f, logoUrl }));
+      toast({ title: "Logo uploaded" });
+    } catch (err: any) {
+      toast({ title: "Logo upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setLogoUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   // ─── Mutations ────────────────────────────────────────────────────────────
 
@@ -480,11 +525,7 @@ export default function AdminAccountForm() {
     formData.accountType === "insurance_company" || formData.accountType === "migration_agent";
 
   const accountInitials = (formData.name || "AC").slice(0, 2).toUpperCase();
-
-  function applyLogoUrl() {
-    setFormData(f => ({ ...f, logoUrl: logoInputVal || null }));
-    setLogoEditMode(false);
-  }
+  const isInstitutionWithCmsLink = formData.accountType === "institution" && !!formData.institutionCmsId;
 
   if (!isNew && accountLoading) {
     return (
@@ -521,15 +562,18 @@ export default function AdminAccountForm() {
                   {accountInitials}
                 </AvatarFallback>
               </Avatar>
-              <button
-                type="button"
-                onClick={() => { setLogoInputVal(formData.logoUrl || ""); setLogoEditMode(true); }}
-                className="absolute inset-0 flex items-center justify-center rounded-md bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
-                data-testid="button-edit-logo"
-                title="Change logo"
-              >
-                <ImageIcon className="h-3.5 w-3.5 text-white" />
-              </button>
+              {!isInstitutionWithCmsLink && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={logoUploading}
+                  className="absolute inset-0 flex items-center justify-center rounded-md bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                  data-testid="button-edit-logo"
+                  title="Upload logo"
+                >
+                  {logoUploading ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" /> : <ImageIcon className="h-3.5 w-3.5 text-white" />}
+                </button>
+              )}
             </div>
 
             <div className="min-w-0">
@@ -572,28 +616,17 @@ export default function AdminAccountForm() {
           </div>
         </div>
 
-        {/* Logo URL edit bar (slides in) */}
-        {logoEditMode && (
-          <div className="border-t bg-muted/50 px-4 sm:px-6 py-2">
-            <div className="max-w-4xl mx-auto flex items-center gap-2">
-              <p className="text-xs text-muted-foreground shrink-0">Logo URL</p>
-              <Input
-                value={logoInputVal}
-                onChange={e => setLogoInputVal(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") applyLogoUrl(); if (e.key === "Escape") setLogoEditMode(false); }}
-                placeholder="https://example.com/logo.png"
-                className="h-7 text-xs flex-1"
-                autoFocus
-                data-testid="input-logo-url-inline"
-              />
-              <Button size="sm" onClick={applyLogoUrl} data-testid="button-apply-logo">Apply</Button>
-              <Button size="sm" variant="ghost" onClick={() => setLogoEditMode(false)}>
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
-        )}
       </header>
+
+      {/* Hidden file input for logo upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+        className="hidden"
+        onChange={handleLogoFileChange}
+        data-testid="input-logo-file"
+      />
 
       {/* ── Page body ─────────────────────────────────────────────────────── */}
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6">
@@ -609,14 +642,17 @@ export default function AdminAccountForm() {
                     {accountInitials}
                   </AvatarFallback>
                 </Avatar>
-                <button
-                  type="button"
-                  onClick={() => { setLogoInputVal(formData.logoUrl || ""); setLogoEditMode(true); }}
-                  className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Change logo"
-                >
-                  <ImageIcon className="h-5 w-5 text-white" />
-                </button>
+                {!isInstitutionWithCmsLink && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={logoUploading}
+                    className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Upload logo"
+                  >
+                    {logoUploading ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <ImageIcon className="h-5 w-5 text-white" />}
+                  </button>
+                )}
               </div>
 
               <div className="flex-1 min-w-0 space-y-3">
@@ -849,21 +885,56 @@ export default function AdminAccountForm() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Other</p>
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label>Logo URL</Label>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9 rounded-md shrink-0">
-                        <AvatarImage src={formData.logoUrl || ""} alt="" />
-                        <AvatarFallback className="rounded-md text-xs font-semibold bg-muted">
-                          {accountInitials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <Input
-                        value={formData.logoUrl || ""}
-                        onChange={e => setFormData({ ...formData, logoUrl: e.target.value || null })}
-                        placeholder="https://example.com/logo.png"
-                        data-testid="input-account-logo"
-                      />
-                    </div>
+                    <Label>Logo</Label>
+                    {isInstitutionWithCmsLink ? (
+                      <div className="flex items-center gap-3 p-3 rounded-md bg-muted/50 border">
+                        <Avatar className="h-9 w-9 rounded-md shrink-0">
+                          <AvatarImage src={formData.logoUrl || ""} alt="" />
+                          <AvatarFallback className="rounded-md text-xs font-semibold bg-muted">
+                            {accountInitials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Link2 className="h-3.5 w-3.5 shrink-0" />
+                          <span>Logo inherited from linked institution</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9 rounded-md shrink-0">
+                          <AvatarImage src={formData.logoUrl || ""} alt="" />
+                          <AvatarFallback className="rounded-md text-xs font-semibold bg-muted">
+                            {accountInitials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={logoUploading}
+                          data-testid="button-upload-logo"
+                        >
+                          {logoUploading ? (
+                            <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Uploading…</>
+                          ) : (
+                            <><Upload className="h-3.5 w-3.5 mr-1.5" />{formData.logoUrl ? "Change Logo" : "Upload Logo"}</>
+                          )}
+                        </Button>
+                        {formData.logoUrl && !logoUploading && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setFormData(f => ({ ...f, logoUrl: null }))}
+                            data-testid="button-remove-logo"
+                            title="Remove logo"
+                          >
+                            <X className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <Label>Notes</Label>
