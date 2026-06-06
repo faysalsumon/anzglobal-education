@@ -5727,6 +5727,7 @@ export const accounts = pgTable("accounts", {
   contractType: text("contract_type"),
   indirectPartnerId: text("indirect_partner_id").references((): any => accounts.id, { onDelete: "set null" }),
   institutionCmsId: varchar("institution_cms_id").references(() => universities.id, { onDelete: "set null" }),
+  primaryContactId: text("primary_contact_id").references((): any => crmContacts.id, { onDelete: "set null" }),
   contactName: text("contact_name"),
   email: text("email"),
   phone: text("phone"),

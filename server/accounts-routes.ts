@@ -6,6 +6,7 @@ import {
   accounts,
   accountProducts,
   accountRestrictedDetails,
+  crmContacts,
   insertAccountSchema,
   insertAccountProductSchema,
   insertAccountRestrictedDetailsSchema,
@@ -72,7 +73,7 @@ export function registerAccountsRoutes(app: Express) {
     }
   });
 
-  // GET /api/admin/accounts/:id — single account with products
+  // GET /api/admin/accounts/:id — single account with products and linked primary contact
   app.get("/api/admin/accounts/:id", isAuthenticated, async (req: any, res: Response) => {
     try {
       const user = req.user as any;
@@ -81,8 +82,27 @@ export function registerAccountsRoutes(app: Express) {
       if (!adminCheck.isAdmin) return res.status(403).json({ message: "Forbidden" });
 
       const { id } = req.params;
-      const [account] = await db.select().from(accounts).where(eq(accounts.id, id)).limit(1);
-      if (!account) return res.status(404).json({ message: "Account not found" });
+
+      const rows = await db
+        .select({
+          account: accounts,
+          primaryContact: {
+            id: crmContacts.id,
+            firstName: crmContacts.firstName,
+            lastName: crmContacts.lastName,
+            email: crmContacts.email,
+            contactType: crmContacts.contactType,
+            photo: crmContacts.photo,
+          },
+        })
+        .from(accounts)
+        .leftJoin(crmContacts, eq(accounts.primaryContactId, crmContacts.id))
+        .where(eq(accounts.id, id))
+        .limit(1);
+
+      if (!rows.length) return res.status(404).json({ message: "Account not found" });
+
+      const { account, primaryContact } = rows[0];
 
       const products = await db
         .select()
@@ -90,7 +110,7 @@ export function registerAccountsRoutes(app: Express) {
         .where(eq(accountProducts.accountId, id))
         .orderBy(accountProducts.name);
 
-      res.json({ ...account, products });
+      res.json({ ...account, primaryContact: primaryContact?.id ? primaryContact : null, products });
     } catch (err: any) {
       console.error("[Accounts] GET /:id error:", err);
       res.status(500).json({ message: "Failed to fetch account" });

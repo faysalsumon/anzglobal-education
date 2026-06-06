@@ -12,10 +12,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ArrowLeft, Save, Loader2, Building2, Plus, X, Check,
-  Package, Trash2, Edit, ImageIcon
+  ArrowLeft, Save, Loader2, Plus, X, Check,
+  Package, Trash2, Edit, ImageIcon, UserRound, ChevronsUpDown, ExternalLink
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -30,6 +32,15 @@ type AccountType =
 
 type ProductType = "insurance" | "visa";
 
+interface CrmContactSummary {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  contactType: string;
+  photo: string | null;
+}
+
 interface Account {
   id: string;
   name: string;
@@ -38,6 +49,8 @@ interface Account {
   contractType: string | null;
   indirectPartnerId: string | null;
   institutionCmsId: string | null;
+  primaryContactId: string | null;
+  primaryContact?: CrmContactSummary | null;
   contactName: string | null;
   email: string | null;
   phone: string | null;
@@ -95,6 +108,17 @@ const ACCOUNT_TYPE_COLORS: Record<AccountType, string> = {
 
 const PROVIDER_TYPES = ["University", "TAFE", "College", "School", "Institute", "Other"];
 
+const CONTACT_TYPE_LABELS: Record<string, string> = {
+  none: "None",
+  clients: "Client",
+  employee: "Employee",
+  external: "External",
+  internal: "Internal",
+  others: "Other",
+  partner: "Partner",
+  providers_rep: "Provider's Rep",
+};
+
 function emptyForm(): Partial<Account> {
   return {
     name: "",
@@ -103,6 +127,7 @@ function emptyForm(): Partial<Account> {
     contractType: null,
     indirectPartnerId: null,
     institutionCmsId: null,
+    primaryContactId: null,
     contactName: null,
     email: null,
     phone: null,
@@ -115,6 +140,159 @@ function emptyForm(): Partial<Account> {
     notes: null,
     isActive: true,
   };
+}
+
+// ─── ContactPicker ─────────────────────────────────────────────────────────────
+
+interface ContactPickerProps {
+  value: CrmContactSummary | null;
+  onChange: (contact: CrmContactSummary | null) => void;
+}
+
+function ContactPicker({ value, onChange }: ContactPickerProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const { data: results = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/crm/contacts", "picker", search],
+    queryFn: async () => {
+      const params = new URLSearchParams({ limit: "20" });
+      if (search) params.set("search", search);
+      else params.set("type", "providers_rep");
+      const res = await fetch(`/api/crm/contacts?${params}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.contacts ?? data;
+    },
+    staleTime: 10_000,
+  });
+
+  const contacts: CrmContactSummary[] = results.map((r: any) => {
+    const c = r.contact ?? r;
+    return {
+      id: c.id,
+      firstName: c.firstName ?? c.first_name ?? "",
+      lastName: c.lastName ?? c.last_name ?? "",
+      email: c.email ?? "",
+      contactType: c.contactType ?? c.contact_type ?? "none",
+      photo: c.photo ?? null,
+    };
+  });
+
+  if (value) {
+    const initials = `${value.firstName[0] ?? ""}${value.lastName[0] ?? ""}`.toUpperCase();
+    return (
+      <div className="flex items-center gap-3 p-3 rounded-md border bg-muted/30" data-testid="contact-picker-selected">
+        <Avatar className="h-9 w-9 shrink-0">
+          <AvatarImage src={value.photo || ""} alt={`${value.firstName} ${value.lastName}`} />
+          <AvatarFallback className="text-xs font-semibold">{initials || <UserRound className="h-4 w-4" />}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium leading-tight">{value.firstName} {value.lastName}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-xs text-muted-foreground truncate">{value.email}</span>
+            {value.contactType && value.contactType !== "none" && (
+              <Badge variant="secondary" className="text-xs shrink-0">
+                {CONTACT_TYPE_LABELS[value.contactType] ?? value.contactType}
+              </Badge>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button
+            type="button" size="icon" variant="ghost"
+            onClick={() => window.open(`/admin?tab=crm&contactId=${value.id}`, "_blank")}
+            title="Open contact"
+            data-testid="button-open-contact"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            type="button" size="icon" variant="ghost"
+            onClick={() => onChange(null)}
+            title="Unlink contact"
+            data-testid="button-unlink-contact"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button" variant="outline"
+          className="w-full justify-between font-normal"
+          data-testid="button-open-contact-picker"
+        >
+          <span className="text-muted-foreground">Search or select a contact…</span>
+          <ChevronsUpDown className="h-4 w-4 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Search by name or email…"
+            value={search}
+            onValueChange={setSearch}
+            data-testid="input-contact-search"
+          />
+          <CommandList>
+            {isLoading && (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {!isLoading && contacts.length === 0 && (
+              <CommandEmpty>No contacts found.</CommandEmpty>
+            )}
+            {!isLoading && contacts.length > 0 && (
+              <CommandGroup heading={search ? "Results" : "Provider's Reps"}>
+                {contacts.map(c => {
+                  const initials = `${c.firstName[0] ?? ""}${c.lastName[0] ?? ""}`.toUpperCase();
+                  return (
+                    <CommandItem
+                      key={c.id}
+                      value={c.id}
+                      onSelect={() => { onChange(c); setOpen(false); setSearch(""); }}
+                      data-testid={`contact-option-${c.id}`}
+                    >
+                      <Avatar className="h-7 w-7 mr-2 shrink-0">
+                        <AvatarImage src={c.photo || ""} alt={`${c.firstName} ${c.lastName}`} />
+                        <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm leading-tight">{c.firstName} {c.lastName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{c.email}</p>
+                      </div>
+                      {c.contactType && c.contactType !== "none" && (
+                        <Badge variant="secondary" className="text-xs ml-2 shrink-0">
+                          {CONTACT_TYPE_LABELS[c.contactType] ?? c.contactType}
+                        </Badge>
+                      )}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+          </CommandList>
+          <div className="border-t p-2">
+            <Button
+              type="button" variant="ghost" size="sm"
+              className="w-full justify-start text-muted-foreground"
+              onClick={() => { window.open("/admin?tab=crm&new=contact&contactType=providers_rep", "_blank"); setOpen(false); }}
+              data-testid="button-new-contact-from-picker"
+            >
+              <Plus className="h-3.5 w-3.5 mr-2" /> Create new contact
+            </Button>
+          </div>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 function emptyRestricted(): Partial<RestrictedDetails> {
@@ -144,6 +322,7 @@ export default function AdminAccountForm() {
 
   const [formData, setFormData] = useState<Partial<Account>>(emptyForm());
   const [restrictedData, setRestrictedData] = useState<Partial<RestrictedDetails>>(emptyRestricted());
+  const [primaryContact, setPrimaryContact] = useState<CrmContactSummary | null>(null);
   const [activeTab, setActiveTab] = useState("details");
   const [logoEditMode, setLogoEditMode] = useState(false);
   const [logoInputVal, setLogoInputVal] = useState("");
@@ -213,6 +392,9 @@ export default function AdminAccountForm() {
     if (account) {
       setFormData({ ...account });
       setLogoInputVal(account.logoUrl || "");
+      if (account.primaryContact) {
+        setPrimaryContact(account.primaryContact);
+      }
     }
   }, [account]);
 
@@ -226,7 +408,7 @@ export default function AdminAccountForm() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const body = { ...formData };
+      const body: any = { ...formData, primaryContactId: primaryContact?.id ?? null };
       if (formData.accountType !== "institution") {
         body.contractType = null;
         body.indirectPartnerId = null;
@@ -580,18 +762,17 @@ export default function AdminAccountForm() {
               <CardContent className="pt-5 pb-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Contact Information</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Contact Name</Label>
-                    <Input
-                      value={formData.contactName || ""}
-                      onChange={e => setFormData({ ...formData, contactName: e.target.value || null })}
-                      placeholder="Primary contact person"
-                      data-testid="input-contact-name"
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Primary Contact</Label>
+                    <ContactPicker
+                      value={primaryContact}
+                      onChange={setPrimaryContact}
                     />
+                    <p className="text-xs text-muted-foreground">Link to a CRM contact — Provider's Rep contacts shown by default.</p>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label>Email</Label>
+                    <Label>Organisation Email</Label>
                     <Input
                       type="email"
                       value={formData.email || ""}
@@ -602,7 +783,7 @@ export default function AdminAccountForm() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label>Phone</Label>
+                    <Label>Organisation Phone</Label>
                     <Input
                       value={formData.phone || ""}
                       onChange={e => setFormData({ ...formData, phone: e.target.value || null })}
@@ -611,7 +792,7 @@ export default function AdminAccountForm() {
                     />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 sm:col-span-2">
                     <Label>Website</Label>
                     <Input
                       value={formData.website || ""}
