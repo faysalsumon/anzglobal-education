@@ -521,14 +521,14 @@ export function AdminAccountsPanel() {
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label>Link to Institution (CMS)</Label>
                       <Select
-                        value={formData.institutionCmsId || ""}
-                        onValueChange={v => setFormData({ ...formData, institutionCmsId: v || null })}
+                        value={formData.institutionCmsId || "__none__"}
+                        onValueChange={v => setFormData({ ...formData, institutionCmsId: v === "__none__" ? null : v })}
                       >
                         <SelectTrigger data-testid="select-institution-cms">
                           <SelectValue placeholder="Search and select institution…" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">— None —</SelectItem>
+                          <SelectItem value="__none__">— None —</SelectItem>
                           {cmsInstitutions.map(inst => (
                             <SelectItem key={inst.id} value={String(inst.id)}>
                               {inst.name}{inst.country ? ` (${inst.country})` : ""}

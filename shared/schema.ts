@@ -2887,7 +2887,7 @@ export const crmContacts = pgTable("crm_contacts", {
   notes: text("notes"),
   
   // Sub-agent tracking (when entrySource = 'sub_agent')
-  subAgentAccountId: text("sub_agent_account_id"),
+  subAgentAccountId: text("sub_agent_account_id").references((): any => accounts.id, { onDelete: "set null" }),
 
   // Created/Updated by tracking
   createdByUserId: varchar("created_by_user_id").references(() => users.id),
