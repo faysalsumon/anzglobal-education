@@ -22590,7 +22590,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         });
       }
 
-      const institution = await storage.getUniversity(institutionId);
+      const institution = await storage.getUniversityById(institutionId);
       if (!institution) {
         await logPartnerUsage(req, 404);
         return res.status(404).json({
