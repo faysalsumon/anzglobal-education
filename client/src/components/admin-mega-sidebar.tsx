@@ -72,6 +72,7 @@ interface AdminMegaSidebarProps {
   hasFullAdminAccess: boolean;
   isCTO?: boolean;
   isMarketingExecutive?: boolean;
+  isAccountsOfficer?: boolean;
   isMobileMenuOpen?: boolean;
   onMobileMenuToggle?: () => void;
 }
@@ -82,6 +83,7 @@ export function AdminMegaSidebar({
   hasFullAdminAccess, 
   isCTO = false,
   isMarketingExecutive = false,
+  isAccountsOfficer = false,
   isMobileMenuOpen = false,
   onMobileMenuToggle
 }: AdminMegaSidebarProps) {
@@ -155,12 +157,12 @@ export function AdminMegaSidebar({
       color: "text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-400",
       showSection: canSeeNav("finance"),
       routes: [
-        { icon: BarChart3, label: "Dashboard", value: "finance-dashboard", show: hasFullAdminAccess },
-        { icon: FileText, label: "Invoices", value: "finance-invoices", show: hasFullAdminAccess },
-        { icon: Users, label: "Customers", value: "finance-customers", show: hasFullAdminAccess },
-        { icon: Package, label: "Items", value: "finance-items", show: hasFullAdminAccess },
-        { icon: BookOpen, label: "Chart of Accounts", value: "finance-accounts", show: hasFullAdminAccess },
-        { icon: DollarSign, label: "Accounting", value: "accounting", show: hasFullAdminAccess },
+        { icon: BarChart3, label: "Dashboard", value: "finance-dashboard", show: hasFullAdminAccess || isAccountsOfficer },
+        { icon: FileText, label: "Invoices", value: "finance-invoices", show: hasFullAdminAccess || isAccountsOfficer },
+        { icon: Users, label: "Customers", value: "finance-customers", show: hasFullAdminAccess || isAccountsOfficer },
+        { icon: Package, label: "Items", value: "finance-items", show: hasFullAdminAccess || isAccountsOfficer },
+        { icon: BookOpen, label: "Chart of Accounts", value: "finance-accounts", show: hasFullAdminAccess || isAccountsOfficer },
+        { icon: DollarSign, label: "Accounting", value: "accounting", show: hasFullAdminAccess || isAccountsOfficer },
       ],
     },
     {

@@ -394,7 +394,7 @@ export async function syncUserProfileToCrmContact(userId: string): Promise<{ suc
 }
 
 // Sync platform users to CRM contacts (students → clients)
-router.post("/contacts/sync-users", requireAdmin, async (req: any, res) => {
+router.post("/contacts/sync-users", requireAdmin, requireCrmWriteAccess, async (req: any, res) => {
   try {
     const userId = getUserId(req);
     if (!userId) {

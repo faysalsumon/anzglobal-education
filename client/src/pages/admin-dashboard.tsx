@@ -439,7 +439,7 @@ const PROVIDER_TYPES = ["Institution", "TAFE", "University", "College", "School"
 
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const { user, isLoading, isAuthenticated, isAuthResolved, adminRole, isConsultant, isCTO, isMarketingExecutive, hasFullAdminAccess, isAdmin, isBranchManager } = useAuth();
+  const { user, isLoading, isAuthenticated, isAuthResolved, adminRole, isConsultant, isCTO, isMarketingExecutive, hasFullAdminAccess, isAdmin, isBranchManager, isAccountsOfficer } = useAuth();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const { signOut } = useSupabaseAuth();
@@ -500,6 +500,7 @@ export default function AdminDashboard() {
   const getInitialTab = () => {
     const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'crm-leads', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
     const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
+    const financeTabsForAccountsOfficer = ['finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting'];
     const ctoOnlyTabs = ['ai-settings'];
     const superAdminOnlyTabs = ['role-management', 'profile-management'];
     const marketingExecutiveTabs = ['institutions'];
@@ -520,9 +521,13 @@ export default function AdminDashboard() {
       if (superAdminOnlyTabs.includes(tab) && !isCTO) {
         return defaultTab;
       }
-      // Check access for full-admin-only tabs
+      // Check access for full-admin-only tabs (accounts_officer may access finance tabs)
       if (fullAdminOnlyTabs.includes(tab) && !hasFullAdminAccess) {
-        return defaultTab; // Restricted admin - use default
+        if (isAccountsOfficer && financeTabsForAccountsOfficer.includes(tab)) {
+          // accounts_officer has full finance access — allow
+        } else {
+          return defaultTab;
+        }
       }
       // Marketing Executive tabs - accessible by full admins OR marketing executives
       if (marketingExecutiveTabs.includes(tab) && !hasFullAdminAccess && !isMarketingExecutive) {
@@ -1943,6 +1948,7 @@ export default function AdminDashboard() {
         hasFullAdminAccess={hasFullAdminAccess}
         isCTO={isCTO}
         isMarketingExecutive={isMarketingExecutive}
+        isAccountsOfficer={isAccountsOfficer}
         isMobileMenuOpen={isMobileMenuOpen}
         onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
