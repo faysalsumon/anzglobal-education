@@ -17573,6 +17573,15 @@ Sitemap: ${baseUrl}/sitemap.xml
     _markRouteGroup('accounting-routes', false, err);
   }
 
+  // Register Accounts (B2B Partner Registry) routes
+  try {
+    const { registerAccountsRoutes } = await import('./accounts-routes');
+    registerAccountsRoutes(app);
+    _markRouteGroup('accounts-routes', true);
+  } catch (err) {
+    _markRouteGroup('accounts-routes', false, err);
+  }
+
   // ========== Activity Logs API ==========
   
   // Get all activity logs (admin only) with optional filtering

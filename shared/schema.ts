@@ -2886,6 +2886,9 @@ export const crmContacts = pgTable("crm_contacts", {
   // Notes
   notes: text("notes"),
   
+  // Sub-agent tracking (when entrySource = 'sub_agent')
+  subAgentAccountId: text("sub_agent_account_id"),
+
   // Created/Updated by tracking
   createdByUserId: varchar("created_by_user_id").references(() => users.id),
   updatedByUserId: varchar("updated_by_user_id").references(() => users.id),
@@ -5699,3 +5702,80 @@ export const accReminderLogs = pgTable("acc_reminder_logs", {
   sentAt: timestamp("sent_at").notNull().defaultNow(),
   triggeredBy: varchar("triggered_by", { length: 255 }),
 });
+
+// ─── Accounts Module (B2B Partner Registry) ──────────────────────────────────
+
+export const accountTypeEnum = pgEnum('account_type_enum', [
+  'institution',
+  'super_agent',
+  'sub_agent',
+  'pathway_provider',
+  'insurance_company',
+  'migration_agent',
+]);
+
+export const accountProductTypeEnum = pgEnum('account_product_type_enum', [
+  'insurance',
+  'visa',
+]);
+
+export const accounts = pgTable("accounts", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  accountType: accountTypeEnum("account_type").notNull(),
+  providerType: text("provider_type"),
+  contractType: text("contract_type"),
+  indirectPartnerId: text("indirect_partner_id").references((): any => accounts.id, { onDelete: "set null" }),
+  institutionCmsId: varchar("institution_cms_id").references(() => universities.id, { onDelete: "set null" }),
+  contactName: text("contact_name"),
+  email: text("email"),
+  phone: text("phone"),
+  website: text("website"),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  country: text("country"),
+  logoUrl: text("logo_url"),
+  isActive: boolean("is_active").default(true).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const accountRestrictedDetails = pgTable("account_restricted_details", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: text("account_id").unique().notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  bankName: text("bank_name"),
+  accountHolderName: text("account_holder_name"),
+  accountNumber: text("account_number"),
+  bsb: text("bsb"),
+  swiftCode: text("swift_code"),
+  contractStartDate: date("contract_start_date"),
+  contractEndDate: date("contract_end_date"),
+  contractNotes: text("contract_notes"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const accountProducts = pgTable("account_products", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  productType: accountProductTypeEnum("product_type").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  studentPrice: decimal("student_price", { precision: 10, scale: 2 }),
+  agentCost: decimal("agent_cost", { precision: 10, scale: 2 }),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true, createdAt: true, updatedAt: true });
+export type Account = typeof accounts.$inferSelect;
+export type InsertAccount = z.infer<typeof insertAccountSchema>;
+
+export const insertAccountProductSchema = createInsertSchema(accountProducts).omit({ id: true, createdAt: true });
+export type AccountProduct = typeof accountProducts.$inferSelect;
+export type InsertAccountProduct = z.infer<typeof insertAccountProductSchema>;
+
+export const insertAccountRestrictedDetailsSchema = createInsertSchema(accountRestrictedDetails).omit({ id: true, updatedAt: true });
+export type AccountRestrictedDetails = typeof accountRestrictedDetails.$inferSelect;
+export type InsertAccountRestrictedDetails = z.infer<typeof insertAccountRestrictedDetailsSchema>;

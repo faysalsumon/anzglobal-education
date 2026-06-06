@@ -30,6 +30,7 @@ import {
   LogOut,
   DollarSign,
   Package,
+  Briefcase,
 } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { performLogout } from "@/lib/logout";
@@ -84,6 +85,12 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess, isCTO
       icon: ClipboardList,
       label: "Applications",
       value: "applications",
+      show: true,
+    },
+    {
+      icon: Briefcase,
+      label: "Accounts",
+      value: "accounts",
       show: true,
     },
   ];

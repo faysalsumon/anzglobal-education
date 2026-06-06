@@ -75,6 +75,7 @@ interface CrmContact {
   assignedTo: string | null;
   sourceLeadId: string | null;
   branchId: string | null;
+  subAgentAccountId: number | null;
   referenceSource: string | null;
   utmSource: string | null;
   utmMedium: string | null;
@@ -363,6 +364,34 @@ function PreferenceSlot({ rank, pref, institutions, onChange, onRemove, canRemov
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Sub-Agent Account Picker ─────────────────────────────────────────────────
+
+interface AccountOption { id: number; name: string; }
+
+function SubAgentPicker({ value, onChange }: { value: number | null; onChange: (id: number | null) => void }) {
+  const { data: accounts = [] } = useQuery<AccountOption[]>({
+    queryKey: ["/api/admin/accounts/by-type/sub_agent"],
+  });
+  return (
+    <div className="space-y-2">
+      <Label>Referring Sub Agent</Label>
+      <Select
+        value={value ? String(value) : ""}
+        onValueChange={(v) => onChange(v ? Number(v) : null)}
+      >
+        <SelectTrigger data-testid="select-sub-agent-account">
+          <SelectValue placeholder="Select sub agent…" />
+        </SelectTrigger>
+        <SelectContent>
+          {accounts.map((a) => (
+            <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -1045,13 +1074,19 @@ export default function AdminContactForm() {
                 )}
                 <div className="space-y-2">
                   <Label htmlFor="entrySource">Entry Source</Label>
-                  <Select value={formData.entrySource || ""} onValueChange={(value: EntrySource) => setFormData({ ...formData, entrySource: value })}>
+                  <Select value={formData.entrySource || ""} onValueChange={(value: EntrySource) => setFormData({ ...formData, entrySource: value, subAgentAccountId: value !== 'sub_agent' ? null : formData.subAgentAccountId })}>
                     <SelectTrigger id="entrySource" data-testid="select-entry-source"><SelectValue placeholder="Select source" /></SelectTrigger>
                     <SelectContent>
                       {entrySourceOptions.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
+                {formData.entrySource === 'sub_agent' && (
+                  <SubAgentPicker
+                    value={formData.subAgentAccountId || null}
+                    onChange={(id) => setFormData({ ...formData, subAgentAccountId: id })}
+                  />
+                )}
                 {(formData.contactType === 'clients' || isLeadMode) && (
                   <div className="space-y-2">
                     <Label htmlFor="leadRating">Lead Rating</Label>
