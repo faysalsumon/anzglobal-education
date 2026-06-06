@@ -213,7 +213,7 @@ export default function CourseForm() {
       console.log("Fees type:", typeof data.fees, "Value:", data.fees);
       
       // Handle sub-discipline creation if needed
-      let finalData = { ...data };
+      const finalData = { ...data };
       if (subDisciplineInput && data.discipline) {
         // Create slug from input
         const slug = subDisciplineInput.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');

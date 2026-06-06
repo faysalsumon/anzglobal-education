@@ -1115,7 +1115,7 @@ export async function getAdminContext(userId: string): Promise<AdminContext> {
     )
     .then((r) => r[0]?.count ?? 0);
 
-  let teammates: AdminContext["teammates"] = [];
+  const teammates: AdminContext["teammates"] = [];
   if (branchId) {
     const samebranchUsers = await db
       .select({ id: users.id, firstName: users.firstName, lastName: users.lastName })
@@ -1362,7 +1362,7 @@ export function registerAdminChatRoutes(app: Express) {
         if (!content?.trim()) return res.status(400).json({ message: "Message content required" });
 
         const ctx = await getAdminContext(userId);
-        let systemPrompt = buildSystemPrompt(ctx);
+        const systemPrompt = buildSystemPrompt(ctx);
 
         const canDoDataEntry = await hasDataEntryPermission(user, userId);
 

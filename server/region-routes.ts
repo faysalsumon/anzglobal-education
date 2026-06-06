@@ -507,7 +507,7 @@ export function registerRegionRoutes(router: Router) {
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
 
-      let filteredCourses = allCourses.filter(course => {
+      const filteredCourses = allCourses.filter(course => {
         const university = allUniversities.find(u => u.id === course.universityId);
         const isApprovedAndActive = course.approvalStatus === 'approved' && 
                course.isActive &&

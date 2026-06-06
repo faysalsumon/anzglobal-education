@@ -589,7 +589,7 @@ router.get("/contacts", requireAdmin, async (req, res) => {
       offset = "0"
     } = req.query;
 
-    let conditions: any[] = [];
+    const conditions: any[] = [];
 
     if (type) {
       conditions.push(eq(crmContacts.contactType, type as any));
@@ -1285,7 +1285,7 @@ router.get("/team-members", requireAdmin, async (req: any, res) => {
   try {
     const { search } = req.query;
     
-    let conditions: any[] = [
+    const conditions: any[] = [
       or(
         eq(users.userType, 'admin'),
         eq(users.userType, 'platform_admin')

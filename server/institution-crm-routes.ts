@@ -413,7 +413,7 @@ router.get("/institutions/:institutionId/documents", requireAdmin, async (req: a
     const { institutionId } = req.params;
     const { category } = req.query;
     
-    let conditions = [eq(institutionDocuments.institutionId, institutionId)];
+    const conditions = [eq(institutionDocuments.institutionId, institutionId)];
     
     if (category) {
       conditions.push(eq(institutionDocuments.category, category as any));

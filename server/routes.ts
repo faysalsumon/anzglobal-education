@@ -1083,7 +1083,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/set-user-type", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      let { userType } = req.body;
+      const { userType } = req.body;
 
       if (!["student", "admin", "platform_admin"].includes(userType)) {
         return res.status(400).json({ message: "Invalid user type" });
@@ -2580,7 +2580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const regionCode = (req.query.region as string)?.toUpperCase() || regionContext.region?.code;
 
       // Filter to only show published and approved courses from published, approved, and publicly visible institutions
-      let courses = allCourses.filter(course => {
+      const courses = allCourses.filter(course => {
         const university = allUniversities.find(u => u.id === course.universityId);
         // Check course is published, approved, active, and visible to this user
         // Course-level visibility: private courses are only visible to authenticated students
@@ -2642,7 +2642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Fetch tags for all courses
       const courseIds = courses.map(c => c.id);
-      let courseTagsMap: Record<string, Array<{ id: number; name: string; slug: string; category: string; color: string | null }>> = {};
+      const courseTagsMap: Record<string, Array<{ id: number; name: string; slug: string; category: string; color: string | null }>> = {};
       
       if (courseIds.length > 0) {
         const courseTagsWithDetails = await db
@@ -2673,7 +2673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Fetch pricing configs for all courses to get feePeriod
-      let coursePricingConfigMap: Record<string, string> = {};
+      const coursePricingConfigMap: Record<string, string> = {};
       if (courseIds.length > 0) {
         const pricingConfigs = await db
           .select({
@@ -2834,7 +2834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Filter courses based on parsed parameters
-      let filteredCourses = allCourses.filter(course => {
+      const filteredCourses = allCourses.filter(course => {
         const university = allUniversities.find(u => u.id === course.universityId);
         
         // Only include published and approved courses from published, approved, and publicly visible institutions
@@ -2973,7 +2973,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allInstitutions = await storage.getAllUniversities();
       
       // Filter institutions based on parsed parameters
-      let filteredInstitutions = allInstitutions.filter(institution => {
+      const filteredInstitutions = allInstitutions.filter(institution => {
         // Only include approved and active institutions
         if (institution.approvalStatus !== 'approved' || !institution.isActive) return false;
         
@@ -4168,7 +4168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      let conditions: any[] = [eq(crmContacts.contactType, 'clients')];
+      const conditions: any[] = [eq(crmContacts.contactType, 'clients')];
       
       const allContacts = await db.select().from(crmContacts)
         .where(and(...conditions));
@@ -5001,7 +5001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { courseIds, filter, universityId, limit: batchLimit } = req.body;
       const maxBatch = Math.min(batchLimit || 100, 100);
       
-      let coursesToProcess: any[] = [];
+      const coursesToProcess: any[] = [];
       
       if (courseIds && Array.isArray(courseIds)) {
         for (const id of courseIds.slice(0, maxBatch)) {
@@ -9257,7 +9257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { userType, branchId } = req.query;
 
-      let conditions: any[] = [];
+      const conditions: any[] = [];
       
       // Filter by user type if specified
       if (userType) {
@@ -10057,7 +10057,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      let { userType, role } = req.body;
+      const { userType, role } = req.body;
       const targetUserId = req.params.id;
 
       if (!["student", "admin", "platform_admin"].includes(userType)) {
@@ -15479,7 +15479,7 @@ ANZ Global Education provides pre-departure orientations and ongoing support for
 
       const { entityType, status } = req.query;
       
-      let query = db.select().from(seoMetadata);
+      const query = db.select().from(seoMetadata);
       
       const conditions = [];
       if (entityType && ['course', 'institution', 'blog'].includes(entityType as string)) {
@@ -15844,8 +15844,8 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
       };
       
       // Enforce character limits with truncation fallback
-      let metaTitle = truncateWithEllipsis((generatedContent.metaTitle || '').trim(), 60, 35);
-      let metaDescription = truncateWithEllipsis((generatedContent.metaDescription || '').trim(), 160, 100);
+      const metaTitle = truncateWithEllipsis((generatedContent.metaTitle || '').trim(), 60, 35);
+      const metaDescription = truncateWithEllipsis((generatedContent.metaDescription || '').trim(), 160, 100);
       
       res.json({
         entityType,
@@ -16705,9 +16705,9 @@ Sitemap: ${baseUrl}/sitemap.xml
       }
 
       // Validate based on type
-      let validationErrors: ValidationError[] = [];
+      const validationErrors: ValidationError[] = [];
       const structuredRows: ParsedCSVRow[] = [];
-      let universitiesMap = new Map<string, string>();
+      const universitiesMap = new Map<string, string>();
       
       // Load existing data for duplicate detection
       let existingNames: Set<string> | undefined;
@@ -19903,7 +19903,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       ]);
 
       // Process institutions
-      let featuredInstitutions: any[] = rawInstitutions.map(inst => {
+      const featuredInstitutions: any[] = rawInstitutions.map(inst => {
         const campuses = inst.campusAddresses as any[] | null;
         const firstCampus = campuses?.[0];
         return {
@@ -20870,7 +20870,7 @@ Sitemap: ${baseUrl}/sitemap.xml
     try {
       const { country, levelCategory } = req.query;
       
-      let query = db.select().from(academicQualificationTypes).where(eq(academicQualificationTypes.isActive, true));
+      const query = db.select().from(academicQualificationTypes).where(eq(academicQualificationTypes.isActive, true));
       
       const results = await query.orderBy(
         academicQualificationTypes.country,

@@ -69,7 +69,7 @@ type UnauthorizedBehavior = "returnNull" | "throw";
 function buildUrlFromQueryKey(queryKey: readonly unknown[]): string {
   // Filter out non-string parts for the path, handle objects as query params
   const pathParts: string[] = [];
-  let queryParams: Record<string, string> = {};
+  const queryParams: Record<string, string> = {};
   
   for (const part of queryKey) {
     if (typeof part === 'string') {

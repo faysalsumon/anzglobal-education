@@ -2085,7 +2085,7 @@ export async function sendInvoiceEmail(
     });
 
     const baseUrl = getEmailBaseUrl();
-    let subject = custom?.subject || `Invoice ${invoice.invoiceNumber} from ANZ Global Education`;
+    const subject = custom?.subject || `Invoice ${invoice.invoiceNumber} from ANZ Global Education`;
     let html: string;
 
     if (custom?.body) {
@@ -2176,7 +2176,7 @@ export async function sendPaymentReceiptEmail(
     });
 
     const baseUrl = getEmailBaseUrl();
-    let subject = custom?.subject || `Payment Receipt — Invoice ${invoiceNumber}`;
+    const subject = custom?.subject || `Payment Receipt — Invoice ${invoiceNumber}`;
     let html: string;
 
     if (custom?.body) {
@@ -2229,7 +2229,7 @@ export async function sendInvoiceReminderEmail(
     });
 
     const baseUrl = getEmailBaseUrl();
-    let subject = custom?.subject || `Reminder: Invoice ${invoice.invoiceNumber} — Payment Overdue`;
+    const subject = custom?.subject || `Reminder: Invoice ${invoice.invoiceNumber} — Payment Overdue`;
     let html: string;
 
     if (custom?.body) {

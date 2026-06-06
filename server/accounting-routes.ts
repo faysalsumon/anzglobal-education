@@ -738,7 +738,7 @@ export function registerAccountingRoutes(app: Express) {
     if (status !== undefined) safeUpdates.status = status;
 
     if (lineItems && Array.isArray(lineItems)) {
-      let subtotal = lineItems.reduce((sum: number, item: { quantity?: string | number; unitPrice?: string | number }) => {
+      const subtotal = lineItems.reduce((sum: number, item: { quantity?: string | number; unitPrice?: string | number }) => {
         return sum + (parseFloat(String(item.quantity || 1)) * parseFloat(String(item.unitPrice || 0)));
       }, 0);
       const gst = gstEnabled ?? false;

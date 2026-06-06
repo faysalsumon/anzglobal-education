@@ -33,7 +33,7 @@ export function registerAccountsRoutes(app: Express) {
 
       const { type, search, active } = req.query as any;
 
-      let query = db.select().from(accounts);
+      const query = db.select().from(accounts);
       const conditions: any[] = [];
 
       if (type) conditions.push(eq(accounts.accountType, type));

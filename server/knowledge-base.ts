@@ -39,7 +39,7 @@ const openai = new OpenAI({
 // Cache for Pinecone index to avoid repeated initialization
 let cachedPineconeIndex: any = null;
 let indexInitializationPromise: Promise<any> | null = null;
-let initializationAttempts = 0;
+const initializationAttempts = 0;
 const MAX_INIT_ATTEMPTS = 3;
 
 // Initialize Pinecone client

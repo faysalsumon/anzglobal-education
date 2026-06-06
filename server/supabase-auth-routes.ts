@@ -741,7 +741,7 @@ router.post('/sync-user', async (req: Request, res: Response) => {
     const safeUserType = userType === 'student' ? 'student' : 'student';
 
     // Check if user already exists in local database
-    let existingUser = await storage.getUserByEmail(email);
+    const existingUser = await storage.getUserByEmail(email);
 
     if (existingUser) {
       // Update existing user's verification status and profile image if not set
