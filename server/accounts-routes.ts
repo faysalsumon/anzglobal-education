@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs/promises";
 import multer from "multer";
 import { db } from "./db";
-import { isAuthenticated } from "./supabase-middleware";
+import { isUnifiedAuthenticated } from "./supabase-middleware";
 import { checkAdminAccess } from "./routes";
 import {
   accounts,
@@ -24,7 +24,7 @@ const logoUpload = multer({
 export function registerAccountsRoutes(app: Express) {
 
   // GET /api/admin/accounts — list all accounts with optional ?type= and ?search= filters
-  app.get("/api/admin/accounts", isAuthenticated, async (req: any, res: Response) => {
+  app.get("/api/admin/accounts", isUnifiedAuthenticated, async (req: any, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
@@ -60,7 +60,7 @@ export function registerAccountsRoutes(app: Express) {
   });
 
   // GET /api/admin/accounts/by-type/:type — used by dropdowns
-  app.get("/api/admin/accounts/by-type/:type", isAuthenticated, async (req: any, res: Response) => {
+  app.get("/api/admin/accounts/by-type/:type", isUnifiedAuthenticated, async (req: any, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
@@ -82,7 +82,7 @@ export function registerAccountsRoutes(app: Express) {
   });
 
   // GET /api/admin/accounts/:id — single account with products and linked primary contact
-  app.get("/api/admin/accounts/:id", isAuthenticated, async (req: any, res: Response) => {
+  app.get("/api/admin/accounts/:id", isUnifiedAuthenticated, async (req: any, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
@@ -126,7 +126,7 @@ export function registerAccountsRoutes(app: Express) {
   });
 
   // POST /api/admin/accounts — create
-  app.post("/api/admin/accounts", isAuthenticated, async (req: any, res: Response) => {
+  app.post("/api/admin/accounts", isUnifiedAuthenticated, async (req: any, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
@@ -145,7 +145,7 @@ export function registerAccountsRoutes(app: Express) {
   });
 
   // PATCH /api/admin/accounts/:id — update
-  app.patch("/api/admin/accounts/:id", isAuthenticated, async (req: any, res: Response) => {
+  app.patch("/api/admin/accounts/:id", isUnifiedAuthenticated, async (req: any, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
@@ -172,7 +172,7 @@ export function registerAccountsRoutes(app: Express) {
   });
 
   // DELETE /api/admin/accounts/:id — soft delete
-  app.delete("/api/admin/accounts/:id", isAuthenticated, async (req: any, res: Response) => {
+  app.delete("/api/admin/accounts/:id", isUnifiedAuthenticated, async (req: any, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
@@ -197,7 +197,7 @@ export function registerAccountsRoutes(app: Express) {
   // ─── Products ─────────────────────────────────────────────────────────────
 
   // GET /api/admin/accounts/:id/products
-  app.get("/api/admin/accounts/:id/products", isAuthenticated, async (req: any, res: Response) => {
+  app.get("/api/admin/accounts/:id/products", isUnifiedAuthenticated, async (req: any, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
@@ -216,7 +216,7 @@ export function registerAccountsRoutes(app: Express) {
   });
 
   // POST /api/admin/accounts/:id/products
-  app.post("/api/admin/accounts/:id/products", isAuthenticated, async (req: any, res: Response) => {
+  app.post("/api/admin/accounts/:id/products", isUnifiedAuthenticated, async (req: any, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
@@ -235,7 +235,7 @@ export function registerAccountsRoutes(app: Express) {
   });
 
   // PATCH /api/admin/accounts/:id/products/:productId
-  app.patch("/api/admin/accounts/:id/products/:productId", isAuthenticated, async (req: any, res: Response) => {
+  app.patch("/api/admin/accounts/:id/products/:productId", isUnifiedAuthenticated, async (req: any, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
@@ -261,7 +261,7 @@ export function registerAccountsRoutes(app: Express) {
   });
 
   // DELETE /api/admin/accounts/:id/products/:productId
-  app.delete("/api/admin/accounts/:id/products/:productId", isAuthenticated, async (req: any, res: Response) => {
+  app.delete("/api/admin/accounts/:id/products/:productId", isUnifiedAuthenticated, async (req: any, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
@@ -280,7 +280,7 @@ export function registerAccountsRoutes(app: Express) {
   // ─── Restricted Details (Banking / Contract) ───────────────────────────────
 
   // GET /api/admin/accounts/:id/restricted
-  app.get("/api/admin/accounts/:id/restricted", isAuthenticated, async (req: any, res: Response) => {
+  app.get("/api/admin/accounts/:id/restricted", isUnifiedAuthenticated, async (req: any, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
@@ -300,7 +300,7 @@ export function registerAccountsRoutes(app: Express) {
   });
 
   // PUT /api/admin/accounts/:id/restricted — upsert
-  app.put("/api/admin/accounts/:id/restricted", isAuthenticated, async (req: any, res: Response) => {
+  app.put("/api/admin/accounts/:id/restricted", isUnifiedAuthenticated, async (req: any, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
@@ -339,7 +339,7 @@ export function registerAccountsRoutes(app: Express) {
   });
 
   // POST /api/admin/accounts/upload-logo — upload account logo to object storage
-  app.post("/api/admin/accounts/upload-logo", isAuthenticated, logoUpload.single("logo"), async (req: any, res: Response) => {
+  app.post("/api/admin/accounts/upload-logo", isUnifiedAuthenticated, logoUpload.single("logo"), async (req: any, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user.id || user.claims?.sub;
