@@ -418,11 +418,10 @@ export async function checkAdminAccess(
     if (userRole) {
       const roleName = userRole.name;
       
-      // COMPLETE mapping of all roles from the roles table to legacy AdminRole types
-      // This mapping is based on the roles table in the database:
-      // cto, ceo, cfo, branch_manager, marketing_executive, senior_consultant, junior_consultant, student, university_rep
+      // Mapping from role name to legacy AdminRole type
+      // Internal team roles only — student/institution_admin users do not have roles assigned
       const roleToLegacy: Record<string, AdminRole> = {
-        // CTO level - full access (highest role)
+        // Executive level - full access
         'cto': 'cto',
         'ceo': 'cto',
         
@@ -437,11 +436,6 @@ export async function checkAdminAccess(
         'marketing_executive': 'support_staff',
         'senior_consultant': 'support_staff',
         'junior_consultant': 'support_staff',
-        
-        // Non-admin roles (for completeness - these users won't pass userType check anyway)
-        'student': 'support_staff',
-        'university_rep': 'support_staff',
-        'institution_rep': 'support_staff',
       };
       
       const legacyRole = roleToLegacy[roleName];
