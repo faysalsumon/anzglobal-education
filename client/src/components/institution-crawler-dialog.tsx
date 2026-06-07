@@ -96,7 +96,7 @@ export function InstitutionCrawlerDialog({
 
     createJobMutation.mutate({
       institutionUrl: url.trim(),
-      institutionId: selectedInstitutionId || institutionId,
+      institutionId: _selectedInstitutionId || institutionId,
       extractInstitutionData,
       useAutoDiscovery,
     });

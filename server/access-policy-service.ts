@@ -55,6 +55,12 @@ export async function getUserAccessContext(userId: string): Promise<UserAccessCo
     let hierarchyLevel = 100;
     let defaultScope: RoleScope = 'self';
 
+    // platform_admin and super_admin always have global scope regardless of role_id assignment
+    if (user.userType === 'platform_admin' || user.userType === 'super_admin') {
+      hierarchyLevel = 1;
+      defaultScope = 'global';
+    }
+
     if (user.roleId) {
       const [role] = await db
         .select({
@@ -68,8 +74,11 @@ export async function getUserAccessContext(userId: string): Promise<UserAccessCo
 
       if (role) {
         roleName = role.name;
-        hierarchyLevel = role.hierarchyLevel ?? 100;
-        defaultScope = (role.defaultScope as RoleScope) ?? 'self';
+        // Only override scope from role record if user is not platform_admin/super_admin
+        if (user.userType !== 'platform_admin' && user.userType !== 'super_admin') {
+          hierarchyLevel = role.hierarchyLevel ?? 100;
+          defaultScope = (role.defaultScope as RoleScope) ?? 'self';
+        }
       }
     }
 
@@ -139,7 +148,7 @@ export async function getModulePermissions(
 
     if (!user) return defaultPerms;
 
-    if (user.userType === 'platform_admin') {
+    if (user.userType === 'platform_admin' || user.userType === 'super_admin') {
       return { canCreate: true, canRead: true, canUpdate: true, canDelete: true };
     }
 

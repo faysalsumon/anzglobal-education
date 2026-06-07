@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Calendar, Clock, ArrowLeft, Share2, GraduationCap, MapPin,
   Twitter, Facebook, Linkedin, Link2, FileText,
-  Newspaper, Radio,
+  Newspaper, Radio, ChevronRight,
 } from "lucide-react";
 import type { BlogWithAuthor, CourseWithDetails } from "@shared/schema";
 import ReactMarkdown from "react-markdown";

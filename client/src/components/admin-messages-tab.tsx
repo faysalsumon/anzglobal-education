@@ -33,6 +33,7 @@ import {
   UserPlus,
   UserMinus,
   Settings2,
+  MapPin,
 } from "lucide-react";
 import { format, isToday, isYesterday, isThisWeek, parseISO } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";

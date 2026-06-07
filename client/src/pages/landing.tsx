@@ -65,7 +65,7 @@ type CourseWithUniversity = Course & { university?: University };
 export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [_showSuggestions, setShowSuggestions] = useState(false);
-  const [_searchType, _setSearchType] = useState<"courses" | "institutions">("courses");
+  const [searchType, setSearchType] = useState<"courses" | "institutions">("courses");
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [reviewIndex, setReviewIndex] = useState(0);
   const [videoActive, setVideoActive] = useState(false);
@@ -136,7 +136,7 @@ export default function Landing() {
         .slice(0, 5)
     : [];
 
-  const _suggestions = _searchType === "courses" ? courseSuggestions : institutionSuggestions;
+  const _suggestions = searchType === "courses" ? courseSuggestions : institutionSuggestions;
 
   // Close suggestions when clicking outside
   useEffect(() => {
