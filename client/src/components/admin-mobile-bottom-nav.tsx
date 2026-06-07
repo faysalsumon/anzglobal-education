@@ -60,6 +60,7 @@ interface AdminMobileBottomNavProps {
   hasFullAdminAccess: boolean;
   isCTO?: boolean;
   isMarketingExecutive?: boolean;
+  isAdmissionsDirector?: boolean;
   onLogout: () => void;
 }
 
@@ -87,6 +88,7 @@ export function AdminMobileBottomNav({
   hasFullAdminAccess,
   isCTO = false,
   isMarketingExecutive = false,
+  isAdmissionsDirector = false,
   onLogout,
 }: AdminMobileBottomNavProps) {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
@@ -167,7 +169,7 @@ export function AdminMobileBottomNav({
       colorClass: "text-purple-600 bg-purple-50 dark:bg-purple-950/60 dark:text-purple-400",
       showSection: canSeeNav("cms"),
       items: [
-        { icon: Building2, label: "Institutions", value: "institutions", show: hasFullAdminAccess || isMarketingExecutive },
+        { icon: Building2, label: "Institutions", value: "institutions", show: hasFullAdminAccess || isMarketingExecutive || isAdmissionsDirector },
         { icon: BookOpen, label: "Courses", value: "courses", show: true },
         { icon: GraduationCap, label: "Qualification Types", value: "qualification-types", show: hasFullAdminAccess && canSeeFeature("qualificationTypes") },
         { icon: FileCheck, label: "Entry Requirements", value: "entry-requirement-templates", show: hasFullAdminAccess && canSeeFeature("entryRequirements") },
@@ -200,7 +202,7 @@ export function AdminMobileBottomNav({
       colorClass: "text-teal-600 bg-teal-50 dark:bg-teal-950/60 dark:text-teal-400",
       showSection: canSeeNav("people"),
       items: [
-        { icon: UserCheck, label: "Attendance", value: "attendance", show: hasFullAdminAccess },
+        { icon: UserCheck, label: "Attendance", value: "attendance", show: hasFullAdminAccess || isAdmissionsDirector },
       ],
     },
     {

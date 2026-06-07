@@ -25,7 +25,7 @@ const ROLE_NAV_SECTIONS: Record<string, readonly string[]> = {
   support_staff: ['crm'],
   operations_staff: ['crm', 'finance'],
   accounts_officer: ['crm', 'cms', 'finance'],
-  admissions_director: ['crm', 'finance'],
+  admissions_director: ['crm', 'cms', 'finance', 'people'],
 };
 
 export function useAuth() {

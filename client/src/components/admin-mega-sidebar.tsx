@@ -72,6 +72,7 @@ interface AdminMegaSidebarProps {
   isCTO?: boolean;
   isMarketingExecutive?: boolean;
   isAccountsOfficer?: boolean;
+  isAdmissionsDirector?: boolean;
   isMobileMenuOpen?: boolean;
   onMobileMenuToggle?: () => void;
 }
@@ -83,6 +84,7 @@ export function AdminMegaSidebar({
   isCTO = false,
   isMarketingExecutive = false,
   isAccountsOfficer = false,
+  isAdmissionsDirector = false,
   isMobileMenuOpen = false,
   onMobileMenuToggle
 }: AdminMegaSidebarProps) {
@@ -124,7 +126,7 @@ export function AdminMegaSidebar({
       color: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
       showSection: canSeeNav("cms"),
       routes: [
-        { icon: Building2, label: "Institutions", value: "institutions", show: hasFullAdminAccess || isMarketingExecutive },
+        { icon: Building2, label: "Institutions", value: "institutions", show: hasFullAdminAccess || isMarketingExecutive || isAdmissionsDirector },
         { icon: BookOpen, label: "Courses", value: "courses", show: true },
         { icon: GraduationCap, label: "Qualification Types", value: "qualification-types", show: hasFullAdminAccess && canSeeFeature('qualificationTypes') },
         { icon: FileCheck, label: "Entry Requirement Templates", value: "entry-requirement-templates", show: hasFullAdminAccess && canSeeFeature('entryRequirements') },
@@ -158,7 +160,7 @@ export function AdminMegaSidebar({
       showSection: canSeeNav("finance"),
       routes: [
         { icon: BarChart3, label: "Dashboard", value: "finance-dashboard", show: hasFullAdminAccess || isAccountsOfficer },
-        { icon: FileText, label: "Invoices", value: "finance-invoices", show: hasFullAdminAccess || isAccountsOfficer },
+        { icon: FileText, label: "Invoices", value: "finance-invoices", show: hasFullAdminAccess || isAccountsOfficer || isAdmissionsDirector },
         { icon: Users, label: "Customers", value: "finance-customers", show: hasFullAdminAccess || isAccountsOfficer },
         { icon: Package, label: "Items", value: "finance-items", show: hasFullAdminAccess || isAccountsOfficer },
         { icon: BookOpen, label: "Chart of Accounts", value: "finance-accounts", show: hasFullAdminAccess || isAccountsOfficer },
@@ -172,7 +174,7 @@ export function AdminMegaSidebar({
       color: "text-teal-600 bg-teal-50 dark:bg-teal-950 dark:text-teal-400",
       showSection: canSeeNav("people"),
       routes: [
-        { icon: UserCheck, label: "Attendance", value: "attendance", show: hasFullAdminAccess },
+        { icon: UserCheck, label: "Attendance", value: "attendance", show: hasFullAdminAccess || isAdmissionsDirector },
       ],
     },
     {

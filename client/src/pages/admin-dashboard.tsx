@@ -393,7 +393,7 @@ const courseSchema = z.object({
 
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const { user, isLoading, isAuthenticated, isAuthResolved, adminRole, isConsultant, isCTO, isMarketingExecutive, hasFullAdminAccess, isAdmin, isBranchManager, isAccountsOfficer } = useAuth();
+  const { user, isLoading, isAuthenticated, isAuthResolved, adminRole, isConsultant, isCTO, isMarketingExecutive, hasFullAdminAccess, isAdmin, isBranchManager, isAccountsOfficer, isAdmissionsDirector } = useAuth();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const { signOut } = useSupabaseAuth();
@@ -438,6 +438,8 @@ export default function AdminDashboard() {
     const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'crm-leads', 'applications', 'accounts', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'seo-metadata', 'tags', 'qualification-types', 'entry-requirement-templates', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
     const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
     const financeTabsForAccountsOfficer = ['finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting'];
+    const financeTabsForAdmissionsDirector = ['finance-invoices'];
+    const peopleTabsForAdmissionsDirector = ['attendance'];
     const _ctoOnlyTabs = ['ai-settings'];
     const superAdminOnlyTabs = ['role-management', 'profile-management'];
     const marketingExecutiveTabs = ['institutions'];
@@ -458,16 +460,20 @@ export default function AdminDashboard() {
       if (superAdminOnlyTabs.includes(tab) && !isCTO) {
         return defaultTab;
       }
-      // Check access for full-admin-only tabs (accounts_officer may access finance tabs)
+      // Check access for full-admin-only tabs with role-specific exemptions
       if (fullAdminOnlyTabs.includes(tab) && !hasFullAdminAccess) {
         if (isAccountsOfficer && financeTabsForAccountsOfficer.includes(tab)) {
           // accounts_officer has full finance access — allow
+        } else if (isAdmissionsDirector && financeTabsForAdmissionsDirector.includes(tab)) {
+          // admissions_director can see invoices only
+        } else if (isAdmissionsDirector && peopleTabsForAdmissionsDirector.includes(tab)) {
+          // admissions_director can see attendance
         } else {
           return defaultTab;
         }
       }
-      // Marketing Executive tabs - accessible by full admins OR marketing executives
-      if (marketingExecutiveTabs.includes(tab) && !hasFullAdminAccess && !isMarketingExecutive) {
+      // Marketing Executive / Admissions Director tabs - accessible by full admins, marketing execs, or admissions director
+      if (marketingExecutiveTabs.includes(tab) && !hasFullAdminAccess && !isMarketingExecutive && !isAdmissionsDirector) {
         return defaultTab;
       }
       // Contacts is hidden from junior_consultant and support_staff
@@ -1820,6 +1826,7 @@ export default function AdminDashboard() {
         isCTO={isCTO}
         isMarketingExecutive={isMarketingExecutive}
         isAccountsOfficer={isAccountsOfficer}
+        isAdmissionsDirector={isAdmissionsDirector}
         isMobileMenuOpen={isMobileMenuOpen}
         onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
@@ -2691,8 +2698,8 @@ export default function AdminDashboard() {
                                   </Button>
                                 </>
                               )}
-                              {/* Edit button (for full admins or marketing executives) */}
-                              {(hasFullAdminAccess || isMarketingExecutive) && (
+                              {/* Edit button (for full admins, marketing executives, or admissions director) */}
+                              {(hasFullAdminAccess || isMarketingExecutive || isAdmissionsDirector) && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -2813,8 +2820,8 @@ export default function AdminDashboard() {
                     {isConsultant ? "View all courses" : "View and manage all courses"}
                   </CardDescription>
                 </div>
-                {/* Full admins and marketing executives can create courses */}
-                {(hasFullAdminAccess || isMarketingExecutive) && (
+                {/* Full admins, marketing executives, and admissions director can create courses */}
+                {(hasFullAdminAccess || isMarketingExecutive || isAdmissionsDirector) && (
                   <div className="flex gap-2">
                     {isCTO && (
                       <Button size="sm" onClick={() => setAiCourseExtractorDialogOpen(true)} variant="outline" data-testid="button-ai-extract-course">
@@ -2981,7 +2988,7 @@ export default function AdminDashboard() {
                                 <AvatarFallback className="text-xs">{course.institutionName?.[0]?.toUpperCase() || 'C'}</AvatarFallback>
                               </Avatar>
                               <span className="font-medium text-sm" data-testid={`text-course-title-${course.id}`}>{course.title}</span>
-                              {(hasFullAdminAccess || isMarketingExecutive) && (
+                              {(hasFullAdminAccess || isMarketingExecutive || isAdmissionsDirector) && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -4129,6 +4136,7 @@ export default function AdminDashboard() {
       hasFullAdminAccess={hasFullAdminAccess}
       isCTO={isCTO}
       isMarketingExecutive={isMarketingExecutive}
+      isAdmissionsDirector={isAdmissionsDirector}
       onLogout={handleLogout}
     />
 
