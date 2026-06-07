@@ -181,6 +181,7 @@ interface Role {
   description: string | null;
   userType: string;
   isActive: boolean;
+  defaultScope?: string | null;
 }
 
 interface Institution {

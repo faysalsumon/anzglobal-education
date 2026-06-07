@@ -1988,7 +1988,7 @@ router.get("/leads/stats", requireAdmin, async (req: any, res) => {
     res.json({
       total: allLeads.length,
       new: allLeads.filter(c => c.createdAt && new Date(c.createdAt) > weekAgo).length,
-      contacted: allLeads.filter(c => c.leadStage === 'contacted' || c.leadStage === 'meeting_scheduled').length,
+      contacted: allLeads.filter(c => c.leadStage === 'contacted' || c.leadStage === 'qualified' || c.leadStage === 'counselling').length,
       converted: allLeads.filter(c => c.leadStage === 'converted').length,
     });
   } catch (error) {
