@@ -131,7 +131,7 @@ export function AdminMegaSidebar({
         { icon: GraduationCap, label: "Qualification Types", value: "qualification-types", show: hasFullAdminAccess && canSeeFeature('qualificationTypes') },
         { icon: FileCheck, label: "Entry Requirement Templates", value: "entry-requirement-templates", show: hasFullAdminAccess && canSeeFeature('entryRequirements') },
         { icon: Newspaper, label: "Blogs", value: "blogs", show: true },
-        { icon: FileText, label: "Website Content", value: "website-content", show: true },
+        { icon: FileText, label: "Website Content", value: "website-content", show: !isAdmissionsDirector },
         { icon: Search, label: "SEO Management", value: "seo-metadata", show: (hasFullAdminAccess || isMarketingExecutive) && canSeeFeature('seoManagement') },
         { icon: Tag, label: "Tag Manager", value: "tags", show: (hasFullAdminAccess || isMarketingExecutive) && canSeeFeature('tagManager') },
       ],
