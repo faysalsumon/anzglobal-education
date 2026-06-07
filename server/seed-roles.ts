@@ -76,6 +76,14 @@ const ADMIN_ROLES: RoleSeed[] = [
     hierarchyLevel: 70,
     defaultScope: 'branch',
   },
+  {
+    name: 'admissions_director',
+    displayName: 'Admissions Director',
+    description: 'Head of Admission & Compliance — global full CRUD access across applications, CRM, institutions, and finance',
+    userType: 'admin',
+    hierarchyLevel: 25,
+    defaultScope: 'global',
+  },
 ];
 
 export async function seedDefaultRoles(): Promise<void> {

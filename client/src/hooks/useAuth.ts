@@ -25,6 +25,7 @@ const ROLE_NAV_SECTIONS: Record<string, readonly string[]> = {
   support_staff: ['crm'],
   operations_staff: ['crm', 'finance'],
   accounts_officer: ['crm', 'cms', 'finance'],
+  admissions_director: ['crm', 'finance'],
 };
 
 export function useAuth() {
@@ -96,6 +97,7 @@ export function useAuth() {
   const isConsultant = adminRole === "senior_consultant" || adminRole === "junior_consultant";
   const isAccountsOfficer = adminRole === "accounts_officer";
   const isMarketingExecutive = adminRole === "marketing_executive";
+  const isAdmissionsDirector = adminRole === "admissions_director";
   
   const hasFullAdminAccess = isCTO || isBranchManager;
 
@@ -132,6 +134,7 @@ export function useAuth() {
     isConsultant,
     isMarketingExecutive,
     isAccountsOfficer,
+    isAdmissionsDirector,
     hasFullAdminAccess,
     regionId: user?.regionId || null,
     regionName: user?.regionName || null,
@@ -139,7 +142,7 @@ export function useAuth() {
     branchId: user?.branchId || null,
     branchName: user?.branchName || null,
     defaultScope: user?.defaultScope || null,
-    isGlobalScope: user?.defaultScope === 'global' || isCTO || isAccountsOfficer,
+    isGlobalScope: user?.defaultScope === 'global' || isCTO || isAccountsOfficer || isAdmissionsDirector,
     allowedNavSections,
   };
 }

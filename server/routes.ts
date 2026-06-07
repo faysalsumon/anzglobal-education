@@ -319,15 +319,15 @@ async function triggerKnowledgeBaseRebuild(operation: string): Promise<void> {
 }
 
 type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
-type AdminRole = 'cto' | 'platform_admin' | 'branch_manager' | 'support_staff' | 'operations_staff' | 'accounts_officer';
+type AdminRole = 'cto' | 'platform_admin' | 'branch_manager' | 'support_staff' | 'operations_staff' | 'accounts_officer' | 'admissions_director';
 
 const addAdminTeamMemberSchema = z.object({
   email: z.string().email(),
-  role: z.enum(['cto', 'branch_manager', 'support_staff', 'operations_staff', 'accounts_officer']),
+  role: z.enum(['cto', 'branch_manager', 'support_staff', 'operations_staff', 'accounts_officer', 'admissions_director']),
 });
 
 const updateAdminTeamMemberRoleSchema = z.object({
-  role: z.enum(['cto', 'branch_manager', 'support_staff', 'operations_staff', 'accounts_officer']),
+  role: z.enum(['cto', 'branch_manager', 'support_staff', 'operations_staff', 'accounts_officer', 'admissions_director']),
 });
 
 async function checkUniversityAccess(
@@ -403,6 +403,7 @@ export async function checkAdminAccess(
           'marketing_executive': 'support_staff',
           'senior_consultant': 'support_staff',
           'junior_consultant': 'support_staff',
+          'admissions_director': 'admissions_director',
         };
         determinedRole = roleToLegacy[roleName] || null;
       }
@@ -436,6 +437,10 @@ export async function checkAdminAccess(
         'marketing_executive': 'support_staff',
         'senior_consultant': 'support_staff',
         'junior_consultant': 'support_staff',
+
+        // Director level - maps to support_staff so it passes all general admin route guards
+        // Finance access is granted separately via FINANCE_ADMIN_ROLES in accounting-routes.ts
+        'admissions_director': 'support_staff',
       };
       
       const legacyRole = roleToLegacy[roleName];
