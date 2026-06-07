@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { db } from "./db";
 import { isAuthenticated } from "./supabase-middleware";
-import { checkAdminAccess } from "./routes";
+import { checkAdminAccess, FINANCE_ROLES } from "./routes";
 import {
   accChartOfAccounts,
   accCustomers,
@@ -38,12 +38,10 @@ import {
 import { eq, desc, sql, and, gte, lte, lt, ilike, or } from "drizzle-orm";
 import { sendInvoiceEmail, sendPaymentReceiptEmail, sendInvoiceReminderEmail } from "./email-service";
 
-const FINANCE_ADMIN_ROLES: Array<'cto' | 'platform_admin' | 'accounts_officer' | 'operations_staff' | 'admissions_director'> = ['cto', 'platform_admin', 'accounts_officer', 'operations_staff', 'admissions_director'];
-
 async function requireFinanceAdmin(req: Request, res: Response): Promise<string | null> {
   const userId = (req as any).supabaseUser?.id || (req as any).user?.claims?.sub || (req as any).user?.id;
   if (!userId) { res.status(401).json({ message: "Not authenticated" }); return null; }
-  const access = await checkAdminAccess(userId, FINANCE_ADMIN_ROLES);
+  const access = await checkAdminAccess(userId, FINANCE_ROLES);
   if (!access) { res.status(403).json({ message: "Finance admin access required" }); return null; }
   return userId;
 }
