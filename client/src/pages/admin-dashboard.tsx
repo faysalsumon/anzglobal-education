@@ -2207,25 +2207,53 @@ export default function AdminDashboard() {
                             </Select>
                           </TableCell>
                           <TableCell className="py-2">
-                            <Select
-                              value={user.branchId ?? "none"}
-                              onValueChange={(value) => updateUserMutation.mutate({
-                                userId: user.id,
-                                branchId: value === "none" ? null : value,
-                              })}
-                            >
-                              <SelectTrigger className="w-[130px] h-7 text-xs" data-testid={`select-branch-${user.id}`}>
-                                <SelectValue placeholder="Assign branch" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">No Branch</SelectItem>
-                                {branches?.filter(b => b.isActive).map((branch) => (
-                                  <SelectItem key={branch.id} value={branch.id}>
-                                    {branch.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            {(() => {
+                              // platform_admin is always global — no branch assignment needed
+                              if (user.userType === 'platform_admin') {
+                                return (
+                                  <Badge variant="outline" className="text-xs text-blue-600 border-blue-300 bg-blue-50">
+                                    <Globe className="h-3 w-3 mr-1" />
+                                    Global
+                                  </Badge>
+                                );
+                              }
+                              // Students and institution admins don't use branch scoping
+                              if (user.userType === 'student' || user.userType === 'institution_admin') {
+                                return <span className="text-xs text-muted-foreground">—</span>;
+                              }
+                              // Check if the assigned role has global scope
+                              const userRole = roles?.find(r => r.id === user.roleId);
+                              if (userRole?.defaultScope === 'global') {
+                                return (
+                                  <Badge variant="outline" className="text-xs text-blue-600 border-blue-300 bg-blue-50">
+                                    <Globe className="h-3 w-3 mr-1" />
+                                    Global
+                                  </Badge>
+                                );
+                              }
+                              // Branch-scoped roles — show the branch selector
+                              return (
+                                <Select
+                                  value={user.branchId ?? "none"}
+                                  onValueChange={(value) => updateUserMutation.mutate({
+                                    userId: user.id,
+                                    branchId: value === "none" ? null : value,
+                                  })}
+                                >
+                                  <SelectTrigger className="w-[130px] h-7 text-xs" data-testid={`select-branch-${user.id}`}>
+                                    <SelectValue placeholder="Assign branch" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">No Branch</SelectItem>
+                                    {branches?.filter(b => b.isActive).map((branch) => (
+                                      <SelectItem key={branch.id} value={branch.id}>
+                                        {branch.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="py-2">
                             {user.approvalStatus === "pending" ? (
