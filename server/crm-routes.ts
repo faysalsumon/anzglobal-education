@@ -1976,6 +1976,27 @@ router.get("/leads", requireAdmin, async (req: any, res) => {
   }
 });
 
+// GET /leads/stats - lead statistics (MUST be before /leads/:id to avoid "stats" matching as :id)
+router.get("/leads/stats", requireAdmin, async (req: any, res) => {
+  try {
+    const allLeads = await db.select().from(crmContacts)
+      .where(eq(crmContacts.clientStatus, 'lead'));
+
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    res.json({
+      total: allLeads.length,
+      new: allLeads.filter(c => c.createdAt && new Date(c.createdAt) > weekAgo).length,
+      contacted: allLeads.filter(c => c.leadStage === 'contacted' || c.leadStage === 'meeting_scheduled').length,
+      converted: allLeads.filter(c => c.leadStage === 'converted').length,
+    });
+  } catch (error) {
+    console.error("Error fetching lead stats:", error);
+    res.status(500).json({ message: "Failed to fetch lead stats" });
+  }
+});
+
 // GET /leads/:id - get single lead with status history
 router.get("/leads/:id", requireAdmin, async (req, res) => {
   try {

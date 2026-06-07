@@ -4157,38 +4157,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/crm/leads/stats - Get lead statistics for dashboard (admin only)
-  app.get("/api/crm/leads/stats", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.supabaseUser?.id || req.user?.claims?.sub;
-      
-      const adminAccess = await checkAdminAccess(userId);
-      if (!adminAccess) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      const conditions: any[] = [eq(crmContacts.contactType, 'clients')];
-      
-      const allContacts = await db.select().from(crmContacts)
-        .where(and(...conditions));
-      
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      
-      const stats = {
-        total: allContacts.length,
-        new: allContacts.filter(c => c.createdAt && new Date(c.createdAt) > weekAgo).length,
-        contacted: allContacts.filter(c => c.clientStatus === 'applicant').length,
-        converted: allContacts.filter(c => c.clientStatus === 'enrolled' || c.clientStatus === 'completed').length,
-      };
-      
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching lead stats:", error);
-      res.status(500).json({ message: "Failed to fetch lead stats" });
-    }
-  });
-
   // GET /api/admin/applications/count - Get total applications count (admin only)
   app.get("/api/admin/applications/count", isAuthenticated, async (req: any, res) => {
     try {

@@ -328,8 +328,11 @@ export function CrmLeadsPanel() {
   });
 
   // Fetch admins for filter dropdown
+  // NOTE: key must differ from the bare ["/api/admin/users"] key used by crm-contacts-panel
+  // (which caches { users: [...] }). A unique key guarantees this queryFn always runs and
+  // returns a flat array, preventing admins?.map from crashing.
   const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string; branchId: string | null }[]>({
-    queryKey: ["/api/admin/users"],
+    queryKey: ["/api/admin/users", "admins-for-leads"],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append("userType", "admin");
