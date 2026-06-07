@@ -703,36 +703,36 @@ export default function AdminDashboard() {
     enabled: hasFullAdminAccess, // Only full admins can access users
   });
 
-  // Full admins see all institutions
+  // Full admins and Admissions Directors see all institutions
   const { data: allInstitutions, isLoading: allInstitutionsLoading } = useQuery<Institution[]>({
     queryKey: ["/api/super-admin/institutions"],
-    enabled: hasFullAdminAccess,
+    enabled: hasFullAdminAccess || isAdmissionsDirector,
   });
 
-  // Non-full-admin team members see only their assigned/created institutions
+  // Non-full-admin team members (excluding Admissions Director) see only their assigned/created institutions
   const { data: myInstitutions, isLoading: myInstitutionsLoading } = useQuery<Institution[]>({
     queryKey: ["/api/admin/my-institutions"],
-    enabled: !hasFullAdminAccess && isAdmin,
+    enabled: !hasFullAdminAccess && !isAdmissionsDirector && isAdmin,
   });
 
   // Use the appropriate institutions data based on access level
-  const institutions = hasFullAdminAccess ? allInstitutions : myInstitutions;
-  const institutionsLoading = hasFullAdminAccess ? allInstitutionsLoading : myInstitutionsLoading;
+  const institutions = (hasFullAdminAccess || isAdmissionsDirector) ? allInstitutions : myInstitutions;
+  const institutionsLoading = (hasFullAdminAccess || isAdmissionsDirector) ? allInstitutionsLoading : myInstitutionsLoading;
 
-  // Courses: Full admins see all, team members see only assigned/created
+  // Courses: Full admins and Admissions Directors see all, team members see only assigned/created
   const { data: allCourses, isLoading: allCoursesLoading } = useQuery<Course[]>({
     queryKey: ["/api/super-admin/courses"],
-    enabled: hasFullAdminAccess,
+    enabled: hasFullAdminAccess || isAdmissionsDirector,
   });
 
   const { data: myCourses, isLoading: myCoursesLoading } = useQuery<Course[]>({
     queryKey: ["/api/admin/my-courses"],
-    enabled: !hasFullAdminAccess && isAdmin,
+    enabled: !hasFullAdminAccess && !isAdmissionsDirector && isAdmin,
   });
 
   // Use the appropriate courses data based on access level
-  const courses = hasFullAdminAccess ? allCourses : myCourses;
-  const coursesLoading = hasFullAdminAccess ? allCoursesLoading : myCoursesLoading;
+  const courses = (hasFullAdminAccess || isAdmissionsDirector) ? allCourses : myCourses;
+  const coursesLoading = (hasFullAdminAccess || isAdmissionsDirector) ? allCoursesLoading : myCoursesLoading;
 
   // (studentLeads query removed - consolidated into CRM Leads)
 

@@ -438,9 +438,9 @@ export async function checkAdminAccess(
         'senior_consultant': 'support_staff',
         'junior_consultant': 'support_staff',
 
-        // Director level - maps to support_staff so it passes all general admin route guards
-        // Finance access is granted separately via FINANCE_ADMIN_ROLES in accounting-routes.ts
-        'admissions_director': 'support_staff',
+        // Director level - keeps its own identity so role-specific route guards work correctly
+        // Routes that AD needs must explicitly include 'admissions_director' in their required roles
+        'admissions_director': 'admissions_director',
       };
       
       const legacyRole = roleToLegacy[roleName];
@@ -10807,7 +10807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       // Allow CTO, branch_manager, and support_staff (marketing executives are mapped to support_staff)
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff', 'admissions_director']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -10908,7 +10908,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/institutions/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff', 'admissions_director']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -10935,7 +10935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       
       // Allow any authenticated admin user to fetch their assigned/created institutions
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff', 'admissions_director']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -11878,7 +11878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff', 'admissions_director']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -12330,7 +12330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/my-courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'branch_manager', 'support_staff', 'admissions_director']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
