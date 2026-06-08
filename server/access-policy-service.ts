@@ -141,7 +141,7 @@ export async function getModulePermissions(
 
   try {
     const [user] = await db
-      .select({ profileId: users.profileId, userType: users.userType })
+      .select({ profileId: users.profileId, userType: users.userType, roleId: users.roleId })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
@@ -153,6 +153,28 @@ export async function getModulePermissions(
     }
 
     if (!user.profileId) {
+      // No profile assigned — derive defaults from the user's role so that
+      // roles already permitted by the route-level checkAdminAccess guard
+      // are not silently blocked here.
+      let roleName: string | null = null;
+      if (user.roleId) {
+        const [role] = await db
+          .select({ name: roles.name })
+          .from(roles)
+          .where(eq(roles.id, user.roleId))
+          .limit(1);
+        roleName = role?.name ?? null;
+      }
+
+      if (roleName === 'cto' || roleName === 'ceo') {
+        return { canCreate: true, canRead: true, canUpdate: true, canDelete: true };
+      }
+      // These roles have write access to CMS content but cannot delete
+      const writeRoles = ['branch_manager', 'admissions_director', 'marketing_executive', 'senior_consultant'];
+      if (roleName && writeRoles.includes(roleName)) {
+        return { canCreate: true, canRead: true, canUpdate: true, canDelete: false };
+      }
+      // All other roles without a profile: read-only
       return { canCreate: false, canRead: true, canUpdate: false, canDelete: false };
     }
 
