@@ -641,12 +641,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     _markRouteGroup('crm-routes (early)', false, err);
   }
 
-  // Serve uploaded files from the public directory
-  app.use('/students', express.static(path.join(process.cwd(), 'public', 'students')));
+  // Proxy handlers for user-uploaded image categories — served from Object Storage
+  // with a local-disk fallback for files not yet migrated.
+  const imageCategories: Array<{ route: string; osPrefix: string; localDir: string }> = [
+    { route: '/students',     osPrefix: 'public/students',     localDir: path.join(process.cwd(), 'public', 'students') },
+    { route: '/admins',       osPrefix: 'public/admins',       localDir: path.join(process.cwd(), 'public', 'admins') },
+    { route: '/contacts',     osPrefix: 'public/contacts',     localDir: path.join(process.cwd(), 'public', 'contacts') },
+    { route: '/testimonials', osPrefix: 'public/testimonials', localDir: path.join(process.cwd(), 'public', 'testimonials') },
+    { route: '/account-logos',osPrefix: 'public/account-logos',localDir: path.join(process.cwd(), 'public', 'account-logos') },
+  ];
+  for (const cat of imageCategories) {
+    app.get(`${cat.route}/:filename`, async (req: any, res: any, next: any) => {
+      try {
+        const filename = req.params.filename;
+        if (!filename || !/^[a-zA-Z0-9_\-.]+$/.test(filename)) return next();
+        const { serveFile } = await import("./file-storage");
+        const served = await serveFile(res, `${cat.osPrefix}/${filename}`, {
+          localFallbackPath: path.join(cat.localDir, filename),
+          cacheControl: 'public, max-age=86400',
+        });
+        if (!served) return res.status(404).json({ message: 'File not found' });
+      } catch {
+        return next();
+      }
+    });
+  }
   app.use('/institutions', express.static(path.join(process.cwd(), 'public', 'institutions')));
-  app.use('/admins', express.static(path.join(process.cwd(), 'public', 'admins')));
-  app.use('/contacts', express.static(path.join(process.cwd(), 'public', 'contacts')));
-  app.use('/testimonials', express.static(path.join(process.cwd(), 'public', 'testimonials')));
 
   // Object Storage fallback for institution logos — when the local static file is missing
   // (e.g. after a redeployment that wiped the runtime filesystem), serve from Object Storage
@@ -3845,12 +3865,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const extMap: Record<string, string> = { 'image/jpeg': '.jpg', 'image/jpg': '.jpg', 'image/png': '.png', 'image/gif': '.gif' };
       const ext = extMap[req.file.mimetype] || '.jpg';
 
-      // Save original buffer to public directory (no sharp resizing — sharp is unavailable in this environment)
       const filename = `student-profile-${profile.id}-${Date.now()}${ext}`;
-      const localPath = path.join(process.cwd(), 'public', 'students');
-      await fs.mkdir(localPath, { recursive: true });
-      await fs.writeFile(path.join(localPath, filename), req.file.buffer);
-      
+      const { uploadFile: osUpload } = await import("./file-storage");
+      const osResult = await osUpload(`public/students/${filename}`, req.file.buffer, req.file.mimetype);
+      if (!osResult.ok) {
+        const localPath = path.join(process.cwd(), 'public', 'students');
+        await fs.mkdir(localPath, { recursive: true });
+        await fs.writeFile(path.join(localPath, filename), req.file.buffer);
+      }
       const photoPath = `/students/${filename}`;
 
       // Update profile with new photo
@@ -4089,12 +4111,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const extMap: Record<string, string> = { 'image/jpeg': '.jpg', 'image/jpg': '.jpg', 'image/png': '.png', 'image/gif': '.gif' };
       const ext = extMap[req.file.mimetype] || '.jpg';
 
-      // Save original buffer to public directory (no sharp resizing — sharp is unavailable in this environment)
       const filename = `admin-profile-${user.id}-${Date.now()}${ext}`;
-      const localPath = path.join(process.cwd(), 'public', 'admins');
-      await fs.mkdir(localPath, { recursive: true });
-      await fs.writeFile(path.join(localPath, filename), req.file.buffer);
-      
+      const { uploadFile: osUpload } = await import("./file-storage");
+      const osResult = await osUpload(`public/admins/${filename}`, req.file.buffer, req.file.mimetype);
+      if (!osResult.ok) {
+        const localPath = path.join(process.cwd(), 'public', 'admins');
+        await fs.mkdir(localPath, { recursive: true });
+        await fs.writeFile(path.join(localPath, filename), req.file.buffer);
+      }
       const photoPath = `/admins/${filename}`;
 
       // Update user with new profile photo
@@ -6507,36 +6531,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Upload to object storage or local directory
-      // Use object storage if available, otherwise fall back to local uploads directory
-      let uploadsBase = process.env.PRIVATE_OBJECT_DIR;
-      
-      // Check if object storage directory exists, otherwise use local directory
-      try {
-        if (uploadsBase) {
-          await fs.access(uploadsBase);
-        }
-      } catch {
-        uploadsBase = undefined;
+      const fileName = `${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const osDocPath = `.private/documents/${profile.id}/${fileName}`;
+      const { uploadFile: osUpload } = await import("./file-storage");
+      const osResult = await osUpload(osDocPath, req.file.buffer, req.file.mimetype);
+      let filePath: string;
+      if (osResult.ok) {
+        filePath = osDocPath;
+      } else {
+        const uploadsDir = path.join(process.cwd(), 'uploads', 'documents', profile.id);
+        await fs.mkdir(uploadsDir, { recursive: true });
+        filePath = path.join(uploadsDir, fileName);
+        await fs.writeFile(filePath, req.file.buffer);
       }
-      
-      // Fall back to local uploads directory if object storage not available
-      if (!uploadsBase) {
-        uploadsBase = path.join(process.cwd(), 'uploads');
-      }
-      
-      const fileName = `${Date.now()}-${req.file.originalname}`;
-      const uploadsDir = path.join(uploadsBase, 'documents', profile.id);
-      const filePath = path.join(uploadsDir, fileName);
-      
-      console.log('[UPLOAD] Uploading to:', filePath);
-      console.log('[UPLOAD] Creating directory:', uploadsDir);
-      
-      // Ensure directory exists
-      await fs.mkdir(uploadsDir, { recursive: true });
-      await fs.writeFile(filePath, req.file.buffer);
-      
-      console.log('[UPLOAD] File uploaded successfully');
 
       const document = await storage.createDocument({
         type: type || 'other',
@@ -6641,12 +6648,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Read the file from local file system (files are stored in mounted object storage directory)
-      let fileBuffer: Buffer;
+      let fileBuffer: Buffer | null;
       try {
-        fileBuffer = await fs.readFile(document.filePath);
+        const { readDocumentBuffer } = await import("./file-storage");
+        fileBuffer = await readDocumentBuffer(document.filePath);
       } catch (err) {
         console.error('Failed to read document file:', err);
+        return res.status(500).json({ message: "Failed to read document file" });
+      }
+      if (!fileBuffer) {
         return res.status(500).json({ message: "Failed to read document file" });
       }
 
@@ -11381,9 +11391,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : req.file.mimetype === "image/webp" ? "webp"
         : "jpg";
       const filename = `college-logo-admin-upload-${Date.now()}.${ext}`;
-      const localPath = path.join(process.cwd(), "public", "institutions");
-      await fs.mkdir(localPath, { recursive: true });
-      await fs.writeFile(path.join(localPath, filename), req.file.buffer);
+
+      const { uploadFile: osUpload } = await import("./file-storage");
+      const osResult = await osUpload(`public/institution-logos/${filename}`, req.file.buffer, req.file.mimetype);
+      if (!osResult.ok) {
+        const localPath = path.join(process.cwd(), "public", "institutions");
+        await fs.mkdir(localPath, { recursive: true });
+        await fs.writeFile(path.join(localPath, filename), req.file.buffer);
+      }
 
       const logoPath = `/institutions/${filename}`;
 
@@ -11395,13 +11410,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.updateUniversity(institutionId, { logo: logoPath });
         }
       }
-
-      // Backup to object storage (best-effort)
-      try {
-        const { Client: LogoClient } = await import("@replit/object-storage");
-        const logoClient = new LogoClient();
-        await logoClient.uploadFromBytes(`public/institution-logos/${filename}`, req.file.buffer, { contentType: req.file.mimetype } as any);
-      } catch (_) { /* object storage optional */ }
 
       res.json({ logoPath });
     } catch (error: any) {
@@ -18992,10 +19000,13 @@ Sitemap: ${baseUrl}/sitemap.xml
       }
 
       const filename = `testimonial-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.jpg`;
-      const localPath = path.join(process.cwd(), 'public', 'testimonials');
-      await fs.mkdir(localPath, { recursive: true });
-      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
-      
+      const { uploadFile: osUpload } = await import("./file-storage");
+      const osResult = await osUpload(`public/testimonials/${filename}`, resizedBuffer, 'image/jpeg');
+      if (!osResult.ok) {
+        const localPath = path.join(process.cwd(), 'public', 'testimonials');
+        await fs.mkdir(localPath, { recursive: true });
+        await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+      }
       const photoUrl = `/testimonials/${filename}`;
 
       res.json({ photoUrl });
@@ -22493,9 +22504,13 @@ Sitemap: ${baseUrl}/sitemap.xml
         .toBuffer();
 
       const filename = `college-logo-${institutionId}-${Date.now()}.png`;
-      const localPath = path.join(process.cwd(), 'public', 'institutions');
-      await fs.mkdir(localPath, { recursive: true });
-      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+      const { uploadFile: osUploadLogo } = await import("./file-storage");
+      const osLogoResult = await osUploadLogo(`public/institution-logos/${filename}`, resizedBuffer, 'image/png');
+      if (!osLogoResult.ok) {
+        const localPath = path.join(process.cwd(), 'public', 'institutions');
+        await fs.mkdir(localPath, { recursive: true });
+        await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+      }
 
       const logoPath = `/institutions/${filename}`;
 
@@ -23926,6 +23941,22 @@ Sitemap: ${baseUrl}/sitemap.xml
   } catch (err) {
     console.error('[routes] Failed to start background workers:', err);
   }
+
+  // ─── One-time local-to-Object-Storage migration endpoint ────────────────────
+  app.post("/api/admin/migrate-local-files", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, CTO_ROLES);
+      if (!access) return res.status(403).json({ message: "Access denied: CTO role required" });
+
+      const { runLocalFileMigration } = await import("./file-storage");
+      const results = await runLocalFileMigration();
+      res.json({ success: true, results });
+    } catch (error: any) {
+      console.error("[Migration] Error running local file migration:", error);
+      res.status(500).json({ message: "Migration failed", error: error.message });
+    }
+  });
 
   // ─── Startup route-group health check ───────────────────────────────────────
   // Print a summary of every named route group so any silent 404s are

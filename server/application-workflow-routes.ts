@@ -1265,23 +1265,20 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         return res.status(404).json({ error: "Application not found" });
       }
 
-      // Resolve uploads base directory (same logic as student upload)
-      let uploadsBase = process.env.PRIVATE_OBJECT_DIR;
-      if (uploadsBase) {
-        try { await fs.access(uploadsBase); } catch { uploadsBase = undefined; }
-      }
-      if (!uploadsBase) {
-        uploadsBase = path.join(process.cwd(), 'uploads');
-      }
-
-      // application.studentId is the studentProfileId FK
       const profileDir = application.studentId || 'admin';
-      const fileName = `${Date.now()}-${req.file.originalname}`;
-      const uploadsDir = path.join(uploadsBase, 'documents', profileDir);
-      const filePath = path.join(uploadsDir, fileName);
-
-      await fs.mkdir(uploadsDir, { recursive: true });
-      await fs.writeFile(filePath, req.file.buffer);
+      const fileName = `${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const osDocPath = `.private/documents/${profileDir}/${fileName}`;
+      const { uploadFile: osUpload } = await import("./file-storage");
+      const osResult = await osUpload(osDocPath, req.file.buffer, req.file.mimetype);
+      let filePath: string;
+      if (osResult.ok) {
+        filePath = osDocPath;
+      } else {
+        const uploadsDir = path.join(process.cwd(), 'uploads', 'documents', profileDir);
+        await fs.mkdir(uploadsDir, { recursive: true });
+        filePath = path.join(uploadsDir, fileName);
+        await fs.writeFile(filePath, req.file.buffer);
+      }
 
       // Use the folder explicitly chosen by the consultant (null = unfiled)
       const resolvedFolderId = bodyFolderId || null;

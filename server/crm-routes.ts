@@ -1209,12 +1209,14 @@ router.post("/contacts/:id/upload-photo", requireAdmin, requireCrmWriteAccess, c
       });
     }
 
-    // Save to public directory
     const filename = `crm-contact-${id}-${Date.now()}.jpg`;
-    const localPath = path.join(process.cwd(), 'public', 'contacts');
-    await fs.mkdir(localPath, { recursive: true });
-    await fs.writeFile(path.join(localPath, filename), resizedBuffer);
-    
+    const { uploadFile: osUpload } = await import("./file-storage");
+    const osResult = await osUpload(`public/contacts/${filename}`, resizedBuffer, 'image/jpeg');
+    if (!osResult.ok) {
+      const localPath = path.join(process.cwd(), 'public', 'contacts');
+      await fs.mkdir(localPath, { recursive: true });
+      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+    }
     const photoPath = `/contacts/${filename}`;
 
     // Update contact with new photo

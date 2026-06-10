@@ -361,17 +361,14 @@ export function registerAccountsRoutes(app: Express) {
         : req.file.mimetype === "image/webp" ? "webp"
         : "jpg";
       const filename = `account-logo-${Date.now()}.${ext}`;
-      const localDir = path.join(process.cwd(), "public", "account-logos");
-      await fs.mkdir(localDir, { recursive: true });
-      await fs.writeFile(path.join(localDir, filename), req.file.buffer);
-
+      const { uploadFile: osUpload } = await import("./file-storage");
+      const osResult = await osUpload(`public/account-logos/${filename}`, req.file.buffer, req.file.mimetype);
+      if (!osResult.ok) {
+        const localDir = path.join(process.cwd(), "public", "account-logos");
+        await fs.mkdir(localDir, { recursive: true });
+        await fs.writeFile(path.join(localDir, filename), req.file.buffer);
+      }
       const logoUrl = `/account-logos/${filename}`;
-
-      try {
-        const { Client: ObjClient } = await import("@replit/object-storage");
-        const objClient = new ObjClient();
-        await objClient.uploadFromBytes(`public/account-logos/${filename}`, req.file.buffer, { contentType: req.file.mimetype } as any);
-      } catch (_) { /* object storage optional */ }
 
       res.json({ logoUrl });
     } catch (err: any) {

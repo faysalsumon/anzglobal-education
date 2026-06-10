@@ -482,11 +482,18 @@ router.post(
       const baseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9-_]/g, "_");
       const fileName = `${baseName}_${timestamp}${ext}`;
       
-      // Use local file storage (like testimonials) for reliability
-      const localDir = path.join(process.cwd(), 'private', 'institutions', institutionId, category);
-      await fs.mkdir(localDir, { recursive: true });
-      const storagePath = path.join(localDir, fileName);
-      await fs.writeFile(storagePath, file.buffer);
+      const osDocPath = `.private/institutions/${institutionId}/${category}/${fileName}`;
+      const { uploadFile: osUpload } = await import("./file-storage");
+      const osResult = await osUpload(osDocPath, file.buffer, file.mimetype);
+      let storagePath: string;
+      if (osResult.ok) {
+        storagePath = osDocPath;
+      } else {
+        const localDir = path.join(process.cwd(), 'private', 'institutions', institutionId, category);
+        await fs.mkdir(localDir, { recursive: true });
+        storagePath = path.join(localDir, fileName);
+        await fs.writeFile(storagePath, file.buffer);
+      }
       
       const [newDocument] = await db
         .insert(institutionDocuments)
@@ -542,17 +549,19 @@ router.get("/institutions/:institutionId/documents/:documentId/download", requir
       return res.status(404).json({ message: "Document not found" });
     }
     
-    // Read from local file storage
     try {
-      const fileBuffer = await fs.readFile(document.filePath);
-      
+      const { readDocumentBuffer } = await import("./file-storage");
+      const fileBuffer = await readDocumentBuffer(document.filePath);
+      if (!fileBuffer) {
+        console.error("File not found:", document.filePath);
+        return res.status(404).json({ message: "File not found in storage" });
+      }
       res.setHeader("Content-Type", document.mimeType || "application/octet-stream");
       res.setHeader(
         "Content-Disposition",
         `attachment; filename="${encodeURIComponent(document.originalFileName)}"`
       );
       res.setHeader("Content-Length", fileBuffer.length);
-      
       res.send(fileBuffer);
     } catch (fileError) {
       console.error("File not found:", document.filePath);
