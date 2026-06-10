@@ -48,13 +48,25 @@ export async function uploadFile(
   }
 }
 
+function normalizeToBuffer(value: unknown): Buffer {
+  if (Buffer.isBuffer(value)) return value as Buffer;
+  if (value instanceof Uint8Array) return Buffer.from(value);
+  if (value instanceof ArrayBuffer) return Buffer.from(value);
+  if (Array.isArray(value)) {
+    const chunks = value.map((c: unknown) =>
+      Buffer.isBuffer(c) ? (c as Buffer) : Buffer.from(c as Uint8Array)
+    );
+    return Buffer.concat(chunks);
+  }
+  return Buffer.from(value as ArrayBufferLike);
+}
+
 export async function downloadFile(storagePath: string): Promise<Buffer | null> {
   try {
     const client = await getClient();
     const result = await client.downloadAsBytes(storagePath);
-    if (!result.ok || !result.value) return null;
-    const chunks = result.value as unknown as Uint8Array[];
-    const buf = Buffer.concat(chunks.map((c) => Buffer.from(c)));
+    if (!result.ok || result.value == null) return null;
+    const buf = normalizeToBuffer(result.value);
     return buf.length > 0 ? buf : null;
   } catch (err: any) {
     console.error(`[FileStorage] Download error for ${storagePath}:`, err.message);
