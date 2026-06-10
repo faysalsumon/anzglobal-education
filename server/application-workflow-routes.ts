@@ -1423,66 +1423,16 @@ export function registerApplicationWorkflowRoutes(app: Express) {
       }
 
       const filePath = document.documentUrl;
-      const fs = await import('fs/promises');
-      const path = await import('path');
-      
-      // Check if it's an object storage path (starts with .private/) or a local file path
-      if (filePath.startsWith('.private/') || filePath.startsWith('private/')) {
-        // Object storage path - use storage client
-        const { Client } = await import("@replit/object-storage");
-        const storageClient = new Client();
-        
-        const { ok, value: fileBuffer } = await storageClient.downloadAsBytes(filePath);
-        
-        if (!ok || !fileBuffer) {
-          return res.status(404).json({ error: "File not found in storage" });
-        }
-        
-        // Determine content type from file extension
-        const ext = path.extname(document.documentName || filePath).toLowerCase();
-        const mimeTypes: Record<string, string> = {
-          '.pdf': 'application/pdf',
-          '.png': 'image/png',
-          '.jpg': 'image/jpeg',
-          '.jpeg': 'image/jpeg',
-          '.gif': 'image/gif',
-          '.doc': 'application/msword',
-          '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          '.xls': 'application/vnd.ms-excel',
-          '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        };
-        const contentType = mimeTypes[ext] || 'application/octet-stream';
-        
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Disposition', `inline; filename="${document.documentName || 'document'}"`);
-        res.send(fileBuffer as unknown as Buffer);
-      } else {
-        // Local file path
-        try {
-          const fileBuffer = await fs.readFile(filePath);
-          
-          const ext = path.extname(document.documentName || filePath).toLowerCase();
-          const mimeTypes: Record<string, string> = {
-            '.pdf': 'application/pdf',
-            '.png': 'image/png',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.gif': 'image/gif',
-            '.doc': 'application/msword',
-            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            '.xls': 'application/vnd.ms-excel',
-            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          };
-          const contentType = mimeTypes[ext] || 'application/octet-stream';
-          
-          res.setHeader('Content-Type', contentType);
-          res.setHeader('Content-Disposition', `inline; filename="${document.documentName || 'document'}"`);
-          res.send(fileBuffer);
-        } catch (err) {
-          console.error("Error reading local file:", err);
-          return res.status(404).json({ error: "File not found" });
-        }
+      const { readDocumentBuffer, getMimeType } = await import("./file-storage");
+      const fileBuffer = await readDocumentBuffer(filePath);
+      if (!fileBuffer) {
+        return res.status(404).json({ error: "File not found in storage" });
       }
+
+      const contentType = getMimeType(document.documentName || filePath, 'application/octet-stream');
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `inline; filename="${document.documentName || 'document'}"`);
+      res.send(fileBuffer);
     } catch (error: any) {
       console.error("Error downloading document:", error);
       res.status(500).json({ error: error.message || "Failed to download document" });
