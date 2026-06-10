@@ -21,6 +21,10 @@ import {
   ShieldCheck,
   RefreshCw,
   Check,
+  HardDriveUpload,
+  FolderSync,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 
 interface AiModel {
@@ -165,10 +169,22 @@ function providerLabel(slug: string): string {
   return map[slug] ?? slug;
 }
 
+interface MigrationCategoryResult {
+  total: number;
+  uploaded: number;
+  skipped: number;
+  failed: number;
+}
+
+interface MigrationResults {
+  [category: string]: MigrationCategoryResult;
+}
+
 export function AdminAiSettingsPanel() {
   const { toast } = useToast();
   const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
   const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
+  const [migrationResults, setMigrationResults] = useState<MigrationResults | null>(null);
 
   const { data: models, isLoading: modelsLoading, refetch: refetchModels } = useQuery<AiModel[]>({
     queryKey: ["/api/admin/ai-models"],
@@ -222,6 +238,31 @@ export function AdminAiSettingsPanel() {
       toast({
         title: "Save failed",
         description: error.message || "Failed to save AI settings.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const migrateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/migrate-local-files");
+      return res.json();
+    },
+    onSuccess: (data: { success: boolean; results: MigrationResults }) => {
+      setMigrationResults(data.results);
+      const total = Object.values(data.results).reduce((sum, r) => sum + r.total, 0);
+      const uploaded = Object.values(data.results).reduce((sum, r) => sum + r.uploaded, 0);
+      const failed = Object.values(data.results).reduce((sum, r) => sum + r.failed, 0);
+      toast({
+        title: "Migration complete",
+        description: `${uploaded} of ${total} files uploaded${failed > 0 ? `, ${failed} failed` : ""}.`,
+        variant: failed > 0 ? "destructive" : "default",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Migration failed",
+        description: error.message || "An error occurred during migration.",
         variant: "destructive",
       });
     },
@@ -453,6 +494,76 @@ export function AdminAiSettingsPanel() {
           )}
         </Button>
       </div>
+
+      {/* System Maintenance */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <FolderSync className="h-5 w-5 text-muted-foreground" />
+            <CardTitle className="text-base">System Maintenance</CardTitle>
+          </div>
+          <CardDescription>
+            One-time actions for platform administrators.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Migrate Local Files to Storage</p>
+              <p className="text-xs text-muted-foreground">
+                Copies any files previously stored on the local disk (logos, documents, etc.) into Object Storage.
+                Run once after deployment. Files already in Object Storage are skipped automatically.
+              </p>
+            </div>
+            <Button
+              data-testid="button-migrate-local-files"
+              onClick={() => migrateMutation.mutate()}
+              disabled={migrateMutation.isPending}
+              className="shrink-0"
+            >
+              {migrateMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Migrating…
+                </>
+              ) : (
+                <>
+                  <HardDriveUpload className="mr-2 h-4 w-4" />
+                  Run Migration
+                </>
+              )}
+            </Button>
+          </div>
+
+          {migrationResults && (
+            <div className="rounded-md border bg-muted/40 p-3 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Migration Results</p>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(migrationResults).map(([category, r]) => {
+                  const hasFailures = r.failed > 0;
+                  return (
+                    <div key={category} className="flex items-start gap-2 rounded-md border bg-background p-2">
+                      {hasFailures ? (
+                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                      ) : (
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium capitalize">{category.replace(/_/g, " ")}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {r.uploaded} uploaded · {r.skipped} skipped
+                          {r.failed > 0 && <span className="text-destructive"> · {r.failed} failed</span>}
+                          <span className="text-muted-foreground/60"> / {r.total} total</span>
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Info footer */}
       <Card>
