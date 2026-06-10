@@ -92,7 +92,6 @@ export async function serveFile(
   res: Response,
   storagePath: string,
   options?: {
-    localFallbackPath?: string;
     mimeType?: string;
     cacheControl?: string;
     disposition?: string;
@@ -112,26 +111,6 @@ export async function serveFile(
     }
     res.send(buf);
     return true;
-  }
-
-  if (options?.localFallbackPath) {
-    try {
-      await fs.access(options.localFallbackPath);
-      const localBuf = await fs.readFile(options.localFallbackPath);
-      if (localBuf.length > 0) {
-        const ext = options.localFallbackPath.split(".").pop()?.toLowerCase() || "";
-        const contentType = options?.mimeType || MIME_TYPES[ext] || "application/octet-stream";
-        res.setHeader("Content-Type", contentType);
-        res.setHeader("Cache-Control", cacheControl);
-        if (options?.disposition) {
-          res.setHeader("Content-Disposition", options.disposition);
-        }
-        res.send(localBuf);
-        return true;
-      }
-    } catch {
-      // local file not found either
-    }
   }
 
   return false;

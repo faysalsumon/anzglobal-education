@@ -1,6 +1,4 @@
 import type { Express, Request, Response } from "express";
-import path from "path";
-import fs from "fs/promises";
 import multer from "multer";
 import { db } from "./db";
 import { isUnifiedAuthenticated } from "./supabase-middleware";
@@ -364,9 +362,8 @@ export function registerAccountsRoutes(app: Express) {
       const { uploadFile: osUpload } = await import("./file-storage");
       const osResult = await osUpload(`public/account-logos/${filename}`, req.file.buffer, req.file.mimetype);
       if (!osResult.ok) {
-        const localDir = path.join(process.cwd(), "public", "account-logos");
-        await fs.mkdir(localDir, { recursive: true });
-        await fs.writeFile(path.join(localDir, filename), req.file.buffer);
+        console.error(`[Accounts] Failed to upload account logo to Object Storage: ${filename}`);
+        return res.status(500).json({ message: "Failed to upload logo to storage" });
       }
       const logoUrl = `/account-logos/${filename}`;
 

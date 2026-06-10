@@ -641,14 +641,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     _markRouteGroup('crm-routes (early)', false, err);
   }
 
-  // Proxy handlers for user-uploaded image categories — served from Object Storage
-  // with a local-disk fallback for files not yet migrated.
-  const imageCategories: Array<{ route: string; osPrefix: string; localDir: string }> = [
-    { route: '/students',     osPrefix: 'public/students',     localDir: path.join(process.cwd(), 'public', 'students') },
-    { route: '/admins',       osPrefix: 'public/admins',       localDir: path.join(process.cwd(), 'public', 'admins') },
-    { route: '/contacts',     osPrefix: 'public/contacts',     localDir: path.join(process.cwd(), 'public', 'contacts') },
-    { route: '/testimonials', osPrefix: 'public/testimonials', localDir: path.join(process.cwd(), 'public', 'testimonials') },
-    { route: '/account-logos',osPrefix: 'public/account-logos',localDir: path.join(process.cwd(), 'public', 'account-logos') },
+  // Proxy handlers for user-uploaded image categories — served from Object Storage.
+  const imageCategories: Array<{ route: string; osPrefix: string }> = [
+    { route: '/students',     osPrefix: 'public/students' },
+    { route: '/admins',       osPrefix: 'public/admins' },
+    { route: '/contacts',     osPrefix: 'public/contacts' },
+    { route: '/testimonials', osPrefix: 'public/testimonials' },
+    { route: '/account-logos',osPrefix: 'public/account-logos' },
   ];
   for (const cat of imageCategories) {
     app.get(`${cat.route}/:filename`, async (req: any, res: any, next: any) => {
@@ -657,7 +656,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!filename || !/^[a-zA-Z0-9_\-.]+$/.test(filename)) return next();
         const { serveFile } = await import("./file-storage");
         const served = await serveFile(res, `${cat.osPrefix}/${filename}`, {
-          localFallbackPath: path.join(cat.localDir, filename),
           cacheControl: 'public, max-age=86400',
         });
         if (!served) return res.status(404).json({ message: 'File not found' });
@@ -1277,9 +1275,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sharp = (await import('sharp')).default;
       const resizedBuffer = await sharp(buffer).resize(600, 400, { fit: 'cover' }).jpeg({ quality: 85 }).toBuffer();
       const filename = `gallery-ai-admin-${Date.now()}.jpg`;
-      const localPath = path.join(process.cwd(), 'public', 'institutions');
-      await fs.mkdir(localPath, { recursive: true });
-      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+      const { uploadFile: osGallery } = await import("./file-storage");
+      const osGalleryResult = await osGallery(`public/institution-logos/${filename}`, resizedBuffer, 'image/jpeg');
+      if (!osGalleryResult.ok) {
+        throw new Error("Failed to save generated image to storage");
+      }
       const imagePath = `/institutions/${filename}`;
       res.json({ imagePath });
     } catch (error) {
@@ -3869,9 +3869,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { uploadFile: osUpload } = await import("./file-storage");
       const osResult = await osUpload(`public/students/${filename}`, req.file.buffer, req.file.mimetype);
       if (!osResult.ok) {
-        const localPath = path.join(process.cwd(), 'public', 'students');
-        await fs.mkdir(localPath, { recursive: true });
-        await fs.writeFile(path.join(localPath, filename), req.file.buffer);
+        console.error(`[Profile] Failed to upload student photo to Object Storage: ${filename}`);
+        return res.status(500).json({ message: "Failed to upload photo to storage" });
       }
       const photoPath = `/students/${filename}`;
 
@@ -4115,9 +4114,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { uploadFile: osUpload } = await import("./file-storage");
       const osResult = await osUpload(`public/admins/${filename}`, req.file.buffer, req.file.mimetype);
       if (!osResult.ok) {
-        const localPath = path.join(process.cwd(), 'public', 'admins');
-        await fs.mkdir(localPath, { recursive: true });
-        await fs.writeFile(path.join(localPath, filename), req.file.buffer);
+        console.error(`[Profile] Failed to upload admin photo to Object Storage: ${filename}`);
+        return res.status(500).json({ message: "Failed to upload photo to storage" });
       }
       const photoPath = `/admins/${filename}`;
 
@@ -11391,9 +11389,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { uploadFile: osUpload } = await import("./file-storage");
       const osResult = await osUpload(`public/institution-logos/${filename}`, req.file.buffer, req.file.mimetype);
       if (!osResult.ok) {
-        const localPath = path.join(process.cwd(), "public", "institutions");
-        await fs.mkdir(localPath, { recursive: true });
-        await fs.writeFile(path.join(localPath, filename), req.file.buffer);
+        console.error(`[Institution] Failed to upload logo to Object Storage: ${filename}`);
+        return res.status(500).json({ message: "Failed to upload logo to storage" });
       }
 
       const logoPath = `/institutions/${filename}`;
@@ -18999,9 +18996,8 @@ Sitemap: ${baseUrl}/sitemap.xml
       const { uploadFile: osUpload } = await import("./file-storage");
       const osResult = await osUpload(`public/testimonials/${filename}`, resizedBuffer, 'image/jpeg');
       if (!osResult.ok) {
-        const localPath = path.join(process.cwd(), 'public', 'testimonials');
-        await fs.mkdir(localPath, { recursive: true });
-        await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+        console.error(`[Testimonial] Failed to upload photo to Object Storage: ${filename}`);
+        return res.status(500).json({ message: "Failed to upload photo to storage" });
       }
       const photoUrl = `/testimonials/${filename}`;
 
@@ -22503,9 +22499,12 @@ Sitemap: ${baseUrl}/sitemap.xml
       const { uploadFile: osUploadLogo } = await import("./file-storage");
       const osLogoResult = await osUploadLogo(`public/institution-logos/${filename}`, resizedBuffer, 'image/png');
       if (!osLogoResult.ok) {
-        const localPath = path.join(process.cwd(), 'public', 'institutions');
-        await fs.mkdir(localPath, { recursive: true });
-        await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+        console.error(`[Partner API] Failed to upload institution logo to Object Storage: ${filename}`);
+        await logPartnerUsage(req, 500);
+        return res.status(500).json({
+          error: 'Storage error',
+          message: 'Failed to upload institution logo to storage',
+        });
       }
 
       const logoPath = `/institutions/${filename}`;

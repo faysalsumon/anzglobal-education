@@ -20,7 +20,6 @@ import { eq, desc, and, or, ilike, count, isNull, isNotNull, aliasedTable, ne, s
 import { logActivity } from "./activity-logger";
 import multer from "multer";
 import path from "path";
-import fs from "fs/promises";
 import { buildRegionScopedFilter, checkCrudPermission } from "./access-policy-service";
 
 // Configure multer for CRM photo uploads
@@ -1213,9 +1212,8 @@ router.post("/contacts/:id/upload-photo", requireAdmin, requireCrmWriteAccess, c
     const { uploadFile: osUpload } = await import("./file-storage");
     const osResult = await osUpload(`public/contacts/${filename}`, resizedBuffer, 'image/jpeg');
     if (!osResult.ok) {
-      const localPath = path.join(process.cwd(), 'public', 'contacts');
-      await fs.mkdir(localPath, { recursive: true });
-      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+      console.error(`[CRM] Failed to upload contact photo to Object Storage for contact ${id}`);
+      return res.status(500).json({ message: "Failed to upload photo to storage" });
     }
     const photoPath = `/contacts/${filename}`;
 
