@@ -485,15 +485,11 @@ router.post(
       const osDocPath = `.private/institutions/${institutionId}/${category}/${fileName}`;
       const { uploadFile: osUpload } = await import("./file-storage");
       const osResult = await osUpload(osDocPath, file.buffer, file.mimetype);
-      let storagePath: string;
-      if (osResult.ok) {
-        storagePath = osDocPath;
-      } else {
-        const localDir = path.join(process.cwd(), 'private', 'institutions', institutionId, category);
-        await fs.mkdir(localDir, { recursive: true });
-        storagePath = path.join(localDir, fileName);
-        await fs.writeFile(storagePath, file.buffer);
+      if (!osResult.ok) {
+        console.error('[InstDoc] Object Storage upload failed:', osResult.error);
+        return res.status(500).json({ message: "File upload failed. Please try again." });
       }
+      const storagePath = osDocPath;
       
       const [newDocument] = await db
         .insert(institutionDocuments)

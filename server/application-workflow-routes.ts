@@ -1270,15 +1270,11 @@ export function registerApplicationWorkflowRoutes(app: Express) {
       const osDocPath = `.private/documents/${profileDir}/${fileName}`;
       const { uploadFile: osUpload } = await import("./file-storage");
       const osResult = await osUpload(osDocPath, req.file.buffer, req.file.mimetype);
-      let filePath: string;
-      if (osResult.ok) {
-        filePath = osDocPath;
-      } else {
-        const uploadsDir = path.join(process.cwd(), 'uploads', 'documents', profileDir);
-        await fs.mkdir(uploadsDir, { recursive: true });
-        filePath = path.join(uploadsDir, fileName);
-        await fs.writeFile(filePath, req.file.buffer);
+      if (!osResult.ok) {
+        console.error('[AppDoc] Object Storage upload failed:', osResult.error);
+        return res.status(500).json({ error: "File upload failed. Please try again." });
       }
+      const filePath = osDocPath;
 
       // Use the folder explicitly chosen by the consultant (null = unfiled)
       const resolvedFolderId = bodyFolderId || null;

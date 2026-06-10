@@ -6535,15 +6535,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const osDocPath = `.private/documents/${profile.id}/${fileName}`;
       const { uploadFile: osUpload } = await import("./file-storage");
       const osResult = await osUpload(osDocPath, req.file.buffer, req.file.mimetype);
-      let filePath: string;
-      if (osResult.ok) {
-        filePath = osDocPath;
-      } else {
-        const uploadsDir = path.join(process.cwd(), 'uploads', 'documents', profile.id);
-        await fs.mkdir(uploadsDir, { recursive: true });
-        filePath = path.join(uploadsDir, fileName);
-        await fs.writeFile(filePath, req.file.buffer);
+      if (!osResult.ok) {
+        console.error('[UPLOAD] Object Storage upload failed:', osResult.error);
+        return res.status(500).json({ message: "File upload failed. Please try again." });
       }
+      const filePath = osDocPath;
 
       const document = await storage.createDocument({
         type: type || 'other',
