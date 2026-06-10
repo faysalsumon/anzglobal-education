@@ -32,3 +32,12 @@ logs/
 tmp/
 temp/
 .cache/
+
+# Local upload directories (files should live in Object Storage, not on disk)
+public/students/
+public/admins/
+public/contacts/
+public/testimonials/
+public/account-logos/
+uploads/documents/
+private/institutions/
