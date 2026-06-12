@@ -6,10 +6,8 @@ import { z } from "zod";
 import OpenAI from "openai";
 import { queryKnowledgeBase } from "./knowledge-base";
 import { getJobAiSettings, AI_JOB_KEYS } from "./ai";
-import { createRateLimiter, getClientIp, replyTooManyRequests } from "./middleware/rate-limit";
-
-// 60 Zan messages per IP per hour — generous for real users, blocks floods
-const zanChatLimiter = createRateLimiter(60 * 60 * 1000, 60);
+import { getClientIp, replyTooManyRequests } from "./middleware/rate-limit";
+import { zanChatLimiter } from "./middleware/rate-limit-instances";
 
 function buildFormattedSources(relevantDocs: Awaited<ReturnType<typeof queryKnowledgeBase>>) {
   return relevantDocs.map(doc => {

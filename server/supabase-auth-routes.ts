@@ -9,13 +9,10 @@ import { sendWelcomeEmail, sendReferralRegistrationConfirmation, sendNewSignupAd
 import { getRegionContext } from './middleware/region-detection';
 import crypto from 'crypto';
 import { createCrmContactForUser } from './crm-routes';
-import { createRateLimiter, getClientIp, replyTooManyRequests } from './middleware/rate-limit';
+import { getClientIp, replyTooManyRequests } from './middleware/rate-limit';
+import { signinLimiter, forgotPasswordLimiter } from './middleware/rate-limit-instances';
 
 const router = Router();
-
-// Rate limiters — scoped to this module
-const signinLimiter = createRateLimiter(15 * 60 * 1000, 10);   // 10 per 15 min
-const forgotPasswordLimiter = createRateLimiter(60 * 60 * 1000, 5); // 5 per hour
 
 function getSiteUrl(): string {
   if (process.env.SITE_URL) {

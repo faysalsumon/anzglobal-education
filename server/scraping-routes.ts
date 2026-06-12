@@ -6,13 +6,10 @@ import { addScrapingJob, getJobStatus, cancelJob, getActiveJobs, getWaitingJobs 
 import { insertScrapingJobSchema, insertScrapedCourseSchema, insertScrapingTemplateSchema } from "../shared/schema";
 import { logApprove, logReject } from "./activity-logger";
 import { validateUrl } from "./ai";
-import { createRateLimiter, replyTooManyRequests } from "./middleware/rate-limit";
+import { replyTooManyRequests } from "./middleware/rate-limit";
+import { scrapingTriggerLimiter, scrapingTestLimiter } from "./middleware/rate-limit-instances";
 
 const router = Router();
-
-// Rate limiters — per-user, 20 expensive Playwright calls per hour
-const scrapingTriggerLimiter = createRateLimiter(60 * 60 * 1000, 20);
-const scrapingTestLimiter = createRateLimiter(60 * 60 * 1000, 20);
 
 // Import checkAdminAccess from routes.ts
 import type { checkAdminAccess as CheckAdminAccessType } from "./routes";

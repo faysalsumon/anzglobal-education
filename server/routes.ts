@@ -199,12 +199,8 @@ import { logActivity, logApprove, logReject, logCreate, logDelete, logUpdate, lo
 import express from "express";
 import { doubleCsrfProtection, csrfTokenEndpoint, csrfErrorHandler } from "./middleware/csrf";
 import { geocodingService } from "./geocoding-service";
-import { createRateLimiter, getClientIp, replyTooManyRequests } from "./middleware/rate-limit";
-
-// Module-level rate limiters (in-process, reset on server restart)
-const legacyLoginLimiter = createRateLimiter(15 * 60 * 1000, 10);    // 10 per 15 min per IP
-const publicLeadsLimiter = createRateLimiter(60 * 60 * 1000, 20);    // 20 per hour per IP
-const contactInquiryLimiter = createRateLimiter(60 * 60 * 1000, 20); // 20 per hour per IP
+import { getClientIp, replyTooManyRequests } from "./middleware/rate-limit";
+import { signinLimiter as legacyLoginLimiter, publicLeadsLimiter, contactInquiryLimiter } from "./middleware/rate-limit-instances";
 
 // Standardized main disciplines list - single source of truth for courses and institutions
 export const MAIN_DISCIPLINES = [
