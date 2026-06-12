@@ -12441,9 +12441,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
   
   // Public contact form submission endpoint (no auth required)
-  // TODO: Add rate limiting to prevent spam/abuse
   app.post("/api/public/contact", async (req, res) => {
     try {
+      const rl = contactInquiryLimiter(getClientIp(req));
+      if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many contact submissions');
+
       const turnstile = await verifyTurnstileToken(req.body.turnstileToken, req.ip);
       if (!turnstile.success) {
         return res.status(400).json({ message: turnstile.error || "CAPTCHA verification failed." });

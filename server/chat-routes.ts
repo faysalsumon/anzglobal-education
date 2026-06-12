@@ -432,6 +432,13 @@ STAFF BEHAVIOUR RULES:
       return verifyConversationOwnership(req, res, next);
     },
     async (req: Request, res: Response) => {
+      // Rate-limit check BEFORE SSE headers so a 429 can be returned normally
+      const { id } = req.params;
+      const userId = getAuthenticatedUserId(req);
+      const rateLimitKey = userId ?? id;
+      const rl = zanChatLimiter(rateLimitKey);
+      if (!rl.allowed) return replyTooManyRequests(res, rl, 'Chat message limit reached');
+
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
@@ -441,12 +448,10 @@ STAFF BEHAVIOUR RULES:
       const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
       try {
-        const { id } = req.params;
         const validation = z.object({ content: z.string().min(1).max(5000) }).safeParse(req.body);
         if (!validation.success) { send({ error: "Invalid message" }); return res.end(); }
         const { content } = validation.data;
 
-        const userId = getAuthenticatedUserId(req);
         const userFirstName = getAuthenticatedUserFirstName(req);
         const isLoggedIn = !!userId;
 
