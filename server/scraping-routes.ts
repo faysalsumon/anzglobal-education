@@ -7,6 +7,8 @@ import { insertScrapingJobSchema, insertScrapedCourseSchema, insertScrapingTempl
 import { logApprove, logReject } from "./activity-logger";
 import { validateUrl } from "./ai";
 
+const router = Router();
+
 // Import checkAdminAccess from routes.ts
 import type { checkAdminAccess as CheckAdminAccessType } from "./routes";
 
