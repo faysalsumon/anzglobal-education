@@ -41,9 +41,9 @@ export function createRateLimiter(windowMs: number, max: number) {
   // Purge expired entries once per window to prevent unbounded memory growth
   setInterval(() => {
     const now = Date.now();
-    for (const [key, record] of store.entries()) {
+    store.forEach((record, key) => {
       if (now > record.resetTime) store.delete(key);
-    }
+    });
   }, windowMs);
 
   return function check(key: string): RateLimitResult {

@@ -252,11 +252,15 @@ export function registerChatRoutes(app: Express) {
     return verifyConversationOwnership(req, res, next);
   }, async (req: Request, res: Response) => {
     try {
-      const rl = zanChatLimiter(getClientIp(req));
+      const { id } = req.params;
+
+      // Key by authenticated userId when available; fall back to conversationId
+      // (unique per anonymous session) so shared-IP users are never unfairly throttled.
+      const userId = getAuthenticatedUserId(req);
+      const rateLimitKey = userId ?? id;
+      const rl = zanChatLimiter(rateLimitKey);
       if (!rl.allowed) return replyTooManyRequests(res, rl, 'Chat message limit reached');
 
-      const { id } = req.params;
-      
       // Validate only the content field from request body
       const messageContentSchema = z.object({
         content: z.string().min(1).max(5000),
@@ -271,7 +275,6 @@ export function registerChatRoutes(app: Express) {
       const { content } = validation.data;
 
       // Get user info for personalization using consistent helpers
-      const userId = getAuthenticatedUserId(req);
       const userFirstName = getAuthenticatedUserFirstName(req);
       const isLoggedIn = !!userId;
 

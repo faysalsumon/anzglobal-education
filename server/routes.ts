@@ -202,7 +202,8 @@ import { geocodingService } from "./geocoding-service";
 import { createRateLimiter, getClientIp, replyTooManyRequests } from "./middleware/rate-limit";
 
 // Module-level rate limiters (in-process, reset on server restart)
-const publicLeadsLimiter = createRateLimiter(60 * 60 * 1000, 20);   // 20 per hour per IP
+const legacyLoginLimiter = createRateLimiter(15 * 60 * 1000, 10);    // 10 per 15 min per IP
+const publicLeadsLimiter = createRateLimiter(60 * 60 * 1000, 20);    // 20 per hour per IP
 const contactInquiryLimiter = createRateLimiter(60 * 60 * 1000, 20); // 20 per hour per IP
 
 // Standardized main disciplines list - single source of truth for courses and institutions
@@ -956,6 +957,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Email/Password Auth Routes
   app.post("/api/auth/login", async (req, res) => {
     try {
+      const rl = legacyLoginLimiter(getClientIp(req));
+      if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many login attempts');
+
       const { email, password } = req.body;
       
       if (!email || !password) {
