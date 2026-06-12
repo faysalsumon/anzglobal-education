@@ -10,6 +10,10 @@ vite.config.ts.*
 .env.local
 .env.*.local
 
+# Replit config files — can contain secrets written by Replit's secret manager
+.replit
+replit.nix
+
 # Session storage
 sessions/
 
