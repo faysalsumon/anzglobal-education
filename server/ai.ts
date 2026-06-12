@@ -1357,7 +1357,7 @@ const ALLOWED_EDUCATION_DOMAINS = [
 ];
 
 // Validate URL to prevent SSRF attacks
-async function validateUrl(urlString: string): Promise<URL> {
+export async function validateUrl(urlString: string): Promise<URL> {
   let url: URL;
   try {
     url = new URL(urlString);
