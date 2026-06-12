@@ -6,8 +6,13 @@ import { addScrapingJob, getJobStatus, cancelJob, getActiveJobs, getWaitingJobs 
 import { insertScrapingJobSchema, insertScrapedCourseSchema, insertScrapingTemplateSchema } from "../shared/schema";
 import { logApprove, logReject } from "./activity-logger";
 import { validateUrl } from "./ai";
+import { createRateLimiter, replyTooManyRequests } from "./middleware/rate-limit";
 
 const router = Router();
+
+// Rate limiters — per-user, 20 expensive Playwright calls per hour
+const scrapingTriggerLimiter = createRateLimiter(60 * 60 * 1000, 20);
+const scrapingTestLimiter = createRateLimiter(60 * 60 * 1000, 20);
 
 // Import checkAdminAccess from routes.ts
 import type { checkAdminAccess as CheckAdminAccessType } from "./routes";
@@ -40,6 +45,9 @@ router.post("/trigger", async (req, res) => {
     if (!access) {
       return res.status(403).json({ error: "Admin access required" });
     }
+
+    const rl = scrapingTriggerLimiter(userId);
+    if (!rl.allowed) return replyTooManyRequests(res, rl, 'Scraping job limit reached');
 
     // Validate request body
     const validation = insertScrapingJobSchema.safeParse({
@@ -130,6 +138,9 @@ router.post("/test", async (req, res) => {
     if (!access) {
       return res.status(403).json({ error: "Admin access required" });
     }
+
+    const rl = scrapingTestLimiter(userId);
+    if (!rl.allowed) return replyTooManyRequests(res, rl, 'Scraping test limit reached');
 
     const { institutionUrl, institutionName, useBrowser } = req.body;
 

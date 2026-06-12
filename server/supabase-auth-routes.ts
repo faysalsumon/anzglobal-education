@@ -9,8 +9,13 @@ import { sendWelcomeEmail, sendReferralRegistrationConfirmation, sendNewSignupAd
 import { getRegionContext } from './middleware/region-detection';
 import crypto from 'crypto';
 import { createCrmContactForUser } from './crm-routes';
+import { createRateLimiter, getClientIp, replyTooManyRequests } from './middleware/rate-limit';
 
 const router = Router();
+
+// Rate limiters — scoped to this module
+const signinLimiter = createRateLimiter(15 * 60 * 1000, 10);   // 10 per 15 min
+const forgotPasswordLimiter = createRateLimiter(60 * 60 * 1000, 5); // 5 per hour
 
 function getSiteUrl(): string {
   if (process.env.SITE_URL) {
@@ -116,6 +121,9 @@ router.post('/signup', async (req: Request, res: Response) => {
 
 router.post('/signin', async (req: Request, res: Response) => {
   try {
+    const rl = signinLimiter(getClientIp(req));
+    if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many login attempts');
+
     if (!supabase) {
       return res.status(503).json({ error: 'Supabase is not configured' });
     }
@@ -231,6 +239,9 @@ router.post('/signout', async (req: Request, res: Response) => {
 
 router.post('/forgot-password', async (req: Request, res: Response) => {
   try {
+    const rl = forgotPasswordLimiter(getClientIp(req));
+    if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many password reset requests');
+
     if (!supabase) {
       return res.status(503).json({ error: 'Supabase is not configured' });
     }

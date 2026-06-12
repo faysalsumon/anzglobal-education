@@ -199,6 +199,11 @@ import { logActivity, logApprove, logReject, logCreate, logDelete, logUpdate, lo
 import express from "express";
 import { doubleCsrfProtection, csrfTokenEndpoint, csrfErrorHandler } from "./middleware/csrf";
 import { geocodingService } from "./geocoding-service";
+import { createRateLimiter, getClientIp, replyTooManyRequests } from "./middleware/rate-limit";
+
+// Module-level rate limiters (in-process, reset on server restart)
+const publicLeadsLimiter = createRateLimiter(60 * 60 * 1000, 20);   // 20 per hour per IP
+const contactInquiryLimiter = createRateLimiter(60 * 60 * 1000, 20); // 20 per hour per IP
 
 // Standardized main disciplines list - single source of truth for courses and institutions
 export const MAIN_DISCIPLINES = [
@@ -3057,9 +3062,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Public lead creation endpoint (no auth required) - creates CRM contact for unified lead management
-  // TODO: Add rate limiting to prevent spam/abuse
   app.post("/api/public/leads", async (req, res) => {
     try {
+      const rl = publicLeadsLimiter(getClientIp(req));
+      if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many form submissions');
+
       const turnstile = await verifyTurnstileToken(req.body.turnstileToken, req.ip);
       if (!turnstile.success) {
         return res.status(400).json({ message: turnstile.error || "CAPTCHA verification failed." });
@@ -16111,6 +16118,9 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
     console.log("Request body:", JSON.stringify(req.body, null, 2));
     
     try {
+      const rl = contactInquiryLimiter(getClientIp(req));
+      if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many contact submissions');
+
       const turnstile = await verifyTurnstileToken(req.body.turnstileToken, req.ip);
       if (!turnstile.success) {
         return res.status(400).json({ message: turnstile.error || "CAPTCHA verification failed." });
