@@ -5,8 +5,90 @@ import { eq, desc, and, sql as dsql } from "drizzle-orm";
 import { addScrapingJob, getJobStatus, cancelJob, getActiveJobs, getWaitingJobs } from "./scraping-queue";
 import { insertScrapingJobSchema, insertScrapedCourseSchema, insertScrapingTemplateSchema } from "../shared/schema";
 import { logApprove, logReject } from "./activity-logger";
+import dns from "dns/promises";
 
 const router = Router();
+
+/**
+ * SSRF guard — validates a user-supplied URL before any outbound HTTP fetch.
+ * Rejects private/loopback/link-local IPs (RFC-1918, 169.254.x.x cloud metadata,
+ * localhost) and non-HTTP(S) schemes. Does DNS resolution to catch DNS-rebinding.
+ * Does NOT enforce an educational domain allowlist — this scraper must reach any
+ * institution website. Throws with a descriptive message on failure.
+ */
+async function validateSsrfUrl(urlString: string): Promise<string> {
+  let url: URL;
+  try {
+    url = new URL(urlString);
+  } catch {
+    throw new Error("Invalid URL format");
+  }
+
+  if (!["http:", "https:"].includes(url.protocol)) {
+    throw new Error("Only HTTP and HTTPS protocols are allowed");
+  }
+
+  const hostname = url.hostname.toLowerCase();
+
+  // Block localhost and loopback variants
+  const forbiddenHosts = ["localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"];
+  if (forbiddenHosts.includes(hostname)) {
+    throw new Error("Access to localhost is not allowed");
+  }
+
+  function isPrivateOrMetadataIP(ip: string): boolean {
+    // Strip IPv6 brackets if present
+    const clean = ip.replace(/^\[|\]$/g, "");
+
+    // IPv6 loopback
+    if (clean === "::1") return true;
+
+    const parts = clean.split(".").map(Number);
+    if (parts.length !== 4 || parts.some(isNaN)) return false;
+
+    const [a, b] = parts;
+    return (
+      a === 10 ||                          // 10.0.0.0/8
+      a === 127 ||                         // 127.0.0.0/8 loopback
+      (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0/12
+      (a === 192 && b === 168) ||          // 192.168.0.0/16
+      (a === 169 && b === 254) ||          // 169.254.0.0/16 link-local / cloud metadata
+      a === 0                              // 0.0.0.0/8
+    );
+  }
+
+  // If the host is a bare IP address, check it directly
+  if (/^(\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname.includes(":")) {
+    if (isPrivateOrMetadataIP(hostname)) {
+      throw new Error("Access to private or link-local IP addresses is not allowed");
+    }
+    return url.href;
+  }
+
+  // Resolve DNS and check every returned address
+  try {
+    const v4 = await dns.resolve4(hostname).catch(() => [] as string[]);
+    const v6 = await dns.resolve6(hostname).catch(() => [] as string[]);
+    const all = [...v4, ...v6];
+
+    if (all.length === 0) {
+      throw new Error("Unable to resolve hostname");
+    }
+
+    for (const addr of all) {
+      if (isPrivateOrMetadataIP(addr)) {
+        throw new Error("Domain resolves to a private or link-local IP address — request blocked");
+      }
+    }
+  } catch (err: any) {
+    if (err.message.includes("private") || err.message.includes("link-local") || err.message.includes("blocked")) {
+      throw err;
+    }
+    throw new Error("Unable to resolve hostname — request blocked for safety");
+  }
+
+  return url.href;
+}
 
 // Import checkAdminAccess from routes.ts
 import type { checkAdminAccess as CheckAdminAccessType } from "./routes";
@@ -56,6 +138,13 @@ router.post("/trigger", async (req, res) => {
     }
 
     const { institutionId, institutionUrl, institutionName, useAutoDiscovery, templateId } = validation.data;
+
+    // SSRF guard — block private IPs, localhost, and cloud metadata endpoints
+    try {
+      await validateSsrfUrl(institutionUrl);
+    } catch (err: any) {
+      return res.status(400).json({ error: "Invalid or disallowed URL", message: err.message });
+    }
 
     // Create database job record
     const [job] = await db
@@ -127,7 +216,15 @@ router.post("/test", async (req, res) => {
       return res.status(400).json({ error: "institutionUrl is required" });
     }
 
-    console.log(`[Direct Scraping] Starting scrape for ${institutionUrl}`);
+    // SSRF guard — block private IPs, localhost, and cloud metadata endpoints
+    let safeUrl: string;
+    try {
+      safeUrl = await validateSsrfUrl(institutionUrl);
+    } catch (err: any) {
+      return res.status(400).json({ error: "Invalid or disallowed URL", message: err.message });
+    }
+
+    console.log(`[Direct Scraping] Starting scrape for ${safeUrl}`);
 
     // Import scraping services
     const { scrapeWebsite } = await import("./web-scraper-service");
@@ -136,7 +233,7 @@ router.post("/test", async (req, res) => {
     // Scrape the website
     console.log("[Direct Scraping] Fetching HTML...");
     const scrapeResult = await scrapeWebsite({
-      url: institutionUrl,
+      url: safeUrl,
       useBrowser: useBrowser || false,
       timeout: 30000,
     });
@@ -147,7 +244,7 @@ router.post("/test", async (req, res) => {
     console.log("[Direct Scraping] Extracting courses with AI...");
     const extractionResult = await extractCourseData(
       scrapeResult.html,
-      institutionUrl,
+      safeUrl,
       institutionName
     );
 
@@ -175,7 +272,7 @@ router.post("/test", async (req, res) => {
     const [tempJob] = await db
       .insert(scrapingJobs)
       .values({
-        institutionUrl,
+        institutionUrl: safeUrl,
         institutionName: institutionName || null,
         status: "completed",
         createdBy: userId,
@@ -203,7 +300,7 @@ router.post("/test", async (req, res) => {
         intakes: extractionResult.data.intakes,
         campusLocations: extractionResult.data.campusLocations,
         deliveryMode: extractionResult.data.deliveryMode,
-        sourceUrl: institutionUrl,
+        sourceUrl: safeUrl,
         confidence: extractionResult.confidence.toString(),
         warnings: extractionResult.warnings,
         reviewStatus: "pending",
@@ -1251,6 +1348,13 @@ router.post("/crawl-institution", async (req, res) => {
 
     if (!institutionUrl) {
       return res.status(400).json({ error: "institutionUrl is required" });
+    }
+
+    // SSRF guard — block private IPs, localhost, and cloud metadata endpoints
+    try {
+      await validateSsrfUrl(institutionUrl);
+    } catch (err: any) {
+      return res.status(400).json({ error: "Invalid or disallowed URL", message: err.message });
     }
 
     // Create database job record with full website crawl enabled
