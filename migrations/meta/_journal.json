@@ -113,6 +113,13 @@
       "when": 1779799849000,
       "tag": "0015_crm_contacts_sub_agent_account",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1750060800000,
+      "tag": "0016_remove_contact_owner_expand_entry_source",
+      "breakpoints": true
     }
   ]
 }

@@ -303,15 +303,18 @@ export const leadStageEnum = pgEnum('lead_stage', [
 
 // CRM Entry Source enum - how the contact entered the system
 export const entrySourceEnum = pgEnum('entry_source', [
-  'website',        // Self-registered student
-  'consultant',     // Manual entry by team member
-  'sub_agent',      // Partner agent submission
-  'affiliate',      // External partner program
-  'import',         // Bulk CSV import
-  'referral',       // Referred by another contact
-  'facebook_ads',   // Facebook advertising
-  'walk_in',        // Walk-in at physical branch (via QR code scan)
-  'other',          // Other sources
+  'website',            // Self-registered student
+  'consultant',         // Manual entry by team member
+  'sub_agent',          // Partner agent submission
+  'affiliate',          // External partner program
+  'import',             // Bulk CSV import
+  'referral',           // Referred by another contact
+  'facebook_ads',       // Facebook advertising
+  'walk_in',            // Walk-in at physical branch (via QR code scan)
+  'social_media',       // Social media inquiry (organic)
+  'marketing_campaign', // Marketing campaign response
+  'phone_inquiry',      // Phone call inquiry
+  'other',              // Other sources
 ]);
 
 // CRM Gender enum
@@ -2824,7 +2827,6 @@ export const crmContacts = pgTable("crm_contacts", {
   emergencyContactAddress: text("emergency_contact_address"),
   
   // Record Information
-  contactOwner: varchar("contact_owner").references(() => users.id),
   assignedTo: varchar("assigned_to").references(() => users.id),
   workdriveFolderUrl: text("workdrive_folder_url"),
   workdriveFolderId: text("workdrive_folder_id"),
@@ -2904,7 +2906,6 @@ export const crmContacts = pgTable("crm_contacts", {
   clientStatusIdx: index("crm_contacts_client_status_idx").on(table.clientStatus),
   leadStageIdx: index("crm_contacts_lead_stage_idx").on(table.leadStage),
   entrySourceIdx: index("crm_contacts_entry_source_idx").on(table.entrySource),
-  contactOwnerIdx: index("crm_contacts_owner_idx").on(table.contactOwner),
   assignedToIdx: index("crm_contacts_assigned_idx").on(table.assignedTo),
   emailIdx: index("crm_contacts_email_idx").on(table.email),
   createdAtIdx: index("crm_contacts_created_at_idx").on(table.createdAt),

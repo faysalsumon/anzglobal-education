@@ -132,20 +132,12 @@ interface CrmLead {
   notes: string | null;
   referrer: string | null;
   assignedTo: string | null;
-  leadOwner: string | null;
   convertedContactId: string | null;
   convertedAt: string | null;
   lastActivityTime: string | null;
   createdAt: string | null;
   updatedAt: string | null;
   assignedToUser?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    profileImageUrl: string | null;
-  } | null;
-  ownerUser?: {
     id: string;
     firstName: string;
     lastName: string;
@@ -1102,9 +1094,8 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, isAccountsOfficer = fa
   const [editingSection, setEditingSection] = useState<LeadEditSection>(null);
   const [sectionData, setSectionData] = useState<Partial<CrmLead>>({});
 
-  // Assign popovers
+  // Assign popover
   const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
-  const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
 
   // Status history collapsible
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -1214,21 +1205,6 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, isAccountsOfficer = fa
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to update assignee", variant: "destructive" });
-    },
-  });
-
-  const ownerMutation = useMutation({
-    mutationFn: async (newOwnerId: string | null) => {
-      return apiRequest("PATCH", `/api/crm/leads/${lead.id}`, { leadOwner: newOwnerId });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", lead.id] });
-      setOwnerPopoverOpen(false);
-      toast({ title: "Owner updated", description: "Lead owner has been reassigned" });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update owner", variant: "destructive" });
     },
   });
 
@@ -1637,7 +1613,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, isAccountsOfficer = fa
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Created By</span>
+                <span className="text-sm text-muted-foreground">Added By</span>
                 {lead.createdByUser ? (
                   <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
@@ -1647,7 +1623,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, isAccountsOfficer = fa
                     <span className="text-sm">{lead.createdByUser.firstName} {lead.createdByUser.lastName}</span>
                   </div>
                 ) : (
-                  <span className="text-sm text-muted-foreground italic">System Generated</span>
+                  <span className="text-sm text-muted-foreground italic">System</span>
                 )}
               </div>
               {lead.createdAt && (
@@ -1674,67 +1650,6 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, isAccountsOfficer = fa
                   </div>
                 </div>
               )}
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Lead Owner</span>
-                <div className="flex items-center gap-2">
-                  {lead.ownerUser ? (
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={lead.ownerUser.profileImageUrl || undefined} />
-                        <AvatarFallback className="text-[10px]">{lead.ownerUser.firstName?.[0]}{lead.ownerUser.lastName?.[0]}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm">{lead.ownerUser.firstName} {lead.ownerUser.lastName}</span>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-muted-foreground italic">Not set</span>
-                  )}
-                  <Popover open={ownerPopoverOpen} onOpenChange={setOwnerPopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" data-testid="button-reassign-lead-owner">
-                        <ChevronsUpDown className="h-3.5 w-3.5" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[250px] p-0" align="end">
-                      <Command>
-                        <CommandInput placeholder="Search team members..." />
-                        <CommandList>
-                          <CommandEmpty>No team members found.</CommandEmpty>
-                          <CommandGroup>
-                            <CommandItem value="no-owner" onSelect={() => ownerMutation.mutate(null)} className="cursor-pointer">
-                              <div className="flex items-center gap-2">
-                                <User className="h-4 w-4 text-muted-foreground" />
-                                <span>No owner</span>
-                              </div>
-                              {!lead.leadOwner && <Check className="ml-auto h-4 w-4" />}
-                            </CommandItem>
-                            {teamMembers?.map((member) => (
-                              <CommandItem
-                                key={member.id}
-                                value={`${member.firstName} ${member.lastName} ${member.email}`}
-                                onSelect={() => ownerMutation.mutate(member.id)}
-                                className="cursor-pointer"
-                                data-testid={`option-lead-owner-${member.id}`}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarImage src={member.profileImageUrl || undefined} />
-                                    <AvatarFallback className="text-[10px]">{member.firstName?.[0]}{member.lastName?.[0]}</AvatarFallback>
-                                  </Avatar>
-                                  <div className="flex flex-col">
-                                    <span className="text-sm">{member.firstName} {member.lastName}</span>
-                                    <span className="text-xs text-muted-foreground">{member.email}</span>
-                                  </div>
-                                </div>
-                                {lead.leadOwner === member.id && <Check className="ml-auto h-4 w-4" />}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Assigned To</span>
                 <div className="flex items-center gap-2">

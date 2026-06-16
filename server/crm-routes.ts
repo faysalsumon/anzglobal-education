@@ -603,9 +603,6 @@ router.get("/contacts", requireAdmin, async (req, res) => {
     if (entrySource) {
       conditions.push(eq(crmContacts.entrySource, entrySource as any));
     }
-    if (ownerId || owner) {
-      conditions.push(eq(crmContacts.contactOwner, (ownerId || owner) as string));
-    }
     if (assignedTo) {
       conditions.push(eq(crmContacts.assignedTo, assignedTo as string));
     }
@@ -649,20 +646,12 @@ router.get("/contacts", requireAdmin, async (req, res) => {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Create aliases for user joins
-    const ownerUsers = aliasedTable(users, "owner_users");
     const assignedUsers = aliasedTable(users, "assigned_users");
 
     const [contacts, totalResult] = await Promise.all([
       db
         .select({
           contact: crmContacts,
-          ownerUser: {
-            id: ownerUsers.id,
-            firstName: ownerUsers.firstName,
-            lastName: ownerUsers.lastName,
-            email: ownerUsers.email,
-            profileImageUrl: ownerUsers.profileImageUrl,
-          },
           assignedUser: {
             id: assignedUsers.id,
             firstName: assignedUsers.firstName,
@@ -672,7 +661,6 @@ router.get("/contacts", requireAdmin, async (req, res) => {
           },
         })
         .from(crmContacts)
-        .leftJoin(ownerUsers, eq(crmContacts.contactOwner, ownerUsers.id))
         .leftJoin(assignedUsers, eq(crmContacts.assignedTo, assignedUsers.id))
         .where(whereClause)
         .orderBy(desc(crmContacts.createdAt))
@@ -682,9 +670,8 @@ router.get("/contacts", requireAdmin, async (req, res) => {
     ]);
 
     res.json({
-      contacts: contacts.map(({ contact, ownerUser, assignedUser }) => ({
+      contacts: contacts.map(({ contact, assignedUser }) => ({
         ...contact,
-        ownerUser: ownerUser?.id ? ownerUser : null,
         assignedUser: assignedUser?.id ? assignedUser : null,
       })),
       total: totalResult[0]?.count || 0,
@@ -713,10 +700,7 @@ router.get("/contacts/:id", requireAdmin, async (req, res) => {
     }
 
     // Get related data
-    const [ownerUser, assignedUser, createdByUser, updatedByUser] = await Promise.all([
-      contact.contactOwner
-        ? db.select().from(users).where(eq(users.id, contact.contactOwner)).limit(1)
-        : Promise.resolve([]),
+    const [assignedUser, createdByUser, updatedByUser] = await Promise.all([
       contact.assignedTo
         ? db.select().from(users).where(eq(users.id, contact.assignedTo)).limit(1)
         : Promise.resolve([]),
@@ -730,7 +714,6 @@ router.get("/contacts/:id", requireAdmin, async (req, res) => {
 
     res.json({
       ...contact,
-      ownerUser: ownerUser[0] || null,
       assignedUser: assignedUser[0] || null,
       createdByUser: createdByUser[0] || null,
       updatedByUser: updatedByUser[0] || null,
@@ -932,14 +915,14 @@ router.post("/contacts", requireAdmin, requireCrmWriteAccess, async (req: any, r
       ? { clientStatus: null, leadRating: null, leadStage: null }
       : {};
 
+    const isSystemSource = SYSTEM_ENTRY_SOURCES.has(validated.entrySource as string);
     const [newContact] = await db.insert(crmContacts).values({
       ...validated,
       ...clientOnlyOverride,
       email: validated.email.toLowerCase().trim(),
       linkedUserId,
       assignedTo: validated.assignedTo || userId,
-      contactOwner: validated.contactOwner || userId,
-      createdByUserId: userId,
+      createdByUserId: isSystemSource ? null : userId,
     }).returning();
 
     // Log activity
@@ -1799,6 +1782,8 @@ function mapStatusToStage(status: string): string {
   }
 }
 
+const SYSTEM_ENTRY_SOURCES = new Set(['website', 'social_media', 'marketing_campaign']);
+
 function mapEntrySourceToCreationMethod(source: string | null): string | null {
   switch (source) {
     case 'website': return 'website_form';
@@ -1809,6 +1794,9 @@ function mapEntrySourceToCreationMethod(source: string | null): string | null {
     case 'referral': return 'referral';
     case 'facebook_ads': return 'facebook_ads';
     case 'walk_in': return 'campus_walk_in';
+    case 'social_media': return 'social_media';
+    case 'marketing_campaign': return 'marketing_campaign';
+    case 'phone_inquiry': return 'phone_inquiry';
     case 'other': return 'manually';
     default: return null;
   }
@@ -1826,11 +1814,14 @@ function mapCreationMethodToEntrySource(method: string | null): string {
     case 'campus_walk_in': return 'walk_in';
     case 'database_import': return 'import';
     case 'ai_web_scrape': return 'other';
+    case 'social_media': return 'social_media';
+    case 'marketing_campaign': return 'marketing_campaign';
+    case 'phone_inquiry': return 'phone_inquiry';
     default: return 'consultant';
   }
 }
 
-function formatAsLead(contact: any, ownerUser: any, assignedUser: any, createdByUser?: any, updatedByUser?: any): any {
+function formatAsLead(contact: any, _ownerUser: any, assignedUser: any, createdByUser?: any, updatedByUser?: any): any {
   return {
     id: contact.id,
     firstName: contact.firstName,
@@ -1882,14 +1873,12 @@ function formatAsLead(contact: any, ownerUser: any, assignedUser: any, createdBy
     referrer: contact.referrer,
     notes: contact.notes,
     assignedTo: contact.assignedTo,
-    leadOwner: contact.contactOwner,
     convertedContactId: null,
     convertedAt: null,
     lastActivityTime: contact.lastActivityTime,
     createdAt: contact.createdAt,
     updatedAt: contact.updatedAt,
     assignedToUser: assignedUser?.id ? assignedUser : null,
-    ownerUser: ownerUser?.id ? ownerUser : null,
     createdByUser: createdByUser?.id ? createdByUser : null,
     updatedByUser: updatedByUser?.id ? updatedByUser : null,
   };
@@ -1935,19 +1924,11 @@ router.get("/leads", requireAdmin, async (req: any, res) => {
 
     const whereClause = and(...conditions);
 
-    const ownerUsers = aliasedTable(users, "lead_owner_u");
     const assignedUsers = aliasedTable(users, "lead_assigned_u");
 
     const [leads, totalResult] = await Promise.all([
       db.select({
         contact: crmContacts,
-        ownerUser: {
-          id: ownerUsers.id,
-          firstName: ownerUsers.firstName,
-          lastName: ownerUsers.lastName,
-          email: ownerUsers.email,
-          profileImageUrl: ownerUsers.profileImageUrl,
-        },
         assignedUser: {
           id: assignedUsers.id,
           firstName: assignedUsers.firstName,
@@ -1957,7 +1938,6 @@ router.get("/leads", requireAdmin, async (req: any, res) => {
         },
       })
         .from(crmContacts)
-        .leftJoin(ownerUsers, eq(crmContacts.contactOwner, ownerUsers.id))
         .leftJoin(assignedUsers, eq(crmContacts.assignedTo, assignedUsers.id))
         .where(whereClause)
         .orderBy(desc(crmContacts.createdAt))
@@ -1966,8 +1946,8 @@ router.get("/leads", requireAdmin, async (req: any, res) => {
     ]);
 
     res.json({
-      leads: leads.map(({ contact, ownerUser, assignedUser }) =>
-        formatAsLead(contact, ownerUser, assignedUser)
+      leads: leads.map(({ contact, assignedUser }) =>
+        formatAsLead(contact, null, assignedUser)
       ),
       total: totalResult[0]?.count || 0,
     });
@@ -2003,7 +1983,6 @@ router.get("/leads/:id", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const ownerUsers = aliasedTable(users, "sl_owner_u");
     const assignedUsers = aliasedTable(users, "sl_assigned_u");
     const createdByUsers = aliasedTable(users, "sl_created_u");
     const updatedByUsers = aliasedTable(users, "sl_updated_u");
@@ -2011,13 +1990,6 @@ router.get("/leads/:id", requireAdmin, async (req, res) => {
     const result = await db
       .select({
         contact: crmContacts,
-        ownerUser: {
-          id: ownerUsers.id,
-          firstName: ownerUsers.firstName,
-          lastName: ownerUsers.lastName,
-          email: ownerUsers.email,
-          profileImageUrl: ownerUsers.profileImageUrl,
-        },
         assignedUser: {
           id: assignedUsers.id,
           firstName: assignedUsers.firstName,
@@ -2039,7 +2011,6 @@ router.get("/leads/:id", requireAdmin, async (req, res) => {
         },
       })
       .from(crmContacts)
-      .leftJoin(ownerUsers, eq(crmContacts.contactOwner, ownerUsers.id))
       .leftJoin(assignedUsers, eq(crmContacts.assignedTo, assignedUsers.id))
       .leftJoin(createdByUsers, eq(crmContacts.createdByUserId, createdByUsers.id))
       .leftJoin(updatedByUsers, eq(crmContacts.updatedByUserId, updatedByUsers.id))
@@ -2057,7 +2028,7 @@ router.get("/leads/:id", requireAdmin, async (req, res) => {
       .limit(20);
 
     res.json({
-      ...formatAsLead(result.contact, result.ownerUser, result.assignedUser, result.createdByUser, result.updatedByUser),
+      ...formatAsLead(result.contact, null, result.assignedUser, result.createdByUser, result.updatedByUser),
       statusHistory,
     });
   } catch (error) {
@@ -2079,13 +2050,15 @@ router.post("/leads", requireAdmin, requireCrmWriteAccess, async (req: any, res)
       branchId, nationality, country, city,
       courseId, universityId, courseName, interestedIn, productInterest,
       budgetMin, budgetMax,
-      notes, referrer, assignedTo, leadOwner,
+      notes, referrer, assignedTo,
     } = req.body;
 
     if (!firstName || !lastName || !email) {
       return res.status(400).json({ message: "First name, last name, and email are required" });
     }
 
+    const derivedEntrySource = mapCreationMethodToEntrySource(leadCreationMethod || 'manually');
+    const isLeadSystemSource = SYSTEM_ENTRY_SOURCES.has(derivedEntrySource);
     const [contact] = await db.insert(crmContacts).values({
       firstName,
       lastName,
@@ -2096,7 +2069,7 @@ router.post("/leads", requireAdmin, requireCrmWriteAccess, async (req: any, res)
       clientStatus: 'lead',
       leadStage: mapStatusToStage(leadStatus || 'not_contacted') as any,
       leadRating: (leadRating || 'cold') as any,
-      entrySource: mapCreationMethodToEntrySource(leadCreationMethod || 'manually') as any,
+      entrySource: derivedEntrySource as any,
       referenceSource: leadSource || null,
       branchId: branchId || null,
       nationality: nationality || null,
@@ -2112,8 +2085,7 @@ router.post("/leads", requireAdmin, requireCrmWriteAccess, async (req: any, res)
       notes: notes || null,
       referrer: referrer || null,
       assignedTo: assignedTo || userId,
-      contactOwner: leadOwner || userId,
-      createdByUserId: userId || undefined,
+      createdByUserId: isLeadSystemSource ? null : (userId || undefined),
     } as any).returning();
 
     res.status(201).json(formatAsLead(contact, null, null));
@@ -2151,7 +2123,7 @@ router.patch("/leads/:id", requireAdmin, requireCrmWriteAccess, async (req: any,
       emergencyContactName, emergencyContactMobile, emergencyContactRelationship, emergencyContactAddress,
       courseId, universityId, courseName, interestedIn, productInterest,
       budgetMin, budgetMax,
-      notes, referrer, assignedTo, leadOwner,
+      notes, referrer, assignedTo,
     } = req.body;
 
     if (firstName !== undefined) updates.firstName = firstName;
@@ -2196,8 +2168,6 @@ router.patch("/leads/:id", requireAdmin, requireCrmWriteAccess, async (req: any,
         updates.assignedTo = assignedTo;
       }
     }
-    if (leadOwner !== undefined) updates.contactOwner = leadOwner;
-
     const [updated] = await db
       .update(crmContacts)
       .set(updates)

@@ -72,7 +72,6 @@ interface CrmContact {
   emergencyContactRelationship: string | null;
   emergencyContactAddress: string | null;
   notes: string | null;
-  contactOwner: string | null;
   assignedTo: string | null;
   sourceLeadId: string | null;
   branchId: string | null;
@@ -166,6 +165,9 @@ const entrySourceOptions = [
   { value: 'referral', label: 'Referral' },
   { value: 'facebook_ads', label: 'Facebook Ads' },
   { value: 'walk_in', label: 'Walk-In' },
+  { value: 'social_media', label: 'Social Media' },
+  { value: 'marketing_campaign', label: 'Marketing Campaign' },
+  { value: 'phone_inquiry', label: 'Phone Inquiry' },
   { value: 'other', label: 'Other' },
 ];
 
@@ -606,16 +608,9 @@ export default function AdminContactForm() {
       setFormData(prev => ({
         ...prev,
         assignedTo: prev.assignedTo || currentUser.id,
-        contactOwner: prev.contactOwner || currentUser.id,
       }));
     }
   }, [isLeadMode, isEditing, currentUser]);
-
-  useEffect(() => {
-    if (!isLeadMode && !isEditing && currentUser && !formData.contactOwner) {
-      setFormData(prev => ({ ...prev, contactOwner: currentUser.id }));
-    }
-  }, [currentUser, isEditing, isLeadMode, formData.contactOwner]);
 
   // ── Preferences helpers ────────────────────────────────────────────────────
 
@@ -1117,15 +1112,15 @@ export default function AdminContactForm() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="assignedTo">{isLeadMode ? "Assigned To" : "Contact Owner"}</Label>
+                  <Label htmlFor="assignedTo">Assigned To</Label>
                   <Select
-                    value={(isLeadMode ? formData.assignedTo : formData.contactOwner) || ""}
-                    onValueChange={(value) => setFormData({ ...formData, ...(isLeadMode ? { assignedTo: value || null, contactOwner: value || null } : { contactOwner: value || null }) })}
+                    value={formData.assignedTo || ""}
+                    onValueChange={(value) => setFormData({ ...formData, assignedTo: value || null })}
                   >
                     <SelectTrigger id="assignedTo" data-testid="select-assigned-to">
                       <SelectValue placeholder="Select person">
                         {(() => {
-                          const val = isLeadMode ? formData.assignedTo : formData.contactOwner;
+                          const val = formData.assignedTo;
                           const m = teamMembers.find(t => t.id === val);
                           if (!m) return null;
                           return (

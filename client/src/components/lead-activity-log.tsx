@@ -65,7 +65,6 @@ function formatFieldLabel(fieldName: string): string {
     leadRating: "Rating",
     branch: "Branch",
     assignedTo: "Assigned To",
-    leadOwner: "Lead Owner",
     courseName: "Course Name",
     courseId: "Course",
     interestedIn: "Interested In",

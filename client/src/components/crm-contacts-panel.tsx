@@ -105,7 +105,6 @@ interface CrmContact {
   emergencyContactRelationship: string | null;
   emergencyContactAddress: string | null;
   notes: string | null;
-  contactOwner: string | null;
   assignedTo: string | null;
   sourceLeadId: string | null;
   courseName: string | null;
@@ -135,13 +134,6 @@ interface CrmContact {
     profileImageUrl: string | null;
   } | null;
   updatedByUser?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    profileImageUrl: string | null;
-  } | null;
-  ownerUser?: {
     id: string;
     firstName: string;
     lastName: string;
@@ -253,6 +245,9 @@ const _entrySourceLabels: Record<string, string> = {
   referral: "Referral",
   facebook_ads: "Facebook Ads",
   walk_in: "Walk-In",
+  social_media: "Social Media",
+  marketing_campaign: "Marketing Campaign",
+  phone_inquiry: "Phone Inquiry",
   other: "Other",
 };
 
@@ -265,6 +260,9 @@ const _entrySourceColors: Record<string, string> = {
   referral: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
   facebook_ads: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
   walk_in: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
+  social_media: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+  marketing_campaign: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  phone_inquiry: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400",
   other: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
 };
 
@@ -972,6 +970,9 @@ export function CrmContactsPanel() {
                     <SelectItem value="referral">Referral</SelectItem>
                     <SelectItem value="facebook_ads">Facebook Ads</SelectItem>
                     <SelectItem value="walk_in">Walk-In</SelectItem>
+                    <SelectItem value="social_media">Social Media</SelectItem>
+                    <SelectItem value="marketing_campaign">Marketing Campaign</SelectItem>
+                    <SelectItem value="phone_inquiry">Phone Inquiry</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1168,21 +1169,6 @@ export function CrmContactsPanel() {
                   </p>
                 )}
                 <div className="flex items-center justify-end gap-1 mt-1">
-                  {contact.ownerUser && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Avatar className="h-6 w-6 cursor-default">
-                          <AvatarImage src={contact.ownerUser.profileImageUrl || undefined} />
-                          <AvatarFallback className="text-[10px]">
-                            {contact.ownerUser.firstName?.[0]}{contact.ownerUser.lastName?.[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        <p className="text-xs">Owner: {contact.ownerUser.firstName} {contact.ownerUser.lastName}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
                   {contact.assignedUser && (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -2082,10 +2068,6 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
   const [editingSection, setEditingSection] = useState<EditSection>(null);
   const [sectionData, setSectionData] = useState<Partial<CrmContact>>({});
 
-  // Owner reassign popover
-  const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
-  const [ownerSearch, setOwnerSearch] = useState("");
-
   const startEdit = (section: EditSection, fields: Partial<CrmContact>) => {
     setEditingSection(section);
     setSectionData(fields);
@@ -2094,21 +2076,6 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
     setEditingSection(null);
     setSectionData({});
   };
-
-  const ownerMutation = useMutation({
-    mutationFn: async (newOwnerId: string | null) => {
-      return apiRequest("PATCH", `/api/crm/contacts/${contact.id}`, { contactOwner: newOwnerId });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
-      setOwnerPopoverOpen(false);
-      setOwnerSearch("");
-      toast({ title: "Owner updated", description: "Contact owner has been reassigned" });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update owner", variant: "destructive" });
-    },
-  });
 
   const saveSectionMutation = useMutation({
     mutationFn: async (data: Partial<CrmContact>) => {
@@ -2787,65 +2754,18 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
               </div>
             )}
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Contact Owner</span>
-              <div className="flex items-center gap-2">
-                {contact.ownerUser ? (
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={contact.ownerUser.profileImageUrl || undefined} />
-                      <AvatarFallback className="text-[10px]">{contact.ownerUser.firstName?.[0]}{contact.ownerUser.lastName?.[0]}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm">{contact.ownerUser.firstName} {contact.ownerUser.lastName}</span>
-                  </div>
-                ) : (
-                  <span className="text-sm text-muted-foreground italic">Not set</span>
-                )}
-                <Popover open={ownerPopoverOpen} onOpenChange={(v) => { setOwnerPopoverOpen(v); if (!v) setOwnerSearch(""); }}>
-                  <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" data-testid="button-reassign-owner">
-                      <ChevronsUpDown className="h-3.5 w-3.5" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[250px] p-0" align="end">
-                    <Command>
-                      <CommandInput placeholder="Search team members..." value={ownerSearch} onValueChange={setOwnerSearch} />
-                      <CommandList>
-                        <CommandEmpty>No team members found.</CommandEmpty>
-                        <CommandGroup>
-                          <CommandItem value="no-owner" onSelect={() => ownerMutation.mutate(null)} className="cursor-pointer">
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-muted-foreground" />
-                              <span>No owner</span>
-                            </div>
-                            {!contact.contactOwner && <Check className="ml-auto h-4 w-4" />}
-                          </CommandItem>
-                          {admins.filter(a => {
-                            const q = ownerSearch.toLowerCase();
-                            return !q || a.firstName.toLowerCase().includes(q) || a.lastName.toLowerCase().includes(q);
-                          }).map((admin) => (
-                            <CommandItem
-                              key={admin.id}
-                              value={`${admin.firstName} ${admin.lastName}`}
-                              onSelect={() => ownerMutation.mutate(admin.id)}
-                              className="cursor-pointer"
-                              data-testid={`option-owner-${admin.id}`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={admin.profileImageUrl || undefined} />
-                                  <AvatarFallback className="text-[10px]">{admin.firstName?.[0]}{admin.lastName?.[0]}</AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm">{admin.firstName} {admin.lastName}</span>
-                              </div>
-                              {contact.contactOwner === admin.id && <Check className="ml-auto h-4 w-4" />}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <span className="text-muted-foreground">Added By</span>
+              {contact.createdByUser ? (
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={contact.createdByUser.profileImageUrl || undefined} />
+                    <AvatarFallback className="text-[10px]">{contact.createdByUser.firstName?.[0]}{contact.createdByUser.lastName?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm">{contact.createdByUser.firstName} {contact.createdByUser.lastName}</span>
+                </div>
+              ) : (
+                <span className="text-sm text-muted-foreground italic">System</span>
+              )}
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Assigned To</span>
