@@ -690,13 +690,9 @@ export interface ThumbnailResult {
   error?: string;
 }
 
-// Helper function to save thumbnail: tries Object Storage first, falls back to static file
+// Helper function to save thumbnail to Object Storage via the central file-storage wrapper
 async function uploadBase64ToObjectStorage(base64DataUrl: string, fileName: string): Promise<string | null> {
   try {
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    const os = await import('os');
-
     // Extract the base64 content and mime type - trim whitespace and handle multi-line
     const cleanedDataUrl = base64DataUrl.trim().replace(/\s+/g, '');
     const matches = cleanedDataUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
@@ -705,7 +701,7 @@ async function uploadBase64ToObjectStorage(base64DataUrl: string, fileName: stri
       return null;
     }
 
-    const [, , base64Data] = matches;
+    const [, mimeType, base64Data] = matches;
     const buffer = Buffer.from(base64Data, 'base64');
 
     if (buffer.length < 100) {
@@ -713,47 +709,21 @@ async function uploadBase64ToObjectStorage(base64DataUrl: string, fileName: stri
       return null;
     }
 
-    const mimeType = matches[1]; // e.g. "png", "jpeg", "webp"
     const ext = mimeType === 'jpeg' ? 'jpg' : mimeType === 'png' ? 'png' : 'webp';
     const fullFileName = `${fileName}.${ext}`;
+    const objectPath = `public/thumbnails/${fullFileName}`;
     console.log(`[Thumbnail AI] Image ready: ${(buffer.length / 1024).toFixed(1)} KB (${ext})`);
 
-    // Try Object Storage if configured
-    if (process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
-      try {
-        const { Client } = await import("@replit/object-storage");
-        const storageClient = new Client();
-        const objectPath = `public/thumbnails/${fullFileName}`;
-
-        const tempDir = os.tmpdir();
-        const tempFilePath = path.join(tempDir, fullFileName);
-        await fs.writeFile(tempFilePath, buffer);
-        const result = await storageClient.uploadFromFilename(objectPath, tempFilePath);
-        await fs.unlink(tempFilePath).catch(() => {});
-
-        const verifyResult = await storageClient.downloadAsBytes(objectPath);
-        const verifyBuffer = verifyResult.value ? Buffer.concat((verifyResult.value as Buffer[]).map(c => Buffer.isBuffer(c) ? c : Buffer.from(c))) : null;
-        if (result.ok && verifyBuffer && verifyBuffer.length > 100) {
-          const publicUrl = `/api/public-storage/public/thumbnails/${fullFileName}`;
-          console.log(`[Thumbnail AI] Thumbnail saved to Object Storage: ${publicUrl} (${(buffer.length / 1024).toFixed(0)}KB)`);
-          return publicUrl;
-        }
-        console.warn("[Thumbnail AI] Object Storage upload verification failed, falling back to static file");
-      } catch (storageError: any) {
-        console.warn("[Thumbnail AI] Object Storage upload failed, falling back to static file:", storageError?.message);
-      }
-    } else {
-      console.warn("[Thumbnail AI] Object Storage not configured, saving as static file");
+    const { uploadFile } = await import("./file-storage");
+    const result = await uploadFile(objectPath, buffer, `image/${mimeType}`);
+    if (!result.ok) {
+      console.error(`[Thumbnail AI] Object Storage upload failed: ${result.error}`);
+      return null;
     }
 
-    // Fallback: save as static file in client/public/thumbnails/ (fast, clean URLs, SEO-friendly)
-    const publicDir = path.join(process.cwd(), 'client', 'public', 'thumbnails');
-    await fs.mkdir(publicDir, { recursive: true });
-    const staticFilePath = path.join(publicDir, fullFileName);
-    await fs.writeFile(staticFilePath, buffer);
-    const staticUrl = `/thumbnails/${fullFileName}`;
-    console.log(`[Thumbnail AI] Thumbnail saved as static file: ${staticUrl} (${(buffer.length / 1024).toFixed(0)}KB)`);
-    return staticUrl;
+    const publicUrl = `/api/public-storage/public/thumbnails/${fullFileName}`;
+    console.log(`[Thumbnail AI] Thumbnail saved to Object Storage: ${publicUrl} (${(buffer.length / 1024).toFixed(0)}KB)`);
+    return publicUrl;
   } catch (error: any) {
     console.error("[Thumbnail AI] Error saving thumbnail:", error?.message);
     return null;

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "./db";
 import { storage } from "./storage";
+import { deleteFile, readDocumentBuffer } from "./file-storage";
 import { 
   institutionContacts, 
   institutionBusinessTerms, 
@@ -546,7 +547,6 @@ router.get("/institutions/:institutionId/documents/:documentId/download", requir
     }
     
     try {
-      const { readDocumentBuffer } = await import("./file-storage");
       const fileBuffer = await readDocumentBuffer(document.filePath);
       if (!fileBuffer) {
         console.error("File not found:", document.filePath);
@@ -635,12 +635,8 @@ router.delete("/institutions/:institutionId/documents/:documentId", requireAdmin
       return res.status(404).json({ message: "Document not found" });
     }
     
-    // Delete from local file storage
-    try {
-      await fs.unlink(document.filePath);
-    } catch (storageError) {
-      console.error("Error deleting file from storage:", storageError);
-    }
+    // Delete from object storage
+    await deleteFile(document.filePath);
     
     await db
       .delete(institutionDocuments)

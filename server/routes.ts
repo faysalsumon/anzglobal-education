@@ -13006,9 +13006,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const uniqueName = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
       const storagePath = `.private/chat-files/${conversationId}/${uniqueName}`;
 
-      const { Client } = await import("@replit/object-storage");
-      const storageClient = new Client();
-      const uploadResult = await storageClient.uploadFromBytes(storagePath, file.buffer);
+      const { uploadFile: osUpload } = await import("./file-storage");
+      const uploadResult = await osUpload(storagePath, file.buffer, file.mimetype);
       if (!uploadResult.ok) {
         console.error("Object storage upload failed:", uploadResult.error);
         return res.status(500).json({ message: "File upload failed" });
@@ -13091,31 +13090,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const storagePath = `.private/chat-files/${conversationId}/${filename}`;
-      const { Client } = await import("@replit/object-storage");
-      const storageClient = new Client();
-      const result = await storageClient.downloadAsBytes(storagePath);
-
-      if (!result.ok || !result.value) {
+      const { serveFile: osServe } = await import("./file-storage");
+      const served = await osServe(res, storagePath, { cacheControl: 'private, max-age=3600' });
+      if (!served) {
         return res.status(404).json({ message: "File not found" });
       }
-
-      const ext = filename.split('.').pop()?.toLowerCase() || '';
-      const mimeTypes: Record<string, string> = {
-        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
-        'gif': 'image/gif', 'webp': 'image/webp',
-        'pdf': 'application/pdf',
-        'doc': 'application/msword',
-        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'xls': 'application/vnd.ms-excel',
-        'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'txt': 'text/plain', 'csv': 'text/csv',
-      };
-      const contentType = mimeTypes[ext] || 'application/octet-stream';
-
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Cache-Control', 'private, max-age=3600');
-      const chunks = result.value as unknown as Uint8Array[];
-      res.send(Buffer.concat(chunks.map((c: Uint8Array) => Buffer.from(c))));
+      return;
     } catch (error) {
       console.error("Error serving chat file:", error);
       res.status(500).json({ message: "Failed to serve file" });
@@ -13681,9 +13661,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const uniqueName = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
       const storagePath = `.private/chat-files/channels/${channelId}/${uniqueName}`;
 
-      const { Client } = await import("@replit/object-storage");
-      const storageClient = new Client();
-      const uploadResult = await storageClient.uploadFromBytes(storagePath, file.buffer);
+      const { uploadFile: osUploadChan } = await import("./file-storage");
+      const uploadResult = await osUploadChan(storagePath, file.buffer, file.mimetype);
       if (!uploadResult.ok) {
         console.error("Object storage upload failed:", uploadResult.error);
         return res.status(500).json({ message: "File upload failed" });
@@ -13748,30 +13727,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const storagePath = `.private/chat-files/channels/${channelId}/${filename}`;
-      const { Client } = await import("@replit/object-storage");
-      const storageClient = new Client();
-      const result = await storageClient.downloadAsBytes(storagePath);
-
-      if (!result.ok || !result.value) {
+      const { serveFile: osServeChan } = await import("./file-storage");
+      const served = await osServeChan(res, storagePath, { cacheControl: 'private, max-age=3600' });
+      if (!served) {
         return res.status(404).json({ message: "File not found" });
       }
-
-      const ext = filename.split('.').pop()?.toLowerCase() || '';
-      const mimeTypes: Record<string, string> = {
-        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
-        'gif': 'image/gif', 'webp': 'image/webp',
-        'pdf': 'application/pdf',
-        'doc': 'application/msword',
-        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'xls': 'application/vnd.ms-excel',
-        'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'txt': 'text/plain', 'csv': 'text/csv',
-      };
-      const contentType = mimeTypes[ext] || 'application/octet-stream';
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Cache-Control', 'private, max-age=3600');
-      const chunks = result.value as unknown as Uint8Array[];
-      res.send(Buffer.concat(chunks.map((c: Uint8Array) => Buffer.from(c))));
+      return;
     } catch (error) {
       console.error("Error serving channel file:", error);
       res.status(500).json({ message: "Failed to serve file" });

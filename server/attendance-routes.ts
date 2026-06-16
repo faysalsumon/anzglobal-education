@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import multer from "multer";
 import { db } from "./db";
+import { uploadFile, deleteFile } from "./file-storage";
 import { isAuthenticated } from "./supabase-middleware";
 import { checkAdminAccess } from "./routes";
 import { checkCrudPermission } from "./access-policy-service";
@@ -62,27 +63,15 @@ async function uploadPhotoToStorage(
 ): Promise<string> {
   const filename = `${Date.now()}-${suffix}.jpg`;
   const objectPath = `attendance-photos/${userId}/${filename}`;
-  const { Client } = await import("@replit/object-storage");
-  const client = new Client();
-  const uploadResult = await client.uploadFromBytes(objectPath, buffer, {
-    contentType: "image/jpeg",
-  } as any);
-  if (!uploadResult.ok) {
-    console.error("[Attendance] Photo upload failed:", uploadResult.error);
-    throw new Error("Failed to upload attendance photo to storage");
+  const result = await uploadFile(objectPath, buffer, "image/jpeg");
+  if (!result.ok) {
+    throw new Error(`Failed to upload attendance photo to storage: ${result.error}`);
   }
-  console.log("[Attendance] Photo uploaded:", objectPath);
   return objectPath;
 }
 
 async function deletePhotoFromStorage(objectPath: string): Promise<void> {
-  try {
-    const { Client } = await import("@replit/object-storage");
-    const client = new Client();
-    await client.delete(objectPath);
-  } catch {
-    // Ignore deletion errors — file may already be gone
-  }
+  await deleteFile(objectPath);
 }
 
 function formatWorkDate(date: Date): string {

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "./db";
 import { storage } from "./storage";
+import { uploadFile } from "./file-storage";
 import { 
   crmContacts, 
   contactStatusHistory,
@@ -2526,16 +2527,7 @@ router.post(
       const sanitizedFilename = `${baseName}_${timestamp}${ext}`;
       const objectPath = `public/note-attachments/${userId}/${sanitizedFilename}`;
 
-      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
-        return res.status(503).json({ message: "Object storage not configured" });
-      }
-
-      const { Client } = await import("@replit/object-storage");
-      const storageClient = new Client();
-      const uploadResult = await storageClient.uploadFromBytes(objectPath, file.buffer, {
-        contentType: file.mimetype,
-      } as any);
-
+      const uploadResult = await uploadFile(objectPath, file.buffer, file.mimetype);
       if (!uploadResult.ok) {
         console.error("Object storage upload failed:", uploadResult.error);
         return res.status(500).json({ message: "Failed to upload file" });
