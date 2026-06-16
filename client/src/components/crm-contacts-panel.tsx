@@ -1162,19 +1162,29 @@ export function CrmContactsPanel() {
                     {contact.country || <span className="text-muted-foreground/40">—</span>}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {contact.assignedUser ? (
-                      <div className="flex items-center gap-1.5">
-                        <Avatar className="h-6 w-6 shrink-0">
-                          <AvatarImage src={contact.assignedUser.profileImageUrl || undefined} />
-                          <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                            {contact.assignedUser.firstName?.[0]}{contact.assignedUser.lastName?.[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">{contact.assignedUser.firstName} {contact.assignedUser.lastName}</span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground/40 text-xs">System</span>
-                    )}
+                    <div className="flex items-center gap-1 group/assign">
+                      {contact.assignedUser ? (
+                        <div className="flex items-center gap-1.5">
+                          <Avatar className="h-6 w-6 shrink-0">
+                            <AvatarImage src={contact.assignedUser.profileImageUrl || undefined} />
+                            <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                              {contact.assignedUser.firstName?.[0]}{contact.assignedUser.lastName?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">{contact.assignedUser.firstName} {contact.assignedUser.lastName}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground/40 text-xs">System</span>
+                      )}
+                      <span className="opacity-0 group-hover/assign:opacity-100 transition-opacity">
+                        <AssignPopover
+                          contactId={contact.id}
+                          assignedTo={contact.assignedTo}
+                          admins={admins || []}
+                          onAssign={(id, adminId) => updateMutation.mutate({ id, data: { assignedTo: adminId } })}
+                        />
+                      </span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">
                     {contact.createdAt ? format(new Date(contact.createdAt), "d MMM yyyy") : <span className="text-muted-foreground/40">—</span>}
