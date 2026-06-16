@@ -903,7 +903,9 @@ export class DatabaseStorage implements IStorage {
   async createStudentProfile(profileData: InsertStudentProfile): Promise<StudentProfile> {
     const [profile] = await db
       .insert(studentProfiles)
-      .values(profileData)
+      // drizzle-orm 0.45 tightened JSON column inference; cast needed for
+      // englishTestScores which contains nested optional fields typed as unknown
+      .values(profileData as any)
       .returning();
     return profile;
   }
@@ -911,7 +913,8 @@ export class DatabaseStorage implements IStorage {
   async updateStudentProfile(id: string, data: Partial<InsertStudentProfile>): Promise<StudentProfile> {
     const [profile] = await db
       .update(studentProfiles)
-      .set({ ...data, updatedAt: new Date() })
+      // same JSON-column inference tightening as createStudentProfile above
+      .set({ ...data, updatedAt: new Date() } as any)
       .where(eq(studentProfiles.id, id))
       .returning();
     return profile;
@@ -2884,13 +2887,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createVariant(variantData: InsertCourseRegionVariant): Promise<CourseRegionVariant> {
-    const [variant] = await db.insert(courseRegionVariants).values(variantData).returning();
+    // drizzle-orm 0.45 tightened JSON column inference; cast needed for
+    // englishRequirements nested optional fields typed as unknown
+    const [variant] = await db.insert(courseRegionVariants).values(variantData as any).returning();
     return variant;
   }
 
   async updateVariant(id: string, data: UpdateCourseRegionVariant): Promise<CourseRegionVariant> {
     const [variant] = await db.update(courseRegionVariants)
-      .set({ ...data, updatedAt: new Date() })
+      // same JSON-column inference tightening as createVariant above
+      .set({ ...data, updatedAt: new Date() } as any)
       .where(eq(courseRegionVariants.id, id))
       .returning();
     return variant;
