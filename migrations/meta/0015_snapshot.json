@@ -1,6 +1,6 @@
 {
-  "id": "f3384d58-252e-4e15-b25b-9f51b273d1a8",
-  "prevId": "a2b3c4d5-e6f7-89ab-cdef-012345678901",
+  "id": "a2b3c4d5-e6f7-89ab-cdef-012345678901",
+  "prevId": "f1a2b3c4-d5e6-789a-bcde-f01234567890",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1264,378 +1264,6 @@
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.account_products": {
-      "name": "account_products",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "account_id": {
-          "name": "account_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "product_type": {
-          "name": "product_type",
-          "type": "account_product_type_enum",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "student_price": {
-          "name": "student_price",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "agent_cost": {
-          "name": "agent_cost",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "account_products_account_id_accounts_id_fk": {
-          "name": "account_products_account_id_accounts_id_fk",
-          "tableFrom": "account_products",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.account_restricted_details": {
-      "name": "account_restricted_details",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "account_id": {
-          "name": "account_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "bank_name": {
-          "name": "bank_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "account_holder_name": {
-          "name": "account_holder_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "account_number": {
-          "name": "account_number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "bsb": {
-          "name": "bsb",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "swift_code": {
-          "name": "swift_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "contract_start_date": {
-          "name": "contract_start_date",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "contract_end_date": {
-          "name": "contract_end_date",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "contract_notes": {
-          "name": "contract_notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "account_restricted_details_account_id_accounts_id_fk": {
-          "name": "account_restricted_details_account_id_accounts_id_fk",
-          "tableFrom": "account_restricted_details",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "account_restricted_details_account_id_unique": {
-          "name": "account_restricted_details_account_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "account_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.accounts": {
-      "name": "accounts",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "account_type": {
-          "name": "account_type",
-          "type": "account_type_enum",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "provider_type": {
-          "name": "provider_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "contract_type": {
-          "name": "contract_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "indirect_partner_id": {
-          "name": "indirect_partner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "institution_cms_id": {
-          "name": "institution_cms_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "primary_contact_id": {
-          "name": "primary_contact_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "contact_name": {
-          "name": "contact_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "phone": {
-          "name": "phone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "website": {
-          "name": "website",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "address": {
-          "name": "address",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "city": {
-          "name": "city",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "state": {
-          "name": "state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "country": {
-          "name": "country",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "logo_url": {
-          "name": "logo_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "notes": {
-          "name": "notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "accounts_indirect_partner_id_accounts_id_fk": {
-          "name": "accounts_indirect_partner_id_accounts_id_fk",
-          "tableFrom": "accounts",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "indirect_partner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "accounts_institution_cms_id_universities_id_fk": {
-          "name": "accounts_institution_cms_id_universities_id_fk",
-          "tableFrom": "accounts",
-          "tableTo": "universities",
-          "columnsFrom": [
-            "institution_cms_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "accounts_primary_contact_id_crm_contacts_id_fk": {
-          "name": "accounts_primary_contact_id_crm_contacts_id_fk",
-          "tableFrom": "accounts",
-          "tableTo": "crm_contacts",
-          "columnsFrom": [
-            "primary_contact_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -8740,6 +8368,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "contact_owner": {
+          "name": "contact_owner",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
         "assigned_to": {
           "name": "assigned_to",
           "type": "varchar",
@@ -9006,12 +8640,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "sub_agent_account_id": {
-          "name": "sub_agent_account_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_by_user_id": {
           "name": "created_by_user_id",
           "type": "varchar",
@@ -9043,6 +8671,12 @@
           "primaryKey": false,
           "notNull": false,
           "default": "now()"
+        },
+        "sub_agent_account_id": {
+          "name": "sub_agent_account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -9096,6 +8730,21 @@
           "columns": [
             {
               "expression": "entry_source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "crm_contacts_owner_idx": {
+          "name": "crm_contacts_owner_idx",
+          "columns": [
+            {
+              "expression": "contact_owner",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -9224,6 +8873,19 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
+        "crm_contacts_contact_owner_users_id_fk": {
+          "name": "crm_contacts_contact_owner_users_id_fk",
+          "tableFrom": "crm_contacts",
+          "tableTo": "users",
+          "columnsFrom": [
+            "contact_owner"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "crm_contacts_assigned_to_users_id_fk": {
           "name": "crm_contacts_assigned_to_users_id_fk",
           "tableFrom": "crm_contacts",
@@ -9276,19 +8938,6 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "crm_contacts_sub_agent_account_id_accounts_id_fk": {
-          "name": "crm_contacts_sub_agent_account_id_accounts_id_fk",
-          "tableFrom": "crm_contacts",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "sub_agent_account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
         "crm_contacts_created_by_user_id_users_id_fk": {
           "name": "crm_contacts_created_by_user_id_users_id_fk",
           "tableFrom": "crm_contacts",
@@ -9313,6 +8962,19 @@
             "id"
           ],
           "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "crm_contacts_sub_agent_account_id_accounts_id_fk": {
+          "name": "crm_contacts_sub_agent_account_id_accounts_id_fk",
+          "tableFrom": "crm_contacts",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "sub_agent_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -19116,7 +18778,21 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "users_approved_by_users_id_fk": {
+          "name": "users_approved_by_users_id_fk",
+          "tableFrom": "users",
+          "tableTo": "users",
+          "columnsFrom": [
+            "approved_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "users_email_unique": {
@@ -19321,6 +18997,378 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "public.accounts": {
+      "name": "accounts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_type": {
+          "name": "account_type",
+          "type": "account_type_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_type": {
+          "name": "provider_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contract_type": {
+          "name": "contract_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "indirect_partner_id": {
+          "name": "indirect_partner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "institution_cms_id": {
+          "name": "institution_cms_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contact_name": {
+          "name": "contact_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "website": {
+          "name": "website",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country": {
+          "name": "country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "logo_url": {
+          "name": "logo_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "primary_contact_id": {
+          "name": "primary_contact_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "accounts_indirect_partner_id_accounts_id_fk": {
+          "name": "accounts_indirect_partner_id_accounts_id_fk",
+          "tableFrom": "accounts",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "indirect_partner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "accounts_institution_cms_id_universities_id_fk": {
+          "name": "accounts_institution_cms_id_universities_id_fk",
+          "tableFrom": "accounts",
+          "tableTo": "universities",
+          "columnsFrom": [
+            "institution_cms_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "accounts_primary_contact_id_crm_contacts_id_fk": {
+          "name": "accounts_primary_contact_id_crm_contacts_id_fk",
+          "tableFrom": "accounts",
+          "tableTo": "crm_contacts",
+          "columnsFrom": [
+            "primary_contact_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.account_restricted_details": {
+      "name": "account_restricted_details",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bank_name": {
+          "name": "bank_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "account_holder_name": {
+          "name": "account_holder_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "account_number": {
+          "name": "account_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bsb": {
+          "name": "bsb",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "swift_code": {
+          "name": "swift_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contract_start_date": {
+          "name": "contract_start_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contract_end_date": {
+          "name": "contract_end_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contract_notes": {
+          "name": "contract_notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "account_restricted_details_account_id_accounts_id_fk": {
+          "name": "account_restricted_details_account_id_accounts_id_fk",
+          "tableFrom": "account_restricted_details",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "account_restricted_details_account_id_unique": {
+          "name": "account_restricted_details_account_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "account_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.account_products": {
+      "name": "account_products",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_type": {
+          "name": "product_type",
+          "type": "account_product_type_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "student_price": {
+          "name": "student_price",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "agent_cost": {
+          "name": "agent_cost",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "account_products_account_id_accounts_id_fk": {
+          "name": "account_products_account_id_accounts_id_fk",
+          "tableFrom": "account_products",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -19374,26 +19422,6 @@
         "cash",
         "card",
         "cheque"
-      ]
-    },
-    "public.account_product_type_enum": {
-      "name": "account_product_type_enum",
-      "schema": "public",
-      "values": [
-        "insurance",
-        "visa"
-      ]
-    },
-    "public.account_type_enum": {
-      "name": "account_type_enum",
-      "schema": "public",
-      "values": [
-        "institution",
-        "super_agent",
-        "sub_agent",
-        "pathway_provider",
-        "insurance_company",
-        "migration_agent"
       ]
     },
     "public.activity_action": {
@@ -19697,9 +19725,6 @@
         "referral",
         "facebook_ads",
         "walk_in",
-        "social_media",
-        "marketing_campaign",
-        "phone_inquiry",
         "other"
       ]
     },
@@ -20067,6 +20092,26 @@
         "pending_verification",
         "verified",
         "needs_reverification"
+      ]
+    },
+    "public.account_type_enum": {
+      "name": "account_type_enum",
+      "schema": "public",
+      "values": [
+        "institution",
+        "super_agent",
+        "sub_agent",
+        "pathway_provider",
+        "insurance_company",
+        "migration_agent"
+      ]
+    },
+    "public.account_product_type_enum": {
+      "name": "account_product_type_enum",
+      "schema": "public",
+      "values": [
+        "insurance",
+        "visa"
       ]
     }
   },

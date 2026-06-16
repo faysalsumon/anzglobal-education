@@ -1,6 +1,6 @@
 {
-  "id": "f3384d58-252e-4e15-b25b-9f51b273d1a8",
-  "prevId": "a2b3c4d5-e6f7-89ab-cdef-012345678901",
+  "id": "a6b7c8d9-e0f1-2345-6789-abcdef012345",
+  "prevId": "c2d3e4f5-a6b7-8901-cdef-234567890abc",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1270,378 +1270,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.account_products": {
-      "name": "account_products",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "account_id": {
-          "name": "account_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "product_type": {
-          "name": "product_type",
-          "type": "account_product_type_enum",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "student_price": {
-          "name": "student_price",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "agent_cost": {
-          "name": "agent_cost",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "account_products_account_id_accounts_id_fk": {
-          "name": "account_products_account_id_accounts_id_fk",
-          "tableFrom": "account_products",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.account_restricted_details": {
-      "name": "account_restricted_details",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "account_id": {
-          "name": "account_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "bank_name": {
-          "name": "bank_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "account_holder_name": {
-          "name": "account_holder_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "account_number": {
-          "name": "account_number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "bsb": {
-          "name": "bsb",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "swift_code": {
-          "name": "swift_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "contract_start_date": {
-          "name": "contract_start_date",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "contract_end_date": {
-          "name": "contract_end_date",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "contract_notes": {
-          "name": "contract_notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "account_restricted_details_account_id_accounts_id_fk": {
-          "name": "account_restricted_details_account_id_accounts_id_fk",
-          "tableFrom": "account_restricted_details",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "account_restricted_details_account_id_unique": {
-          "name": "account_restricted_details_account_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "account_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.accounts": {
-      "name": "accounts",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "account_type": {
-          "name": "account_type",
-          "type": "account_type_enum",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "provider_type": {
-          "name": "provider_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "contract_type": {
-          "name": "contract_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "indirect_partner_id": {
-          "name": "indirect_partner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "institution_cms_id": {
-          "name": "institution_cms_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "primary_contact_id": {
-          "name": "primary_contact_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "contact_name": {
-          "name": "contact_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "phone": {
-          "name": "phone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "website": {
-          "name": "website",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "address": {
-          "name": "address",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "city": {
-          "name": "city",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "state": {
-          "name": "state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "country": {
-          "name": "country",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "logo_url": {
-          "name": "logo_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "notes": {
-          "name": "notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "accounts_indirect_partner_id_accounts_id_fk": {
-          "name": "accounts_indirect_partner_id_accounts_id_fk",
-          "tableFrom": "accounts",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "indirect_partner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "accounts_institution_cms_id_universities_id_fk": {
-          "name": "accounts_institution_cms_id_universities_id_fk",
-          "tableFrom": "accounts",
-          "tableTo": "universities",
-          "columnsFrom": [
-            "institution_cms_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "accounts_primary_contact_id_crm_contacts_id_fk": {
-          "name": "accounts_primary_contact_id_crm_contacts_id_fk",
-          "tableFrom": "accounts",
-          "tableTo": "crm_contacts",
-          "columnsFrom": [
-            "primary_contact_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.activity_logs": {
       "name": "activity_logs",
       "schema": "",
@@ -2218,12 +1846,6 @@
           "notNull": false,
           "default": "ARRAY['institutions:create', 'courses:create', 'institutions:read']::text[]"
         },
-        "allowed_institutions": {
-          "name": "allowed_institutions",
-          "type": "varchar[]",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_by_user_id": {
           "name": "created_by_user_id",
           "type": "varchar",
@@ -2426,25 +2048,7 @@
           "name": "course_id",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": false
-        },
-        "external_course_name": {
-          "name": "external_course_name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "external_institution_name": {
-          "name": "external_institution_name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "external_country": {
-          "name": "external_country",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "is_primary": {
           "name": "is_primary",
@@ -2510,6 +2114,27 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "app_courses_unique": {
+          "name": "app_courses_unique",
+          "columns": [
+            {
+              "expression": "application_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "course_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2536,7 +2161,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "application_courses_added_by_users_id_fk": {
@@ -3855,13 +3480,6 @@
           "notNull": true,
           "default": "'blog'"
         },
-        "available_markets": {
-          "name": "available_markets",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "ARRAY['AU','BD']::text[]"
-        },
         "tags": {
           "name": "tags",
           "type": "text[]",
@@ -3989,21 +3607,6 @@
           "isUnique": false,
           "concurrently": false,
           "method": "btree",
-          "with": {}
-        },
-        "blogs_available_markets_gin_idx": {
-          "name": "blogs_available_markets_gin_idx",
-          "columns": [
-            {
-              "expression": "available_markets",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
           "with": {}
         }
       },
@@ -6170,109 +5773,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.course_intake_dates": {
-      "name": "course_intake_dates",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "course_id": {
-          "name": "course_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "intake_date": {
-          "name": "intake_date",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "label": {
-          "name": "label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "course_intake_dates_course_idx": {
-          "name": "course_intake_dates_course_idx",
-          "columns": [
-            {
-              "expression": "course_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "course_intake_dates_date_idx": {
-          "name": "course_intake_dates_date_idx",
-          "columns": [
-            {
-              "expression": "course_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "intake_date",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "course_intake_dates_course_id_courses_id_fk": {
-          "name": "course_intake_dates_course_id_courses_id_fk",
-          "tableFrom": "course_intake_dates",
-          "tableTo": "courses",
-          "columnsFrom": [
-            "course_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.course_intake_templates": {
       "name": "course_intake_templates",
       "schema": "",
@@ -7887,19 +7387,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "cricos_code": {
-          "name": "cricos_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_cricos_registered": {
-          "name": "is_cricos_registered",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "pr_pathway": {
           "name": "pr_pathway",
           "type": "boolean",
@@ -7939,18 +7426,6 @@
         },
         "application_fees": {
           "name": "application_fees",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "admission_fee": {
-          "name": "admission_fee",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "materials_fee": {
-          "name": "materials_fee",
           "type": "numeric(10, 2)",
           "primaryKey": false,
           "notNull": false
@@ -8102,20 +7577,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "available_markets": {
-          "name": "available_markets",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "ARRAY['AU','BD']::text[]"
-        },
-        "featured_markets": {
-          "name": "featured_markets",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "ARRAY[]::text[]"
-        },
         "is_active": {
           "name": "is_active",
           "type": "boolean",
@@ -8139,36 +7600,6 @@
         }
       },
       "indexes": {
-        "courses_available_markets_gin_idx": {
-          "name": "courses_available_markets_gin_idx",
-          "columns": [
-            {
-              "expression": "available_markets",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
-          "with": {}
-        },
-        "courses_featured_markets_gin_idx": {
-          "name": "courses_featured_markets_gin_idx",
-          "columns": [
-            {
-              "expression": "featured_markets",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
-          "with": {}
-        },
         "courses_intakes_gin_idx": {
           "name": "courses_intakes_gin_idx",
           "columns": [
@@ -8740,6 +8171,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "contact_owner": {
+          "name": "contact_owner",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
         "assigned_to": {
           "name": "assigned_to",
           "type": "varchar",
@@ -9006,12 +8443,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "sub_agent_account_id": {
-          "name": "sub_agent_account_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_by_user_id": {
           "name": "created_by_user_id",
           "type": "varchar",
@@ -9096,6 +8527,21 @@
           "columns": [
             {
               "expression": "entry_source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "crm_contacts_owner_idx": {
+          "name": "crm_contacts_owner_idx",
+          "columns": [
+            {
+              "expression": "contact_owner",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -9224,6 +8670,19 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
+        "crm_contacts_contact_owner_users_id_fk": {
+          "name": "crm_contacts_contact_owner_users_id_fk",
+          "tableFrom": "crm_contacts",
+          "tableTo": "users",
+          "columnsFrom": [
+            "contact_owner"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "crm_contacts_assigned_to_users_id_fk": {
           "name": "crm_contacts_assigned_to_users_id_fk",
           "tableFrom": "crm_contacts",
@@ -9274,19 +8733,6 @@
             "id"
           ],
           "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "crm_contacts_sub_agent_account_id_accounts_id_fk": {
-          "name": "crm_contacts_sub_agent_account_id_accounts_id_fk",
-          "tableFrom": "crm_contacts",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "sub_agent_account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "crm_contacts_created_by_user_id_users_id_fk": {
@@ -12449,156 +11895,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.lead_course_preferences": {
-      "name": "lead_course_preferences",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "identity": {
-            "type": "always",
-            "name": "lead_course_preferences_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
-        },
-        "lead_id": {
-          "name": "lead_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "preference_rank": {
-          "name": "preference_rank",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "country": {
-          "name": "country",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "university_id": {
-          "name": "university_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "course_id": {
-          "name": "course_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "course_name": {
-          "name": "course_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "lead_course_prefs_lead_idx": {
-          "name": "lead_course_prefs_lead_idx",
-          "columns": [
-            {
-              "expression": "lead_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "lead_course_prefs_rank_idx": {
-          "name": "lead_course_prefs_rank_idx",
-          "columns": [
-            {
-              "expression": "lead_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "preference_rank",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "lead_course_preferences_lead_id_crm_contacts_id_fk": {
-          "name": "lead_course_preferences_lead_id_crm_contacts_id_fk",
-          "tableFrom": "lead_course_preferences",
-          "tableTo": "crm_contacts",
-          "columnsFrom": [
-            "lead_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "lead_course_preferences_university_id_universities_id_fk": {
-          "name": "lead_course_preferences_university_id_universities_id_fk",
-          "tableFrom": "lead_course_preferences",
-          "tableTo": "universities",
-          "columnsFrom": [
-            "university_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "lead_course_preferences_course_id_courses_id_fk": {
-          "name": "lead_course_preferences_course_id_courses_id_fk",
-          "tableFrom": "lead_course_preferences",
-          "tableTo": "courses",
-          "columnsFrom": [
-            "course_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -18393,20 +17689,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "available_markets": {
-          "name": "available_markets",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "ARRAY['AU','BD']::text[]"
-        },
-        "featured_markets": {
-          "name": "featured_markets",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "ARRAY[]::text[]"
-        },
         "is_active": {
           "name": "is_active",
           "type": "boolean",
@@ -18450,36 +17732,6 @@
           "columns": [
             {
               "expression": "tags",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
-          "with": {}
-        },
-        "universities_available_markets_gin_idx": {
-          "name": "universities_available_markets_gin_idx",
-          "columns": [
-            {
-              "expression": "available_markets",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
-          "with": {}
-        },
-        "universities_featured_markets_gin_idx": {
-          "name": "universities_featured_markets_gin_idx",
-          "columns": [
-            {
-              "expression": "featured_markets",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -19116,7 +18368,21 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "users_approved_by_users_id_fk": {
+          "name": "users_approved_by_users_id_fk",
+          "tableFrom": "users",
+          "tableTo": "users",
+          "columnsFrom": [
+            "approved_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "users_email_unique": {
@@ -19374,26 +18640,6 @@
         "cash",
         "card",
         "cheque"
-      ]
-    },
-    "public.account_product_type_enum": {
-      "name": "account_product_type_enum",
-      "schema": "public",
-      "values": [
-        "insurance",
-        "visa"
-      ]
-    },
-    "public.account_type_enum": {
-      "name": "account_type_enum",
-      "schema": "public",
-      "values": [
-        "institution",
-        "super_agent",
-        "sub_agent",
-        "pathway_provider",
-        "insurance_company",
-        "migration_agent"
       ]
     },
     "public.activity_action": {
@@ -19697,9 +18943,6 @@
         "referral",
         "facebook_ads",
         "walk_in",
-        "social_media",
-        "marketing_campaign",
-        "phone_inquiry",
         "other"
       ]
     },
