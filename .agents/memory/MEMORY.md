@@ -4,3 +4,4 @@
 - [Role Management tab](role-management-tab.md) — CTO-only tab; roles/permissions/role_permissions DB tables; two sections: user-role assignment (writes roleId) + role hierarchy cards (hierarchyLevel + defaultScope)
 - [Profiles tab](profiles-tab.md) — CTO-only; profiles + profile_permissions DB tables; CRUD-per-module axis orthogonal to Roles; enforced in getAccessContext(); tab is read-only (no create/edit UI)
 - [RBAC audit findings](rbac-audit-findings.md) — June 2026 audit; legacy tiers removed; isMarketingExecutive/isConsultant fixed; 4 missing tabs added; profiles still unseeded and unenforced
+- [drizzle-zod Zod version pinning](drizzle-zod-version.md) — drizzle-zod 0.8.x switched to Zod v4 internals; this project must stay on drizzle-zod 0.7.x (last Zod v3 compatible)
