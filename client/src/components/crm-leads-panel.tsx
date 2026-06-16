@@ -435,8 +435,15 @@ export function CrmLeadsPanel() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div>
-          <h2 className="text-2xl font-bold" data-testid="text-crm-leads-title">CRM Leads</h2>
-          <p className="text-muted-foreground">Manage and track potential students</p>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold" data-testid="text-crm-leads-title">CRM Leads</h2>
+            {leadsData && (
+              <Badge variant="secondary" className="text-xs no-default-active-elevate" data-testid="badge-lead-count">
+                {leadsData.total} lead{leadsData.total !== 1 ? 's' : ''}
+              </Badge>
+            )}
+          </div>
+          <p className="text-muted-foreground text-sm">Manage and track potential students</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center border rounded-lg p-1">
@@ -466,9 +473,8 @@ export function CrmLeadsPanel() {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex flex-col gap-3 mb-4">
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -642,138 +648,96 @@ export function CrmLeadsPanel() {
               </DragOverlay>
             </DndContext>
           ) : (
-            <div className="space-y-2">
-              {leadsData?.leads?.map((lead) => (
-                <div
-                  key={lead.id}
-                  className="p-4 border rounded-lg hover-elevate cursor-pointer"
-                  onClick={() => { setSelectedLead(lead); setInitialTab('details'); }}
-                  data-testid={`card-lead-${lead.id}`}
-                >
-                  {/* Mobile: Stack vertically, Desktop: Horizontal layout */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                    {/* Avatar + Name + Badges section */}
-                    <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
-                      <Avatar className="h-10 w-10 shrink-0">
-                        <AvatarFallback>
-                          {lead.firstName?.[0]}{lead.lastName?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        {/* Name and badges row */}
-                        <div className="flex flex-wrap items-center gap-2">
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="sticky left-0 z-10 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[180px]">Name</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Stage</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Rating</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Email</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Phone</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Country</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Assigned To</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Added</th>
+                    <th className="px-4 py-3 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leadsData?.leads?.map((lead) => (
+                    <tr
+                      key={lead.id}
+                      className="border-b last:border-b-0 cursor-pointer group hover:bg-muted/40 transition-colors"
+                      onClick={() => { setSelectedLead(lead); setInitialTab('details'); }}
+                      data-testid={`row-lead-${lead.id}`}
+                    >
+                      <td className="sticky left-0 z-10 bg-background group-hover:bg-muted/40 transition-colors px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar className="h-8 w-8 shrink-0">
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                              {lead.firstName?.[0]}{lead.lastName?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
                           <span className="font-medium" data-testid={`text-lead-name-${lead.id}`}>
                             {lead.firstName} {lead.lastName}
                           </span>
                         </div>
-                        {/* Badges on their own row for clarity */}
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                          <Badge variant="outline" className={`${statusColors[lead.leadStatus]} text-xs`}>
-                            {statusLabels[lead.leadStatus]}
-                          </Badge>
-                          <Badge variant="outline" className={`${ratingColors[lead.leadRating]} text-xs`}>
-                            {lead.leadRating}
-                          </Badge>
-                          {lead.leadCreationMethod === 'website_form' && (
-                            <Badge variant="secondary" className="text-xs">
-                              Website
-                            </Badge>
-                          )}
-                        </div>
-                        {/* Course name */}
-                        {lead.courseName && (
-                          <div className="flex items-center gap-1 text-sm text-primary mt-1.5" data-testid={`text-lead-course-${lead.id}`}>
-                            <BookOpen className="h-3 w-3 shrink-0" />
-                            {lead.courseId ? (
-                              <a 
-                                href={`/courses/${lead.courseSlug || lead.courseId}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="font-medium hover:underline truncate"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {lead.courseName}
-                              </a>
-                            ) : (
-                              <span className="font-medium truncate">{lead.courseName}</span>
-                            )}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <Badge variant="outline" className={`${statusColors[lead.leadStatus]} text-xs no-default-active-elevate`}>
+                          {statusLabels[lead.leadStatus]}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <Badge variant="outline" className={`${ratingColors[lead.leadRating]} text-xs no-default-active-elevate`}>
+                          {lead.leadRating}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground max-w-[200px]">
+                        <span className="truncate block">{lead.email || '—'}</span>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                        {lead.phone || lead.mobile || <span className="text-muted-foreground/40">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                        {lead.country || <span className="text-muted-foreground/40">—</span>}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {lead.assignedToUser ? (
+                          <div className="flex items-center gap-1.5">
+                            <Avatar className="h-6 w-6 shrink-0">
+                              <AvatarImage src={lead.assignedToUser.profileImageUrl || undefined} />
+                              <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                {lead.assignedToUser.firstName?.[0]}{lead.assignedToUser.lastName?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">{lead.assignedToUser.firstName} {lead.assignedToUser.lastName}</span>
                           </div>
+                        ) : (
+                          <span className="text-muted-foreground/40 text-xs">Unassigned</span>
                         )}
-                        {/* Date and Assigned - visible on mobile */}
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-1.5 sm:hidden">
-                          {lead.createdAt && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {format(new Date(lead.createdAt), "MMM d, yyyy")}
-                            </span>
-                          )}
-                          {lead.assignedToUser && (
-                            <span className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              {lead.assignedToUser.firstName} {lead.assignedToUser.lastName}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {/* View button - visible on mobile, aligned right */}
-                      <Button variant="ghost" size="icon" className="sm:hidden shrink-0" onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); setInitialTab('details'); }}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    
-                    {/* Contact info - horizontal on desktop, vertical on mobile */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground pl-13 sm:pl-0">
-                      <span className="flex items-center gap-1 truncate">
-                        <Mail className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{lead.email}</span>
-                      </span>
-                      {lead.phone && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3 shrink-0" />
-                          {lead.phone}
-                        </span>
-                      )}
-                      {lead.country && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          {lead.country}
-                        </span>
-                      )}
-                      {lead.branch && (
-                        <span className="flex items-center gap-1">
-                          <Building2 className="h-3 w-3 shrink-0" />
-                          {lead.branch}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Date/Assigned + View button - desktop only */}
-                  <div className="hidden sm:flex items-center justify-end gap-4 mt-2">
-                    <div className="text-right text-sm text-muted-foreground">
-                      {lead.createdAt && (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {format(new Date(lead.createdAt), "MMM d, yyyy")}
-                        </div>
-                      )}
-                      {lead.assignedToUser && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <User className="h-3 w-3" />
-                          {lead.assignedToUser.firstName} {lead.assignedToUser.lastName}
-                        </div>
-                      )}
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); setInitialTab('details'); }}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">
+                        {lead.createdAt ? format(new Date(lead.createdAt), "d MMM yyyy") : <span className="text-muted-foreground/40">—</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground"
+                          onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); setInitialTab('details'); }}
+                          data-testid={`button-view-lead-${lead.id}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+      </div>
 
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent>

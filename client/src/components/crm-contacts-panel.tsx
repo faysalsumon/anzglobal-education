@@ -1097,110 +1097,112 @@ export function CrmContactsPanel() {
           No contacts found. Create your first contact to get started.
         </div>
       ) : (
-        <div className="space-y-2">
-          {contactsData?.contacts?.map((contact) => (
-            <div
-              key={contact.id}
-              className="flex items-center gap-3 px-4 py-3 border rounded-lg hover-elevate cursor-pointer"
-              onClick={() => setSelectedContact(contact)}
-              data-testid={`card-contact-${contact.id}`}
-            >
-              {/* Avatar */}
-              <Avatar className="h-9 w-9 shrink-0">
-                <AvatarImage src={contact.photo || undefined} />
-                <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
-                  {contact.firstName?.[0]}{contact.lastName?.[0]}
-                </AvatarFallback>
-              </Avatar>
-
-              {/* Main content */}
-              <div className="flex-1 min-w-0">
-                {/* Name + primary badges */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold leading-tight" data-testid={`text-contact-name-${contact.id}`}>
-                    {contact.firstName} {contact.lastName}
-                  </span>
-                  <Badge variant="outline" className={`text-xs no-default-active-elevate ${contactTypeColors[contact.contactType]}`}>
-                    {contactTypeLabels[contact.contactType]}
-                  </Badge>
-                  {contact.contactType === 'clients' && contact.clientStatus && (
-                    <Badge variant="outline" className={`text-xs no-default-active-elevate ${clientStatusColors[contact.clientStatus]}`} data-testid={`badge-status-${contact.id}`}>
-                      {clientStatusLabels[contact.clientStatus]}
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="sticky left-0 z-10 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[180px]">Name</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Type</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Email</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Phone</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Country</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Assigned To</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Added</th>
+                <th className="px-4 py-3 w-20"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {contactsData?.contacts?.map((contact) => (
+                <tr
+                  key={contact.id}
+                  className="border-b last:border-b-0 cursor-pointer group hover:bg-muted/40 transition-colors"
+                  onClick={() => setSelectedContact(contact)}
+                  data-testid={`row-contact-${contact.id}`}
+                >
+                  <td className="sticky left-0 z-10 bg-background group-hover:bg-muted/40 transition-colors px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-2.5">
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={contact.photo || undefined} />
+                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                          {contact.firstName?.[0]}{contact.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium" data-testid={`text-contact-name-${contact.id}`}>
+                        {contact.firstName} {contact.lastName}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <Badge variant="outline" className={`text-xs no-default-active-elevate ${contactTypeColors[contact.contactType]}`}>
+                      {contactTypeLabels[contact.contactType]}
                     </Badge>
-                  )}
-                  {contact.contactType === 'clients' && contact.clientStatus === 'lead' && contact.leadStage && (
-                    <Badge variant="outline" className={`text-xs no-default-active-elevate ${leadStageColors[contact.leadStage]}`} data-testid={`badge-lead-stage-${contact.id}`}>
-                      {leadStageLabels[contact.leadStage]}
-                    </Badge>
-                  )}
-                  {contact.contactType === 'clients' && contact.leadRating && (
-                    <Badge variant="secondary" className={`text-xs no-default-active-elevate ${leadRatingColors[contact.leadRating]}`}>
-                      {leadRatingLabels[contact.leadRating]}
-                    </Badge>
-                  )}
-                </div>
-                {/* Meta row */}
-                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
-                  {contact.email && (
-                    <span className="flex items-center gap-1 truncate max-w-[200px]">
-                      <Mail className="h-3 w-3 shrink-0" />{contact.email}
-                    </span>
-                  )}
-                  {contact.mobile && (
-                    <span className="flex items-center gap-1">
-                      <Phone className="h-3 w-3 shrink-0" />{contact.mobile}
-                    </span>
-                  )}
-                  {(contact.city || contact.country) && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3 shrink-0" />
-                      {[contact.city, contact.country].filter(Boolean).join(', ')}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Right column: date + people avatars */}
-              <div className="text-right text-xs text-muted-foreground shrink-0 hidden sm:block">
-                {contact.createdAt && (
-                  <p className="flex items-center justify-end gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {format(new Date(contact.createdAt), "d MMM yyyy")}
-                  </p>
-                )}
-                <div className="flex items-center justify-end gap-1 mt-1">
-                  {contact.assignedUser && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Avatar className="h-6 w-6 cursor-default ring-2 ring-primary/30">
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex flex-col gap-1">
+                      {contact.contactType === 'clients' && contact.clientStatus && (
+                        <Badge variant="outline" className={`text-xs no-default-active-elevate ${clientStatusColors[contact.clientStatus]}`} data-testid={`badge-status-${contact.id}`}>
+                          {clientStatusLabels[contact.clientStatus]}
+                        </Badge>
+                      )}
+                      {contact.contactType === 'clients' && contact.clientStatus === 'lead' && contact.leadStage && (
+                        <Badge variant="outline" className={`text-xs no-default-active-elevate ${leadStageColors[contact.leadStage]}`} data-testid={`badge-lead-stage-${contact.id}`}>
+                          {leadStageLabels[contact.leadStage]}
+                        </Badge>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground max-w-[200px]">
+                    <span className="truncate block">{contact.email || '—'}</span>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                    {contact.mobile || contact.phone || <span className="text-muted-foreground/40">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                    {contact.country || <span className="text-muted-foreground/40">—</span>}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {contact.assignedUser ? (
+                      <div className="flex items-center gap-1.5">
+                        <Avatar className="h-6 w-6 shrink-0">
                           <AvatarImage src={contact.assignedUser.profileImageUrl || undefined} />
                           <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
                             {contact.assignedUser.firstName?.[0]}{contact.assignedUser.lastName?.[0]}
                           </AvatarFallback>
                         </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        <p className="text-xs">Assigned to: {contact.assignedUser.firstName} {contact.assignedUser.lastName}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-              </div>
-
-              {/* Quick-assign button */}
-              <AssignPopover
-                contactId={contact.id}
-                assignedTo={contact.assignedTo}
-                admins={admins || []}
-                onAssign={(id, adminId) => updateMutation.mutate({ id, data: { assignedTo: adminId } })}
-              />
-
-              {/* View icon */}
-              <Button type="button" variant="ghost" size="icon" className="shrink-0 text-muted-foreground" onClick={(e) => { e.stopPropagation(); setSelectedContact(contact); }} data-testid={`button-view-contact-${contact.id}`}>
-                <Eye className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
+                        <span className="text-sm">{contact.assignedUser.firstName} {contact.assignedUser.lastName}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground/40 text-xs">Unassigned</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">
+                    {contact.createdAt ? format(new Date(contact.createdAt), "d MMM yyyy") : <span className="text-muted-foreground/40">—</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <AssignPopover
+                        contactId={contact.id}
+                        assignedTo={contact.assignedTo}
+                        admins={admins || []}
+                        onAssign={(id, adminId) => updateMutation.mutate({ id, data: { assignedTo: adminId } })}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground"
+                        onClick={(e) => { e.stopPropagation(); setSelectedContact(contact); }}
+                        data-testid={`button-view-contact-${contact.id}`}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

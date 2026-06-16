@@ -271,13 +271,15 @@ export function logSecurityEvent(
 const CSP_DIRECTIVES = [
   "default-src 'self'",
   // 'unsafe-inline' is required by GTM and GA4 inline scripts in index.html
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://maps.googleapis.com https://maps.gstatic.com https://connect.facebook.net",
+  // clarity.ms is loaded by GTM for Microsoft Clarity analytics
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://maps.googleapis.com https://maps.gstatic.com https://connect.facebook.net https://www.clarity.ms",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   // blob: needed for PDF previews and canvas exports; https: allows institution/student image CDNs
   "img-src 'self' data: blob: https:",
   // wss: for Supabase Realtime; ws://localhost for dev HMR
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://maps.googleapis.com https://api.openai.com ws://localhost:* wss://localhost:*",
+  // clarity.ms for Microsoft Clarity telemetry
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://maps.googleapis.com https://api.openai.com https://*.clarity.ms ws://localhost:* wss://localhost:*",
   // GTM noscript iframe
   "frame-src 'self' https://www.googletagmanager.com",
   // Blocks Flash, Silverlight, and other plugins
