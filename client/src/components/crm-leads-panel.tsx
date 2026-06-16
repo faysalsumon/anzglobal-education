@@ -658,6 +658,7 @@ export function CrmLeadsPanel() {
                     <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Email</th>
                     <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Phone</th>
                     <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Country</th>
+                    <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Source</th>
                     <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Assigned To</th>
                     <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Added</th>
                     <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 w-10"></th>
@@ -701,6 +702,15 @@ export function CrmLeadsPanel() {
                       </td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                         {lead.country || <span className="text-muted-foreground/40">—</span>}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {lead.leadCreationMethod ? (
+                          <span className="text-xs text-muted-foreground capitalize">
+                            {lead.leadCreationMethod === 'website_form' ? 'Website Inquiry' : lead.leadCreationMethod.replace(/_/g, ' ')}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/40">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         {lead.assignedToUser ? (
