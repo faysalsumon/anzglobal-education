@@ -195,7 +195,7 @@ export function botProtectionMiddleware(req: Request, res: Response, next: NextF
   }
   
   if (isAIBot(userAgent)) {
-    console.log(`[Bot Protection] Blocked AI bot: ${userAgent.substring(0, 100)} from ${clientIP}`);
+    logSecurityEvent('BOT_BLOCKED', req, { ua: userAgent.substring(0, 60) });
     
     if (isApiRequest) {
       return res.status(403).json({
@@ -218,7 +218,7 @@ export function botProtectionMiddleware(req: Request, res: Response, next: NextF
   }
   
   if (isRateLimited(clientIP, isApiRequest)) {
-    console.log(`[Bot Protection] Rate limited: ${clientIP} on ${req.path}`);
+    logSecurityEvent('RATE_LIMITED', req);
     
     res.setHeader('Retry-After', '60');
     
@@ -245,17 +245,63 @@ export function botProtectionMiddleware(req: Request, res: Response, next: NextF
   next();
 }
 
+/**
+ * Structured security event logger.
+ * All security-relevant events (rate limits, auth failures, blocked bots) are
+ * written with a [Security] prefix so they can be grepped from server logs.
+ */
+export function logSecurityEvent(
+  event: string,
+  req: Request,
+  extra?: Record<string, string | number | boolean>
+): void {
+  const ip = (
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+    req.ip ||
+    'unknown'
+  );
+  const details = extra
+    ? ' ' + Object.entries(extra).map(([k, v]) => `${k}=${v}`).join(' ')
+    : '';
+  console.warn(
+    `[Security] ${event} ip=${ip} method=${req.method} path=${req.path}${details}`
+  );
+}
+
+const CSP_DIRECTIVES = [
+  "default-src 'self'",
+  // 'unsafe-inline' is required by GTM and GA4 inline scripts in index.html
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://maps.googleapis.com https://maps.gstatic.com https://connect.facebook.net",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  // blob: needed for PDF previews and canvas exports; https: allows institution/student image CDNs
+  "img-src 'self' data: blob: https:",
+  // wss: for Supabase Realtime; ws://localhost for dev HMR
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://maps.googleapis.com https://api.openai.com ws://localhost:* wss://localhost:*",
+  // GTM noscript iframe
+  "frame-src 'self' https://www.googletagmanager.com",
+  // Blocks Flash, Silverlight, and other plugins
+  "object-src 'none'",
+  // Prevents base-tag hijacking
+  "base-uri 'self'",
+  // Restricts form submissions to same origin
+  "form-action 'self'",
+].join('; ');
+
 export function securityHeadersMiddleware(_req: Request, res: Response, next: NextFunction) {
   res.setHeader('X-Robots-Tag', 'noai, noimageai');
-  
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(self)');
-  
+
+  res.setHeader('Content-Security-Policy', CSP_DIRECTIVES);
+
+  // HSTS: only meaningful over HTTPS — skip in local development
+  if (process.env.NODE_ENV !== 'development') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+
   next();
 }
 

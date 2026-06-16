@@ -642,10 +642,15 @@ function formatNoteDate(date: Date | string | null): string {
 const DOMPURIFY_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
   ALLOWED_TAGS: [
     "p", "br", "strong", "em", "u", "s", "span", "div", "a",
-    "img", "ul", "ol", "li", "code", "pre",
+    "ul", "ol", "li", "code", "pre",
+    // img removed: prevents tracking-pixel injection via external src URLs
   ],
-  ALLOWED_ATTR: ["class", "href", "src", "alt", "target", "rel"],
+  ALLOWED_ATTR: ["class", "href", "target", "rel"],
+  // Forbid data-* attributes to prevent data exfiltration via custom attributes
   ALLOW_DATA_ATTR: false,
+  // Force all links to open safely: rel="noopener noreferrer"
+  ADD_ATTR: ["target"],
+  FORCE_BODY: false,
 };
 
 function VisibilityBadge({ visibility, visibleTo }: { visibility?: NoteVisibility; visibleTo?: string[] }) {

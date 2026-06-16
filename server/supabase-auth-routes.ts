@@ -11,6 +11,7 @@ import crypto from 'crypto';
 import { createCrmContactForUser } from './crm-routes';
 import { getClientIp, replyTooManyRequests } from './middleware/rate-limit';
 import { signinLimiter, forgotPasswordLimiter } from './middleware/rate-limit-instances';
+import { logSecurityEvent } from './middleware/bot-protection';
 
 const router = Router();
 
@@ -137,6 +138,7 @@ router.post('/signin', async (req: Request, res: Response) => {
     });
 
     if (error) {
+      logSecurityEvent('LOGIN_FAILED', req, { reason: error.message.substring(0, 60) });
       return res.status(401).json({ error: error.message });
     }
 
@@ -261,6 +263,7 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
     });
 
     if (error) {
+      logSecurityEvent('PASSWORD_RESET_FAILED', req, { reason: error.message.substring(0, 60) });
       return res.status(400).json({ error: error.message });
     }
 

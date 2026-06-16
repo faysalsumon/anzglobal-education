@@ -77,6 +77,9 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   }
 
   return (
+    // dangerouslySetInnerHTML is safe here: only injects CSS custom-property
+    // declarations (e.g. --color-key: #hex) built from the chart's own config
+    // object — never from user-supplied input.
     <style
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
