@@ -181,6 +181,7 @@ export async function createCrmContactForUser(user: {
   profileImageUrl?: string | null;
   entrySource?: string | null;
   branchId?: string | null;
+  createdByUserId?: string | null;
 }): Promise<{ success: boolean; contactId?: string; error?: string }> {
   try {
     const contactType = mapUserTypeToContactType(user.userType);
@@ -251,6 +252,7 @@ export async function createCrmContactForUser(user: {
       branchId: user.branchId || null,
       linkedUserId: user.id,
       photo: user.photo || user.profileImageUrl,
+      createdByUserId: user.createdByUserId || null,
     }).returning();
 
     if (resolvedEntrySource === 'walk_in' && user.branchId) {

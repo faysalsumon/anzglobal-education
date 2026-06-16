@@ -2912,6 +2912,7 @@ export const crmContacts = pgTable("crm_contacts", {
   regionIdx: index("crm_contacts_region_idx").on(table.regionId),
   branchIdx: index("crm_contacts_branch_idx").on(table.branchId),
   linkedUserIdx: index("crm_contacts_linked_user_idx").on(table.linkedUserId),
+  createdByIdx: index("crm_contacts_created_by_idx").on(table.createdByUserId),
 }));
 
 // Contact Status History for tracking client status changes with timeline

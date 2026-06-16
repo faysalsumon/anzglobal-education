@@ -1,0 +1,1 @@
+CREATE INDEX "crm_contacts_created_by_idx" ON "crm_contacts" USING btree ("created_by_user_id");
