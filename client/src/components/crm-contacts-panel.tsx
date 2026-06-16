@@ -923,7 +923,7 @@ export function CrmContactsPanel() {
 
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
         <CollapsibleContent>
-          <Card className="p-4">
+          <div className="p-4 rounded-lg border bg-muted/30">
             {savedFiltersData && savedFiltersData.length > 0 && (
               <div className="mb-4">
                 <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
@@ -1041,7 +1041,7 @@ export function CrmContactsPanel() {
                 </div>
               )}
             </div>
-          </Card>
+          </div>
         </CollapsibleContent>
       </Collapsible>
 
@@ -1101,26 +1101,26 @@ export function CrmContactsPanel() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="sticky left-0 z-10 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[180px]">Name</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Type</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Email</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Phone</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Country</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Assigned To</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Added</th>
-                <th className="px-4 py-3 w-20"></th>
+                <th className="sticky left-0 top-0 z-30 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[180px]">Name</th>
+                <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Type</th>
+                <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Status</th>
+                <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Email</th>
+                <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Phone</th>
+                <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Country</th>
+                <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Assigned To</th>
+                <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Added</th>
+                <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 w-10"></th>
               </tr>
             </thead>
             <tbody>
               {contactsData?.contacts?.map((contact) => (
                 <tr
                   key={contact.id}
-                  className="border-b last:border-b-0 cursor-pointer group hover:bg-muted/40 transition-colors"
+                  className="border-b last:border-b-0 cursor-pointer group hover:bg-muted/40 even:bg-muted/20 transition-colors"
                   onClick={() => setSelectedContact(contact)}
                   data-testid={`row-contact-${contact.id}`}
                 >
-                  <td className="sticky left-0 z-10 bg-background group-hover:bg-muted/40 transition-colors px-4 py-3 whitespace-nowrap">
+                  <td className="sticky left-0 z-10 bg-background group-hover:bg-muted/40 group-even:bg-muted/20 transition-colors px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-2.5">
                       <Avatar className="h-8 w-8 shrink-0">
                         <AvatarImage src={contact.photo || undefined} />
@@ -1173,31 +1173,23 @@ export function CrmContactsPanel() {
                         <span className="text-sm">{contact.assignedUser.firstName} {contact.assignedUser.lastName}</span>
                       </div>
                     ) : (
-                      <span className="text-muted-foreground/40 text-xs">Unassigned</span>
+                      <span className="text-muted-foreground/40 text-xs">System</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">
                     {contact.createdAt ? format(new Date(contact.createdAt), "d MMM yyyy") : <span className="text-muted-foreground/40">—</span>}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <AssignPopover
-                        contactId={contact.id}
-                        assignedTo={contact.assignedTo}
-                        admins={admins || []}
-                        onAssign={(id, adminId) => updateMutation.mutate({ id, data: { assignedTo: adminId } })}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground"
-                        onClick={(e) => { e.stopPropagation(); setSelectedContact(contact); }}
-                        data-testid={`button-view-contact-${contact.id}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground"
+                      onClick={(e) => { e.stopPropagation(); setSelectedContact(contact); }}
+                      data-testid={`button-view-contact-${contact.id}`}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
                   </td>
                 </tr>
               ))}

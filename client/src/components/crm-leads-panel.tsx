@@ -652,26 +652,26 @@ export function CrmLeadsPanel() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
-                    <th className="sticky left-0 z-10 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[180px]">Name</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Stage</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Rating</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Email</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Phone</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Country</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Assigned To</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Added</th>
-                    <th className="px-4 py-3 w-10"></th>
+                    <th className="sticky left-0 top-0 z-30 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[180px]">Name</th>
+                    <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Stage</th>
+                    <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Rating</th>
+                    <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Email</th>
+                    <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Phone</th>
+                    <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Country</th>
+                    <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Assigned To</th>
+                    <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Added</th>
+                    <th className="sticky top-0 z-20 bg-muted/50 px-4 py-3 w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {leadsData?.leads?.map((lead) => (
                     <tr
                       key={lead.id}
-                      className="border-b last:border-b-0 cursor-pointer group hover:bg-muted/40 transition-colors"
+                      className="border-b last:border-b-0 cursor-pointer group hover:bg-muted/40 even:bg-muted/20 transition-colors"
                       onClick={() => { setSelectedLead(lead); setInitialTab('details'); }}
                       data-testid={`row-lead-${lead.id}`}
                     >
-                      <td className="sticky left-0 z-10 bg-background group-hover:bg-muted/40 transition-colors px-4 py-3 whitespace-nowrap">
+                      <td className="sticky left-0 z-10 bg-background group-hover:bg-muted/40 group-even:bg-muted/20 transition-colors px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-2.5">
                           <Avatar className="h-8 w-8 shrink-0">
                             <AvatarFallback className="text-xs bg-primary/10 text-primary">
@@ -714,7 +714,7 @@ export function CrmLeadsPanel() {
                             <span className="text-sm">{lead.assignedToUser.firstName} {lead.assignedToUser.lastName}</span>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground/40 text-xs">Unassigned</span>
+                          <span className="text-muted-foreground/40 text-xs">System</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">
