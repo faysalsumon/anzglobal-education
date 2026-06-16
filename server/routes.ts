@@ -17850,6 +17850,38 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
+  // KPI Team Report — CTO only
+  app.get("/api/kpi/team-report", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin, role } = await isAdminTeamMember(userId);
+
+      if (!isAdmin || role !== 'cto') {
+        return res.status(403).json({ message: "Only CTO can view KPI reports" });
+      }
+
+      const { from, to } = req.query as { from?: string; to?: string };
+      if (!from || !to) {
+        return res.status(400).json({ message: "from and to date parameters are required" });
+      }
+
+      const fromDate = new Date(from);
+      const toDate = new Date(to);
+      if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+        return res.status(400).json({ message: "Invalid date format" });
+      }
+
+      // Set to end of day for toDate
+      toDate.setHours(23, 59, 59, 999);
+
+      const report = await storage.getTeamKpiReport(fromDate, toDate);
+      res.json(report);
+    } catch (error: any) {
+      console.error("Error fetching KPI report:", error);
+      res.status(500).json({ message: "Failed to fetch KPI report" });
+    }
+  });
+
   // Get single task by ID
   app.get("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {

@@ -68,6 +68,7 @@ import {
   type ContactInquiry,
   type InsertContactInquiry,
   // CRM imports
+  crmContacts,
   tasks,
   taskNotes,
   applicationInternalNotes,
@@ -142,7 +143,7 @@ import {
   type ApiKeyUsageLog,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like, or, desc, isNull, sql, lt, lte, getTableColumns } from "drizzle-orm";
+import { eq, and, like, or, desc, isNull, sql, lt, lte, gte, count, getTableColumns } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -3364,6 +3365,143 @@ export class DatabaseStorage implements IStorage {
       .where(eq(apiKeyUsageLogs.apiKeyId, apiKeyId))
       .orderBy(desc(apiKeyUsageLogs.createdAt))
       .limit(limit);
+  }
+
+  async getTeamKpiReport(from: Date, to: Date): Promise<{
+    userId: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    profileImageUrl: string | null;
+    role: string | null;
+    leadsAdded: number;
+    appsEnrolled: number;
+    tasksCompleted: number;
+    tasksAssigned: number;
+  }[]> {
+    // Get all admin/platform_admin users
+    const adminUsers = await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        profileImageUrl: users.profileImageUrl,
+        userType: users.userType,
+      })
+      .from(users)
+      .where(
+        or(
+          eq(users.userType, 'admin'),
+          eq(users.userType, 'platform_admin')
+        )
+      );
+
+    // Query 1: leads added grouped by createdByUserId in crmContacts
+    const leadsRows = await db
+      .select({
+        userId: crmContacts.createdByUserId,
+        cnt: count(),
+      })
+      .from(crmContacts)
+      .where(
+        and(
+          gte(crmContacts.createdAt, from),
+          lte(crmContacts.createdAt, to)
+        )
+      )
+      .groupBy(crmContacts.createdByUserId);
+
+    // Query 2: applications reaching 'Application Won' stage grouped by assignedConsultantId
+    const appsRows = await db
+      .select({
+        userId: applications.assignedConsultantId,
+        cnt: count(),
+      })
+      .from(applications)
+      .where(
+        and(
+          eq(applications.currentStage, 'Application Won'),
+          gte(applications.updatedAt, from),
+          lte(applications.updatedAt, to)
+        )
+      )
+      .groupBy(applications.assignedConsultantId);
+
+    // Query 3a: tasks completed grouped by assignedToId
+    const tasksCompletedRows = await db
+      .select({
+        userId: tasks.assignedToId,
+        cnt: count(),
+      })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.status, 'completed'),
+          gte(tasks.completedAt, from),
+          lte(tasks.completedAt, to)
+        )
+      )
+      .groupBy(tasks.assignedToId);
+
+    // Query 3b: tasks assigned (total assigned in period) grouped by assignedToId
+    const tasksAssignedRows = await db
+      .select({
+        userId: tasks.assignedToId,
+        cnt: count(),
+      })
+      .from(tasks)
+      .where(
+        and(
+          gte(tasks.createdAt, from),
+          lte(tasks.createdAt, to)
+        )
+      )
+      .groupBy(tasks.assignedToId);
+
+    // Build lookup maps
+    const leadsMap = new Map<string, number>();
+    for (const row of leadsRows) {
+      if (row.userId) leadsMap.set(row.userId, Number(row.cnt));
+    }
+
+    const appsMap = new Map<string, number>();
+    for (const row of appsRows) {
+      if (row.userId) appsMap.set(row.userId, Number(row.cnt));
+    }
+
+    const tasksCompletedMap = new Map<string, number>();
+    for (const row of tasksCompletedRows) {
+      if (row.userId) tasksCompletedMap.set(row.userId, Number(row.cnt));
+    }
+
+    const tasksAssignedMap = new Map<string, number>();
+    for (const row of tasksAssignedRows) {
+      if (row.userId) tasksAssignedMap.set(row.userId, Number(row.cnt));
+    }
+
+    // Get roles from adminTeamMembers
+    const teamMembers = await db.select().from(adminTeamMembers);
+    const roleMap = new Map<string, string>();
+    for (const m of teamMembers) {
+      if (m.userId) roleMap.set(m.userId, m.role || 'consultant');
+    }
+
+    return adminUsers.map((user) => {
+      const role = roleMap.get(user.id) || (user.userType === 'platform_admin' ? 'cto' : 'consultant');
+      return {
+        userId: user.id,
+        firstName: user.firstName || null,
+        lastName: user.lastName || null,
+        email: user.email || null,
+        profileImageUrl: user.profileImageUrl || null,
+        role,
+        leadsAdded: leadsMap.get(user.id) ?? 0,
+        appsEnrolled: appsMap.get(user.id) ?? 0,
+        tasksCompleted: tasksCompletedMap.get(user.id) ?? 0,
+        tasksAssigned: tasksAssignedMap.get(user.id) ?? 0,
+      };
+    });
   }
 }
 

@@ -60,6 +60,7 @@ import { ActivityFeed } from "@/components/activity-feed";
 import { AdminApplicationsKanban } from "@/components/admin-applications-kanban";
 import { MyTasksPanel } from "@/components/my-tasks-panel";
 import { TeamWorkloadPanel } from "@/components/team-workload-panel";
+import { KpiDashboardPanel } from "@/components/kpi-dashboard-panel";
 import { UpcomingRemindersPanel } from "@/components/upcoming-reminders-panel";
 import { CrmContactsPanel } from "@/components/crm-contacts-panel";
 import { CrmLeadsPanel } from "@/components/crm-leads-panel";
@@ -436,8 +437,8 @@ export default function AdminDashboard() {
   
   // Initialize activeTab from hash OR query parameters (for notification deep-linking)
   const getInitialTab = () => {
-    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'crm-leads', 'applications', 'accounts', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'seo-metadata', 'tags', 'qualification-types', 'entry-requirement-templates', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
-    const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
+    const validTabs = ['overview', 'my-tasks', 'team-workload', 'kpi-reports', 'users', 'institutions', 'courses', 'crm-contacts', 'crm-leads', 'applications', 'accounts', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'seo-metadata', 'tags', 'qualification-types', 'entry-requirement-templates', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
+    const fullAdminOnlyTabs = ['team-workload', 'kpi-reports', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
     const financeTabsForAccountsOfficer = ['finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting'];
     const financeTabsForAdmissionsDirector = ['finance-invoices'];
     const peopleTabsForAdmissionsDirector = ['attendance'];
@@ -496,6 +497,7 @@ export default function AdminDashboard() {
     'overview': 'Overview',
     'my-tasks': 'My Tasks',
     'team-workload': 'Team Workload',
+    'kpi-reports': 'KPI Reports',
     'users': 'Users',
     'institutions': 'Institutions',
     'courses': 'Courses',
@@ -548,7 +550,7 @@ export default function AdminDashboard() {
     const searchParams = new URLSearchParams(searchString);
     const tabFromQuery = searchParams.get('tab');
     if (tabFromQuery && tabFromQuery !== activeTab) {
-      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'crm-leads', 'applications', 'accounts', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'seo-metadata', 'tags', 'qualification-types', 'entry-requirement-templates', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
+      const validTabs = ['overview', 'my-tasks', 'team-workload', 'kpi-reports', 'users', 'institutions', 'courses', 'crm-contacts', 'crm-leads', 'applications', 'accounts', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'seo-metadata', 'tags', 'qualification-types', 'entry-requirement-templates', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
       if (validTabs.includes(tabFromQuery)) {
         const isContactsRestricted = tabFromQuery === 'crm-contacts' && (adminRole === 'junior_consultant' || adminRole === 'support_staff');
         setActiveTab(isContactsRestricted ? 'crm-leads' : tabFromQuery);
@@ -1974,6 +1976,13 @@ export default function AdminDashboard() {
         {activeTab === "team-workload" && hasFullAdminAccess && (
           <div className="space-y-4">
             <TeamWorkloadPanel />
+          </div>
+        )}
+
+        {/* KPI Reports Tab */}
+        {activeTab === "kpi-reports" && isCTO && (
+          <div className="space-y-4">
+            <KpiDashboardPanel />
           </div>
         )}
 
