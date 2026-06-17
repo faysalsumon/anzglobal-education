@@ -934,8 +934,12 @@ function AccountContacts({ accountId, primaryContact, onPrimaryChange }: Account
     onSuccess: (_, { contactId, isLinkedViaAccountId }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/accounts", accountId, "related", "contacts"] });
       const removingLastLinked = linkedContacts.length === 1 && linkedContacts[0].id === contactId;
-      if (contactId === primaryContact?.id || removingLastLinked) onPrimaryChange(null);
-      toast({ title: isLinkedViaAccountId ? "Contact removed" : "Primary contact cleared" });
+      const clearingPrimary = contactId === primaryContact?.id || removingLastLinked;
+      if (clearingPrimary) onPrimaryChange(null);
+      toast({
+        title: isLinkedViaAccountId ? "Contact removed" : "Primary contact cleared",
+        ...(clearingPrimary ? { description: "Save the account to persist the primary contact change." } : {}),
+      });
     },
     onError: () => toast({ title: "Failed to remove contact", variant: "destructive" }),
   });
