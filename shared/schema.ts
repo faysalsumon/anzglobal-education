@@ -5765,6 +5765,8 @@ export const accountRestrictedDetails = pgTable("account_restricted_details", {
   contractStartDate: date("contract_start_date"),
   contractEndDate: date("contract_end_date"),
   contractNotes: text("contract_notes"),
+  commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }),
+  commissionPercentage: decimal("commission_percentage", { precision: 5, scale: 2 }),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

@@ -93,6 +93,8 @@ interface RestrictedDetails {
   contractStartDate: string | null;
   contractEndDate: string | null;
   contractNotes: string | null;
+  commissionAmount: string | null;
+  commissionPercentage: string | null;
 }
 
 interface AccountNote {
@@ -498,6 +500,8 @@ function emptyRestricted(): Partial<RestrictedDetails> {
     contractStartDate: null,
     contractEndDate: null,
     contractNotes: null,
+    commissionAmount: null,
+    commissionPercentage: null,
   };
 }
 
@@ -1895,6 +1899,31 @@ export default function AdminAccountForm() {
                       value={restrictedData.contractEndDate || ""}
                       onChange={e => setRestrictedData({ ...restrictedData, contractEndDate: e.target.value || null })}
                       data-testid="input-contract-end"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Commission Amount ($)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={restrictedData.commissionAmount ?? ""}
+                      onChange={e => setRestrictedData({ ...restrictedData, commissionAmount: e.target.value || null })}
+                      placeholder="0.00"
+                      data-testid="input-commission-amount"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Commission (%)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={restrictedData.commissionPercentage ?? ""}
+                      onChange={e => setRestrictedData({ ...restrictedData, commissionPercentage: e.target.value || null })}
+                      placeholder="0.00"
+                      data-testid="input-commission-percentage"
                     />
                   </div>
                   <div className="space-y-1.5 sm:col-span-2">
