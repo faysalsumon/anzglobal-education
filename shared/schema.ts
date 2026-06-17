@@ -15,6 +15,7 @@ import {
   date,
   pgEnum,
   real,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -2889,12 +2890,12 @@ export const crmContacts = pgTable("crm_contacts", {
   notes: text("notes"),
   
   // Sub-agent tracking (when entrySource = 'sub_agent')
-  subAgentAccountId: text("sub_agent_account_id").references((): any => accounts.id, { onDelete: "set null" }),
+  subAgentAccountId: uuid("sub_agent_account_id").references((): any => accounts.id, { onDelete: "set null" }),
 
   // Referral tracking (when referenceSource = "Client's Referral")
   referralContactId: text("referral_contact_id").references((): any => crmContacts.id, { onDelete: "set null" }),
   // Direct account link (for contacts associated with a CRM account)
-  accountId: text("account_id").references((): any => accounts.id, { onDelete: "set null" }),
+  accountId: uuid("account_id").references((): any => accounts.id, { onDelete: "set null" }),
 
   // Created/Updated by tracking
   createdByUserId: varchar("created_by_user_id").references(() => users.id),
@@ -5566,7 +5567,7 @@ export const accInvoices = pgTable("acc_invoices", {
   institutionId: varchar("institution_id").references(() => universities.id, { onDelete: "set null" }),
   studentId: varchar("student_id").references(() => studentProfiles.id, { onDelete: "set null" }),
   applicationId: varchar("application_id").references(() => applications.id, { onDelete: "set null" }),
-  accountId: varchar("account_id").references((): any => accounts.id, { onDelete: "set null" }),
+  accountId: uuid("account_id").references((): any => accounts.id, { onDelete: "set null" }),
   issueDate: date("issue_date").notNull(),
   dueDate: date("due_date").notNull(),
   currency: varchar("currency", { length: 3 }).notNull().default("AUD"),
@@ -5728,12 +5729,12 @@ export const accountProductTypeEnum = pgEnum('account_product_type_enum', [
 ]);
 
 export const accounts = pgTable("accounts", {
-  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   accountType: accountTypeEnum("account_type").notNull(),
   providerType: text("provider_type"),
   contractType: text("contract_type"),
-  indirectPartnerId: text("indirect_partner_id").references((): any => accounts.id, { onDelete: "set null" }),
+  indirectPartnerId: uuid("indirect_partner_id").references((): any => accounts.id, { onDelete: "set null" }),
   institutionCmsId: varchar("institution_cms_id").references(() => universities.id, { onDelete: "set null" }),
   primaryContactId: text("primary_contact_id").references((): any => crmContacts.id, { onDelete: "set null" }),
   contactName: text("contact_name"),
@@ -5755,7 +5756,7 @@ export const accounts = pgTable("accounts", {
 
 export const accountRestrictedDetails = pgTable("account_restricted_details", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
-  accountId: text("account_id").unique().notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id").unique().notNull().references(() => accounts.id, { onDelete: "cascade" }),
   bankName: text("bank_name"),
   accountHolderName: text("account_holder_name"),
   accountNumber: text("account_number"),
@@ -5769,7 +5770,7 @@ export const accountRestrictedDetails = pgTable("account_restricted_details", {
 
 export const accountProducts = pgTable("account_products", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
-  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
   productType: accountProductTypeEnum("product_type").notNull(),
   name: text("name").notNull(),
   description: text("description"),
@@ -5781,7 +5782,7 @@ export const accountProducts = pgTable("account_products", {
 
 export const accountNotes = pgTable("account_notes", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),
-  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   mentions: text("mentions").array().default(sql`'{}'::text[]`),
   visibility: noteVisibilityEnum("visibility").notNull().default("public"),
