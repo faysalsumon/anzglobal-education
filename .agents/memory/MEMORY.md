@@ -5,4 +5,5 @@
 - [Profiles tab](profiles-tab.md) — CTO-only; profiles + profile_permissions DB tables; CRUD-per-module axis orthogonal to Roles; enforced in getAccessContext(); tab is read-only (no create/edit UI)
 - [RBAC audit findings](rbac-audit-findings.md) — June 2026 audit; legacy tiers removed; isMarketingExecutive/isConsultant fixed; 4 missing tabs added; profiles still unseeded and unenforced
 - [drizzle-zod Zod version pinning](drizzle-zod-version.md) — drizzle-zod 0.8.x switched to Zod v4 internals; this project must stay on drizzle-zod 0.7.x (last Zod v3 compatible)
+- [Typecheck/validation slowness](typecheck-validation-slowness.md) — `bun run check` takes 10+ min; killed runs wipe the incremental cache; don't spam mark_task_complete (CPU storm); pkill needs the `[t]sc` bracket trick
 - [Custom queryFn auth pattern](custom-queryfn-auth.md) — raw fetch() in a custom queryFn bypasses the default fetcher's Authorization header; always use the default fetcher or apiRequest instead
