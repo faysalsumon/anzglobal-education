@@ -528,6 +528,41 @@ export function registerAccountsRoutes(app: Express) {
     }
   });
 
+  // POST /api/admin/accounts/:id/contacts/:contactId/link — set crmContacts.accountId = accountId
+  app.post("/api/admin/accounts/:id/contacts/:contactId/link", isUnifiedAuthenticated, async (req: any, res: Response) => {
+    try {
+      if (!await requireAdmin(req, res)) return;
+      const { id: accountId, contactId } = req.params;
+
+      const [contact] = await db
+        .select({ id: crmContacts.id })
+        .from(crmContacts)
+        .where(eq(crmContacts.id, contactId))
+        .limit(1);
+      if (!contact) return res.status(404).json({ message: "Contact not found" });
+
+      await db.update(crmContacts).set({ accountId }).where(eq(crmContacts.id, contactId));
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("[Accounts] POST /:id/contacts/:contactId/link error:", err);
+      res.status(500).json({ message: "Failed to link contact" });
+    }
+  });
+
+  // DELETE /api/admin/accounts/:id/contacts/:contactId/link — clear crmContacts.accountId
+  app.delete("/api/admin/accounts/:id/contacts/:contactId/link", isUnifiedAuthenticated, async (req: any, res: Response) => {
+    try {
+      if (!await requireAdmin(req, res)) return;
+      const { contactId } = req.params;
+
+      await db.update(crmContacts).set({ accountId: null }).where(eq(crmContacts.id, contactId));
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("[Accounts] DELETE /:id/contacts/:contactId/link error:", err);
+      res.status(500).json({ message: "Failed to unlink contact" });
+    }
+  });
+
   // GET /api/admin/accounts/:id/related/applications
   app.get("/api/admin/accounts/:id/related/applications", isUnifiedAuthenticated, async (req: any, res: Response) => {
     try {

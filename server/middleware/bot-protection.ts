@@ -271,8 +271,8 @@ export function logSecurityEvent(
 const CSP_DIRECTIVES = [
   "default-src 'self'",
   // 'unsafe-inline' is required by GTM and GA4 inline scripts in index.html
-  // clarity.ms is loaded by GTM for Microsoft Clarity analytics
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://maps.googleapis.com https://maps.gstatic.com https://connect.facebook.net https://www.clarity.ms",
+  // clarity.ms: GTM loads the main tag from www.clarity.ms; the actual script bundle is served from scripts.clarity.ms
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://maps.googleapis.com https://maps.gstatic.com https://connect.facebook.net https://www.clarity.ms https://scripts.clarity.ms",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   // blob: needed for PDF previews and canvas exports; https: allows institution/student image CDNs

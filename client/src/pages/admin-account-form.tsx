@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -884,6 +884,197 @@ function RelatedInstitutions({ accountId }: { accountId: string }) {
   );
 }
 
+// ─── AccountContacts ────────────────────────────────────────────────────────
+
+interface AccountContactsProps {
+  accountId: string;
+  primaryContact: CrmContactSummary | null;
+  onPrimaryChange: (contact: CrmContactSummary | null) => void;
+}
+
+function AccountContacts({ accountId, primaryContact, onPrimaryChange }: AccountContactsProps) {
+  const [addOpen, setAddOpen] = useState(false);
+  const [addSearch, setAddSearch] = useState("");
+  const { toast } = useToast();
+
+  const { data: contactData, isLoading } = useQuery<{ contacts: CrmContactSummary[] }>({
+    queryKey: ["/api/admin/accounts", accountId, "related", "contacts"],
+    queryFn: () => apiRequest("GET", `/api/admin/accounts/${accountId}/related/contacts`).then(r => r.json()),
+    enabled: !!accountId,
+  });
+
+  const searchUrl = addSearch
+    ? `/api/crm/contacts?search=${encodeURIComponent(addSearch)}&limit=20`
+    : `/api/crm/contacts?type=providers_rep&limit=20`;
+
+  const { data: searchData } = useQuery<any>({
+    queryKey: [searchUrl],
+    enabled: addOpen,
+    staleTime: 10_000,
+  });
+
+  const linkMutation = useMutation({
+    mutationFn: (contactId: string) =>
+      apiRequest("POST", `/api/admin/accounts/${accountId}/contacts/${contactId}/link`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/accounts", accountId, "related", "contacts"] });
+      toast({ title: "Contact linked" });
+      setAddOpen(false);
+      setAddSearch("");
+    },
+    onError: () => toast({ title: "Failed to link contact", variant: "destructive" }),
+  });
+
+  const unlinkMutation = useMutation({
+    mutationFn: async ({ contactId, isLinkedViaAccountId }: { contactId: string; isLinkedViaAccountId: boolean }) => {
+      if (isLinkedViaAccountId) {
+        await apiRequest("DELETE", `/api/admin/accounts/${accountId}/contacts/${contactId}/link`);
+      }
+    },
+    onSuccess: (_, { contactId }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/accounts", accountId, "related", "contacts"] });
+      if (contactId === primaryContact?.id) onPrimaryChange(null);
+      toast({ title: "Contact removed" });
+    },
+    onError: () => toast({ title: "Failed to remove contact", variant: "destructive" }),
+  });
+
+  const linkedContacts: CrmContactSummary[] = contactData?.contacts || [];
+
+  // Always show the primary contact even if not yet formally linked via crmContacts.accountId
+  const allContacts = useMemo(() => {
+    if (!primaryContact) return linkedContacts;
+    const alreadyLinked = linkedContacts.some(c => c.id === primaryContact.id);
+    return alreadyLinked ? linkedContacts : [primaryContact, ...linkedContacts];
+  }, [primaryContact, linkedContacts]);
+
+  const linkedIds = useMemo(() => new Set(linkedContacts.map(c => c.id)), [linkedContacts]);
+
+  const searchContacts: CrmContactSummary[] = useMemo(() => {
+    const raw = searchData?.contacts ?? searchData ?? [];
+    return raw
+      .map((r: any) => {
+        const c = r.contact ?? r;
+        return {
+          id: c.id,
+          firstName: c.firstName ?? c.first_name ?? "",
+          lastName: c.lastName ?? c.last_name ?? "",
+          email: c.email ?? "",
+          contactType: c.contactType ?? c.contact_type ?? "none",
+          photo: c.photo ?? null,
+        } as CrmContactSummary;
+      })
+      .filter((c: CrmContactSummary) => !allContacts.some(ac => ac.id === c.id));
+  }, [searchData, allContacts]);
+
+  if (isLoading) return <Skeleton className="h-20 w-full" />;
+
+  return (
+    <div className="space-y-2">
+      {allContacts.length > 0 && (
+        <div className="space-y-1.5">
+          {allContacts.map(c => {
+            const initials = `${c.firstName?.[0] ?? ""}${c.lastName?.[0] ?? ""}`.toUpperCase();
+            const isPrimary = c.id === primaryContact?.id;
+            const isLinked = linkedIds.has(c.id);
+            return (
+              <div key={c.id} className="flex items-center gap-3 p-2 rounded-md border bg-muted/20" data-testid={`contact-row-${c.id}`}>
+                <Avatar className="h-8 w-8 shrink-0">
+                  <AvatarImage src={c.photo || ""} />
+                  <AvatarFallback className="text-xs font-semibold">{initials || <UserRound className="h-3.5 w-3.5" />}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="text-sm font-medium leading-tight">{c.firstName} {c.lastName}</p>
+                    {isPrimary && <Badge variant="secondary" className="text-xs">Primary</Badge>}
+                    {c.contactType && c.contactType !== "none" && (
+                      <Badge variant="outline" className="text-xs">{CONTACT_TYPE_LABELS[c.contactType] ?? c.contactType}</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">{c.email}</p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {!isPrimary && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs h-7 px-2"
+                      onClick={() => onPrimaryChange(c)}
+                      data-testid={`button-set-primary-${c.id}`}
+                    >
+                      Set primary
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => unlinkMutation.mutate({ contactId: c.id, isLinkedViaAccountId: isLinked })}
+                    disabled={unlinkMutation.isPending}
+                    data-testid={`button-remove-contact-${c.id}`}
+                    title="Remove contact"
+                  >
+                    <X className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Popover open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) setAddSearch(""); }}>
+        <PopoverTrigger asChild>
+          <Button type="button" size="sm" variant="outline" data-testid="button-add-account-contact">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Add Contact
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Search contacts…"
+              value={addSearch}
+              onValueChange={setAddSearch}
+              data-testid="input-search-account-contact"
+            />
+            <CommandList>
+              {searchContacts.length === 0 ? (
+                <CommandEmpty>No contacts found.</CommandEmpty>
+              ) : (
+                <CommandGroup>
+                  {searchContacts.map(c => {
+                    const initials = `${c.firstName?.[0] ?? ""}${c.lastName?.[0] ?? ""}`.toUpperCase();
+                    return (
+                      <CommandItem
+                        key={c.id}
+                        value={`${c.firstName} ${c.lastName} ${c.email}`}
+                        onSelect={() => linkMutation.mutate(c.id)}
+                        disabled={linkMutation.isPending}
+                        data-testid={`option-link-contact-${c.id}`}
+                      >
+                        <Avatar className="h-5 w-5 shrink-0 mr-2">
+                          <AvatarImage src={c.photo || ""} />
+                          <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm leading-tight">{c.firstName} {c.lastName}</p>
+                          <p className="text-xs text-muted-foreground truncate">{c.email}</p>
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      <p className="text-xs text-muted-foreground">Link CRM contacts to this account — Provider's Rep contacts shown by default.</p>
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminAccountForm() {
@@ -1377,12 +1568,19 @@ export default function AdminAccountForm() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Company Information</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5 sm:col-span-2">
-                    <Label>Primary Contact</Label>
-                    <ContactPicker
-                      value={primaryContact}
-                      onChange={setPrimaryContact}
-                    />
-                    <p className="text-xs text-muted-foreground">Link to a CRM contact — Provider's Rep contacts shown by default.</p>
+                    <Label>Contacts</Label>
+                    {isNew ? (
+                      <>
+                        <ContactPicker value={primaryContact} onChange={setPrimaryContact} />
+                        <p className="text-xs text-muted-foreground">Link a primary contact — you can add more after saving.</p>
+                      </>
+                    ) : (
+                      <AccountContacts
+                        accountId={id!}
+                        primaryContact={primaryContact}
+                        onPrimaryChange={setPrimaryContact}
+                      />
+                    )}
                   </div>
 
                   <div className="space-y-1.5">
