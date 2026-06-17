@@ -5739,6 +5739,8 @@ export const accounts = pgTable("accounts", {
   primaryContactId: text("primary_contact_id").references((): any => crmContacts.id, { onDelete: "set null" }),
   contactName: text("contact_name"),
   email: text("email"),
+  accountsEmail: text("accounts_email"),
+  admissionEmail: text("admission_email"),
   phone: text("phone"),
   website: text("website"),
   abn: text("abn"),

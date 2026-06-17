@@ -60,6 +60,8 @@ interface Account {
   primaryContact?: CrmContactSummary | null;
   contactName: string | null;
   email: string | null;
+  accountsEmail: string | null;
+  admissionEmail: string | null;
   phone: string | null;
   website: string | null;
   abn: string | null;
@@ -176,6 +178,8 @@ function emptyForm(): Partial<Account> {
     primaryContactId: null,
     contactName: null,
     email: null,
+    accountsEmail: null,
+    admissionEmail: null,
     phone: null,
     website: null,
     abn: null,
@@ -1603,6 +1607,28 @@ export default function AdminAccountForm() {
                       onChange={e => setFormData({ ...formData, email: e.target.value || null })}
                       placeholder="contact@example.com"
                       data-testid="input-account-email"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Accounts Email</Label>
+                    <Input
+                      type="email"
+                      value={formData.accountsEmail || ""}
+                      onChange={e => setFormData({ ...formData, accountsEmail: e.target.value || null })}
+                      placeholder="accounts@example.com"
+                      data-testid="input-account-accounts-email"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Admission Email</Label>
+                    <Input
+                      type="email"
+                      value={formData.admissionEmail || ""}
+                      onChange={e => setFormData({ ...formData, admissionEmail: e.target.value || null })}
+                      placeholder="admissions@example.com"
+                      data-testid="input-account-admission-email"
                     />
                   </div>
 
