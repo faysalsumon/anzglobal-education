@@ -5769,6 +5769,12 @@ export const accountRestrictedDetails = pgTable("account_restricted_details", {
   contractNotes: text("contract_notes"),
   commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }),
   commissionPercentage: decimal("commission_percentage", { precision: 5, scale: 2 }),
+  hasApplicationPortal: boolean("has_application_portal").default(false),
+  applicationForm: text("application_form"),
+  portalDetails: text("portal_details"),
+  portalLink: text("portal_link"),
+  portalUsername: text("portal_username"),
+  portalPassword: text("portal_password"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

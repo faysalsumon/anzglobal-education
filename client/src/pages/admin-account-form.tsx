@@ -97,6 +97,12 @@ interface RestrictedDetails {
   contractNotes: string | null;
   commissionAmount: string | null;
   commissionPercentage: string | null;
+  hasApplicationPortal: boolean | null;
+  applicationForm: string | null;
+  portalDetails: string | null;
+  portalLink: string | null;
+  portalUsername: string | null;
+  portalPassword: string | null;
 }
 
 interface AccountNote {
@@ -506,6 +512,12 @@ function emptyRestricted(): Partial<RestrictedDetails> {
     contractNotes: null,
     commissionAmount: null,
     commissionPercentage: null,
+    hasApplicationPortal: null,
+    applicationForm: null,
+    portalDetails: null,
+    portalLink: null,
+    portalUsername: null,
+    portalPassword: null,
   };
 }
 
@@ -2017,6 +2029,91 @@ export default function AdminAccountForm() {
                       data-testid="input-swift"
                     />
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Application/Portal Details card */}
+            <Card data-section="portal">
+              <CardContent className="pt-5 pb-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Application / Portal Details</p>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Label className="min-w-0">Any Application Portal?</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={restrictedData.hasApplicationPortal === true ? "default" : "outline"}
+                        onClick={() => setRestrictedData({ ...restrictedData, hasApplicationPortal: true })}
+                        data-testid="button-portal-yes"
+                      >
+                        Yes
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={restrictedData.hasApplicationPortal === false ? "default" : "outline"}
+                        onClick={() => setRestrictedData({ ...restrictedData, hasApplicationPortal: false })}
+                        data-testid="button-portal-no"
+                      >
+                        No
+                      </Button>
+                    </div>
+                  </div>
+
+                  {restrictedData.hasApplicationPortal === true && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label>Application Form</Label>
+                        <Input
+                          value={restrictedData.applicationForm || ""}
+                          onChange={e => setRestrictedData({ ...restrictedData, applicationForm: e.target.value || null })}
+                          placeholder="e.g. Online Application Form"
+                          data-testid="input-application-form"
+                        />
+                      </div>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label>Portal Details</Label>
+                        <Textarea
+                          value={restrictedData.portalDetails || ""}
+                          onChange={e => setRestrictedData({ ...restrictedData, portalDetails: e.target.value || null })}
+                          placeholder="Any notes about the portal…"
+                          rows={3}
+                          data-testid="textarea-portal-details"
+                        />
+                      </div>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label>Portal Link</Label>
+                        <Input
+                          type="url"
+                          value={restrictedData.portalLink || ""}
+                          onChange={e => setRestrictedData({ ...restrictedData, portalLink: e.target.value || null })}
+                          placeholder="https://portal.example.com"
+                          data-testid="input-portal-link"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Username</Label>
+                        <Input
+                          value={restrictedData.portalUsername || ""}
+                          onChange={e => setRestrictedData({ ...restrictedData, portalUsername: e.target.value || null })}
+                          placeholder="Portal login username"
+                          data-testid="input-portal-username"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Password</Label>
+                        <Input
+                          type="password"
+                          value={restrictedData.portalPassword || ""}
+                          onChange={e => setRestrictedData({ ...restrictedData, portalPassword: e.target.value || null })}
+                          placeholder="Portal login password"
+                          data-testid="input-portal-password"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
