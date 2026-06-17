@@ -75,6 +75,7 @@ export function ApplicationStageSelector({
       queryClient.invalidateQueries({ queryKey: ["/api/admin/applications"] });
       queryClient.invalidateQueries({ queryKey: ["/api/applications", applicationId] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/my-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/applications", applicationId, "history"] });
       toast({
         title: "Stage Updated",
         description: `Application moved to ${STAGE_CONFIG[toStage].displayName}`,
