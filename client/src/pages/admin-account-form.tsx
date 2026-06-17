@@ -9,19 +9,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Save, Loader2, Plus, X, Check,
   Package, Trash2, Edit, ImageIcon, UserRound, ChevronsUpDown, ExternalLink,
-  Upload, Link2
+  Link2, FileText, Users, Building2, ReceiptText, ChevronRight
 } from "lucide-react";
+import { NotesThread, type UnifiedNote, type ThreadTeamMember, type NoteVisibilityOpts } from "@/components/notes-thread";
+import { GoogleAddressAutocomplete, type AddressComponents } from "@/components/ui/google-address-autocomplete";
+import { supabase } from "@/lib/supabase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +62,8 @@ interface Account {
   email: string | null;
   phone: string | null;
   website: string | null;
+  abn: string | null;
+  acn: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
@@ -87,6 +93,32 @@ interface RestrictedDetails {
   contractStartDate: string | null;
   contractEndDate: string | null;
   contractNotes: string | null;
+}
+
+interface AccountNote {
+  id: string;
+  accountId: string;
+  content: string;
+  mentions: string[] | null;
+  visibility: "public" | "private" | "selected";
+  visibleTo: string[] | null;
+  createdById: string;
+  createdAt: Date | string | null;
+  author: {
+    id: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+    profileImageUrl?: string | null;
+  };
+}
+
+interface CrmTeamMember {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  profileImageUrl: string | null;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -122,6 +154,15 @@ const CONTACT_TYPE_LABELS: Record<string, string> = {
   providers_rep: "Provider's Rep",
 };
 
+const INVOICE_STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  sent: "Sent",
+  partially_paid: "Partial",
+  paid: "Paid",
+  overdue: "Overdue",
+  void: "Void",
+};
+
 function emptyForm(): Partial<Account> {
   return {
     name: "",
@@ -135,6 +176,8 @@ function emptyForm(): Partial<Account> {
     email: null,
     phone: null,
     website: null,
+    abn: null,
+    acn: null,
     address: null,
     city: null,
     state: null,
@@ -462,6 +505,385 @@ function emptyProduct(type: ProductType = "insurance"): Partial<AccountProduct> 
   return { productType: type, name: "", description: null, studentPrice: null, agentCost: null, isActive: true };
 }
 
+// ─── AccountNotes wrapper (mirrors LeadNotes pattern) ─────────────────────────
+
+function AccountNotes({ accountId }: { accountId: string }) {
+  const { toast } = useToast();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      if (supabase) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) setCurrentUserId(user.id);
+      }
+    };
+    getUser();
+  }, []);
+
+  const { data: rawNotes, isLoading: notesLoading } = useQuery<AccountNote[]>({
+    queryKey: ["/api/admin/accounts", accountId, "notes"],
+    enabled: !!accountId,
+  });
+
+  const { data: rawTeamMembers } = useQuery<CrmTeamMember[]>({
+    queryKey: ["/api/crm/team-members"],
+    enabled: !!accountId,
+  });
+
+  const createNoteMutation = useMutation({
+    mutationFn: async (data: { content: string; mentions: string[]; visibility?: string; visibleTo?: string[] }) => {
+      return apiRequest("POST", `/api/admin/accounts/${accountId}/notes`, {
+        content: data.content,
+        mentions: data.mentions,
+        visibility: data.visibility ?? "public",
+        visibleTo: data.visibleTo ?? [],
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/accounts", accountId, "notes"] });
+      toast({ title: "Note added", description: "Your note has been saved." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to save note.", variant: "destructive" });
+    },
+  });
+
+  const updateNoteMutation = useMutation({
+    mutationFn: async (data: { noteId: string; content: string; visibility?: string; visibleTo?: string[] }) => {
+      return apiRequest("PUT", `/api/admin/accounts/${accountId}/notes/${data.noteId}`, {
+        content: data.content,
+        visibility: data.visibility,
+        visibleTo: data.visibleTo,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/accounts", accountId, "notes"] });
+      toast({ title: "Note updated" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update note.", variant: "destructive" });
+    },
+  });
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      return apiRequest("DELETE", `/api/admin/accounts/${accountId}/notes/${noteId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/accounts", accountId, "notes"] });
+      toast({ title: "Note deleted" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete note.", variant: "destructive" });
+    },
+  });
+
+  const notes: UnifiedNote[] = (rawNotes || []).map((n) => ({
+    id: n.id,
+    content: n.content,
+    createdAt: n.createdAt,
+    createdById: n.createdById,
+    author: n.author,
+    visibility: n.visibility,
+    visibleTo: n.visibleTo ?? [],
+  }));
+
+  const teamMembers: ThreadTeamMember[] = (rawTeamMembers || []).map((m) => ({
+    id: m.id,
+    firstName: m.firstName,
+    lastName: m.lastName,
+    email: m.email,
+    profileImageUrl: m.profileImageUrl,
+  }));
+
+  return (
+    <NotesThread
+      notes={notes}
+      isLoading={notesLoading}
+      currentUserId={currentUserId}
+      teamMembers={teamMembers}
+      isSubmitting={createNoteMutation.isPending}
+      onAddNote={async (content, mentionedUserIds, opts?: NoteVisibilityOpts) => {
+        await createNoteMutation.mutateAsync({
+          content,
+          mentions: mentionedUserIds,
+          visibility: opts?.visibility,
+          visibleTo: opts?.visibleTo,
+        });
+      }}
+      onEditNote={(noteId, content, opts?: NoteVisibilityOpts) => {
+        updateNoteMutation.mutate({ noteId, content, visibility: opts?.visibility, visibleTo: opts?.visibleTo });
+      }}
+      onDeleteNote={(noteId) => {
+        deleteNoteMutation.mutate(noteId);
+      }}
+      readOnly={false}
+    />
+  );
+}
+
+// ─── Related Tab Panels ───────────────────────────────────────────────────────
+
+function RelatedInvoices({ accountId }: { accountId: string }) {
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/admin/accounts", accountId, "related", "invoices"],
+    queryFn: () => apiRequest("GET", `/api/admin/accounts/${accountId}/related/invoices`).then(r => r.json()),
+    enabled: !!accountId,
+  });
+
+  if (isLoading) return <Skeleton className="h-24 w-full" />;
+
+  const invoices: any[] = data?.invoices || [];
+  const outstanding = parseFloat(data?.totalOutstanding || "0");
+
+  return (
+    <Card data-section="related-finance">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <ReceiptText className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-semibold">Finance</CardTitle>
+          {invoices.length > 0 && (
+            <Badge variant="secondary" className="text-xs">{invoices.length}</Badge>
+          )}
+          {outstanding > 0 && (
+            <span className="text-xs font-medium text-orange-600 dark:text-orange-400">
+              ${outstanding.toFixed(2)} outstanding
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs h-7"
+            onClick={() => window.open(`/admin?tab=accounting&action=new-invoice&accountId=${accountId}`, "_blank")}
+            data-testid="button-new-invoice"
+          >
+            <Plus className="h-3 w-3 mr-1" /> New Invoice
+          </Button>
+          {invoices.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs h-7"
+              onClick={() => window.open(`/admin?tab=accounting`, "_blank")}
+              data-testid="button-view-all-invoices"
+            >
+              View all <ChevronRight className="h-3 w-3 ml-0.5" />
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {invoices.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-3">No invoices linked to this account yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {invoices.map((inv: any) => (
+              <div key={inv.id} className="flex items-center justify-between text-sm gap-2" data-testid={`related-invoice-${inv.id}`}>
+                <span className="font-mono text-xs text-muted-foreground">{inv.invoiceNumber}</span>
+                <Badge variant="outline" className="text-xs capitalize">
+                  {INVOICE_STATUS_LABELS[inv.status] ?? inv.status}
+                </Badge>
+                <span className="ml-auto font-medium">${parseFloat(inv.total).toFixed(2)}</span>
+                {inv.dueDate && (
+                  <span className="text-xs text-muted-foreground">{inv.dueDate}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RelatedApplications({ accountId }: { accountId: string }) {
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/admin/accounts", accountId, "related", "applications"],
+    queryFn: () => apiRequest("GET", `/api/admin/accounts/${accountId}/related/applications`).then(r => r.json()),
+    enabled: !!accountId,
+  });
+
+  if (isLoading) return <Skeleton className="h-24 w-full" />;
+
+  const stats = data || { pending: 0, active: 0, completed: 0, total: 0 };
+
+  return (
+    <Card data-section="related-applications">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-semibold">Applications</CardTitle>
+          {stats.total > 0 && (
+            <Badge variant="secondary" className="text-xs">{stats.total}</Badge>
+          )}
+        </div>
+        {stats.total > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs h-7"
+            onClick={() => window.open(`/admin?tab=applications`, "_blank")}
+            data-testid="button-view-all-applications"
+          >
+            View all <ChevronRight className="h-3 w-3 ml-0.5" />
+          </Button>
+        )}
+      </CardHeader>
+      <CardContent className="pt-0">
+        {stats.total === 0 ? (
+          <p className="text-sm text-muted-foreground py-3">No applications linked via this account's institution.</p>
+        ) : (
+          <div className="flex gap-6">
+            <div className="text-center">
+              <p className="text-xl font-bold">{stats.pending}</p>
+              <p className="text-xs text-muted-foreground">Pending</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold">{stats.active}</p>
+              <p className="text-xs text-muted-foreground">Active</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold">{stats.completed}</p>
+              <p className="text-xs text-muted-foreground">Completed</p>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RelatedContacts({ accountId }: { accountId: string }) {
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/admin/accounts", accountId, "related", "contacts"],
+    queryFn: () => apiRequest("GET", `/api/admin/accounts/${accountId}/related/contacts`).then(r => r.json()),
+    enabled: !!accountId,
+  });
+
+  if (isLoading) return <Skeleton className="h-24 w-full" />;
+
+  const contacts: any[] = data?.contacts || [];
+
+  return (
+    <Card data-section="related-contacts">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-semibold">Contacts</CardTitle>
+          {contacts.length > 0 && (
+            <Badge variant="secondary" className="text-xs">{contacts.length}</Badge>
+          )}
+        </div>
+        {contacts.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs h-7"
+            onClick={() => window.open(`/admin?tab=crm`, "_blank")}
+            data-testid="button-view-all-contacts"
+          >
+            View all <ChevronRight className="h-3 w-3 ml-0.5" />
+          </Button>
+        )}
+      </CardHeader>
+      <CardContent className="pt-0">
+        {contacts.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-3">No CRM contacts linked to this account.</p>
+        ) : (
+          <div className="space-y-2">
+            {contacts.slice(0, 5).map((c: any) => {
+              const initials = `${c.firstName?.[0] ?? ""}${c.lastName?.[0] ?? ""}`.toUpperCase();
+              return (
+                <div key={c.id} className="flex items-center gap-3" data-testid={`related-contact-${c.id}`}>
+                  <Avatar className="h-7 w-7 shrink-0">
+                    <AvatarImage src={c.photo || ""} />
+                    <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm leading-tight">{c.firstName} {c.lastName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{c.email}</p>
+                  </div>
+                  {c.contactType && c.contactType !== "none" && (
+                    <Badge variant="secondary" className="text-xs shrink-0">
+                      {CONTACT_TYPE_LABELS[c.contactType] ?? c.contactType}
+                    </Badge>
+                  )}
+                </div>
+              );
+            })}
+            {contacts.length > 5 && (
+              <p className="text-xs text-muted-foreground">+{contacts.length - 5} more</p>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RelatedInstitutions({ accountId }: { accountId: string }) {
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/admin/accounts", accountId, "related", "institutions"],
+    queryFn: () => apiRequest("GET", `/api/admin/accounts/${accountId}/related/institutions`).then(r => r.json()),
+    enabled: !!accountId,
+  });
+
+  if (isLoading) return <Skeleton className="h-24 w-full" />;
+
+  const institutions: any[] = data?.institutions || [];
+
+  return (
+    <Card data-section="related-institutions">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Building2 className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-semibold">Institutions</CardTitle>
+          {institutions.length > 0 && (
+            <Badge variant="secondary" className="text-xs">{institutions.length}</Badge>
+          )}
+        </div>
+        {institutions.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs h-7"
+            onClick={() => window.open(`/admin?tab=institutions`, "_blank")}
+            data-testid="button-view-all-institutions"
+          >
+            View all <ChevronRight className="h-3 w-3 ml-0.5" />
+          </Button>
+        )}
+      </CardHeader>
+      <CardContent className="pt-0">
+        {institutions.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-3">No CMS institutions linked to this account.</p>
+        ) : (
+          <div className="space-y-2">
+            {institutions.map((inst: any) => (
+              <div key={inst.id} className="flex items-center gap-3" data-testid={`related-institution-${inst.id}`}>
+                <Avatar className="h-7 w-7 shrink-0 rounded-md">
+                  <AvatarImage src={inst.logo || ""} />
+                  <AvatarFallback className="rounded-md text-xs">{inst.name?.[0]}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm leading-tight">{inst.name}</p>
+                  {inst.country && <p className="text-xs text-muted-foreground">{inst.country}</p>}
+                </div>
+                {inst.studentCount != null && (
+                  <span className="text-xs text-muted-foreground">{inst.studentCount} students</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminAccountForm() {
@@ -575,6 +997,17 @@ export default function AdminAccountForm() {
     }
   }
 
+  // ─── Address autocomplete handler ─────────────────────────────────────────
+  function handleAddressSelect(components: AddressComponents) {
+    setFormData(f => ({
+      ...f,
+      address: components.address || f.address,
+      city: components.city || f.city,
+      state: components.state || f.state,
+      country: components.country || f.country,
+    }));
+  }
+
   // ─── Mutations ────────────────────────────────────────────────────────────
 
   const saveMutation = useMutation({
@@ -679,7 +1112,6 @@ export default function AdminAccountForm() {
             Accounts
           </Button>
 
-          {/* Logo / Avatar + name block */}
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="relative group shrink-0">
               <Avatar className="h-10 w-10 rounded-md">
@@ -741,7 +1173,6 @@ export default function AdminAccountForm() {
             </Button>
           </div>
         </div>
-
       </header>
 
       {/* Hidden file input for logo upload */}
@@ -757,10 +1188,11 @@ export default function AdminAccountForm() {
       {/* ── Page body ─────────────────────────────────────────────────────── */}
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6">
 
-        {/* Large avatar hero card */}
+        {/* ── Hero card ─────────────────────────────────────────────────── */}
         <Card className="mb-6">
           <CardContent className="pt-5 pb-5">
-            <div className="flex items-center gap-5">
+            <div className="flex items-start gap-5">
+              {/* Logo / avatar with upload overlay */}
               <div className="relative group shrink-0">
                 <Avatar className="h-20 w-20 rounded-xl">
                   <AvatarImage src={formData.logoUrl || ""} alt={formData.name || "Account"} />
@@ -779,6 +1211,12 @@ export default function AdminAccountForm() {
                     {logoUploading ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <ImageIcon className="h-5 w-5 text-white" />}
                   </button>
                 )}
+                {isInstitutionWithCmsLink && (
+                  <div className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+                    <Link2 className="h-3 w-3 shrink-0" />
+                    <span>Inherited</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex-1 min-w-0 space-y-3">
@@ -793,10 +1231,21 @@ export default function AdminAccountForm() {
                     data-testid="input-account-name"
                   />
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant={formData.isActive !== false ? "default" : "secondary"}>
-                    {formData.isActive !== false ? "Active" : "Inactive"}
-                  </Badge>
+
+                <div className="flex items-center gap-4 flex-wrap">
+                  {/* Inline Active toggle */}
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="account-active-hero"
+                      checked={formData.isActive !== false}
+                      onCheckedChange={v => setFormData({ ...formData, isActive: v })}
+                      data-testid="switch-account-active"
+                    />
+                    <Label htmlFor="account-active-hero" className="text-sm cursor-pointer">
+                      {formData.isActive !== false ? "Active" : "Inactive"}
+                    </Label>
+                  </div>
+
                   {formData.contractType && (
                     <Badge variant="outline" className="capitalize">{formData.contractType}</Badge>
                   )}
@@ -817,13 +1266,16 @@ export default function AdminAccountForm() {
               <TabsTrigger value="products" className="flex-1">Products</TabsTrigger>
             )}
             <TabsTrigger value="banking" className="flex-1">Contract &amp; Banking</TabsTrigger>
+            {!isNew && (
+              <TabsTrigger value="related" className="flex-1">Related</TabsTrigger>
+            )}
           </TabsList>
 
           {/* ── Details tab ──────────────────────────────────────────────── */}
           <TabsContent value="details" className="space-y-5">
 
             {/* Classification */}
-            <Card>
+            <Card data-section="classification">
               <CardContent className="pt-5 pb-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Classification</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -919,10 +1371,10 @@ export default function AdminAccountForm() {
               </CardContent>
             </Card>
 
-            {/* Contact info */}
-            <Card>
+            {/* Company Information */}
+            <Card data-section="company-information">
               <CardContent className="pt-5 pb-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Contact Information</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Company Information</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label>Primary Contact</Label>
@@ -963,23 +1415,45 @@ export default function AdminAccountForm() {
                       data-testid="input-account-website"
                     />
                   </div>
+
+                  <div className="space-y-1.5">
+                    <Label>ABN</Label>
+                    <Input
+                      value={formData.abn || ""}
+                      onChange={e => setFormData({ ...formData, abn: e.target.value || null })}
+                      placeholder="12 345 678 901"
+                      data-testid="input-account-abn"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>ACN</Label>
+                    <Input
+                      value={formData.acn || ""}
+                      onChange={e => setFormData({ ...formData, acn: e.target.value || null })}
+                      placeholder="123 456 789"
+                      data-testid="input-account-acn"
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Location */}
-            <Card>
+            <Card data-section="location">
               <CardContent className="pt-5 pb-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Location</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Country</Label>
-                    <Input
-                      value={formData.country || ""}
-                      onChange={e => setFormData({ ...formData, country: e.target.value || null })}
-                      placeholder="Australia"
-                      data-testid="input-account-country"
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Street Address</Label>
+                    <GoogleAddressAutocomplete
+                      value={formData.address || ""}
+                      onAddressSelect={handleAddressSelect}
+                      onInputChange={v => setFormData(f => ({ ...f, address: v || null }))}
+                      placeholder="Start typing an address…"
+                      testId="input-account-address"
                     />
+                    <p className="text-xs text-muted-foreground">Selecting an address auto-fills City, State, and Country below.</p>
                   </div>
 
                   <div className="space-y-1.5">
@@ -992,98 +1466,38 @@ export default function AdminAccountForm() {
                     />
                   </div>
 
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label>Address</Label>
+                  <div className="space-y-1.5">
+                    <Label>State</Label>
                     <Input
-                      value={formData.address || ""}
-                      onChange={e => setFormData({ ...formData, address: e.target.value || null })}
-                      placeholder="Street address"
-                      data-testid="input-account-address"
+                      value={formData.state || ""}
+                      onChange={e => setFormData({ ...formData, state: e.target.value || null })}
+                      placeholder="VIC"
+                      data-testid="input-account-state"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Country</Label>
+                    <Input
+                      value={formData.country || ""}
+                      onChange={e => setFormData({ ...formData, country: e.target.value || null })}
+                      placeholder="Australia"
+                      data-testid="input-account-country"
                     />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Other */}
-            <Card>
-              <CardContent className="pt-5 pb-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Other</p>
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label>Logo</Label>
-                    {isInstitutionWithCmsLink ? (
-                      <div className="flex items-center gap-3 p-3 rounded-md bg-muted/50 border">
-                        <Avatar className="h-9 w-9 rounded-md shrink-0">
-                          <AvatarImage src={formData.logoUrl || ""} alt="" />
-                          <AvatarFallback className="rounded-md text-xs font-semibold bg-muted">
-                            {accountInitials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Link2 className="h-3.5 w-3.5 shrink-0" />
-                          <span>Logo inherited from linked institution</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9 rounded-md shrink-0">
-                          <AvatarImage src={formData.logoUrl || ""} alt="" />
-                          <AvatarFallback className="rounded-md text-xs font-semibold bg-muted">
-                            {accountInitials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={logoUploading}
-                          data-testid="button-upload-logo"
-                        >
-                          {logoUploading ? (
-                            <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Uploading…</>
-                          ) : (
-                            <><Upload className="h-3.5 w-3.5 mr-1.5" />{formData.logoUrl ? "Change Logo" : "Upload Logo"}</>
-                          )}
-                        </Button>
-                        {formData.logoUrl && !logoUploading && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setFormData(f => ({ ...f, logoUrl: null }))}
-                            data-testid="button-remove-logo"
-                            title="Remove logo"
-                          >
-                            <X className="h-3.5 w-3.5 text-muted-foreground" />
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Notes</Label>
-                    <Textarea
-                      value={formData.notes || ""}
-                      onChange={e => setFormData({ ...formData, notes: e.target.value || null })}
-                      placeholder="Any relevant notes…"
-                      rows={3}
-                      data-testid="textarea-account-notes"
-                    />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Switch
-                      checked={formData.isActive !== false}
-                      onCheckedChange={v => setFormData({ ...formData, isActive: v })}
-                      id="account-active"
-                      data-testid="switch-account-active"
-                    />
-                    <Label htmlFor="account-active">Active</Label>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Notes */}
+            {!isNew && id && (
+              <Card data-section="notes">
+                <CardContent className="pt-5 pb-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Notes</p>
+                  <AccountNotes accountId={id} />
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* ── Products tab ─────────────────────────────────────────────── */}
@@ -1253,11 +1667,49 @@ export default function AdminAccountForm() {
           )}
 
           {/* ── Contract & Banking tab ────────────────────────────────────── */}
-          <TabsContent value="banking" className="space-y-4">
-            <Card>
+          <TabsContent value="banking" className="space-y-5">
+            {/* Contract card */}
+            <Card data-section="contract">
               <CardContent className="pt-5 pb-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Banking &amp; Contract</p>
-                <p className="text-sm text-muted-foreground mb-5">Banking and contract information for internal reference.</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Contract</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>Contract Start Date</Label>
+                    <Input
+                      type="date"
+                      value={restrictedData.contractStartDate || ""}
+                      onChange={e => setRestrictedData({ ...restrictedData, contractStartDate: e.target.value || null })}
+                      data-testid="input-contract-start"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Contract End Date</Label>
+                    <Input
+                      type="date"
+                      value={restrictedData.contractEndDate || ""}
+                      onChange={e => setRestrictedData({ ...restrictedData, contractEndDate: e.target.value || null })}
+                      data-testid="input-contract-end"
+                    />
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Contract Notes</Label>
+                    <Textarea
+                      value={restrictedData.contractNotes || ""}
+                      onChange={e => setRestrictedData({ ...restrictedData, contractNotes: e.target.value || null })}
+                      placeholder="Any contract terms, conditions, or notes…"
+                      rows={4}
+                      data-testid="textarea-contract-notes"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Banking card */}
+            <Card data-section="banking">
+              <CardContent className="pt-5 pb-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Banking</p>
+                <p className="text-sm text-muted-foreground mb-5">Banking information for internal reference only.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label>Bank Name</Label>
@@ -1304,38 +1756,21 @@ export default function AdminAccountForm() {
                       data-testid="input-swift"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>Contract Start Date</Label>
-                    <Input
-                      type="date"
-                      value={restrictedData.contractStartDate || ""}
-                      onChange={e => setRestrictedData({ ...restrictedData, contractStartDate: e.target.value || null })}
-                      data-testid="input-contract-start"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Contract End Date</Label>
-                    <Input
-                      type="date"
-                      value={restrictedData.contractEndDate || ""}
-                      onChange={e => setRestrictedData({ ...restrictedData, contractEndDate: e.target.value || null })}
-                      data-testid="input-contract-end"
-                    />
-                  </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label>Contract Notes</Label>
-                    <Textarea
-                      value={restrictedData.contractNotes || ""}
-                      onChange={e => setRestrictedData({ ...restrictedData, contractNotes: e.target.value || null })}
-                      placeholder="Any contract terms, conditions, or notes…"
-                      rows={4}
-                      data-testid="textarea-contract-notes"
-                    />
-                  </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* ── Related tab ───────────────────────────────────────────────── */}
+          {!isNew && id && (
+            <TabsContent value="related" className="space-y-5">
+              <p className="text-sm text-muted-foreground">Read-only view of records linked to this account.</p>
+              <RelatedInvoices accountId={id} />
+              <RelatedApplications accountId={id} />
+              <RelatedContacts accountId={id} />
+              <RelatedInstitutions accountId={id} />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
     </div>

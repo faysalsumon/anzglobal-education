@@ -7,3 +7,5 @@
 - [drizzle-zod Zod version pinning](drizzle-zod-version.md) — drizzle-zod 0.8.x switched to Zod v4 internals; this project must stay on drizzle-zod 0.7.x (last Zod v3 compatible)
 - [Typecheck/validation slowness](typecheck-validation-slowness.md) — `bun run check` takes 10+ min; killed runs wipe the incremental cache; don't spam mark_task_complete (CPU storm); pkill needs the `[t]sc` bracket trick
 - [Custom queryFn auth pattern](custom-queryfn-auth.md) — raw fetch() in a custom queryFn bypasses the default fetcher's Authorization header; always use the default fetcher or apiRequest instead
+- [Accounts UUID/FK pattern](accounts-uuid-fk-pattern.md) — accounts.id is uuid in DB (schema says text); new FKs must use uuid; drizzle migrations tracked in drizzle.__drizzle_migrations schema
+- [Drizzle DO block migration crash](drizzle-do-block-crash.md) — PL/pgSQL DO $$ blocks in migration files crash the server at startup; never use them in migration SQL files

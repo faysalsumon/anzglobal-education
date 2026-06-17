@@ -2893,6 +2893,8 @@ export const crmContacts = pgTable("crm_contacts", {
 
   // Referral tracking (when referenceSource = "Client's Referral")
   referralContactId: text("referral_contact_id").references((): any => crmContacts.id, { onDelete: "set null" }),
+  // Direct account link (for contacts associated with a CRM account)
+  accountId: text("account_id").references((): any => accounts.id, { onDelete: "set null" }),
 
   // Created/Updated by tracking
   createdByUserId: varchar("created_by_user_id").references(() => users.id),
@@ -5564,6 +5566,7 @@ export const accInvoices = pgTable("acc_invoices", {
   institutionId: varchar("institution_id").references(() => universities.id, { onDelete: "set null" }),
   studentId: varchar("student_id").references(() => studentProfiles.id, { onDelete: "set null" }),
   applicationId: varchar("application_id").references(() => applications.id, { onDelete: "set null" }),
+  accountId: varchar("account_id").references((): any => accounts.id, { onDelete: "set null" }),
   issueDate: date("issue_date").notNull(),
   dueDate: date("due_date").notNull(),
   currency: varchar("currency", { length: 3 }).notNull().default("AUD"),
@@ -5737,6 +5740,8 @@ export const accounts = pgTable("accounts", {
   email: text("email"),
   phone: text("phone"),
   website: text("website"),
+  abn: text("abn"),
+  acn: text("acn"),
   address: text("address"),
   city: text("city"),
   state: text("state"),
@@ -5774,6 +5779,21 @@ export const accountProducts = pgTable("account_products", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const accountNotes = pgTable("account_notes", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: text("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  mentions: text("mentions").array().default(sql`'{}'::text[]`),
+  visibility: noteVisibilityEnum("visibility").notNull().default("public"),
+  visibleTo: text("visible_to").array().default(sql`'{}'::text[]`),
+  createdById: varchar("created_by_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  accountIdIdx: index("account_notes_account_idx").on(table.accountId),
+  createdByIdx: index("account_notes_created_by_idx").on(table.createdById),
+  createdAtIdx: index("account_notes_created_at_idx").on(table.createdAt),
+}));
+
 export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true, createdAt: true, updatedAt: true });
 export type Account = typeof accounts.$inferSelect;
 export type InsertAccount = z.infer<typeof insertAccountSchema>;
@@ -5785,3 +5805,7 @@ export type InsertAccountProduct = z.infer<typeof insertAccountProductSchema>;
 export const insertAccountRestrictedDetailsSchema = createInsertSchema(accountRestrictedDetails).omit({ id: true, updatedAt: true });
 export type AccountRestrictedDetails = typeof accountRestrictedDetails.$inferSelect;
 export type InsertAccountRestrictedDetails = z.infer<typeof insertAccountRestrictedDetailsSchema>;
+
+export const insertAccountNoteSchema = createInsertSchema(accountNotes).omit({ id: true, createdAt: true });
+export type AccountNote = typeof accountNotes.$inferSelect;
+export type InsertAccountNote = z.infer<typeof insertAccountNoteSchema>;
