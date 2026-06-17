@@ -148,17 +148,7 @@ export function KpiDashboardPanel() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const { data: members = [], isLoading, isError, error } = useQuery<KpiMember[]>({
-    queryKey: ["/api/kpi/team-report", dateRange.from.toISOString(), dateRange.to.toISOString()],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        from: dateRange.from.toISOString(),
-        to: dateRange.to.toISOString(),
-      });
-      const res = await fetch(`/api/kpi/team-report?${params}`, { credentials: "include" });
-      if (res.status === 403) throw new Error("You do not have permission to view KPI reports.");
-      if (!res.ok) throw new Error("Failed to fetch KPI report. Please try again.");
-      return res.json();
-    },
+    queryKey: ["/api/kpi/team-report", { from: dateRange.from.toISOString(), to: dateRange.to.toISOString() }],
   });
 
   function handlePreset(label: string, getRange: () => { from: Date; to: Date }) {
