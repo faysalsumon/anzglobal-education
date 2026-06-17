@@ -15,7 +15,9 @@ import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Save, Loader2, Building, Plus, X, Briefcase, Camera, User, Link2, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Building, Plus, X, Briefcase, Camera, User, Link2, CheckCircle2, ChevronsUpDown, ExternalLink, UserRound } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -76,6 +78,7 @@ interface CrmContact {
   sourceLeadId: string | null;
   branchId: string | null;
   subAgentAccountId: string | null;
+  referralContactId: string | null;
   referenceSource: string | null;
   utmSource: string | null;
   utmMedium: string | null;
@@ -371,6 +374,200 @@ function PreferenceSlot({ rank, pref, institutions, onChange, onRemove, canRemov
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Referral Contact Picker ───────────────────────────────────────────────────
+
+interface ReferralContactOption {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  contactType: string;
+  photo: string | null;
+}
+
+const REFERRAL_CONTACT_TYPE_LABELS: Record<string, string> = {
+  clients: "Client",
+  external: "External",
+  others: "Other",
+  partner: "Partner",
+  providers_rep: "Provider's Rep",
+};
+
+function ReferralContactPicker({ valueId, onChange }: {
+  valueId: string | null;
+  onChange: (id: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const { data: selectedRaw } = useQuery<any>({
+    queryKey: ["/api/crm/contacts", valueId, "referral-display"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/crm/contacts/${valueId}`, { credentials: "include", headers });
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: !!valueId,
+    staleTime: 60_000,
+  });
+
+  const selectedContact: ReferralContactOption | null = valueId && selectedRaw
+    ? {
+        id: selectedRaw.id,
+        firstName: selectedRaw.firstName ?? "",
+        lastName: selectedRaw.lastName ?? "",
+        email: selectedRaw.email ?? "",
+        contactType: selectedRaw.contactType ?? "",
+        photo: selectedRaw.photo ?? null,
+      }
+    : null;
+
+  const contactsUrl = search
+    ? `/api/crm/contacts?search=${encodeURIComponent(search)}&limit=20`
+    : `/api/crm/contacts?limit=20`;
+
+  const { data: rawContactData, isLoading } = useQuery<any>({
+    queryKey: [contactsUrl],
+    staleTime: 10_000,
+    enabled: open,
+  });
+
+  const contacts: ReferralContactOption[] = (rawContactData?.contacts ?? rawContactData ?? []).map((r: any) => {
+    const c = r.contact ?? r;
+    return {
+      id: c.id,
+      firstName: c.firstName ?? c.first_name ?? "",
+      lastName: c.lastName ?? c.last_name ?? "",
+      email: c.email ?? "",
+      contactType: c.contactType ?? c.contact_type ?? "",
+      photo: c.photo ?? null,
+    };
+  });
+
+  if (valueId && !selectedContact) {
+    return (
+      <div className="flex items-center gap-3 p-3 rounded-md border bg-muted/30">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">Loading contact…</span>
+        <Button
+          type="button" size="icon" variant="ghost"
+          onClick={() => onChange(null)}
+          className="ml-auto"
+          data-testid="button-remove-referral-contact-loading"
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    );
+  }
+
+  if (valueId && selectedContact) {
+    const initials = `${selectedContact.firstName[0] ?? ""}${selectedContact.lastName[0] ?? ""}`.toUpperCase();
+    return (
+      <div className="flex items-center gap-3 p-3 rounded-md border bg-muted/30" data-testid="referral-contact-picker-selected">
+        <Avatar className="h-9 w-9 shrink-0">
+          <AvatarImage src={selectedContact.photo || ""} alt={`${selectedContact.firstName} ${selectedContact.lastName}`} />
+          <AvatarFallback className="text-xs font-semibold">{initials || <UserRound className="h-4 w-4" />}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium leading-tight">{selectedContact.firstName} {selectedContact.lastName}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-xs text-muted-foreground truncate">{selectedContact.email}</span>
+            {selectedContact.contactType && (
+              <Badge variant="secondary" className="text-xs shrink-0">
+                {REFERRAL_CONTACT_TYPE_LABELS[selectedContact.contactType] ?? selectedContact.contactType}
+              </Badge>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button
+            type="button" size="icon" variant="ghost"
+            onClick={() => window.open(`/admin?tab=crm&contactId=${valueId}`, "_blank")}
+            title="Open contact"
+            data-testid="button-open-referral-contact"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            type="button" size="icon" variant="ghost"
+            onClick={() => onChange(null)}
+            title="Remove referral"
+            data-testid="button-remove-referral-contact"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setSearch(""); }}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button" variant="outline"
+          className="w-full justify-between font-normal"
+          data-testid="button-open-referral-picker"
+        >
+          <span className="text-muted-foreground">Search or select a contact…</span>
+          <ChevronsUpDown className="h-4 w-4 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Search by name or email…"
+            value={search}
+            onValueChange={setSearch}
+            data-testid="input-referral-contact-search"
+          />
+          <CommandList>
+            {isLoading && (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {!isLoading && contacts.length === 0 && (
+              <CommandEmpty>No contacts found.</CommandEmpty>
+            )}
+            {!isLoading && contacts.length > 0 && (
+              <CommandGroup heading={search ? "Results" : "Recent Contacts"}>
+                {contacts.map(c => {
+                  const initials = `${c.firstName[0] ?? ""}${c.lastName[0] ?? ""}`.toUpperCase();
+                  return (
+                    <CommandItem
+                      key={c.id}
+                      value={c.id}
+                      onSelect={() => { onChange(c.id); setOpen(false); setSearch(""); }}
+                      data-testid={`referral-contact-option-${c.id}`}
+                    >
+                      <Avatar className="h-7 w-7 mr-2 shrink-0">
+                        <AvatarImage src={c.photo || ""} alt={`${c.firstName} ${c.lastName}`} />
+                        <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm leading-tight">{c.firstName} {c.lastName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{c.email}</p>
+                      </div>
+                      {c.contactType && (
+                        <Badge variant="secondary" className="text-xs ml-2 shrink-0">
+                          {REFERRAL_CONTACT_TYPE_LABELS[c.contactType] ?? c.contactType}
+                        </Badge>
+                      )}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -1156,7 +1353,13 @@ export default function AdminContactForm() {
                 <Label htmlFor="referenceSource">Lead Source</Label>
                 <Select
                   value={formData.referenceSource || ""}
-                  onValueChange={(v) => setFormData({ ...formData, referenceSource: v || null })}
+                  onValueChange={(v) => {
+                    const newSource = v || null;
+                    const updates: Partial<typeof formData> = { referenceSource: newSource };
+                    if (newSource !== "Client's Referral") updates.referralContactId = null;
+                    if (newSource !== "Sub-Agent") updates.subAgentAccountId = null;
+                    setFormData({ ...formData, ...updates });
+                  }}
                 >
                   <SelectTrigger id="referenceSource" data-testid="select-reference-source">
                     <SelectValue placeholder="Select lead source…" />
@@ -1178,6 +1381,23 @@ export default function AdminContactForm() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {formData.referenceSource === "Client's Referral" && (
+                <div className="space-y-2">
+                  <Label>Referred By</Label>
+                  <ReferralContactPicker
+                    valueId={formData.referralContactId || null}
+                    onChange={(id) => setFormData({ ...formData, referralContactId: id })}
+                  />
+                </div>
+              )}
+
+              {formData.referenceSource === "Sub-Agent" && (
+                <SubAgentPicker
+                  value={formData.subAgentAccountId || null}
+                  onChange={(id) => setFormData({ ...formData, subAgentAccountId: id })}
+                />
+              )}
 
               <Separator />
 

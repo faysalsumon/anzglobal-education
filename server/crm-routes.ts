@@ -2053,6 +2053,7 @@ router.post("/leads", requireAdmin, requireCrmWriteAccess, async (req: any, res)
       courseId, universityId, courseName, interestedIn, productInterest,
       budgetMin, budgetMax,
       notes, referrer, assignedTo,
+      referralContactId, subAgentAccountId,
     } = req.body;
 
     if (!firstName || !lastName || !email) {
@@ -2088,6 +2089,8 @@ router.post("/leads", requireAdmin, requireCrmWriteAccess, async (req: any, res)
       referrer: referrer || null,
       assignedTo: assignedTo || userId,
       createdByUserId: isLeadSystemSource ? null : (userId || undefined),
+      referralContactId: referralContactId || null,
+      subAgentAccountId: subAgentAccountId || null,
     } as any).returning();
 
     res.status(201).json(formatAsLead(contact, null, null));
@@ -2126,6 +2129,7 @@ router.patch("/leads/:id", requireAdmin, requireCrmWriteAccess, async (req: any,
       courseId, universityId, courseName, interestedIn, productInterest,
       budgetMin, budgetMax,
       notes, referrer, assignedTo,
+      referralContactId, subAgentAccountId,
     } = req.body;
 
     if (firstName !== undefined) updates.firstName = firstName;
@@ -2161,6 +2165,8 @@ router.patch("/leads/:id", requireAdmin, requireCrmWriteAccess, async (req: any,
     if (budgetMax !== undefined) updates.budgetMax = budgetMax !== null ? budgetMax.toString() : null;
     if (notes !== undefined) updates.notes = notes;
     if (referrer !== undefined) updates.referrer = referrer;
+    if (referralContactId !== undefined) updates.referralContactId = referralContactId;
+    if (subAgentAccountId !== undefined) updates.subAgentAccountId = subAgentAccountId;
     if (assignedTo !== undefined) {
       // Business rule: once a lead has an assignee, it cannot be cleared back to null.
       // Only system-generated (website/auto) leads that were never assigned can remain null.

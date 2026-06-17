@@ -2891,6 +2891,9 @@ export const crmContacts = pgTable("crm_contacts", {
   // Sub-agent tracking (when entrySource = 'sub_agent')
   subAgentAccountId: text("sub_agent_account_id").references((): any => accounts.id, { onDelete: "set null" }),
 
+  // Referral tracking (when referenceSource = "Client's Referral")
+  referralContactId: text("referral_contact_id").references((): any => crmContacts.id, { onDelete: "set null" }),
+
   // Created/Updated by tracking
   createdByUserId: varchar("created_by_user_id").references(() => users.id),
   updatedByUserId: varchar("updated_by_user_id").references(() => users.id),

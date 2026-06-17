@@ -1,0 +1,2 @@
+ALTER TABLE "crm_contacts" ADD COLUMN "referral_contact_id" text;--> statement-breakpoint
+ALTER TABLE "crm_contacts" ADD CONSTRAINT "crm_contacts_referral_contact_id_crm_contacts_id_fk" FOREIGN KEY ("referral_contact_id") REFERENCES "public"."crm_contacts"("id") ON DELETE set null ON UPDATE no action;
