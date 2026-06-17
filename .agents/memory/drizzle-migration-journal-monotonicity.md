@@ -26,6 +26,23 @@ the current max-applied timestamp so the migrator picks it up on next startup (i
 this safe to re-run). When fixing fresh-DB ordering, set the offending entry's `when` between its
 neighbors so fresh clones apply everything in sequence.
 
+## SQL file exists but has no journal entry — also silently ignored
+The Drizzle migrator **only runs migrations that appear in `_journal.json`**. A `.sql` file in
+`migrations/` with no matching `tag` entry in the journal is completely invisible to the migrator
+(no error, no warning). This happened with migrations 0021–0024: the SQL files existed on disk,
+the Drizzle schema referenced the new columns, but the journal stopped at 0020, so the migrations
+never ran and every query touching those columns 500'd.
+
+**Symptom:** `column "x" does not exist` on a column that is in `schema.ts` and has a migration
+`.sql` file, but `SELECT tag FROM drizzle.__drizzle_migrations` doesn't list that migration.
+
+**Fix:** append the missing entries to `_journal.json` with `when` values strictly greater than
+the current max. Because all these SQL files used `ADD COLUMN IF NOT EXISTS` / `CREATE TABLE IF NOT
+EXISTS`, they are safe to apply even if a column was manually added in the interim.
+
+**Root-cause guard:** whenever you create a new `.sql` migration file, always add its journal
+entry to `_journal.json` in the same commit.
+
 ## Enum / DB drift can't be fixed by db:generate
 `db:generate` only diffs `schema.ts` against the latest **snapshot**. If an enum's values exist in
 both `schema.ts` and the snapshot but are missing from a deployed **DB** (because the migration that

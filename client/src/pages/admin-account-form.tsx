@@ -520,12 +520,17 @@ function PortalFormsList({ accountId }: { accountId: string }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
+    if (!supabase) return {};
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return {};
+    return { Authorization: `Bearer ${session.access_token}` };
+  };
+
   const { data: forms = [], isLoading } = useQuery<PortalForm[]>({
     queryKey: ["/api/admin/accounts", accountId, "portal-forms"],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const headers: Record<string, string> = {};
-      if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+      const headers = await getAuthHeaders();
       const res = await fetch(`/api/admin/accounts/${accountId}/portal-forms`, {
         credentials: "include",
         headers,
@@ -537,9 +542,7 @@ function PortalFormsList({ accountId }: { accountId: string }) {
 
   const deleteMutation = useMutation({
     mutationFn: async (formId: string) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const headers: Record<string, string> = {};
-      if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+      const headers = await getAuthHeaders();
       const res = await fetch(`/api/admin/accounts/${accountId}/portal-forms/${formId}`, {
         method: "DELETE",
         credentials: "include",
@@ -557,9 +560,7 @@ function PortalFormsList({ accountId }: { accountId: string }) {
   const handleUpload = async (file: File) => {
     setUploading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const headers: Record<string, string> = {};
-      if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+      const headers = await getAuthHeaders();
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch(`/api/admin/accounts/${accountId}/portal-forms`, {
@@ -584,9 +585,7 @@ function PortalFormsList({ accountId }: { accountId: string }) {
 
   const handleDownload = async (formId: string, fileName: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const headers: Record<string, string> = {};
-      if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+      const headers = await getAuthHeaders();
       const res = await fetch(`/api/admin/accounts/${accountId}/portal-forms/${formId}/download`, {
         credentials: "include",
         headers,

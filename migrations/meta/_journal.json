@@ -148,6 +148,34 @@
       "when": 1781690618704,
       "tag": "0020_reconcile_entry_source_enum",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1781690619000,
+      "tag": "0021_account_commission_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1781690619001,
+      "tag": "0022_account_email_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1781690619002,
+      "tag": "0023_account_portal_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1781690619003,
+      "tag": "0024_account_portal_forms",
+      "breakpoints": true
     }
   ]
 }
