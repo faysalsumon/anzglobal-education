@@ -586,7 +586,6 @@ export function registerAccountsRoutes(app: Express) {
           name: universities.name,
           country: universities.country,
           logo: universities.logo,
-          studentCount: universities.studentCount,
         })
         .from(accounts)
         .innerJoin(universities, eq(universities.id, accounts.institutionCmsId))
