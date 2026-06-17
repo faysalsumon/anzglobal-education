@@ -555,19 +555,24 @@ export function CrmLeadsPanel() {
                     </SelectContent>
                   </Select>
                   <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                    <SelectTrigger className="w-[150px]" data-testid="select-source-filter">
+                    <SelectTrigger className="w-[160px]" data-testid="select-source-filter">
                       <SelectValue placeholder="Lead Source" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Sources</SelectItem>
-                      <SelectItem value="website_form">Website Form</SelectItem>
-                      <SelectItem value="facebook_ads">Facebook Ads</SelectItem>
-                      <SelectItem value="google_ads">Google Ads</SelectItem>
-                      <SelectItem value="education_fair">Education Fair</SelectItem>
-                      <SelectItem value="referral">Referral</SelectItem>
-                      <SelectItem value="recruitment_agent">Recruitment Agent</SelectItem>
-                      <SelectItem value="campus_walk_in">Campus Walk-in</SelectItem>
-                      <SelectItem value="manually">Manual Entry</SelectItem>
+                      <SelectItem value="Friends/Family">Friends / Family</SelectItem>
+                      <SelectItem value="Google">Google</SelectItem>
+                      <SelectItem value="Facebook">Facebook</SelectItem>
+                      <SelectItem value="YouTube">YouTube</SelectItem>
+                      <SelectItem value="Social Media">Social Media</SelectItem>
+                      <SelectItem value="Posters/Leaflets/Signboards">Posters / Leaflets / Signboards</SelectItem>
+                      <SelectItem value="Sub-Agent">Sub-Agent</SelectItem>
+                      <SelectItem value="Walk-In">Walk-In</SelectItem>
+                      <SelectItem value="Client's Referral">Client's Referral</SelectItem>
+                      <SelectItem value="Email Marketing">Email Marketing</SelectItem>
+                      <SelectItem value="Team Referral">Team Referral</SelectItem>
+                      <SelectItem value="External Referral">External Referral</SelectItem>
+                      <SelectItem value="Website">Website</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select value={countryFilter} onValueChange={setCountryFilter}>

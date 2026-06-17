@@ -1153,8 +1153,30 @@ export default function AdminContactForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="referenceSource">Reference Source</Label>
-                <Input id="referenceSource" value={formData.referenceSource || ""} onChange={(e) => setFormData({ ...formData, referenceSource: e.target.value })} placeholder="e.g. QR Code - Dhaka Branch, Facebook Winter Campaign" data-testid="input-reference-source" />
+                <Label htmlFor="referenceSource">Lead Source</Label>
+                <Select
+                  value={formData.referenceSource || ""}
+                  onValueChange={(v) => setFormData({ ...formData, referenceSource: v || null })}
+                >
+                  <SelectTrigger id="referenceSource" data-testid="select-reference-source">
+                    <SelectValue placeholder="Select lead source…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Friends/Family">Friends / Family</SelectItem>
+                    <SelectItem value="Google">Google</SelectItem>
+                    <SelectItem value="Facebook">Facebook</SelectItem>
+                    <SelectItem value="YouTube">YouTube</SelectItem>
+                    <SelectItem value="Social Media">Social Media</SelectItem>
+                    <SelectItem value="Posters/Leaflets/Signboards">Posters / Leaflets / Signboards</SelectItem>
+                    <SelectItem value="Sub-Agent">Sub-Agent</SelectItem>
+                    <SelectItem value="Walk-In">Walk-In</SelectItem>
+                    <SelectItem value="Client's Referral">Client's Referral</SelectItem>
+                    <SelectItem value="Email Marketing">Email Marketing</SelectItem>
+                    <SelectItem value="Team Referral">Team Referral</SelectItem>
+                    <SelectItem value="External Referral">External Referral</SelectItem>
+                    <SelectItem value="Website">Website</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <Separator />
