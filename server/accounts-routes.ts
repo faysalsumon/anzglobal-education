@@ -670,7 +670,13 @@ export function registerAccountsRoutes(app: Express) {
         .orderBy(desc(accountPortalForms.uploadedAt));
 
       res.json(rows.map(r => ({
-        ...r,
+        id: r.id,
+        accountId: r.accountId,
+        fileName: r.fileName,
+        mimeType: r.mimeType,
+        fileSize: r.fileSize,
+        uploadedById: r.uploadedById,
+        uploadedAt: r.uploadedAt,
         uploaderName: [r.uploaderFirstName, r.uploaderLastName].filter(Boolean).join(" ") || null,
       })));
     } catch (err: any) {
@@ -772,8 +778,14 @@ export function registerAccountsRoutes(app: Express) {
 
       if (!form) return res.status(404).json({ message: "Form not found" });
 
-      const { deleteFile } = await import("./file-storage");
-      await deleteFile(form.storagePath);
+      const { downloadFile, deleteFile } = await import("./file-storage");
+      // Verify storage object exists before mutating the DB
+      const exists = await downloadFile(form.storagePath);
+      if (exists !== null) {
+        await deleteFile(form.storagePath);
+      } else {
+        console.warn(`[Accounts] DELETE portal-form: storage object missing for ${form.storagePath} — removing DB record only`);
+      }
       await db.delete(accountPortalForms).where(eq(accountPortalForms.id, form.id));
       res.json({ success: true });
     } catch (err: any) {
