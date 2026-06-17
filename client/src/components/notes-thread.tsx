@@ -644,7 +644,10 @@ const DOMPURIFY_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
     "p", "br", "strong", "em", "u", "s", "span", "div", "a",
     "ul", "ol", "li", "code", "pre",
     // img removed: prevents tracking-pixel injection via external src URLs
+    // svg/math removed: can be used as XSS vectors in some browser contexts
   ],
+  // svg and math are allowed by DOMPurify by default — explicitly forbid them
+  FORBID_TAGS: ["svg", "math", "script", "style"],
   ALLOWED_ATTR: ["class", "href", "target", "rel"],
   // Forbid data-* attributes to prevent data exfiltration via custom attributes
   ALLOW_DATA_ATTR: false,

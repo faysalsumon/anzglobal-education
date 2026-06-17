@@ -21,7 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Save, Loader2, Plus, X, Check,
   Package, Trash2, Edit, ImageIcon, UserRound, ChevronsUpDown, ExternalLink,
-  Link2, FileText, Users, Building2, ReceiptText, ChevronRight
+  Link2, FileText, Users, Building2, ReceiptText, ChevronRight,
+  Upload, Download,
 } from "lucide-react";
 import { NotesThread, type UnifiedNote, type ThreadTeamMember, type NoteVisibilityOpts } from "@/components/notes-thread";
 import { GoogleAddressAutocomplete, type AddressComponents } from "@/components/ui/google-address-autocomplete";
@@ -103,6 +104,18 @@ interface RestrictedDetails {
   portalLink: string | null;
   portalUsername: string | null;
   portalPassword: string | null;
+}
+
+interface PortalForm {
+  id: string;
+  accountId: string;
+  fileName: string;
+  storagePath: string;
+  mimeType: string | null;
+  fileSize: number | null;
+  uploadedById: string | null;
+  uploaderName: string | null;
+  uploadedAt: string;
 }
 
 interface AccountNote {
@@ -497,6 +510,182 @@ function ContactPicker({ value, onChange }: ContactPickerProps) {
       </Popover>
       {createDialog}
     </>
+  );
+}
+
+// ─── Portal Form file upload component ────────────────────────────────────────
+
+function PortalFormsList({ accountId }: { accountId: string }) {
+  const { toast } = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const { data: forms = [], isLoading } = useQuery<PortalForm[]>({
+    queryKey: ["/api/admin/accounts", accountId, "portal-forms"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = {};
+      if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+      const res = await fetch(`/api/admin/accounts/${accountId}/portal-forms`, {
+        credentials: "include",
+        headers,
+      });
+      if (!res.ok) throw new Error("Failed to fetch forms");
+      return res.json();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (formId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = {};
+      if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+      const res = await fetch(`/api/admin/accounts/${accountId}/portal-forms/${formId}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers,
+      });
+      if (!res.ok) throw new Error("Failed to delete");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/accounts", accountId, "portal-forms"] });
+      toast({ description: "Form deleted" });
+    },
+    onError: () => toast({ description: "Failed to delete form", variant: "destructive" }),
+  });
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = {};
+      if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/admin/accounts/${accountId}/portal-forms`, {
+        method: "POST",
+        credentials: "include",
+        headers,
+        body: fd,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).message || "Upload failed");
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/accounts", accountId, "portal-forms"] });
+      toast({ description: "Form uploaded successfully" });
+    } catch (err: any) {
+      toast({ description: err.message || "Upload failed", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const handleDownload = async (formId: string, fileName: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = {};
+      if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+      const res = await fetch(`/api/admin/accounts/${accountId}/portal-forms/${formId}/download`, {
+        credentials: "include",
+        headers,
+      });
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ description: "Failed to download file", variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <Label>Application Forms</Label>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          data-testid="button-upload-portal-form"
+        >
+          {uploading
+            ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+            : <Upload className="h-3.5 w-3.5 mr-1.5" />}
+          Upload File
+        </Button>
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip"
+          onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0])}
+          data-testid="input-portal-form-file"
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ) : forms.length === 0 ? (
+        <p className="text-xs text-muted-foreground py-1">No files uploaded yet. Accepted: PDF, Word, Excel, TXT, CSV, ZIP (max 20 MB).</p>
+      ) : (
+        <div className="space-y-1.5">
+          {forms.map(form => (
+            <div
+              key={form.id}
+              className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
+              data-testid={`row-portal-form-${form.id}`}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{form.fileName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {form.uploaderName || "Unknown"}
+                    {" · "}
+                    {new Date(form.uploadedAt).toLocaleDateString()}
+                    {form.fileSize ? ` · ${(form.fileSize / 1024).toFixed(0)} KB` : ""}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => handleDownload(form.id, form.fileName)}
+                  data-testid={`button-download-form-${form.id}`}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => deleteMutation.mutate(form.id)}
+                  disabled={deleteMutation.isPending}
+                  data-testid={`button-delete-form-${form.id}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -2065,14 +2254,19 @@ export default function AdminAccountForm() {
                   {restrictedData.hasApplicationPortal === true && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5 sm:col-span-2">
-                        <Label>Application Form</Label>
+                        <Label>Form Notes</Label>
                         <Input
                           value={restrictedData.applicationForm || ""}
                           onChange={e => setRestrictedData({ ...restrictedData, applicationForm: e.target.value || null })}
-                          placeholder="e.g. Online Application Form"
-                          data-testid="input-application-form"
+                          placeholder="e.g. Use the online portal, paper form required for PG apps…"
+                          data-testid="input-application-form-notes"
                         />
                       </div>
+                      {!isNew && id && (
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <PortalFormsList accountId={id} />
+                        </div>
+                      )}
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label>Portal Details</Label>
                         <Textarea

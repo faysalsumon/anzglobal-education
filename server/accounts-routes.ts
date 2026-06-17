@@ -8,6 +8,7 @@ import {
   accountProducts,
   accountRestrictedDetails,
   accountNotes,
+  accountPortalForms,
   crmContacts,
   accInvoices,
   applications,
@@ -23,6 +24,11 @@ import { eq, and, ilike, or, sql, desc, sum } from "drizzle-orm";
 const logoUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+const portalFormUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
 });
 
 function getUserId(req: any): string | null {
@@ -635,6 +641,144 @@ export function registerAccountsRoutes(app: Express) {
     } catch (err: any) {
       console.error("[Accounts] GET /:id/related/institutions error:", err);
       res.status(500).json({ message: "Failed to fetch related institutions" });
+    }
+  });
+
+  // ─── Portal Forms ──────────────────────────────────────────────────────────
+
+  // GET /api/admin/accounts/:id/portal-forms — list uploaded forms with uploader name
+  app.get("/api/admin/accounts/:id/portal-forms", isUnifiedAuthenticated, async (req: any, res: Response) => {
+    try {
+      if (!await requireAdmin(req, res)) return;
+      const accountId = req.params.id;
+      const rows = await db
+        .select({
+          id: accountPortalForms.id,
+          accountId: accountPortalForms.accountId,
+          fileName: accountPortalForms.fileName,
+          storagePath: accountPortalForms.storagePath,
+          mimeType: accountPortalForms.mimeType,
+          fileSize: accountPortalForms.fileSize,
+          uploadedById: accountPortalForms.uploadedById,
+          uploadedAt: accountPortalForms.uploadedAt,
+          uploaderFirstName: users.firstName,
+          uploaderLastName: users.lastName,
+        })
+        .from(accountPortalForms)
+        .leftJoin(users, eq(accountPortalForms.uploadedById, users.id))
+        .where(eq(accountPortalForms.accountId, accountId))
+        .orderBy(desc(accountPortalForms.uploadedAt));
+
+      res.json(rows.map(r => ({
+        ...r,
+        uploaderName: [r.uploaderFirstName, r.uploaderLastName].filter(Boolean).join(" ") || null,
+      })));
+    } catch (err: any) {
+      console.error("[Accounts] GET /:id/portal-forms error:", err);
+      res.status(500).json({ message: "Failed to fetch portal forms" });
+    }
+  });
+
+  // POST /api/admin/accounts/:id/portal-forms — upload a form file
+  app.post("/api/admin/accounts/:id/portal-forms", isUnifiedAuthenticated, portalFormUpload.single("file"), async (req: any, res: Response) => {
+    try {
+      const userId = await requireAdmin(req, res);
+      if (!userId) return;
+
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+      const allowedMimes = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "text/plain",
+        "text/csv",
+        "application/zip",
+      ];
+      if (!allowedMimes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: "Unsupported file type. Allowed: PDF, Word, Excel, TXT, CSV, ZIP" });
+      }
+
+      const accountId = req.params.id;
+      const safeFileName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const storagePath = `.private/account-portal-forms/${accountId}/${Date.now()}_${safeFileName}`;
+
+      const { uploadFile: osUpload } = await import("./file-storage");
+      const osResult = await osUpload(storagePath, req.file.buffer, req.file.mimetype);
+      if (!osResult.ok) {
+        return res.status(500).json({ message: "Failed to store file" });
+      }
+
+      const [row] = await db.insert(accountPortalForms).values({
+        accountId,
+        fileName: req.file.originalname,
+        storagePath,
+        mimeType: req.file.mimetype,
+        fileSize: req.file.size,
+        uploadedById: userId,
+      }).returning();
+
+      res.status(201).json(row);
+    } catch (err: any) {
+      console.error("[Accounts] POST /:id/portal-forms error:", err);
+      res.status(500).json({ message: "Failed to upload form" });
+    }
+  });
+
+  // GET /api/admin/accounts/:id/portal-forms/:formId/download — serve file
+  app.get("/api/admin/accounts/:id/portal-forms/:formId/download", isUnifiedAuthenticated, async (req: any, res: Response) => {
+    try {
+      if (!await requireAdmin(req, res)) return;
+
+      const [form] = await db
+        .select()
+        .from(accountPortalForms)
+        .where(and(
+          eq(accountPortalForms.id, req.params.formId),
+          eq(accountPortalForms.accountId, req.params.id),
+        ))
+        .limit(1);
+
+      if (!form) return res.status(404).json({ message: "Form not found" });
+
+      const { serveFile } = await import("./file-storage");
+      const served = await serveFile(res, form.storagePath, {
+        mimeType: form.mimeType || undefined,
+        cacheControl: "no-store",
+        disposition: `attachment; filename="${form.fileName.replace(/"/g, "")}"`,
+      });
+      if (!served) return res.status(404).json({ message: "File not found in storage" });
+    } catch (err: any) {
+      console.error("[Accounts] GET /:id/portal-forms/:formId/download error:", err);
+      res.status(500).json({ message: "Failed to download form" });
+    }
+  });
+
+  // DELETE /api/admin/accounts/:id/portal-forms/:formId — delete a form
+  app.delete("/api/admin/accounts/:id/portal-forms/:formId", isUnifiedAuthenticated, async (req: any, res: Response) => {
+    try {
+      if (!await requireAdmin(req, res)) return;
+
+      const [form] = await db
+        .select()
+        .from(accountPortalForms)
+        .where(and(
+          eq(accountPortalForms.id, req.params.formId),
+          eq(accountPortalForms.accountId, req.params.id),
+        ))
+        .limit(1);
+
+      if (!form) return res.status(404).json({ message: "Form not found" });
+
+      const { deleteFile } = await import("./file-storage");
+      await deleteFile(form.storagePath);
+      await db.delete(accountPortalForms).where(eq(accountPortalForms.id, form.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("[Accounts] DELETE /:id/portal-forms/:formId error:", err);
+      res.status(500).json({ message: "Failed to delete form" });
     }
   });
 

@@ -5805,6 +5805,17 @@ export const accountNotes = pgTable("account_notes", {
   createdAtIdx: index("account_notes_created_at_idx").on(table.createdAt),
 }));
 
+export const accountPortalForms = pgTable("account_portal_forms", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  fileName: text("file_name").notNull(),
+  storagePath: text("storage_path").notNull(),
+  mimeType: text("mime_type"),
+  fileSize: integer("file_size"),
+  uploadedById: varchar("uploaded_by_id").references(() => users.id, { onDelete: "set null" }),
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+});
+
 export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true, createdAt: true, updatedAt: true });
 export type Account = typeof accounts.$inferSelect;
 export type InsertAccount = z.infer<typeof insertAccountSchema>;
