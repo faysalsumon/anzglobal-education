@@ -553,9 +553,13 @@ export function registerAccountsRoutes(app: Express) {
   app.delete("/api/admin/accounts/:id/contacts/:contactId/link", isUnifiedAuthenticated, async (req: any, res: Response) => {
     try {
       if (!await requireAdmin(req, res)) return;
-      const { contactId } = req.params;
+      const { id: accountId, contactId } = req.params;
 
-      await db.update(crmContacts).set({ accountId: null }).where(eq(crmContacts.id, contactId));
+      const result = await db
+        .update(crmContacts)
+        .set({ accountId: null })
+        .where(and(eq(crmContacts.id, contactId), eq(crmContacts.accountId, accountId)));
+      if (result.rowCount === 0) return res.status(404).json({ message: "Contact not linked to this account" });
       res.json({ success: true });
     } catch (err: any) {
       console.error("[Accounts] DELETE /:id/contacts/:contactId/link error:", err);

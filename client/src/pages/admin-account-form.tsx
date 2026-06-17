@@ -939,7 +939,10 @@ function AccountContacts({ accountId, primaryContact, onPrimaryChange }: Account
     onError: () => toast({ title: "Failed to remove contact", variant: "destructive" }),
   });
 
-  const linkedContacts: CrmContactSummary[] = contactData?.contacts || [];
+  const linkedContacts: CrmContactSummary[] = useMemo(
+    () => contactData?.contacts || [],
+    [contactData]
+  );
 
   // Always show the primary contact even if not yet formally linked via crmContacts.accountId
   const allContacts = useMemo(() => {
