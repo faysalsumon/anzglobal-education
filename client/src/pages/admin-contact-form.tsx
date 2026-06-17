@@ -581,7 +581,7 @@ function SubAgentPicker({ value, onChange }: { value: string | null; onChange: (
   });
   return (
     <div className="space-y-2">
-      <Label>Referring Sub Agent</Label>
+      <Label>Sub-Agent Account</Label>
       <Select
         value={value || ""}
         onValueChange={(v) => onChange(v || null)}
@@ -1277,7 +1277,7 @@ export default function AdminContactForm() {
                     </SelectContent>
                   </Select>
                 </div>
-                {formData.entrySource === 'sub_agent' && (
+                {formData.entrySource === 'sub_agent' && formData.referenceSource !== "Sub-Agent" && (
                   <SubAgentPicker
                     value={formData.subAgentAccountId || null}
                     onChange={(id) => setFormData({ ...formData, subAgentAccountId: id })}
