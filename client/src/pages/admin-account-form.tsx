@@ -1004,7 +1004,7 @@ function AccountContacts({ accountId, primaryContact, onPrimaryChange }: Account
                       size="sm"
                       variant="ghost"
                       className="text-xs h-7 px-2"
-                      onClick={() => onPrimaryChange(c)}
+                      onClick={() => { onPrimaryChange(c); toast({ title: "Primary contact updated", description: "Save the account to persist this change." }); }}
                       data-testid={`button-set-primary-${c.id}`}
                     >
                       Set primary
