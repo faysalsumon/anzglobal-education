@@ -534,11 +534,11 @@ export function registerAccountsRoutes(app: Express) {
       if (!await requireAdmin(req, res)) return;
       const { id: accountId, contactId } = req.params;
 
-      const [contact] = await db
-        .select({ id: crmContacts.id })
-        .from(crmContacts)
-        .where(eq(crmContacts.id, contactId))
-        .limit(1);
+      const [[account], [contact]] = await Promise.all([
+        db.select({ id: accounts.id }).from(accounts).where(eq(accounts.id, accountId)).limit(1),
+        db.select({ id: crmContacts.id }).from(crmContacts).where(eq(crmContacts.id, contactId)).limit(1),
+      ]);
+      if (!account) return res.status(404).json({ message: "Account not found" });
       if (!contact) return res.status(404).json({ message: "Contact not found" });
 
       await db.update(crmContacts).set({ accountId }).where(eq(crmContacts.id, contactId));

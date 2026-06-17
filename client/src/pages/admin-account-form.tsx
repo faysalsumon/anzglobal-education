@@ -931,10 +931,10 @@ function AccountContacts({ accountId, primaryContact, onPrimaryChange }: Account
         await apiRequest("DELETE", `/api/admin/accounts/${accountId}/contacts/${contactId}/link`);
       }
     },
-    onSuccess: (_, { contactId }) => {
+    onSuccess: (_, { contactId, isLinkedViaAccountId }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/accounts", accountId, "related", "contacts"] });
       if (contactId === primaryContact?.id) onPrimaryChange(null);
-      toast({ title: "Contact removed" });
+      toast({ title: isLinkedViaAccountId ? "Contact removed" : "Primary contact cleared" });
     },
     onError: () => toast({ title: "Failed to remove contact", variant: "destructive" }),
   });
