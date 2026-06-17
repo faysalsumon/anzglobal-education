@@ -563,15 +563,7 @@ export default function AdminAccountForm() {
     try {
       const fd = new FormData();
       fd.append("logo", file);
-      const res = await fetch("/api/admin/accounts/upload-logo", {
-        method: "POST",
-        body: fd,
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Upload failed");
-      }
+      const res = await apiRequest("POST", "/api/admin/accounts/upload-logo", fd);
       const { logoUrl } = await res.json();
       setFormData(f => ({ ...f, logoUrl }));
       toast({ title: "Logo uploaded" });
