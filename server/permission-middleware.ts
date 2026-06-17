@@ -8,6 +8,7 @@ import {
   getUserPermissionContext,
   PermissionCheck,
 } from "./permission-service";
+import { logSecurityEvent } from "./middleware/bot-protection";
 
 // Extend Express Request to include permission context
 declare global {
@@ -127,6 +128,7 @@ export function requirePlatformAdmin() {
 
     const isPlatAdmin = await isPlatformAdmin(user.id);
     if (!isPlatAdmin) {
+      logSecurityEvent('ACCESS_DENIED', req, { reason: 'platform_admin_required', userId: user.id });
       return res.status(403).json({
         message: "Forbidden",
         error: "Platform admin access required",
@@ -149,6 +151,7 @@ export function requireAdmin() {
 
     const isAdminUser = await isAdmin(user.id);
     if (!isAdminUser) {
+      logSecurityEvent('ACCESS_DENIED', req, { reason: 'admin_required', userId: user.id });
       return res.status(403).json({
         message: "Forbidden",
         error: "Admin access required",
