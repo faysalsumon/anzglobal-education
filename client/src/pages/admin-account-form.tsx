@@ -1065,6 +1065,11 @@ interface AccountContactsProps {
 function AccountContacts({ accountId, primaryContact, onPrimaryChange }: AccountContactsProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [addSearch, setAddSearch] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newContactForm, setNewContactForm] = useState({
+    firstName: "", lastName: "", email: "", mobile: "", contactType: "providers_rep",
+  });
+  const [createError, setCreateError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const { data: contactData, isLoading } = useQuery<{ contacts: CrmContactSummary[] }>({
@@ -1113,6 +1118,47 @@ function AccountContacts({ accountId, primaryContact, onPrimaryChange }: Account
     },
     onError: () => toast({ title: "Failed to remove contact", variant: "destructive" }),
   });
+
+  const createContactMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/crm/contacts", {
+        firstName: newContactForm.firstName.trim(),
+        lastName: newContactForm.lastName.trim(),
+        email: newContactForm.email.trim(),
+        mobile: newContactForm.mobile.trim() || null,
+        contactType: newContactForm.contactType,
+      });
+      const data = await res.json();
+      const c = data.contact ?? data;
+      await apiRequest("POST", `/api/admin/accounts/${accountId}/contacts/${c.id}/link`);
+      return c;
+    },
+    onSuccess: (c: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/accounts", accountId, "related", "contacts"] });
+      setCreateOpen(false);
+      setAddOpen(false);
+      setAddSearch("");
+      setNewContactForm({ firstName: "", lastName: "", email: "", mobile: "", contactType: "providers_rep" });
+      setCreateError(null);
+      toast({ title: "Contact created & linked", description: `${c.firstName} ${c.lastName} has been added.` });
+    },
+    onError: (err: any) => {
+      setCreateError(err.message || "Failed to create contact. Please try again.");
+    },
+  });
+
+  const handleOpenCreate = () => {
+    const parts = addSearch.trim().split(/\s+/);
+    setNewContactForm({
+      firstName: parts[0] ?? "",
+      lastName: parts.slice(1).join(" ") ?? "",
+      email: "",
+      mobile: "",
+      contactType: "providers_rep",
+    });
+    setCreateError(null);
+    setCreateOpen(true);
+  };
 
   const linkedContacts: CrmContactSummary[] = useMemo(
     () => contactData?.contacts || [],
@@ -1218,7 +1264,20 @@ function AccountContacts({ accountId, primaryContact, onPrimaryChange }: Account
             />
             <CommandList>
               {searchContacts.length === 0 ? (
-                <CommandEmpty>No contacts found.</CommandEmpty>
+                <div className="py-4 px-3 text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">No contacts found.</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleOpenCreate}
+                    data-testid="button-create-contact-from-empty"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    Create new contact{addSearch.trim() ? ` "${addSearch.trim()}"` : ""}
+                  </Button>
+                </div>
               ) : (
                 <CommandGroup>
                   {searchContacts.map(c => {
@@ -1242,6 +1301,17 @@ function AccountContacts({ accountId, primaryContact, onPrimaryChange }: Account
                       </CommandItem>
                     );
                   })}
+                  <div className="border-t mx-1 mt-1 pt-1">
+                    <CommandItem
+                      value="__create_new_contact__"
+                      onSelect={handleOpenCreate}
+                      data-testid="button-create-contact-from-list"
+                      className="text-muted-foreground"
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-2 shrink-0" />
+                      <span className="text-sm">Create new contact…</span>
+                    </CommandItem>
+                  </div>
                 </CommandGroup>
               )}
             </CommandList>
@@ -1249,6 +1319,105 @@ function AccountContacts({ accountId, primaryContact, onPrimaryChange }: Account
         </PopoverContent>
       </Popover>
       <p className="text-xs text-muted-foreground">Link CRM contacts to this account — Provider's Rep contacts shown by default.</p>
+
+      <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) setCreateError(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Contact</DialogTitle>
+            <DialogDescription>Fill in the basics — you can add more details from the CRM later. The contact will be linked to this account automatically.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-1">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="ac-nc-first">First Name *</Label>
+                <Input
+                  id="ac-nc-first"
+                  value={newContactForm.firstName}
+                  onChange={e => setNewContactForm(f => ({ ...f, firstName: e.target.value }))}
+                  placeholder="Jane"
+                  data-testid="input-ac-new-contact-first"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ac-nc-last">Last Name *</Label>
+                <Input
+                  id="ac-nc-last"
+                  value={newContactForm.lastName}
+                  onChange={e => setNewContactForm(f => ({ ...f, lastName: e.target.value }))}
+                  placeholder="Smith"
+                  data-testid="input-ac-new-contact-last"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ac-nc-email">Email *</Label>
+              <Input
+                id="ac-nc-email"
+                type="email"
+                value={newContactForm.email}
+                onChange={e => setNewContactForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="jane@example.com"
+                data-testid="input-ac-new-contact-email"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ac-nc-mobile">Mobile</Label>
+              <Input
+                id="ac-nc-mobile"
+                value={newContactForm.mobile}
+                onChange={e => setNewContactForm(f => ({ ...f, mobile: e.target.value }))}
+                placeholder="+61 400 000 000"
+                data-testid="input-ac-new-contact-mobile"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Contact Type</Label>
+              <Select
+                value={newContactForm.contactType}
+                onValueChange={v => setNewContactForm(f => ({ ...f, contactType: v }))}
+              >
+                <SelectTrigger data-testid="select-ac-new-contact-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CONTACT_TYPE_LABELS)
+                    .filter(([v]) => v !== "none")
+                    .map(([v, label]) => (
+                      <SelectItem key={v} value={v}>{label}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {createError && (
+              <p className="text-sm text-destructive" data-testid="text-ac-create-contact-error">{createError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button" variant="outline"
+              onClick={() => { setCreateOpen(false); setCreateError(null); }}
+              data-testid="button-ac-cancel-new-contact"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setCreateError(null);
+                if (!newContactForm.firstName.trim()) { setCreateError("First name is required."); return; }
+                if (!newContactForm.email.trim()) { setCreateError("Email is required."); return; }
+                createContactMutation.mutate();
+              }}
+              disabled={createContactMutation.isPending}
+              data-testid="button-ac-save-new-contact"
+            >
+              {createContactMutation.isPending
+                ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Saving…</>
+                : "Create & Link"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
