@@ -247,6 +247,87 @@ export function botProtectionMiddleware(req: Request, res: Response, next: NextF
 }
 
 /**
+ * Domains that are always allowed as redirect targets (in addition to same-origin).
+ * Add production domains here so password-reset and OAuth flows keep working
+ * across the multi-region setup.
+ */
+const REDIRECT_ALLOWLIST_HOSTS = new Set([
+  'anzglobal.com.au',
+  'www.anzglobal.com.au',
+  'anzglobal.com.bd',
+  'www.anzglobal.com.bd',
+]);
+
+/**
+ * Returns true when `url` is safe to redirect to:
+ *   - A relative path starting with exactly one "/" (never "//", which is protocol-relative)
+ *   - An absolute http/https URL whose host matches the current request host (same-origin).
+ *     This naturally covers Replit dev-preview domains without opening the namespace to
+ *     attacker-controlled *.replit.dev / *.replit.app registrations.
+ *   - An absolute http/https URL whose host is on the explicit REDIRECT_ALLOWLIST_HOSTS
+ *   - An absolute http/https URL whose host matches the SITE_URL env var
+ *
+ * Everything else — including protocol-relative "//evil.com", javascript: URIs,
+ * data: URIs, unknown external hosts, and attacker-controlled Replit subdomains —
+ * returns false.
+ */
+export function isSafeRedirect(url: string, req?: Request): boolean {
+  if (!url || typeof url !== 'string') return false;
+
+  // Relative path: must start with "/" but NOT "//" (protocol-relative smuggling)
+  if (url.startsWith('/') && !url.startsWith('//')) {
+    return true;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+
+  // Only http and https are acceptable protocols
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return false;
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  // Explicit production allowlist
+  if (REDIRECT_ALLOWLIST_HOSTS.has(hostname)) {
+    return true;
+  }
+
+  // Same-origin check against the current Express request host
+  if (req) {
+    const reqHost = (req.hostname || (req.headers.host?.split(':')[0] ?? '')).toLowerCase();
+    if (reqHost && hostname === reqHost) {
+      return true;
+    }
+  }
+
+  // SITE_URL environment variable (may point to any custom domain)
+  if (process.env.SITE_URL) {
+    try {
+      const siteHost = new URL(process.env.SITE_URL).hostname.toLowerCase();
+      if (siteHost && hostname === siteHost) return true;
+    } catch {
+      // ignore malformed SITE_URL
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Returns `url` if it passes `isSafeRedirect`, otherwise returns `fallback`.
+ * Use this as a drop-in replacement anywhere you call `res.redirect(userSuppliedUrl)`.
+ */
+export function safeRedirectUrl(url: string, fallback = '/', req?: Request): string {
+  return isSafeRedirect(url, req) ? url : fallback;
+}
+
+/**
  * Structured security event logger.
  * All security-relevant events (rate limits, auth failures, blocked bots) are
  * written with a [Security] prefix so they can be grepped from server logs.

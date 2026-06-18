@@ -11,7 +11,7 @@ import crypto from 'crypto';
 import { createCrmContactForUser } from './crm-routes';
 import { getClientIp, replyTooManyRequests } from './middleware/rate-limit';
 import { signinLimiter, forgotPasswordLimiter } from './middleware/rate-limit-instances';
-import { logSecurityEvent } from './middleware/bot-protection';
+import { logSecurityEvent, isSafeRedirect, safeRedirectUrl } from './middleware/bot-protection';
 
 const router = Router();
 
@@ -255,8 +255,19 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
     // always points to the domain the user is actually on (e.g. anzglobal.com.au
     // or anzglobal.com.bd), rather than the static server-side URL which may
     // resolve to the Replit dev preview domain.
-    const requestOrigin = req.headers.origin || req.headers.referer?.replace(/\/$/, '').split('/').slice(0, 3).join('/');
-    const baseUrl = requestOrigin || getSiteUrl();
+    //
+    // SECURITY: validate the Origin/Referer against the redirect allowlist before
+    // embedding it in the Supabase redirectTo URL.  An attacker who forges
+    // Origin: https://evil.com would otherwise receive a password-reset email
+    // whose link points to their phishing page.
+    const rawOrigin =
+      req.headers.origin ||
+      req.headers.referer?.replace(/\/$/, '').split('/').slice(0, 3).join('/');
+    const safeOrigin = rawOrigin && isSafeRedirect(rawOrigin, req) ? rawOrigin : null;
+    if (rawOrigin && !safeOrigin) {
+      logSecurityEvent('OPEN_REDIRECT_BLOCKED', req, { origin: rawOrigin.substring(0, 80) });
+    }
+    const baseUrl = safeOrigin || getSiteUrl();
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${baseUrl}/reset-password`,
@@ -717,7 +728,7 @@ router.get('/oauth/:provider', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid OAuth provider' });
     }
 
-    const redirectTo = `${getSiteUrl()}/auth/callback`;
+    const redirectTo = safeRedirectUrl(`${getSiteUrl()}/auth/callback`, '/auth/callback', req);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: provider as any,
@@ -1055,7 +1066,7 @@ router.post('/admin/invite', async (req: Request, res: Response) => {
         user_type: 'platform_admin',
         invited_by: requestingUser.id,
       },
-      redirectTo: `${getSiteUrl()}/admin/login`,
+      redirectTo: safeRedirectUrl(`${getSiteUrl()}/admin/login`, '/admin/login', req),
     });
 
     if (error) {
