@@ -663,6 +663,7 @@ export function registerAccountingRoutes(app: Express) {
         institutionId: billToType === "institution" ? (invoiceData.institutionId || null) : null,
         studentId: billToType === "student" ? (invoiceData.studentId || null) : null,
         applicationId: invoiceData.applicationId || null,
+        accountId: invoiceData.accountId || null,
         issueDate: invoiceData.issueDate,
         dueDate: invoiceData.dueDate,
         currency: invoiceData.currency || "AUD",
@@ -675,6 +676,7 @@ export function registerAccountingRoutes(app: Express) {
         gstAmount: gstAmount.toFixed(2),
         total: total.toFixed(2),
         status: invoiceData.status || "draft",
+        clientTaxRef: invoiceData.clientTaxRef || null,
       }).returning();
 
       if (lineItems && Array.isArray(lineItems) && lineItems.length > 0) {
@@ -700,7 +702,7 @@ export function registerAccountingRoutes(app: Express) {
     if (!await requireFinanceAdmin(req, res)) return;
     const { id } = req.params;
     const { lineItems, customerId, issueDate, dueDate, currency, gstEnabled, notes, terms, regionCode, status,
-      billToType, institutionId, studentId, applicationId, clientName, clientEmail, clientPhone, clientAddress } = req.body;
+      billToType, institutionId, studentId, applicationId, clientName, clientEmail, clientPhone, clientAddress, accountId, clientTaxRef } = req.body;
 
     if (billToType !== undefined) {
       if (!["institution", "student", "manual"].includes(billToType)) {
@@ -734,6 +736,8 @@ export function registerAccountingRoutes(app: Express) {
     if (terms !== undefined) safeUpdates.terms = terms;
     if (regionCode !== undefined) safeUpdates.regionCode = regionCode;
     if (status !== undefined) safeUpdates.status = status;
+    if (accountId !== undefined) safeUpdates.accountId = accountId || null;
+    if (clientTaxRef !== undefined) safeUpdates.clientTaxRef = clientTaxRef || null;
 
     if (lineItems && Array.isArray(lineItems)) {
       const subtotal = lineItems.reduce((sum: number, item: { quantity?: string | number; unitPrice?: string | number }) => {

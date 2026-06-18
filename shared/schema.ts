@@ -5580,6 +5580,7 @@ export const accInvoices = pgTable("acc_invoices", {
   notes: text("notes"),
   terms: text("terms"),
   regionCode: varchar("region_code", { length: 5 }).default("AU"),
+  clientTaxRef: text("client_tax_ref"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

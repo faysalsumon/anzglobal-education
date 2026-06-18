@@ -58,6 +58,7 @@ import {
   X,
   Info,
   ExternalLink,
+  Briefcase,
 } from "lucide-react";
 import {
   BarChart,
@@ -574,6 +575,102 @@ function EntitySearchCombobox({ type, onSelect, selected, onClear }: {
   );
 }
 
+function AccountSearchCombobox({ onSelect, selected, onClear }: {
+  onSelect: (account: any) => void;
+  selected: any;
+  onClear: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const { data: results = [] } = useQuery<any[]>({
+    queryKey: [`/api/admin/accounts?search=${encodeURIComponent(query)}&active=true`],
+    enabled: isOpen || query.length > 0,
+  });
+
+  if (selected) {
+    return (
+      <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/30">
+        <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{selected.legalEntityName || selected.name}</p>
+          <p className="text-xs text-muted-foreground truncate">{selected.accountsEmail || selected.email || selected.country || ""}</p>
+        </div>
+        <Button type="button" variant="ghost" size="icon" onClick={onClear} data-testid="button-clear-account">
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <div className="relative">
+        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search accounts..."
+          value={query}
+          onChange={e => { setQuery(e.target.value); setIsOpen(true); }}
+          onFocus={() => setIsOpen(true)}
+          className="pl-8"
+          data-testid="input-search-account"
+        />
+      </div>
+      {isOpen && results.length > 0 && (
+        <div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto border rounded-md bg-popover shadow-md">
+          {results.map((item: any) => (
+            <button
+              type="button"
+              key={item.id}
+              className="w-full text-left px-3 py-2 text-sm hover-elevate cursor-pointer flex items-center gap-2"
+              onClick={() => { onSelect(item); setIsOpen(false); setQuery(""); }}
+              data-testid={`option-account-${item.id}`}
+            >
+              <Briefcase className="h-3 w-3 text-muted-foreground shrink-0" />
+              <div className="min-w-0">
+                <p className="font-medium truncate">{item.legalEntityName || item.name}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {[item.accountType, item.country].filter(Boolean).join(" · ")}
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+      {isOpen && query && results.length === 0 && (
+        <div className="absolute z-50 mt-1 w-full border rounded-md bg-popover shadow-md p-3 text-sm text-muted-foreground">
+          No accounts found
+        </div>
+      )}
+    </div>
+  );
+}
+
+function buildAccountAddress(account: any): string {
+  if (account.billingSameAsLocation !== false) {
+    return [account.address, account.city, account.state, account.country].filter(Boolean).join(", ");
+  }
+  return [account.billingAddress, account.billingCity, account.billingState, account.billingCountry].filter(Boolean).join(", ");
+}
+
+function buildAccountTaxRef(account: any): string {
+  if (account.abn) return `ABN: ${account.abn}`;
+  if (account.acn) return `ACN: ${account.acn}`;
+  if (account.taxId) return `Tax ID: ${account.taxId}`;
+  return "";
+}
+
 const STUDENT_FEE_TYPES = [
   { label: "Visa Application Fee", description: "Visa Application Fee" },
   { label: "Service Fee", description: "Education Consulting Service Fee" },
@@ -586,10 +683,12 @@ function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
   const [billToType, setBillToType] = useState<"institution" | "student" | "manual">("manual");
   const [selectedInstitution, setSelectedInstitution] = useState<any>(null);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [selectedAccount, setSelectedAccount] = useState<any>(null);
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [clientAddress, setClientAddress] = useState("");
+  const [clientTaxRef, setClientTaxRef] = useState("");
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
   const [dueDate, setDueDate] = useState("");
   const [currency, setCurrency] = useState("AUD");
@@ -617,6 +716,15 @@ function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
     setClientAddress(stud.address || "");
   };
 
+  const handleSelectAccount = (account: any) => {
+    setSelectedAccount(account);
+    setClientName(account.legalEntityName || account.name || "");
+    setClientEmail(account.accountsEmail || account.email || "");
+    setClientPhone(account.phone || "");
+    setClientAddress(buildAccountAddress(account));
+    setClientTaxRef(buildAccountTaxRef(account));
+  };
+
   const handleClearEntity = () => {
     setSelectedInstitution(null);
     setSelectedStudent(null);
@@ -624,11 +732,23 @@ function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
     setClientEmail("");
     setClientPhone("");
     setClientAddress("");
+    setClientTaxRef("");
+  };
+
+  const handleClearAccount = () => {
+    setSelectedAccount(null);
+    setClientName("");
+    setClientEmail("");
+    setClientPhone("");
+    setClientAddress("");
+    setClientTaxRef("");
   };
 
   const handleBillToTypeChange = (type: "institution" | "student" | "manual") => {
     setBillToType(type);
     handleClearEntity();
+    setSelectedAccount(null);
+    setClientTaxRef("");
   };
 
   const addItem = () => setItems([...items, { description: "", quantity: "1", unitPrice: "" }]);
@@ -661,6 +781,7 @@ function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
       clientEmail,
       clientPhone,
       clientAddress,
+      clientTaxRef: clientTaxRef || null,
       issueDate,
       dueDate,
       currency,
@@ -673,6 +794,9 @@ function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
     }
     if (billToType === "student" && selectedStudent) {
       payload.studentId = selectedStudent.id;
+    }
+    if (selectedAccount) {
+      payload.accountId = selectedAccount.id;
     }
     onSubmit(payload);
   };
@@ -767,6 +891,17 @@ function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
             </div>
           )}
 
+          {billToType === "manual" && (
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">Link to Account (optional)</Label>
+              <AccountSearchCombobox
+                selected={selectedAccount}
+                onSelect={handleSelectAccount}
+                onClear={handleClearAccount}
+              />
+            </div>
+          )}
+
           {(billToType === "manual" || selectedInstitution || selectedStudent) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -810,6 +945,17 @@ function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
                   data-testid="input-client-address"
                 />
               </div>
+              {billToType === "manual" && (
+                <div className="md:col-span-2">
+                  <Label>Tax Reference (ABN / ACN / Tax ID)</Label>
+                  <Input
+                    value={clientTaxRef}
+                    onChange={e => setClientTaxRef(e.target.value)}
+                    placeholder="e.g. ABN: 12 345 678 901"
+                    data-testid="input-client-tax-ref"
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -899,10 +1045,24 @@ function EditInvoiceDialog({ open, onClose, onSubmit, isPending, invoice }: any)
   const [billToType, setBillToType] = useState<"institution" | "student" | "manual">(invoice.billToType || "manual");
   const [selectedInstitution, setSelectedInstitution] = useState<any>(invoice.institution || null);
   const [selectedStudent, setSelectedStudent] = useState<any>(invoice.student || null);
+  const [selectedAccount, setSelectedAccount] = useState<any>(invoice.account || null);
+
+  const { data: fetchedAccount } = useQuery<any>({
+    queryKey: [`/api/admin/accounts/${invoice.accountId}`],
+    enabled: !!invoice.accountId && !invoice.account,
+  });
+
+  useEffect(() => {
+    if (fetchedAccount && !selectedAccount) {
+      setSelectedAccount(fetchedAccount);
+    }
+  }, [fetchedAccount]);
+
   const [clientName, setClientName] = useState(invoice.clientName || "");
   const [clientEmail, setClientEmail] = useState(invoice.clientEmail || "");
   const [clientPhone, setClientPhone] = useState(invoice.customer?.phone || "");
   const [clientAddress, setClientAddress] = useState(invoice.customer?.address || "");
+  const [clientTaxRef, setClientTaxRef] = useState(invoice.clientTaxRef || "");
   const [issueDate, setIssueDate] = useState(invoice.issueDate || "");
   const [dueDate, setDueDate] = useState(invoice.dueDate || "");
   const [currency, setCurrency] = useState(invoice.currency || "AUD");
@@ -931,6 +1091,15 @@ function EditInvoiceDialog({ open, onClose, onSubmit, isPending, invoice }: any)
     setClientAddress(stud.address || "");
   };
 
+  const handleSelectAccount = (account: any) => {
+    setSelectedAccount(account);
+    setClientName(account.legalEntityName || account.name || "");
+    setClientEmail(account.accountsEmail || account.email || "");
+    setClientPhone(account.phone || "");
+    setClientAddress(buildAccountAddress(account));
+    setClientTaxRef(buildAccountTaxRef(account));
+  };
+
   const handleClearEntity = () => {
     setSelectedInstitution(null);
     setSelectedStudent(null);
@@ -938,11 +1107,23 @@ function EditInvoiceDialog({ open, onClose, onSubmit, isPending, invoice }: any)
     setClientEmail("");
     setClientPhone("");
     setClientAddress("");
+    setClientTaxRef("");
+  };
+
+  const handleClearAccount = () => {
+    setSelectedAccount(null);
+    setClientName("");
+    setClientEmail("");
+    setClientPhone("");
+    setClientAddress("");
+    setClientTaxRef("");
   };
 
   const handleBillToTypeChange = (type: "institution" | "student" | "manual") => {
     setBillToType(type);
     handleClearEntity();
+    setSelectedAccount(null);
+    setClientTaxRef("");
   };
 
   const addItem = () => setItems([...items, { description: "", quantity: "1", unitPrice: "" }]);
@@ -975,6 +1156,7 @@ function EditInvoiceDialog({ open, onClose, onSubmit, isPending, invoice }: any)
       clientEmail,
       clientPhone,
       clientAddress,
+      clientTaxRef: clientTaxRef || null,
       issueDate,
       dueDate,
       currency,
@@ -987,6 +1169,9 @@ function EditInvoiceDialog({ open, onClose, onSubmit, isPending, invoice }: any)
     }
     if (billToType === "student" && selectedStudent) {
       payload.studentId = selectedStudent.id;
+    }
+    if (selectedAccount) {
+      payload.accountId = selectedAccount.id;
     }
     onSubmit(payload);
   };
@@ -1049,6 +1234,17 @@ function EditInvoiceDialog({ open, onClose, onSubmit, isPending, invoice }: any)
             </div>
           )}
 
+          {billToType === "manual" && (
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">Link to Account (optional)</Label>
+              <AccountSearchCombobox
+                selected={selectedAccount}
+                onSelect={handleSelectAccount}
+                onClear={handleClearAccount}
+              />
+            </div>
+          )}
+
           {(billToType === "manual" || selectedInstitution || selectedStudent) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -1067,6 +1263,17 @@ function EditInvoiceDialog({ open, onClose, onSubmit, isPending, invoice }: any)
                 <Label>Address</Label>
                 <Input value={clientAddress} onChange={e => setClientAddress(e.target.value)} readOnly={billToType !== "manual"} className={billToType !== "manual" ? "bg-muted/30" : ""} data-testid="input-edit-client-address" />
               </div>
+              {billToType === "manual" && (
+                <div className="md:col-span-2">
+                  <Label>Tax Reference (ABN / ACN / Tax ID)</Label>
+                  <Input
+                    value={clientTaxRef}
+                    onChange={e => setClientTaxRef(e.target.value)}
+                    placeholder="e.g. ABN: 12 345 678 901"
+                    data-testid="input-edit-client-tax-ref"
+                  />
+                </div>
+              )}
             </div>
           )}
 

@@ -61,7 +61,9 @@ export function registerAccountsRoutes(app: Express) {
           or(
             ilike(accounts.name, `%${search}%`),
             ilike(accounts.email, `%${search}%`),
-            ilike(accounts.country, `%${search}%`)
+            ilike(accounts.country, `%${search}%`),
+            ilike(accounts.legalEntityName, `%${search}%`),
+            ilike(accounts.accountsEmail, `%${search}%`)
           )
         );
       }
