@@ -251,7 +251,7 @@ function VisibilityPicker({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 px-2 gap-1 text-xs text-muted-foreground"
+            className="px-2 gap-1 text-xs text-muted-foreground"
             data-testid="button-visibility-picker"
           >
             <Icon className="h-3.5 w-3.5" />
@@ -288,7 +288,7 @@ function VisibilityPicker({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-7 px-2 gap-1 text-xs text-muted-foreground"
+              className="px-2 gap-1 text-xs text-muted-foreground"
               data-testid="button-select-people"
             >
               {visibleTo.length > 0 ? `${visibleTo.length} selected` : "Select people"}
@@ -567,7 +567,6 @@ function NoteComposer({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
             title="Attach file (image or PDF)"
@@ -596,7 +595,7 @@ function NoteComposer({
               onClick={onCancel}
               data-testid="button-cancel-note"
             >
-              <X className="h-4 w-4 mr-1" />
+              <X className="h-4 w-4" />
               Cancel
             </Button>
           )}
@@ -611,7 +610,7 @@ function NoteComposer({
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>
-                <Send className="h-4 w-4 mr-1" />
+                <Send className="h-4 w-4" />
                 Save
               </>
             )}
