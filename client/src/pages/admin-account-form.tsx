@@ -1972,6 +1972,17 @@ export default function AdminAccountForm() {
               <CardContent className="pt-5 pb-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Company Information</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Legal Entity Name — first field, full width */}
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Legal Entity Name</Label>
+                    <Input
+                      value={formData.legalEntityName || ""}
+                      onChange={e => setFormData({ ...formData, legalEntityName: e.target.value || null })}
+                      placeholder="Registered legal name of the company"
+                      data-testid="input-account-legal-entity-name"
+                    />
+                  </div>
+
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label>Contacts</Label>
                     {isNew ? (
@@ -2038,17 +2049,6 @@ export default function AdminAccountForm() {
                       onChange={e => setFormData({ ...formData, website: e.target.value || null })}
                       placeholder="https://example.com"
                       data-testid="input-account-website"
-                    />
-                  </div>
-
-                  {/* Legal Entity Name — full width, above tax fields */}
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label>Legal Entity Name</Label>
-                    <Input
-                      value={formData.legalEntityName || ""}
-                      onChange={e => setFormData({ ...formData, legalEntityName: e.target.value || null })}
-                      placeholder="Registered legal name of the company"
-                      data-testid="input-account-legal-entity-name"
                     />
                   </div>
 
