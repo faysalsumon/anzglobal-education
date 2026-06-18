@@ -279,9 +279,12 @@ const CSP_DIRECTIVES = [
   "img-src 'self' data: blob: https:",
   // wss: for Supabase Realtime; ws://localhost for dev HMR
   // clarity.ms for Microsoft Clarity telemetry
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://maps.googleapis.com https://api.openai.com https://*.clarity.ms ws://localhost:* wss://localhost:*",
+  // https://www.facebook.com: Meta Pixel fires conversion events to /tr on this origin
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://maps.googleapis.com https://api.openai.com https://*.clarity.ms https://www.facebook.com ws://localhost:* wss://localhost:*",
   // GTM noscript iframe
   "frame-src 'self' https://www.googletagmanager.com",
+  // Belt-and-suspenders alongside X-Frame-Options: SAMEORIGIN
+  "frame-ancestors 'self'",
   // Blocks Flash, Silverlight, and other plugins
   "object-src 'none'",
   // Prevents base-tag hijacking

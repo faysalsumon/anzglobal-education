@@ -1639,7 +1639,7 @@ export default function AdminAccountForm() {
 
       {/* ── Sticky header ─────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
+        <div className="max-w-[1380px] mx-auto px-4 sm:px-6 h-16 flex items-center gap-4">
           <Button
             variant="ghost"
             size="sm"
@@ -1724,7 +1724,9 @@ export default function AdminAccountForm() {
       />
 
       {/* ── Page body ─────────────────────────────────────────────────────── */}
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6">
+      <main className="flex-1 max-w-[1380px] mx-auto w-full px-4 sm:px-6 py-6">
+        <div className="xl:grid xl:grid-cols-[1fr_360px] xl:gap-6 xl:items-start">
+          <div className="min-w-0">
 
         {/* ── Hero card ─────────────────────────────────────────────────── */}
         <Card className="mb-6">
@@ -2056,15 +2058,6 @@ export default function AdminAccountForm() {
               </CardContent>
             </Card>
 
-            {/* Notes */}
-            {!isNew && id && (
-              <Card data-section="notes">
-                <CardContent className="pt-5 pb-5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Notes</p>
-                  <AccountNotes accountId={id} />
-                </CardContent>
-              </Card>
-            )}
           </TabsContent>
 
           {/* ── Products tab ─────────────────────────────────────────────── */}
@@ -2454,6 +2447,20 @@ export default function AdminAccountForm() {
             </TabsContent>
           )}
         </Tabs>
+          </div>{/* end left column */}
+
+          {/* ── Right column: sticky notes panel ────────────────────────── */}
+          {!isNew && id && (
+            <div className="mt-6 xl:mt-0">
+              <Card className="sticky top-16 max-h-[calc(100vh-4.5rem)] overflow-y-auto" data-section="notes">
+                <CardContent className="pt-5 pb-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Notes &amp; Activity</p>
+                  <AccountNotes accountId={id} />
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>{/* end grid */}
       </main>
     </div>
   );
