@@ -10,3 +10,4 @@
 - [Accounts UUID/FK pattern](accounts-uuid-fk-pattern.md) — accounts.id + all account FKs are uuid in DB AND schema (aligned); new FKs to accounts.id must be uuid; migrations tracked in drizzle.__drizzle_migrations schema
 - [Migration journal monotonicity](drizzle-migration-journal-monotonicity.md) — migrator silently skips journal entries whose `when` ≤ max-applied; keep timestamps strictly increasing; enum/DB drift needs a hand-written forward migration
 - [Drizzle DO block migration crash](drizzle-do-block-crash.md) — PL/pgSQL DO $$ blocks in migration files crash the server at startup; never use them in migration SQL files
+- [Production startup order](production-startup-order.md) — server.listen() must be called before runMigrations(); Neon wakeup can exceed Replit's ~60s health-check window if listen() is last

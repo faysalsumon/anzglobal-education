@@ -174,25 +174,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  await runMigrations();
-
-  // Seed default roles (idempotent — skips existing rows)
-  await seedDefaultRoles();
-
-  // Seed default profiles (idempotent — skips existing rows)
-  await seedDefaultProfiles();
-
-  // Seed default AI job settings after migrations
-  const { seedAiJobDefaults } = await import("./ai");
-  await seedAiJobDefaults();
-
   const server = await registerRoutes(app);
-
-  // Initialize Pinecone index in background (non-blocking)
-  initializePineconeIndex().catch((error) => {
-    console.error('[Pinecone] Failed to initialize index:', error);
-    console.error('[Pinecone] Chat agent will not function until index is ready');
-  });
 
   app.use(csrfErrorHandler);
 
@@ -258,10 +240,10 @@ app.use((req, res, next) => {
     });
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
+  // Bind the port before running migrations so that Replit's production
+  // health-check window is satisfied immediately. Migrations, seeding, and
+  // Pinecone init all run in the background after the server is listening.
+  // Any failure is logged but does NOT crash the already-running server.
   const port = parseInt(process.env.PORT || '5000', 10);
   server.listen({
     port,
@@ -270,4 +252,26 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
   });
+
+  // Run DB migrations and seed data after the port is open.
+  // In production the Neon database may need several seconds to wake from
+  // idle — running these async ensures the health-check is never blocked.
+  (async () => {
+    try {
+      await runMigrations();
+      await seedDefaultRoles();
+      await seedDefaultProfiles();
+      const { seedAiJobDefaults } = await import("./ai");
+      await seedAiJobDefaults();
+      log('Startup tasks complete (migrations + seeds)');
+    } catch (err) {
+      console.error('[Server] Startup task failed (migrations/seeds):', err);
+    }
+
+    // Initialize Pinecone index in background (non-blocking)
+    initializePineconeIndex().catch((error) => {
+      console.error('[Pinecone] Failed to initialize index:', error);
+      console.error('[Pinecone] Chat agent will not function until index is ready');
+    });
+  })();
 })();
