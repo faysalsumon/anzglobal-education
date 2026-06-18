@@ -1817,6 +1817,38 @@ export default function AdminAccountForm() {
                     <p className="text-xs text-muted-foreground">ID: {id}</p>
                   )}
                 </div>
+
+                {/* Legal entity / tax ID quick-read strip */}
+                {!isNew && (formData.legalEntityName || formData.abn || formData.acn || formData.taxId) && (
+                  <div className="flex items-center gap-3 flex-wrap pt-0.5" data-testid="text-account-legal-summary">
+                    {formData.legalEntityName && (
+                      <span className="text-sm text-muted-foreground" data-testid="text-account-legal-entity-name">
+                        {formData.legalEntityName}
+                      </span>
+                    )}
+                    {(formData.legalEntityName && (formData.abn || formData.acn || formData.taxId)) && (
+                      <span className="text-muted-foreground/40 select-none">·</span>
+                    )}
+                    {formData.abn && (
+                      <span className="text-sm text-muted-foreground" data-testid="text-account-abn">
+                        ABN: {formData.abn}
+                      </span>
+                    )}
+                    {formData.abn && formData.acn && (
+                      <span className="text-muted-foreground/40 select-none">/</span>
+                    )}
+                    {formData.acn && (
+                      <span className="text-sm text-muted-foreground" data-testid="text-account-acn">
+                        ACN: {formData.acn}
+                      </span>
+                    )}
+                    {!formData.abn && !formData.acn && formData.taxId && (
+                      <span className="text-sm text-muted-foreground" data-testid="text-account-tax-id">
+                        Tax ID: {formData.taxId}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

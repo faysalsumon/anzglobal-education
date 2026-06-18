@@ -86,8 +86,35 @@ export default function PrintInvoice() {
         <div className="grid grid-cols-2 gap-8 mb-8">
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Bill To</p>
-            <p className="font-semibold text-gray-900" data-testid="text-print-client">{invoice.clientName}</p>
+            {invoice.crmAccount?.legalEntityName ? (
+              <>
+                <p className="font-semibold text-gray-900" data-testid="text-print-client">{invoice.crmAccount.legalEntityName}</p>
+                <p className="text-sm text-gray-500">{invoice.clientName}</p>
+              </>
+            ) : (
+              <p className="font-semibold text-gray-900" data-testid="text-print-client">{invoice.clientName}</p>
+            )}
             {invoice.clientEmail && <p className="text-sm text-gray-600">{invoice.clientEmail}</p>}
+            {invoice.crmAccount && (
+              <div className="mt-1 text-sm text-gray-600" data-testid="text-print-billing-address">
+                {invoice.crmAccount.effectiveBillingAddress && (
+                  <p>{invoice.crmAccount.effectiveBillingAddress}</p>
+                )}
+                {(invoice.crmAccount.effectiveBillingCity || invoice.crmAccount.effectiveBillingState || invoice.crmAccount.effectiveBillingCountry) && (
+                  <p>
+                    {[
+                      invoice.crmAccount.effectiveBillingCity,
+                      invoice.crmAccount.effectiveBillingState,
+                      invoice.crmAccount.effectiveBillingCountry,
+                    ].filter(Boolean).join(", ")}
+                  </p>
+                )}
+                {invoice.crmAccount.abn && <p className="text-gray-500">ABN: {invoice.crmAccount.abn}</p>}
+                {!invoice.crmAccount.abn && invoice.crmAccount.taxId && (
+                  <p className="text-gray-500">Tax ID: {invoice.crmAccount.taxId}</p>
+                )}
+              </div>
+            )}
           </div>
           <div className="text-right">
             <div className="space-y-1">

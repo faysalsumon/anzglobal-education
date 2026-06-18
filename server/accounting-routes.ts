@@ -23,6 +23,7 @@ import {
   users,
   applications,
   courses,
+  accounts,
   insertAccChartOfAccountsSchema,
   insertAccCustomerSchema,
   insertAccItemSchema,
@@ -551,6 +552,37 @@ export function registerAccountingRoutes(app: Express) {
       : invoice.billToType === "student" ? (student?.fullName || customer?.name || "Unknown")
       : (customer?.name || "Unknown");
 
+    let crmAccount = null;
+    if (invoice.accountId) {
+      const [acc] = await db.select({
+        id: accounts.id,
+        name: accounts.name,
+        legalEntityName: accounts.legalEntityName,
+        abn: accounts.abn,
+        acn: accounts.acn,
+        taxId: accounts.taxId,
+        address: accounts.address,
+        city: accounts.city,
+        state: accounts.state,
+        country: accounts.country,
+        billingAddress: accounts.billingAddress,
+        billingCity: accounts.billingCity,
+        billingState: accounts.billingState,
+        billingCountry: accounts.billingCountry,
+        billingSameAsLocation: accounts.billingSameAsLocation,
+      }).from(accounts).where(eq(accounts.id, invoice.accountId));
+      if (acc) {
+        const sameAsLocation = acc.billingSameAsLocation ?? true;
+        crmAccount = {
+          ...acc,
+          effectiveBillingAddress: sameAsLocation ? acc.address : acc.billingAddress,
+          effectiveBillingCity: sameAsLocation ? acc.city : acc.billingCity,
+          effectiveBillingState: sameAsLocation ? acc.state : acc.billingState,
+          effectiveBillingCountry: sameAsLocation ? acc.country : acc.billingCountry,
+        };
+      }
+    }
+
     res.json({
       ...invoice,
       customer: customer || null,
@@ -558,6 +590,7 @@ export function registerAccountingRoutes(app: Express) {
       student,
       clientName,
       clientEmail: customer?.email || null,
+      crmAccount,
       lineItems,
       payments,
       creditNotes: creditNotes.map(cn => ({
