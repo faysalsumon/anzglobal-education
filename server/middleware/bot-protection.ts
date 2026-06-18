@@ -284,10 +284,29 @@ export function nonceMiddleware(_req: Request, res: Response, next: NextFunction
 const CSP_REPORT_URI = '/api/csp-report';
 const CSP_REPORT_GROUP = 'csp-violations';
 
+/**
+ * Inline event handler audit — last verified: 2026-06-18
+ *
+ * We explicitly do NOT include 'unsafe-hashes' or sha256 hashes for inline
+ * event handlers (onclick="…", onload="…", etc.) because a full codebase
+ * audit confirmed zero such attributes exist in:
+ *   - client/index.html (the SPA entry point)
+ *   - Every server-rendered HTML page (403 / 429 error pages, email templates)
+ *   - All server route files that call res.send() with an HTML body
+ *
+ * The nonce-based allowlist covers legitimate inline <script> blocks (GTM,
+ * GA4, gtag bootstrap). All other script execution must come from allowed
+ * origins listed below.
+ *
+ * If a future change requires an inline event handler that genuinely cannot
+ * be avoided, compute its sha256 hash, add 'unsafe-hashes' to script-src,
+ * and append the hash here rather than widening to 'unsafe-inline'.
+ */
 function buildCspDirectives(nonce: string): string {
   return [
     "default-src 'self'",
     // Nonce allows our known inline GTM / GA4 / gtag blocks; no 'unsafe-inline'.
+    // 'unsafe-hashes' is intentionally absent — see audit comment above.
     // clarity.ms: GTM loads the main tag from www.clarity.ms; actual bundle from scripts.clarity.ms
     `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com https://maps.googleapis.com https://maps.gstatic.com https://connect.facebook.net https://www.clarity.ms https://scripts.clarity.ms`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
