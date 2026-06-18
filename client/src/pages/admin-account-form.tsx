@@ -520,36 +520,13 @@ function PortalFormsList({ accountId }: { accountId: string }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
-  const getAuthHeaders = async (): Promise<Record<string, string>> => {
-    if (!supabase) return {};
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return {};
-    return { Authorization: `Bearer ${session.access_token}` };
-  };
-
   const { data: forms = [], isLoading } = useQuery<PortalForm[]>({
     queryKey: ["/api/admin/accounts", accountId, "portal-forms"],
-    queryFn: async () => {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`/api/admin/accounts/${accountId}/portal-forms`, {
-        credentials: "include",
-        headers,
-      });
-      if (!res.ok) throw new Error("Failed to fetch forms");
-      return res.json();
-    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (formId: string) => {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`/api/admin/accounts/${accountId}/portal-forms/${formId}`, {
-        method: "DELETE",
-        credentials: "include",
-        headers,
-      });
-      if (!res.ok) throw new Error("Failed to delete");
-    },
+    mutationFn: (formId: string) =>
+      apiRequest("DELETE", `/api/admin/accounts/${accountId}/portal-forms/${formId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/accounts", accountId, "portal-forms"] });
       toast({ description: "Form deleted" });
@@ -560,19 +537,9 @@ function PortalFormsList({ accountId }: { accountId: string }) {
   const handleUpload = async (file: File) => {
     setUploading(true);
     try {
-      const headers = await getAuthHeaders();
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch(`/api/admin/accounts/${accountId}/portal-forms`, {
-        method: "POST",
-        credentials: "include",
-        headers,
-        body: fd,
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error((err as any).message || "Upload failed");
-      }
+      await apiRequest("POST", `/api/admin/accounts/${accountId}/portal-forms`, fd);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/accounts", accountId, "portal-forms"] });
       toast({ description: "Form uploaded successfully" });
     } catch (err: any) {
@@ -585,12 +552,7 @@ function PortalFormsList({ accountId }: { accountId: string }) {
 
   const handleDownload = async (formId: string, fileName: string) => {
     try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`/api/admin/accounts/${accountId}/portal-forms/${formId}/download`, {
-        credentials: "include",
-        headers,
-      });
-      if (!res.ok) throw new Error("Download failed");
+      const res = await apiRequest("GET", `/api/admin/accounts/${accountId}/portal-forms/${formId}/download`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
