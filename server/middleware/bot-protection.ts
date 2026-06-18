@@ -281,6 +281,9 @@ export function nonceMiddleware(_req: Request, res: Response, next: NextFunction
   next();
 }
 
+const CSP_REPORT_URI = '/api/csp-report';
+const CSP_REPORT_GROUP = 'csp-violations';
+
 function buildCspDirectives(nonce: string): string {
   return [
     "default-src 'self'",
@@ -305,15 +308,38 @@ function buildCspDirectives(nonce: string): string {
     "base-uri 'self'",
     // Restricts form submissions to same origin
     "form-action 'self'",
+    // Violation reporting — newer Reporting API (Chrome 70+)
+    `report-to ${CSP_REPORT_GROUP}`,
+    // Violation reporting — legacy fallback for Safari and Firefox
+    `report-uri ${CSP_REPORT_URI}`,
   ].join('; ');
 }
 
-export function securityHeadersMiddleware(_req: Request, res: Response, next: NextFunction) {
+export function securityHeadersMiddleware(req: Request, res: Response, next: NextFunction) {
   res.setHeader('X-Robots-Tag', 'noai, noimageai');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(self)');
+
+  // Reporting API requires an absolute URL — derive it from the trusted base URL
+  // env var when available (production), or fall back to the request origin so
+  // it also works correctly in the local dev environment.
+  const baseUrl =
+    process.env.PUBLIC_BASE_URL ||
+    `${req.protocol}://${req.get('host')}`;
+  const reportEndpointUrl = `${baseUrl}${CSP_REPORT_URI}`;
+
+  // Reporting API group definition consumed by the `report-to` CSP directive.
+  // The spec requires endpoints[].url to be an absolute URL.
+  res.setHeader(
+    'Report-To',
+    JSON.stringify({
+      group: CSP_REPORT_GROUP,
+      max_age: 86400,
+      endpoints: [{ url: reportEndpointUrl }],
+    })
+  );
 
   const nonce = (res.locals.nonce as string | undefined) ?? randomBytes(16).toString('base64');
   res.setHeader('Content-Security-Policy', buildCspDirectives(nonce));

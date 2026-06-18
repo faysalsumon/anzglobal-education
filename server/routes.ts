@@ -588,6 +588,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // CSP violation reporting endpoint
+  // Browsers POST here automatically when a Content-Security-Policy violation occurs.
+  // Supports both the legacy `report-uri` format (application/csp-report) and the
+  // newer Reporting API format (application/reports+json).
+  // No authentication required — browsers send these anonymously.
+  app.post(
+    "/api/csp-report",
+    // Express's default json() parser only handles application/json, so we
+    // register a text parser here that accepts the two CSP-specific MIME types
+    // and then parse them manually.
+    express.text({ type: ['application/csp-report', 'application/reports+json'], limit: '50kb' }),
+    (req, res) => {
+      try {
+        let parsed: unknown = null;
+        const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+        try {
+          parsed = JSON.parse(rawBody);
+        } catch {
+          // Unparseable body — log and move on
+          console.warn('[CSP] Received unparseable violation report body');
+          res.status(204).end();
+          return;
+        }
+
+        if (parsed && typeof parsed === 'object') {
+          // Legacy report-uri format: { "csp-report": { ... } }
+          const legacyReport = (parsed as Record<string, unknown>)['csp-report'];
+          if (legacyReport && typeof legacyReport === 'object') {
+            const r = legacyReport as Record<string, unknown>;
+            const blockedUri = r['blocked-uri'] ?? 'unknown';
+            const violatedDirective = r['violated-directive'] ?? 'unknown';
+            const documentUri = r['document-uri'] ?? 'unknown';
+            const sourceFile = r['source-file'] ?? '';
+            const lineNumber = r['line-number'] ?? '';
+            console.warn(
+              `[CSP] Violation blocked-uri=${blockedUri} directive=${violatedDirective}` +
+              ` document=${documentUri}` +
+              (sourceFile ? ` source=${sourceFile}:${lineNumber}` : '')
+            );
+          }
+          // Newer Reporting API format: array of { type, body: { ... } }
+          else if (Array.isArray(parsed)) {
+            for (const entry of parsed) {
+              if (entry && entry.type === 'csp-violation' && entry.body) {
+                const b = entry.body as Record<string, unknown>;
+                const blockedUri = b.blockedURL ?? b['blocked-uri'] ?? 'unknown';
+                const violatedDirective = b.effectiveDirective ?? b['violated-directive'] ?? 'unknown';
+                const documentUri = b.documentURL ?? b['document-uri'] ?? 'unknown';
+                const sourceFile = b.sourceFile ?? '';
+                const lineNumber = b.lineNumber ?? '';
+                console.warn(
+                  `[CSP] Violation blocked-uri=${blockedUri} directive=${violatedDirective}` +
+                  ` document=${documentUri}` +
+                  (sourceFile ? ` source=${sourceFile}:${lineNumber}` : '')
+                );
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[CSP] Failed to process violation report:', err);
+      }
+      res.status(204).end();
+    }
+  );
+
   // CSRF token endpoint
   app.get("/api/csrf-token", csrfTokenEndpoint);
 
