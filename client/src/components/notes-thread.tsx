@@ -656,12 +656,16 @@ const DOMPURIFY_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
 
 // Enforce safe link behaviour: every <a> gets target="_blank" rel="noopener noreferrer"
 // so user-supplied href values can never navigate the parent frame or leak the referrer.
-DOMPurify.addHook("afterSanitizeAttributes", (node) => {
-  if (node.tagName === "A") {
-    node.setAttribute("target", "_blank");
-    node.setAttribute("rel", "noopener noreferrer");
-  }
-});
+// Guard prevents duplicate hook registration under HMR hot-reloads.
+if (!(DOMPurify as any)._anzLinkHookRegistered) {
+  (DOMPurify as any)._anzLinkHookRegistered = true;
+  DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+    if (node.tagName === "A") {
+      node.setAttribute("target", "_blank");
+      node.setAttribute("rel", "noopener noreferrer");
+    }
+  });
+}
 
 function VisibilityBadge({ visibility, visibleTo }: { visibility?: NoteVisibility; visibleTo?: string[] }) {
   if (!visibility || visibility === "public") return null;
