@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { randomBytes } from "crypto";
 
 const AI_BOT_USER_AGENTS = [
   'GPTBot',
@@ -268,30 +269,44 @@ export function logSecurityEvent(
   );
 }
 
-const CSP_DIRECTIVES = [
-  "default-src 'self'",
-  // 'unsafe-inline' is required by GTM and GA4 inline scripts in index.html
-  // clarity.ms: GTM loads the main tag from www.clarity.ms; the actual script bundle is served from scripts.clarity.ms
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://maps.googleapis.com https://maps.gstatic.com https://connect.facebook.net https://www.clarity.ms https://scripts.clarity.ms",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' data: https://fonts.gstatic.com",
-  // blob: needed for PDF previews and canvas exports; https: allows institution/student image CDNs
-  "img-src 'self' data: blob: https:",
-  // wss: for Supabase Realtime; ws://localhost for dev HMR
-  // clarity.ms for Microsoft Clarity telemetry
-  // https://www.facebook.com: Meta Pixel fires conversion events to /tr on this origin
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://maps.googleapis.com https://api.openai.com https://*.clarity.ms https://www.facebook.com ws://localhost:* wss://localhost:*",
-  // GTM noscript iframe
-  "frame-src 'self' https://www.googletagmanager.com",
-  // Belt-and-suspenders alongside X-Frame-Options: SAMEORIGIN
-  "frame-ancestors 'self'",
-  // Blocks Flash, Silverlight, and other plugins
-  "object-src 'none'",
-  // Prevents base-tag hijacking
-  "base-uri 'self'",
-  // Restricts form submissions to same origin
-  "form-action 'self'",
-].join('; ');
+/**
+ * Generates a cryptographically random nonce for use in Content-Security-Policy
+ * headers and injects it into res.locals.nonce so downstream middleware and
+ * HTML transforms can stamp matching nonce="" attributes on inline scripts.
+ *
+ * Must be registered BEFORE securityHeadersMiddleware in the Express chain.
+ */
+export function nonceMiddleware(_req: Request, res: Response, next: NextFunction) {
+  res.locals.nonce = randomBytes(16).toString('base64');
+  next();
+}
+
+function buildCspDirectives(nonce: string): string {
+  return [
+    "default-src 'self'",
+    // Nonce allows our known inline GTM / GA4 / gtag blocks; no 'unsafe-inline'.
+    // clarity.ms: GTM loads the main tag from www.clarity.ms; actual bundle from scripts.clarity.ms
+    `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com https://maps.googleapis.com https://maps.gstatic.com https://connect.facebook.net https://www.clarity.ms https://scripts.clarity.ms`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    // blob: needed for PDF previews and canvas exports; https: allows institution/student image CDNs
+    "img-src 'self' data: blob: https:",
+    // wss: for Supabase Realtime; ws://localhost for dev HMR
+    // clarity.ms for Microsoft Clarity telemetry
+    // https://www.facebook.com: Meta Pixel fires conversion events to /tr on this origin
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://maps.googleapis.com https://api.openai.com https://*.clarity.ms https://www.facebook.com ws://localhost:* wss://localhost:*",
+    // GTM noscript iframe
+    "frame-src 'self' https://www.googletagmanager.com",
+    // Belt-and-suspenders alongside X-Frame-Options: SAMEORIGIN
+    "frame-ancestors 'self'",
+    // Blocks Flash, Silverlight, and other plugins
+    "object-src 'none'",
+    // Prevents base-tag hijacking
+    "base-uri 'self'",
+    // Restricts form submissions to same origin
+    "form-action 'self'",
+  ].join('; ');
+}
 
 export function securityHeadersMiddleware(_req: Request, res: Response, next: NextFunction) {
   res.setHeader('X-Robots-Tag', 'noai, noimageai');
@@ -300,7 +315,8 @@ export function securityHeadersMiddleware(_req: Request, res: Response, next: Ne
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(self)');
 
-  res.setHeader('Content-Security-Policy', CSP_DIRECTIVES);
+  const nonce = (res.locals.nonce as string | undefined) ?? randomBytes(16).toString('base64');
+  res.setHeader('Content-Security-Policy', buildCspDirectives(nonce));
 
   // HSTS: only meaningful over HTTPS — skip in local development
   if (process.env.NODE_ENV !== 'development') {

@@ -4,13 +4,13 @@ import cookieParser from "cookie-parser";
 import fs from "fs";
 import path from "path";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, serveStatic, log, injectNonce } from "./vite";
 import { injectPageMeta } from "./meta-injector";
 import { initializePineconeIndex } from "./knowledge-base";
 import { regionDetectionMiddleware, geoRedirectMiddleware } from "./middleware/region-detection";
 import { csrfErrorHandler } from "./middleware/csrf";
 import { supabaseAuthMiddleware } from "./supabase-middleware";
-import { botProtectionMiddleware, securityHeadersMiddleware, protectedPathsMiddleware } from "./middleware/bot-protection";
+import { botProtectionMiddleware, securityHeadersMiddleware, protectedPathsMiddleware, nonceMiddleware } from "./middleware/bot-protection";
 import { runMigrations } from "./migrate";
 import { seedDefaultRoles } from "./seed-roles";
 import { seedDefaultProfiles } from "./seed-profiles";
@@ -81,7 +81,10 @@ app.use((req, _res, next) => {
 // Gzip compression for all responses (reduces payload size significantly)
 app.use(compression());
 
-// Bot protection and security headers (must be early in middleware chain)
+// Bot protection and security headers (must be early in middleware chain).
+// nonceMiddleware must run first so res.locals.nonce is set before
+// securityHeadersMiddleware builds the CSP header that includes it.
+app.use(nonceMiddleware);
 app.use(securityHeadersMiddleware);
 app.use(protectedPathsMiddleware);
 app.use(botProtectionMiddleware);
@@ -210,7 +213,10 @@ app.use((req, res, next) => {
     // In production: serve static files first, then inject page-specific meta
     // into index.html before sending it to crawlers/browsers
     const distPath = path.resolve(import.meta.dirname, "public");
+    // index: false — prevents express.static from serving index.html directly,
+    // which would bypass the nonce injection in the catch-all below.
     app.use(express.static(distPath, {
+      index: false,
       setHeaders: (res, filePath) => {
         if (filePath.endsWith('.html')) {
           res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -226,10 +232,28 @@ app.use((req, res, next) => {
         const indexPath = path.resolve(distPath, "index.html");
         const html = await fs.promises.readFile(indexPath, "utf-8");
         const hostname = req.hostname || req.headers.host || "anzglobal.com.au";
-        const injected = await injectPageMeta(req.originalUrl, html, hostname);
+        let injected = await injectPageMeta(req.originalUrl, html, hostname);
+
+        // Inject the per-request nonce into every <script tag so the browser
+        // will execute them under the matching 'nonce-{value}' CSP directive.
+        const nonce = res.locals.nonce as string | undefined;
+        if (nonce) {
+          injected = injectNonce(injected, nonce);
+        }
+
         res.set("Content-Type", "text/html").send(injected);
       } catch {
-        res.sendFile(path.resolve(distPath, "index.html"));
+        // Fallback: still inject nonce even when meta-injection fails, so CSP
+        // nonce in the response header always matches the nonce in the HTML.
+        try {
+          const indexPath = path.resolve(distPath, "index.html");
+          const raw = await fs.promises.readFile(indexPath, "utf-8");
+          const nonce = res.locals.nonce as string | undefined;
+          const page = nonce ? injectNonce(raw, nonce) : raw;
+          res.set("Content-Type", "text/html").send(page);
+        } catch {
+          res.status(500).send("Internal Server Error");
+        }
       }
     });
   }

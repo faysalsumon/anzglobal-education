@@ -8,6 +8,18 @@ import { nanoid } from "nanoid";
 
 const viteLogger = createLogger();
 
+/**
+ * Stamps every <script tag in an HTML string with a nonce="…" attribute so
+ * the browser will execute them under the per-request CSP nonce.
+ * Works for both bare `<script>` and `<script …>` forms.
+ * Idempotent: skips tags that already carry a nonce attribute.
+ */
+export function injectNonce(html: string, nonce: string): string {
+  // Negative lookahead skips <script tags that already carry a nonce attribute
+  // so this function is safe to call more than once on the same HTML string.
+  return html.replace(/<script(?! [^>]*nonce=)(\s|>)/g, (_match, p1) => `<script nonce="${nonce}"${p1}`);
+}
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -58,7 +70,15 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
-      const page = await vite.transformIndexHtml(url, template);
+      let page = await vite.transformIndexHtml(url, template);
+
+      // Stamp every <script tag with the per-request nonce so the browser
+      // will execute them under the 'nonce-{value}' CSP directive.
+      const nonce = res.locals.nonce as string | undefined;
+      if (nonce) {
+        page = injectNonce(page, nonce);
+      }
+
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
