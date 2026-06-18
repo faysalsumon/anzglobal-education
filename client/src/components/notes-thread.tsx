@@ -553,8 +553,8 @@ function NoteComposer({
         </div>
       )}
 
-      <div className="flex items-center justify-between px-3 pb-2 pt-1 border-t gap-2">
-        <div className="flex items-center gap-1 flex-wrap">
+      <div className="flex items-center px-3 pb-2 pt-1 border-t gap-2">
+        <div className="flex items-center gap-1 flex-1 min-w-0">
           <input
             ref={fileInputRef}
             type="file"
