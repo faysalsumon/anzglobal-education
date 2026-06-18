@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "wouter";
 import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
@@ -15,20 +15,10 @@ const funnyMessages = [
   "This URL is as lost as a freshman on the first day of uni.",
 ];
 
-const studentEmojis = ["📚", "🎓", "✏️", "🎒", "💤", "☕", "🍕", "📖"];
-
 export default function NotFound() {
-  const [message] = useState(() => funnyMessages[Math.floor(Math.random() * funnyMessages.length)]);
-  const [emoji] = useState(() => studentEmojis[Math.floor(Math.random() * studentEmojis.length)]);
-  const [bounce, setBounce] = useState(false);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setBounce(true);
-      setTimeout(() => setBounce(false), 500);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  const [message] = useState(
+    () => funnyMessages[Math.floor(Math.random() * funnyMessages.length)]
+  );
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/10 p-4">
@@ -37,33 +27,27 @@ export default function NotFound() {
         <meta name="robots" content="noindex, follow" />
       </Helmet>
       <div className="text-center max-w-2xl mx-auto">
-        <div 
-          className={`text-[150px] md:text-[200px] leading-none font-bold select-none transition-transform duration-500 ${bounce ? 'scale-110' : 'scale-100'}`}
+        <div
+          className="flex items-center justify-center gap-2 leading-none font-bold select-none"
           data-testid="text-404-number"
         >
-          <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+          <span className="text-[150px] md:text-[200px] bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
             4
           </span>
-          <span 
-            className={`inline-block transition-transform duration-300 ${bounce ? 'rotate-12' : 'rotate-0'}`}
-            role="img" 
-            aria-label="emoji"
-          >
-            {emoji}
-          </span>
-          <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+          <GraduationCap className="w-24 h-24 md:w-36 md:h-36 text-accent shrink-0" />
+          <span className="text-[150px] md:text-[200px] bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
             4
           </span>
         </div>
 
-        <h1 
+        <h1
           className="text-2xl md:text-3xl font-bold text-foreground mt-4 mb-3"
           data-testid="text-404-title"
         >
           Page Not Found
         </h1>
 
-        <p 
+        <p
           className="text-lg md:text-xl text-muted-foreground mb-8 px-4"
           data-testid="text-404-message"
         >
@@ -118,7 +102,7 @@ export default function NotFound() {
         </div>
 
         <p className="text-xs text-muted-foreground mt-8 opacity-60">
-          Pro tip: Copy-pasting URLs is harder than it looks. We've all been there.
+          Pro tip: Copy-pasting URLs is harder than it looks. We have all been there.
         </p>
       </div>
     </div>
