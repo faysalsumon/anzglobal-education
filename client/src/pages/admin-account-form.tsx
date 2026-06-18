@@ -65,12 +65,19 @@ interface Account {
   admissionEmail: string | null;
   phone: string | null;
   website: string | null;
+  legalEntityName: string | null;
   abn: string | null;
   acn: string | null;
+  taxId: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
   country: string | null;
+  billingAddress: string | null;
+  billingCity: string | null;
+  billingState: string | null;
+  billingCountry: string | null;
+  billingSameAsLocation: boolean | null;
   logoUrl: string | null;
   isActive: boolean;
   notes: string | null;
@@ -201,12 +208,19 @@ function emptyForm(): Partial<Account> {
     admissionEmail: null,
     phone: null,
     website: null,
+    legalEntityName: null,
     abn: null,
     acn: null,
+    taxId: null,
     address: null,
     city: null,
     state: null,
     country: null,
+    billingAddress: null,
+    billingCity: null,
+    billingState: null,
+    billingCountry: null,
+    billingSameAsLocation: true,
     logoUrl: null,
     notes: null,
     isActive: true,
@@ -1535,7 +1549,7 @@ export default function AdminAccountForm() {
     }
   }
 
-  // ─── Address autocomplete handler ─────────────────────────────────────────
+  // ─── Address autocomplete handlers ────────────────────────────────────────
   function handleAddressSelect(components: AddressComponents) {
     setFormData(f => ({
       ...f,
@@ -1543,6 +1557,16 @@ export default function AdminAccountForm() {
       city: components.city || f.city,
       state: components.state || f.state,
       country: components.country || f.country,
+    }));
+  }
+
+  function handleBillingAddressSelect(components: AddressComponents) {
+    setFormData(f => ({
+      ...f,
+      billingAddress: components.address || f.billingAddress,
+      billingCity: components.city || f.billingCity,
+      billingState: components.state || f.billingState,
+      billingCountry: components.country || f.billingCountry,
     }));
   }
 
@@ -1985,25 +2009,53 @@ export default function AdminAccountForm() {
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label>ABN</Label>
+                  {/* Legal Entity Name — full width, above tax fields */}
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Legal Entity Name</Label>
                     <Input
-                      value={formData.abn || ""}
-                      onChange={e => setFormData({ ...formData, abn: e.target.value || null })}
-                      placeholder="12 345 678 901"
-                      data-testid="input-account-abn"
+                      value={formData.legalEntityName || ""}
+                      onChange={e => setFormData({ ...formData, legalEntityName: e.target.value || null })}
+                      placeholder="Registered legal name of the company"
+                      data-testid="input-account-legal-entity-name"
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label>ACN</Label>
-                    <Input
-                      value={formData.acn || ""}
-                      onChange={e => setFormData({ ...formData, acn: e.target.value || null })}
-                      placeholder="123 456 789"
-                      data-testid="input-account-acn"
-                    />
-                  </div>
+                  {/* Country-aware tax fields */}
+                  {(!formData.country || formData.country.trim().toLowerCase() === "australia") ? (
+                    <div className="sm:col-span-2">
+                      <div className="flex items-end gap-3">
+                        <div className="space-y-1.5 flex-1">
+                          <Label>ABN</Label>
+                          <Input
+                            value={formData.abn || ""}
+                            onChange={e => setFormData({ ...formData, abn: e.target.value || null })}
+                            placeholder="12 345 678 901"
+                            data-testid="input-account-abn"
+                          />
+                        </div>
+                        <span className="text-muted-foreground text-sm pb-2.5 shrink-0">/</span>
+                        <div className="space-y-1.5 flex-1">
+                          <Label>ACN</Label>
+                          <Input
+                            value={formData.acn || ""}
+                            onChange={e => setFormData({ ...formData, acn: e.target.value || null })}
+                            placeholder="123 456 789"
+                            data-testid="input-account-acn"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Tax ID</Label>
+                      <Input
+                        value={formData.taxId || ""}
+                        onChange={e => setFormData({ ...formData, taxId: e.target.value || null })}
+                        placeholder="VAT, EIN, GST number, etc."
+                        data-testid="input-account-tax-id"
+                      />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -2055,6 +2107,73 @@ export default function AdminAccountForm() {
                     />
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Billing Address */}
+            <Card data-section="billing-address">
+              <CardContent className="pt-5 pb-5">
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Billing Address</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Same as location address</span>
+                    <Switch
+                      checked={formData.billingSameAsLocation ?? true}
+                      onCheckedChange={checked => setFormData(f => ({ ...f, billingSameAsLocation: checked }))}
+                      data-testid="switch-billing-same-as-location"
+                    />
+                  </div>
+                </div>
+
+                {(formData.billingSameAsLocation ?? true) ? (
+                  <p className="text-sm text-muted-foreground">
+                    Billing address matches the location address above.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Street Address</Label>
+                      <GoogleAddressAutocomplete
+                        value={formData.billingAddress || ""}
+                        onAddressSelect={handleBillingAddressSelect}
+                        onInputChange={v => setFormData(f => ({ ...f, billingAddress: v || null }))}
+                        placeholder="Start typing a billing address…"
+                        testId="input-billing-address"
+                      />
+                      <p className="text-xs text-muted-foreground">Selecting an address auto-fills City, State, and Country below.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label>City</Label>
+                      <Input
+                        value={formData.billingCity || ""}
+                        onChange={e => setFormData({ ...formData, billingCity: e.target.value || null })}
+                        placeholder="Melbourne"
+                        data-testid="input-billing-city"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label>State</Label>
+                      <Input
+                        value={formData.billingState || ""}
+                        onChange={e => setFormData({ ...formData, billingState: e.target.value || null })}
+                        placeholder="VIC"
+                        data-testid="input-billing-state"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Country</Label>
+                      <Input
+                        value={formData.billingCountry || ""}
+                        onChange={e => setFormData({ ...formData, billingCountry: e.target.value || null })}
+                        placeholder="Australia"
+                        data-testid="input-billing-country"
+                      />
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
