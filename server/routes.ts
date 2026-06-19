@@ -16161,13 +16161,33 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
 
       const data = parsed.data;
 
-      // Fire-and-forget email — don't fail the user if Resend is down
+      // --- Persist to CRM (contactType = 'partner') — mandatory ---
+      // Split contactName into first/last (best-effort)
+      const nameParts = data.contactName.trim().split(/\s+/);
+      const firstName = nameParts[0] ?? data.contactName;
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "-";
+
+      const { crmContacts } = await import("@shared/schema");
+      await db.insert(crmContacts).values({
+        contactType: "partner",
+        firstName,
+        lastName,
+        email: data.email,
+        phone: data.phone ?? null,
+        country: data.country,
+        companyName: data.institutionName,
+        jobTitle: data.role,
+        notes: data.message ?? null,
+        entrySource: "website",
+      });
+      console.log(`[Partner Inquiry] Saved CRM contact for ${data.email} — ${data.institutionName} (${data.country})`);
+
+      // Fire-and-forget email — email failure must not undo the saved record
       const { sendPartnerInquiryEmail } = await import("./email-service");
       sendPartnerInquiryEmail(data).catch((err: unknown) => {
         console.error("[Partner Inquiry] Email send error:", err);
       });
 
-      console.log(`[Partner Inquiry] Received from ${data.email} — ${data.institutionName} (${data.country})`);
       return res.json({ success: true });
     } catch (error) {
       console.error("[Partner Inquiry] Error:", error);
