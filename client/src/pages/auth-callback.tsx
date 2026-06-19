@@ -164,8 +164,8 @@ export default function AuthCallback() {
           }
           break;
         case "institution_admin":
-        case "institution_user": // Legacy support
-          setLocation("/university/dashboard");
+        case "institution_user": // Legacy — portal removed
+          setLocation("/auth");
           break;
         case "student":
         default:
@@ -201,7 +201,7 @@ export default function AuthCallback() {
               </div>
               <CardTitle>Email Verified!</CardTitle>
               <CardDescription>
-                Your account has been verified. Redirecting to your {userType === "student" ? "student" : (userType === "institution_admin" || userType === "institution_user") ? "institution" : "admin"} dashboard...
+                Your account has been verified. Redirecting to your {userType === "student" ? "student" : "admin"} dashboard...
               </CardDescription>
             </>
           )}

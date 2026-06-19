@@ -1,7 +1,17 @@
+import { useState } from "react";
 import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Globe, 
   Users, 
@@ -15,7 +25,14 @@ import {
   Zap,
   ArrowRight,
   Target,
-  FileCheck
+  FileCheck,
+  Send,
+  CheckCircle,
+  Phone,
+  Mail,
+  MapPin,
+  User,
+  Briefcase
 } from "lucide-react";
 import { PublicLayout } from "@/components/public-layout";
 import { useQuery } from "@tanstack/react-query";
@@ -23,6 +40,229 @@ import { useQuery } from "@tanstack/react-query";
 interface PlatformStats {
   institutionCount: number;
   courseCount: number;
+}
+
+const partnerInquirySchema = z.object({
+  institutionName: z.string().min(1, "Institution name is required"),
+  country: z.string().min(1, "Country is required"),
+  contactName: z.string().min(1, "Contact name is required"),
+  role: z.string().min(1, "Role / position is required"),
+  email: z.string().email("Enter a valid email address"),
+  phone: z.string().optional(),
+  message: z.string().optional(),
+});
+
+type PartnerInquiryForm = z.infer<typeof partnerInquirySchema>;
+
+function PartnerInquirySection() {
+  const { toast } = useToast();
+  const [submitted, setSubmitted] = useState(false);
+
+  const form = useForm<PartnerInquiryForm>({
+    resolver: zodResolver(partnerInquirySchema),
+    defaultValues: {
+      institutionName: "",
+      country: "",
+      contactName: "",
+      role: "",
+      email: "",
+      phone: "",
+      message: "",
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: (data: PartnerInquiryForm) =>
+      apiRequest("POST", "/api/public/partner-inquiry", data),
+    onSuccess: () => {
+      setSubmitted(true);
+    },
+    onError: () => {
+      toast({
+        title: "Something went wrong",
+        description: "We couldn't send your inquiry. Please try again or email us directly at info@anzglobal.com.au.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (submitted) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+          <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-xl font-semibold text-foreground">Inquiry Sent!</h3>
+          <p className="text-muted-foreground max-w-sm mx-auto">
+            Thank you! Our partnership manager will be in touch within 2 business days.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
+        className="space-y-5"
+        data-testid="form-partner-inquiry"
+      >
+        <div className="grid gap-5 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="institutionName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-1.5">
+                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  Institution Name <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. University of Melbourne" data-testid="input-institution-name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="country"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                  Country <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. Australia" data-testid="input-country" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="contactName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5 text-muted-foreground" />
+                  Contact Person Name <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input placeholder="Your full name" data-testid="input-contact-name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="role"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-1.5">
+                  <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                  Role / Position <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. International Relations Manager" data-testid="input-role" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                  Email Address <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input type="email" placeholder="you@institution.edu.au" data-testid="input-email" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                  Phone Number
+                  <span className="text-muted-foreground text-xs">(optional)</span>
+                </FormLabel>
+                <FormControl>
+                  <Input type="tel" placeholder="+61 4XX XXX XXX" data-testid="input-phone" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="message"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Message
+                <span className="text-muted-foreground text-xs ml-1">(optional)</span>
+              </FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Tell us about your institution, student enrollment goals, or any questions you have..."
+                  className="min-h-[110px] resize-none"
+                  data-testid="textarea-message"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full"
+          disabled={mutation.isPending}
+          data-testid="button-submit-inquiry"
+        >
+          {mutation.isPending ? (
+            "Sending..."
+          ) : (
+            <>
+              <Send className="mr-2 h-4 w-4" />
+              Send Partnership Inquiry
+            </>
+          )}
+        </Button>
+
+        <p className="text-center text-xs text-muted-foreground">
+          We typically respond within 2 business days. You can also reach us directly at{" "}
+          <a href="mailto:info@anzglobal.com.au" className="text-primary hover:underline">
+            info@anzglobal.com.au
+          </a>
+        </p>
+      </form>
+    </Form>
+  );
 }
 
 export default function PartnerWithUs() {
@@ -93,7 +333,6 @@ export default function PartnerWithUs() {
     }
   ];
 
-  // Partner logos - these would typically be stored in your assets or database
   const partnerLogos = [
     { name: "Leading Australian University", placeholder: true },
     { name: "International College", placeholder: true },
@@ -123,9 +362,8 @@ export default function PartnerWithUs() {
         <link rel="canonical" href={`${window.location.origin}/partner-with-us`} />
       </Helmet>
 
-      {/* Hero Section - Enhanced with modern gradient and platform positioning */}
+      {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/95 to-primary/90 py-20 md:py-28 lg:py-36">
-        {/* Decorative background pattern */}
         <div className="absolute inset-0 bg-grid-white/5 bg-[size:30px_30px]" />
         <div className="absolute inset-0 bg-gradient-to-t from-primary/50 to-transparent" />
         
@@ -144,7 +382,6 @@ export default function PartnerWithUs() {
               With over 1,100 institutions and 22,000 courses in Australia, finding the right international students can be overwhelming. Our AI-powered platform simplifies global recruitment for you.
             </p>
             
-            {/* Stats showcase in hero */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-10 max-w-3xl mx-auto">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
                 <div className="text-2xl md:text-3xl font-bold text-white">6+</div>
@@ -168,14 +405,14 @@ export default function PartnerWithUs() {
               <Button 
                 size="lg" 
                 variant="secondary"
-                asChild
+                onClick={() => {
+                  document.getElementById('partner-inquiry')?.scrollIntoView({ behavior: 'smooth' });
+                }}
                 className="min-w-[240px] h-12 md:h-14 text-base md:text-lg font-semibold group"
-                data-testid="button-register-institution"
+                data-testid="button-become-partner"
               >
-                <a href="/contact">
-                  Become a Partner
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </a>
+                Become a Partner
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button 
                 size="lg" 
@@ -193,7 +430,7 @@ export default function PartnerWithUs() {
         </div>
       </section>
 
-      {/* Benefits Section - Redesigned with modern cards */}
+      {/* Benefits Section */}
       <section id="benefits" className="py-16 md:py-20 lg:py-28 bg-background">
         <div className="container mx-auto px-4 md:px-6">
           <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
@@ -236,7 +473,7 @@ export default function PartnerWithUs() {
         </div>
       </section>
 
-      {/* Platform Features Section - NEW */}
+      {/* Platform Features Section */}
       <section className="py-16 md:py-20 lg:py-28 bg-card">
         <div className="container mx-auto px-4 md:px-6">
           <div className="max-w-6xl mx-auto">
@@ -276,7 +513,6 @@ export default function PartnerWithUs() {
               })}
             </div>
 
-            {/* Platform value proposition */}
             <div className="bg-gradient-to-br from-primary/5 to-accent/5 p-8 md:p-10 rounded-xl border border-border/50">
               <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-6 text-center">
                 What You Get When You Partner
@@ -303,7 +539,7 @@ export default function PartnerWithUs() {
         </div>
       </section>
 
-      {/* Trusted Partners Section - NEW */}
+      {/* Trusted Partners Section */}
       <section className="py-16 md:py-20 lg:py-28 bg-background">
         <div className="container mx-auto px-4 md:px-6">
           <div className="max-w-5xl mx-auto">
@@ -316,7 +552,6 @@ export default function PartnerWithUs() {
               </p>
             </div>
 
-            {/* Partner logos grid - placeholder styling */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 mb-12">
               {partnerLogos.map((partner, index) => (
                 <div 
@@ -330,20 +565,6 @@ export default function PartnerWithUs() {
                   </div>
                 </div>
               ))}
-            </div>
-
-            <div className="text-center">
-              <Button 
-                size="lg"
-                asChild
-                className="min-w-[280px]"
-                data-testid="button-join-partners"
-              >
-                <a href="/contact">
-                  Join Our Partner Network
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </a>
-              </Button>
             </div>
           </div>
         </div>
@@ -378,29 +599,28 @@ export default function PartnerWithUs() {
         </div>
       </section>
 
-      {/* Final CTA Section */}
-      <section className="py-20 md:py-24 lg:py-32 bg-gradient-to-br from-primary via-primary/95 to-accent relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-white/5 bg-[size:30px_30px]" />
-        <div className="container relative mx-auto px-4 md:px-6">
-          <div className="max-w-4xl mx-auto text-center text-white">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
-              Ready to Transform Your International Recruitment?
-            </h2>
-            <p className="text-lg md:text-xl mb-10 opacity-90 max-w-2xl mx-auto">
-              Join the ANZ Global Education platform today and gain immediate access to qualified international students from 80+ countries worldwide.
-            </p>
-            <Button 
-              size="lg" 
-              variant="secondary"
-              asChild
-              className="min-w-[280px] h-14 text-lg font-semibold"
-              data-testid="button-register-cta-bottom"
-            >
-              <a href="/contact">
-                Become a Partner Today
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </a>
-            </Button>
+      {/* Partnership Inquiry Form Section */}
+      <section id="partner-inquiry" className="py-20 md:py-24 lg:py-32 bg-background">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="max-w-xl mx-auto">
+            <div className="text-center mb-10">
+              <Badge variant="outline" className="mb-4">
+                <Send className="h-3.5 w-3.5 mr-1.5" />
+                Get in Touch
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
+                Ready to Partner? Let's Talk.
+              </h2>
+              <p className="text-muted-foreground text-lg">
+                Fill in the form below and our partnership manager will get back to you within 2 business days.
+              </p>
+            </div>
+
+            <Card>
+              <CardContent className="pt-6">
+                <PartnerInquirySection />
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>

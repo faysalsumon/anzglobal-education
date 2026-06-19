@@ -35,7 +35,7 @@ export default function AdminLogin() {
       } else if (user.userType === "student") {
         setLocation("/student/dashboard");
       } else if (user.userType === "institution_admin" || user.userType === "university") {
-        setLocation("/university/dashboard");
+        setLocation("/auth");
       }
     }
   }, [isAuthResolved, isAuthenticated, user, setLocation]);

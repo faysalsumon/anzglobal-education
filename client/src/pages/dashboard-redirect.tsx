@@ -29,8 +29,8 @@ export default function DashboardRedirect() {
         setLocation("/admin/dashboard");
         break;
       case "institution_admin":
-      case "institution_user": // Legacy support
-        setLocation("/university/dashboard");
+      case "institution_user": // Legacy — portal removed
+        setLocation("/auth");
         break;
       case "student":
       default:

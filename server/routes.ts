@@ -16138,6 +16138,44 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
   });
 
   // ========================================
+  // PARTNER INQUIRY ROUTE (public, no auth)
+  // ========================================
+
+  app.post("/api/public/partner-inquiry", async (req, res) => {
+    try {
+      const { z } = await import("zod");
+      const schema = z.object({
+        institutionName: z.string().min(1, "Institution name is required"),
+        country: z.string().min(1, "Country is required"),
+        contactName: z.string().min(1, "Contact name is required"),
+        role: z.string().min(1, "Role is required"),
+        email: z.string().email("Valid email is required"),
+        phone: z.string().optional(),
+        message: z.string().optional(),
+      });
+
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid submission", errors: parsed.error.flatten().fieldErrors });
+      }
+
+      const data = parsed.data;
+
+      // Fire-and-forget email — don't fail the user if Resend is down
+      const { sendPartnerInquiryEmail } = await import("./email-service");
+      sendPartnerInquiryEmail(data).catch((err: unknown) => {
+        console.error("[Partner Inquiry] Email send error:", err);
+      });
+
+      console.log(`[Partner Inquiry] Received from ${data.email} — ${data.institutionName} (${data.country})`);
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("[Partner Inquiry] Error:", error);
+      return res.status(500).json({ message: "An error occurred. Please try again." });
+    }
+  });
+
+  // ========================================
   // CONTACT INQUIRY ROUTES
   // ========================================
 

@@ -2264,3 +2264,65 @@ export async function sendInvoiceReminderEmail(
     return false;
   }
 }
+
+/**
+ * Send a partnership inquiry email to info@anzglobal.com.au.
+ * The reply-to is set to the submitter's email so the partnership manager
+ * can reply directly without copying from the body.
+ */
+export async function sendPartnerInquiryEmail(data: {
+  institutionName: string;
+  country: string;
+  contactName: string;
+  role: string;
+  email: string;
+  phone?: string;
+  message?: string;
+}): Promise<boolean> {
+  if (!resend) {
+    console.warn('[Email] RESEND_API_KEY not set — skipping partner inquiry email');
+    return false;
+  }
+  try {
+    const subject = `New Partnership Inquiry — ${data.institutionName}`;
+    const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /><title>${subject}</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #333;">
+  <h2 style="color: #3465A5; margin-bottom: 4px;">New Partnership Inquiry</h2>
+  <p style="color: #666; font-size: 13px; margin-top: 0;">Submitted via ANZ Global Education — Partner With Us page</p>
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+  <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+    <tr><td style="padding: 8px 0; font-weight: 600; width: 40%; color: #555;">Institution</td><td style="padding: 8px 0;">${data.institutionName}</td></tr>
+    <tr><td style="padding: 8px 0; font-weight: 600; color: #555;">Country</td><td style="padding: 8px 0;">${data.country}</td></tr>
+    <tr><td style="padding: 8px 0; font-weight: 600; color: #555;">Contact Person</td><td style="padding: 8px 0;">${data.contactName}</td></tr>
+    <tr><td style="padding: 8px 0; font-weight: 600; color: #555;">Role / Position</td><td style="padding: 8px 0;">${data.role}</td></tr>
+    <tr><td style="padding: 8px 0; font-weight: 600; color: #555;">Email</td><td style="padding: 8px 0;"><a href="mailto:${data.email}" style="color: #3465A5;">${data.email}</a></td></tr>
+    <tr><td style="padding: 8px 0; font-weight: 600; color: #555;">Phone</td><td style="padding: 8px 0;">${data.phone || 'Not provided'}</td></tr>
+  </table>
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
+  <p style="font-weight: 600; color: #555; font-size: 14px; margin-bottom: 6px;">Message</p>
+  <p style="font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${data.message || 'No message provided'}</p>
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+  <p style="font-size: 12px; color: #9ca3af;">Reply directly to this email to reach ${data.contactName} at ${data.email}.</p>
+</body>
+</html>`;
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL_AU,
+      replyTo: data.email,
+      subject,
+      html,
+    });
+    if (result.error) {
+      console.error('[Email] Resend error sending partner inquiry email:', result.error);
+      return false;
+    }
+    console.log(`[Email] Partner inquiry email sent from ${data.email}, ID: ${result.data?.id}`);
+    return true;
+  } catch (error) {
+    console.error('[Email] Error sending partner inquiry email:', error instanceof Error ? error.message : error);
+    return false;
+  }
+}
