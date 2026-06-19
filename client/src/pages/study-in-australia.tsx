@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +15,6 @@ import {
   Award
 } from "lucide-react";
 import { PublicLayout } from "@/components/public-layout";
-import { StudentAuthModal } from "@/components/student-auth-modal";
 import { useQuery } from "@tanstack/react-query";
 import heroImage from "@assets/stock_images/diverse_internationa_09386d83.jpg";
 import successImage from "@assets/stock_images/student_success_cele_a3674b15.jpg";
@@ -28,8 +26,6 @@ interface PlatformStats {
 }
 
 export default function StudyInAustralia() {
-  const [showStudentAuthModal, setShowStudentAuthModal] = useState(false);
-
   const { data: _stats } = useQuery<PlatformStats>({
     queryKey: ["/api/platform/stats"],
   });
@@ -258,7 +254,7 @@ export default function StudyInAustralia() {
               <Button 
                 size="lg" 
                 variant="secondary"
-                onClick={() => setShowStudentAuthModal(true)}
+                onClick={() => { window.location.href = '/auth'; }}
                 className="w-full sm:w-auto min-h-12 px-8 text-base group hover-elevate active-elevate-2"
                 data-testid="button-register-hero"
               >
@@ -332,7 +328,7 @@ export default function StudyInAustralia() {
                 </div>
                 <Button 
                   size="lg"
-                  onClick={() => setShowStudentAuthModal(true)}
+                  onClick={() => { window.location.href = '/auth'; }}
                   className="mt-6 group"
                   data-testid="button-register-admission"
                 >
@@ -416,7 +412,7 @@ export default function StudyInAustralia() {
             <div className="text-center mt-12">
               <Button 
                 size="lg"
-                onClick={() => setShowStudentAuthModal(true)}
+                onClick={() => { window.location.href = '/auth'; }}
                 className="group"
                 data-testid="button-register-how-it-works"
               >
@@ -533,7 +529,7 @@ export default function StudyInAustralia() {
               <Button 
                 size="lg" 
                 variant="secondary"
-                onClick={() => setShowStudentAuthModal(true)}
+                onClick={() => { window.location.href = '/auth'; }}
                 className="w-full sm:w-auto min-h-12 px-8 text-base group hover-elevate active-elevate-2"
                 data-testid="button-register-final"
               >
@@ -560,11 +556,6 @@ export default function StudyInAustralia() {
         </div>
       </section>
 
-      {/* Student Auth Modal */}
-      <StudentAuthModal 
-        open={showStudentAuthModal}
-        onOpenChange={setShowStudentAuthModal}
-      />
     </PublicLayout>
   );
 }
