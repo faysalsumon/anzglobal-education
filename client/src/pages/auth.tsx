@@ -66,6 +66,7 @@ export default function AuthPage() {
   const [walkInBranchId, setWalkInBranchId] = useState("");
   const [walkInSource, setWalkInSource] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { signIn, signUp, resetPassword, resendVerification, signInWithOAuth, isConfigured } = useSupabaseAuth();
@@ -125,6 +126,21 @@ export default function AuthPage() {
     }
   }, [isAuthResolved, isAuthenticated, user, redirectingToAdmin]);
 
+  const VIEW_ORDER: Record<AuthView, number> = {
+    "email-entry": 0,
+    "password": 1,
+    "signup": 1,
+    "forgot-password": 2,
+    "email-exists": 2,
+  };
+
+  const navigateTo = (newView: AuthView) => {
+    const currentOrder = VIEW_ORDER[view];
+    const newOrder = VIEW_ORDER[newView];
+    setDirection(newOrder >= currentOrder ? "forward" : "back");
+    setView(newView);
+  };
+
   const handleGoogleLogin = async () => {
     if (!isConfigured) {
       toast({ title: "Not Available", description: "Google authentication is not configured yet.", variant: "destructive" });
@@ -180,7 +196,7 @@ export default function AuthPage() {
     setEmailError("");
     setEmail(trimmedEmail);
     setIsSignup(false);
-    setView("password");
+    navigateTo("password");
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -232,16 +248,16 @@ export default function AuthPage() {
             fullError.includes("signups not allowed") ||
             (isRateLimitOrDuplicate && fullError.includes("signup"))) {
             setEmailExistsError({ verified: false, email });
-            setView("email-exists");
+            navigateTo("email-exists");
           } else if (fullError.includes("already registered") ||
             fullError.includes("user already exists") ||
             fullError.includes("email already") ||
             fullError.includes("already been registered")) {
             setEmailExistsError({ verified: true, email });
-            setView("email-exists");
+            navigateTo("email-exists");
           } else if (fullError.includes("confirm") || fullError.includes("verify")) {
             setEmailExistsError({ verified: false, email });
-            setView("email-exists");
+            navigateTo("email-exists");
           } else {
             toast({ title: "Signup Failed", description: error.message || "Failed to create account.", variant: "destructive" });
           }
@@ -250,7 +266,7 @@ export default function AuthPage() {
           localStorage.removeItem('walk_in_source');
           trackCompleteRegistration("registered");
           toast({ title: "Check Your Email", description: "We've sent you a verification link. Please check your email to complete signup." });
-          setView("email-entry");
+          navigateTo("email-entry");
         }
       } else {
         const { error } = await signIn(email, password);
@@ -259,7 +275,7 @@ export default function AuthPage() {
           const errorMsg = error.message?.toLowerCase() || "";
           if (errorMsg.includes("email not confirmed") || errorMsg.includes("not verified")) {
             setEmailExistsError({ verified: false, email });
-            setView("email-exists");
+            navigateTo("email-exists");
           } else {
             toast({ title: "Login Failed", description: error.message || "Invalid email or password.", variant: "destructive" });
           }
@@ -338,7 +354,7 @@ export default function AuthPage() {
         toast({ title: "Error", description: error.message || "Failed to send reset email.", variant: "destructive" });
       } else {
         toast({ title: "Email Sent", description: "Check your inbox for password reset instructions." });
-        setView("password");
+        navigateTo("password");
       }
     } finally {
       setIsLoading(false);
@@ -349,12 +365,12 @@ export default function AuthPage() {
 
   const handleBack = () => {
     if (view === "password" || view === "signup") {
-      setView("email-entry");
+      navigateTo("email-entry");
     } else if (view === "forgot-password") {
-      setView("password");
+      navigateTo("password");
     } else if (view === "email-exists") {
       setEmailExistsError(null);
-      setView("password");
+      navigateTo("password");
     }
   };
 
@@ -412,7 +428,7 @@ export default function AuthPage() {
 
       <div className="flex-1 flex items-center justify-center p-4 py-10">
         <div className="w-full max-w-sm">
-          <div className="bg-background rounded-xl border border-border shadow-sm p-8 relative">
+          <div className="bg-background rounded-xl border border-border shadow-sm p-8 relative overflow-hidden">
 
             {/* Close */}
             <button
@@ -439,6 +455,16 @@ export default function AuthPage() {
             <div className="flex justify-center mb-7">
               <img src={logoUrl} alt="ANZ Global Education" className="h-10 w-auto" />
             </div>
+
+            {/* Animated view container — re-mounts on each view change */}
+            <div
+              key={view}
+              className={
+                direction === "forward"
+                  ? "animate-in fade-in slide-in-from-right-3 duration-200 fill-mode-both"
+                  : "animate-in fade-in slide-in-from-left-3 duration-200 fill-mode-both"
+              }
+            >
 
             {/* ── EMAIL ENTRY ── */}
             {view === "email-entry" && (
@@ -484,7 +510,7 @@ export default function AuthPage() {
                   Don't have an account?{" "}
                   <button
                     type="button"
-                    onClick={() => { setIsSignup(true); setView("signup"); }}
+                    onClick={() => { setIsSignup(true); navigateTo("signup"); }}
                     className="text-primary font-medium hover:underline"
                     data-testid="button-go-to-signup"
                   >
@@ -505,7 +531,7 @@ export default function AuthPage() {
 
                 <button
                   type="button"
-                  onClick={() => setView("email-entry")}
+                  onClick={() => navigateTo("email-entry")}
                   className="flex items-center gap-2 w-full px-3 py-2 mb-4 rounded-md border border-border bg-muted/30 text-sm text-foreground hover:bg-muted/50 transition-colors"
                   data-testid="button-change-email"
                 >
@@ -520,7 +546,7 @@ export default function AuthPage() {
                       <Label htmlFor="password-input" className="text-sm font-medium">Password</Label>
                       <button
                         type="button"
-                        onClick={() => setView("forgot-password")}
+                        onClick={() => navigateTo("forgot-password")}
                         className="text-xs text-primary hover:underline"
                         data-testid="link-forgot-password"
                       >
@@ -563,7 +589,7 @@ export default function AuthPage() {
                   Don't have an account?{" "}
                   <button
                     type="button"
-                    onClick={() => { setIsSignup(true); setView("signup"); }}
+                    onClick={() => { setIsSignup(true); navigateTo("signup"); }}
                     className="text-primary font-medium hover:underline"
                     data-testid="button-go-to-signup-from-password"
                   >
@@ -686,7 +712,7 @@ export default function AuthPage() {
                   Already have an account?{" "}
                   <button
                     type="button"
-                    onClick={() => { setIsSignup(false); setView("email-entry"); }}
+                    onClick={() => { setIsSignup(false); navigateTo("email-entry"); }}
                     className="text-primary font-medium hover:underline"
                     data-testid="button-go-to-signin"
                   >
@@ -731,7 +757,7 @@ export default function AuthPage() {
                 <div className="mt-5 text-center">
                   <button
                     type="button"
-                    onClick={() => setView("password")}
+                    onClick={() => navigateTo("password")}
                     className="text-sm text-muted-foreground hover:text-foreground"
                     data-testid="button-back-to-signin"
                   >
@@ -767,7 +793,7 @@ export default function AuthPage() {
                     <>
                       <Button
                         className="w-full h-11 gap-2"
-                        onClick={() => { setIsSignup(false); setView("password"); }}
+                        onClick={() => { setIsSignup(false); navigateTo("password"); }}
                         data-testid="button-go-to-signin"
                       >
                         <Mail className="h-4 w-4" />
@@ -776,7 +802,7 @@ export default function AuthPage() {
                       <Button
                         variant="outline"
                         className="w-full h-11 gap-2"
-                        onClick={() => setView("forgot-password")}
+                        onClick={() => navigateTo("forgot-password")}
                         data-testid="button-go-to-reset"
                       >
                         <KeyRound className="h-4 w-4" />
@@ -801,7 +827,7 @@ export default function AuthPage() {
                       <Button
                         variant="outline"
                         className="w-full h-11 gap-2"
-                        onClick={() => { setIsSignup(false); setView("password"); }}
+                        onClick={() => { setIsSignup(false); navigateTo("password"); }}
                         data-testid="button-try-signin"
                       >
                         <Mail className="h-4 w-4" />
@@ -822,7 +848,7 @@ export default function AuthPage() {
                 <div className="mt-5 text-center">
                   <button
                     type="button"
-                    onClick={() => { setEmailExistsError(null); setIsSignup(true); setEmail(""); setView("signup"); }}
+                    onClick={() => { setEmailExistsError(null); setIsSignup(true); setEmail(""); navigateTo("signup"); }}
                     className="text-sm text-muted-foreground hover:text-foreground"
                     data-testid="button-try-different-email"
                   >
@@ -831,6 +857,8 @@ export default function AuthPage() {
                 </div>
               </>
             )}
+
+            </div>{/* end animated view container */}
 
           </div>
 
