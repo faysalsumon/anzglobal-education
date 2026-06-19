@@ -5,10 +5,10 @@ import { Helmet } from "react-helmet";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Building2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
-type CallbackStatus = "loading" | "success" | "error";
+type CallbackStatus = "loading" | "success" | "error" | "institution_blocked";
 
 export default function AuthCallback() {
   const [, setLocation] = useLocation();
@@ -165,7 +165,7 @@ export default function AuthCallback() {
           break;
         case "institution_admin":
         case "institution_user": // Legacy — portal removed
-          setLocation("/auth");
+          setStatus("institution_blocked");
           break;
         case "student":
         default:
@@ -206,6 +206,23 @@ export default function AuthCallback() {
             </>
           )}
           
+          {status === "institution_blocked" && (
+            <>
+              <div className="mx-auto mb-4">
+                <Building2 className="h-12 w-12 text-muted-foreground" />
+              </div>
+              <CardTitle>Institution Portal Unavailable</CardTitle>
+              <CardDescription>
+                Institution portal access is no longer available through this platform. ANZ Global Education operates as an agency on your behalf.
+                <br /><br />
+                To explore a partnership, please contact us at{" "}
+                <a href="mailto:info@anzglobal.com.au" className="text-primary underline">
+                  info@anzglobal.com.au
+                </a>
+              </CardDescription>
+            </>
+          )}
+
           {status === "error" && (
             <>
               <div className="mx-auto mb-4">
@@ -217,6 +234,26 @@ export default function AuthCallback() {
           )}
         </CardHeader>
         
+        {status === "institution_blocked" && (
+          <CardContent className="flex flex-col gap-3">
+            <Button
+              onClick={() => setLocation("/partner-with-us")}
+              className="w-full"
+              data-testid="button-partner-inquiry"
+            >
+              Submit a Partnership Inquiry
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setLocation("/")}
+              className="w-full"
+              data-testid="button-go-home"
+            >
+              Go to Home
+            </Button>
+          </CardContent>
+        )}
+
         {status === "error" && (
           <CardContent className="flex flex-col gap-3">
             <Button 
