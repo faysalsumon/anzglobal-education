@@ -277,7 +277,7 @@ export function PublicHeader({ onStudentLoginClick: _onStudentLoginClick }: Publ
                   asChild
                   data-testid="button-login"
                 >
-                  <a href="/auth?mode=login">{t("navigation.login")}</a>
+                  <a href="/auth">{t("navigation.login")}</a>
                 </Button>
                 <Button
                   variant="default"
@@ -314,7 +314,7 @@ export function PublicHeader({ onStudentLoginClick: _onStudentLoginClick }: Publ
                   asChild
                   data-testid="button-mobile-login"
                 >
-                  <a href="/auth?mode=login">Login</a>
+                  <a href="/auth">Login</a>
                 </Button>
                 <Button
                   variant="outline"
