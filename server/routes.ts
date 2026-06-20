@@ -16161,6 +16161,11 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
 
       const data = parsed.data;
 
+      const turnstile = await verifyTurnstileToken(req.body.turnstileToken, req.ip);
+      if (!turnstile.success) {
+        return res.status(400).json({ message: turnstile.error || "CAPTCHA verification failed." });
+      }
+
       // --- Persist to CRM (contactType = 'partner') — mandatory ---
       // Split contactName into first/last (best-effort)
       const nameParts = data.contactName.trim().split(/\s+/);
@@ -16182,10 +16187,13 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
       });
       console.log(`[Partner Inquiry] Saved CRM contact for ${data.email} — ${data.institutionName} (${data.country})`);
 
-      // Fire-and-forget email — email failure must not undo the saved record
-      const { sendPartnerInquiryEmail } = await import("./email-service");
+      // Fire-and-forget emails — failures must not undo the saved record
+      const { sendPartnerInquiryEmail, sendPartnerInquiryConfirmationEmail } = await import("./email-service");
       sendPartnerInquiryEmail(data).catch((err: unknown) => {
         console.error("[Partner Inquiry] Email send error:", err);
+      });
+      sendPartnerInquiryConfirmationEmail(data).catch((err: unknown) => {
+        console.error("[Partner Inquiry] Confirmation email error:", err);
       });
 
       return res.json({ success: true });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { PublicLayout } from "@/components/public-layout";
 import { useQuery } from "@tanstack/react-query";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 
 interface PlatformStats {
   institutionCount: number;
@@ -57,6 +58,9 @@ type PartnerInquiryForm = z.infer<typeof partnerInquirySchema>;
 function PartnerInquirySection() {
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
+  const handleTurnstileSuccess = useCallback((token: string) => setTurnstileToken(token), []);
+  const handleTurnstileExpire = useCallback(() => setTurnstileToken(""), []);
 
   const form = useForm<PartnerInquiryForm>({
     resolver: zodResolver(partnerInquirySchema),
@@ -73,14 +77,18 @@ function PartnerInquirySection() {
 
   const mutation = useMutation({
     mutationFn: (data: PartnerInquiryForm) =>
-      apiRequest("POST", "/api/public/partner-inquiry", data),
+      apiRequest("POST", "/api/public/partner-inquiry", {
+        ...data,
+        turnstileToken: turnstileToken || undefined,
+      }),
     onSuccess: () => {
       setSubmitted(true);
+      setTurnstileToken("");
     },
     onError: () => {
       toast({
         title: "Something went wrong",
-        description: "We couldn't send your inquiry. Please try again or email us directly at info@anzglobal.com.au.",
+        description: "We couldn't send your inquiry. Please try again.",
         variant: "destructive",
       });
     },
@@ -237,11 +245,16 @@ function PartnerInquirySection() {
           )}
         />
 
+        <TurnstileWidget
+          onSuccess={handleTurnstileSuccess}
+          onExpire={handleTurnstileExpire}
+        />
+
         <Button
           type="submit"
           size="lg"
           className="w-full"
-          disabled={mutation.isPending}
+          disabled={mutation.isPending || !turnstileToken}
           data-testid="button-submit-inquiry"
         >
           {mutation.isPending ? (
@@ -255,10 +268,7 @@ function PartnerInquirySection() {
         </Button>
 
         <p className="text-center text-xs text-muted-foreground">
-          We typically respond within 2 business days. You can also reach us directly at{" "}
-          <a href="mailto:info@anzglobal.com.au" className="text-primary hover:underline">
-            info@anzglobal.com.au
-          </a>
+          We typically respond within 2 business days.
         </p>
       </form>
     </Form>

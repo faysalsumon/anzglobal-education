@@ -2270,6 +2270,66 @@ export async function sendInvoiceReminderEmail(
  * The reply-to is set to the submitter's email so the partnership manager
  * can reply directly without copying from the body.
  */
+export async function sendPartnerInquiryConfirmationEmail(data: {
+  institutionName: string;
+  country: string;
+  contactName: string;
+  role: string;
+  email: string;
+  phone?: string;
+  message?: string;
+}): Promise<boolean> {
+  if (!resend) {
+    console.warn('[Email] RESEND_API_KEY not set — skipping partner inquiry confirmation email');
+    return false;
+  }
+  try {
+    const firstName = data.contactName.trim().split(/\s+/)[0] ?? data.contactName;
+    const subject = `We've received your partnership inquiry — ANZ Global Education`;
+    const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /><title>${subject}</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #333;">
+  <div style="background-color: #3465A5; padding: 24px 32px; border-radius: 6px 6px 0 0;">
+    <h1 style="color: #ffffff; font-size: 22px; margin: 0;">ANZ Global Education</h1>
+    <p style="color: rgba(255,255,255,0.85); font-size: 13px; margin: 4px 0 0;">Partnership Team</p>
+  </div>
+  <div style="background-color: #f9fafb; padding: 32px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 6px 6px;">
+    <p style="font-size: 16px; margin-top: 0;">Hi ${firstName},</p>
+    <p style="font-size: 15px; line-height: 1.6;">Thank you for your interest in partnering with ANZ Global Education. We have received your partnership inquiry for <strong>${data.institutionName}</strong>.</p>
+    <p style="font-size: 15px; line-height: 1.6;">One of our partnership managers will review your submission and be in touch within <strong>2 business days</strong>.</p>
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+    <p style="font-size: 13px; font-weight: 600; color: #555; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Your Submission Summary</p>
+    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+      <tr><td style="padding: 7px 0; font-weight: 600; width: 42%; color: #555; vertical-align: top;">Institution</td><td style="padding: 7px 0;">${data.institutionName}</td></tr>
+      <tr><td style="padding: 7px 0; font-weight: 600; color: #555; vertical-align: top;">Country</td><td style="padding: 7px 0;">${data.country}</td></tr>
+      <tr><td style="padding: 7px 0; font-weight: 600; color: #555; vertical-align: top;">Your Role</td><td style="padding: 7px 0;">${data.role}</td></tr>
+    </table>
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+    <p style="font-size: 14px; color: #555; margin: 0;">Warm regards,</p>
+    <p style="font-size: 14px; font-weight: 600; color: #3465A5; margin: 4px 0 0;">The ANZ Global Education Partnership Team</p>
+  </div>
+</body>
+</html>`;
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.email,
+      subject,
+      html,
+    });
+    if (result.error) {
+      console.error('[Email] Resend error sending partner inquiry confirmation email:', result.error);
+      return false;
+    }
+    console.log(`[Email] Partner inquiry confirmation email sent to ${data.email}, ID: ${result.data?.id}`);
+    return true;
+  } catch (error) {
+    console.error('[Email] Error sending partner inquiry confirmation email:', error instanceof Error ? error.message : error);
+    return false;
+  }
+}
+
 export async function sendPartnerInquiryEmail(data: {
   institutionName: string;
   country: string;
