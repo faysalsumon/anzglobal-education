@@ -1804,5 +1804,41 @@ export function registerAdminChatRoutes(app: Express) {
     }
   });
 
+  const audioUploadMiddleware = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 25 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const allowed = ["audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-m4a", "application/octet-stream"];
+      cb(null, allowed.includes(file.mimetype) || file.fieldname === "audio");
+    },
+  });
+
+  app.post("/api/admin-chat/transcribe", requireAdmin, audioUploadMiddleware.single("audio"), async (req: any, res: Response) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No audio file uploaded" });
+
+      const ext = req.file.originalname?.split(".").pop() || "webm";
+      const tmpPath = join(tmpdir(), `zan-audio-${Date.now()}.${ext}`);
+      await writeFile(tmpPath, req.file.buffer);
+
+      try {
+        const { createReadStream } = await import("fs");
+        const { toFile } = await import("openai");
+        const audioFile = await toFile(createReadStream(tmpPath), `audio.${ext}`, { type: req.file.mimetype || "audio/webm" });
+        const result = await nativeOpenAI.audio.transcriptions.create({
+          file: audioFile,
+          model: "whisper-1",
+          language: "en",
+        });
+        res.json({ transcript: result.text });
+      } finally {
+        unlink(tmpPath).catch(() => {});
+      }
+    } catch (err) {
+      console.error("[ZAN] Audio transcription error:", err);
+      res.status(500).json({ message: "Failed to transcribe audio" });
+    }
+  });
+
   console.log("[AdminChat] Admin chat routes registered (with data entry tools)");
 }
