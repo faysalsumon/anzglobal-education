@@ -130,7 +130,7 @@ import {
   permissions,
   rolePermissions,
 } from "@shared/schema";
-import { eq, and, or, desc, not, inArray, sql as dsql, isNull, isNotNull, ne, count, sum } from "drizzle-orm";
+import { eq, and, or, desc, asc, not, inArray, sql as dsql, isNull, isNotNull, ne, count, sum } from "drizzle-orm";
 import { z } from "zod";
 import { 
   isAdmin as checkIsAdmin, 
@@ -18567,6 +18567,30 @@ Sitemap: ${baseUrl}/sitemap.xml
               .from(contactNotes)
               .leftJoin(users, eq(contactNotes.createdById, users.id))
               .where(eq(contactNotes.contactId, contact.id));
+
+            // Fetch status history to determine what stage the contact was in when each note was written
+            const statusHistory = await db
+              .select({ toStatus: contactStatusHistory.toStatus, createdAt: contactStatusHistory.createdAt })
+              .from(contactStatusHistory)
+              .where(eq(contactStatusHistory.contactId, contact.id))
+              .orderBy(asc(contactStatusHistory.createdAt));
+
+            // Given a note timestamp, return the clientStatus active at that moment.
+            // Contacts always start as 'lead'; we walk status changes in order.
+            const stageAtTime = (noteCreatedAt: Date | null): string => {
+              if (!noteCreatedAt) return contact.clientStatus ?? 'lead';
+              const noteTime = new Date(noteCreatedAt).getTime();
+              let currentStage: string = 'lead';
+              for (const change of statusHistory) {
+                if (change.createdAt && new Date(change.createdAt).getTime() <= noteTime) {
+                  currentStage = change.toStatus;
+                } else {
+                  break;
+                }
+              }
+              return currentStage;
+            };
+
             leadNotesList = cNotes
               .filter(n => canSeeNote(n.createdById, n.visibility ?? 'public', n.mentions ?? [], n.visibleTo ?? []))
               .map(n => ({
@@ -18578,6 +18602,7 @@ Sitemap: ${baseUrl}/sitemap.xml
                 visibility: n.visibility ?? 'public',
                 visibleTo: n.visibleTo ?? [],
                 source: 'crm' as const,
+                crmStage: stageAtTime(n.createdAt),
                 author: {
                   id: n.createdById,
                   firstName: n.authorFirstName,

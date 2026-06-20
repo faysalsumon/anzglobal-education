@@ -21,6 +21,7 @@ interface UnifiedNoteRaw {
   source: "lead" | "crm" | "application";
   visibility?: "public" | "private" | "selected";
   visibleTo?: string[] | null;
+  crmStage?: string | null;
   author?: {
     id?: string;
     firstName?: string | null;
@@ -134,6 +135,7 @@ export function ApplicationInternalNotes({
     source: n.source,
     visibility: n.visibility,
     visibleTo: n.visibleTo ?? [],
+    crmStage: n.crmStage,
     author: n.author,
   }));
 

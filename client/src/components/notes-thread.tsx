@@ -29,6 +29,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   MessageSquare,
   Pencil,
   Trash2,
@@ -76,6 +81,7 @@ export interface UnifiedNote {
   isPinned?: boolean | null;
   visibility?: NoteVisibility;
   visibleTo?: string[];
+  crmStage?: string | null;
 }
 
 export interface ThreadTeamMember {
@@ -621,6 +627,17 @@ function NoteComposer({
   );
 }
 
+function formatCrmStage(stage: string): string {
+  const labels: Record<string, string> = {
+    lead: "Lead",
+    applicant: "Applicant",
+    enrolled: "Enrolled",
+    completed: "Completed",
+    inactive: "Inactive",
+  };
+  return labels[stage] ?? stage;
+}
+
 function getAuthorName(author?: UnifiedNote["author"]): string {
   if (author?.firstName && author?.lastName) return `${author.firstName} ${author.lastName}`;
   return author?.email || "Unknown";
@@ -763,7 +780,18 @@ function NoteItem({
                   {formatRelativeTime(note.createdAt)}
                 </span>
                 {(note.source === "lead" || note.source === "crm") && (
-                  <Badge variant="secondary" className="text-[10px] px-1 py-0 leading-tight no-default-active-elevate">CRM</Badge>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="secondary" className="text-[10px] px-1 py-0 leading-tight no-default-active-elevate cursor-default">
+                        CRM{note.crmStage ? ` · ${formatCrmStage(note.crmStage)}` : ""}
+                      </Badge>
+                    </TooltipTrigger>
+                    {note.crmStage && (
+                      <TooltipContent side="top" className="text-xs">
+                        Written when contact status was: <span className="font-medium">{formatCrmStage(note.crmStage)}</span>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
                 )}
                 <VisibilityBadge visibility={note.visibility} visibleTo={note.visibleTo} />
               </div>
