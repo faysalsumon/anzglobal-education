@@ -15,6 +15,7 @@ import { getFlagUrl, getCountryByName } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { useRegion } from "@/context/RegionContext";
 import { apiRequest } from "@/lib/queryClient";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 import { getFrameworksForCountry, FRAMEWORK_CONFIGS } from "@shared/qualification-frameworks";
 import type { LucideIcon } from "lucide-react";
 
@@ -130,6 +131,9 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
   const [contactPhone, setContactPhone] = useState(isBD ? "+880 " : "+61 ");
   const [contactErrors, setContactErrors] = useState<Record<string, string>>({});
   const [submittingLead, setSubmittingLead] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const handleTurnstileSuccess = useCallback((token: string) => setTurnstileToken(token), []);
+  const handleTurnstileExpire = useCallback(() => setTurnstileToken(""), []);
 
   const { data: filterOptions, isLoading: filtersLoading } = useQuery<FilterOptions>({
     queryKey: ["/api/courses/filter-options"],
@@ -151,6 +155,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
       setContactPhone(isBD ? "+880 " : "+61 ");
       setContactErrors({});
       setSubmittingLead(false);
+      setTurnstileToken("");
       document.body.style.overflow = "hidden";
       setTimeout(() => modalRef.current?.focus(), 50);
     } else {
@@ -236,6 +241,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
         budgetMin: budgetRange[0],
         budgetMax: budgetRange[1],
         regionCode: regionCode || "AU",
+        turnstileToken: turnstileToken || undefined,
       });
       sessionStorage.setItem("quiz_lead_submitted", JSON.stringify({ firstName: contactFirstName.trim(), submittedAt: Date.now() }));
       onClose();
@@ -539,18 +545,25 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
         <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{STEP_CONFIG.phone.title}</h2>
         <p id="quiz-description" className="text-muted-foreground text-base">{STEP_CONFIG.phone.subtitle}</p>
       </div>
-      <div className="max-w-md mx-auto space-y-2">
-        <Label htmlFor="quiz-phone" className="text-sm font-medium">Mobile Number</Label>
-        <Input
-          id="quiz-phone"
-          type="tel"
-          autoFocus
-          value={contactPhone}
-          onChange={(e) => { setContactPhone(e.target.value); setContactErrors(p => ({ ...p, phone: "" })); }}
-          placeholder={isBD ? "+880 1XXXXXXXXX" : "+61 4XX XXX XXX"}
-          data-testid="quiz-input-phone"
+      <div className="max-w-md mx-auto space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="quiz-phone" className="text-sm font-medium">Mobile Number</Label>
+          <Input
+            id="quiz-phone"
+            type="tel"
+            autoFocus
+            value={contactPhone}
+            onChange={(e) => { setContactPhone(e.target.value); setContactErrors(p => ({ ...p, phone: "" })); }}
+            placeholder={isBD ? "+880 1XXXXXXXXX" : "+61 4XX XXX XXX"}
+            data-testid="quiz-input-phone"
+          />
+          {contactErrors.phone && <p className="text-xs text-destructive">{contactErrors.phone}</p>}
+        </div>
+        <TurnstileWidget
+          onSuccess={handleTurnstileSuccess}
+          onExpire={handleTurnstileExpire}
+          className="flex justify-center"
         />
-        {contactErrors.phone && <p className="text-xs text-destructive">{contactErrors.phone}</p>}
         {contactErrors.submit && (
           <p className="text-sm text-destructive text-center pt-2">{contactErrors.submit}</p>
         )}
