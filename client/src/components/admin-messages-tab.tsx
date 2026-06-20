@@ -277,6 +277,7 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const zanImagePreviewsRef = useRef<Map<string, string>>(new Map());
 
   const currentUser = user as any;
   const currentUserId = currentUser?.id || currentUser?.claims?.sub;
@@ -401,8 +402,17 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
       return res.json();
     },
     onSuccess: (_data, { conversationId }) => {
+      // Save image blob URL before revoking — keyed by server-assigned message ID
+      const msgId = _data?.userMessage?.id;
+      if (msgId && pendingFilePreview && pendingFile?.type.startsWith("image/")) {
+        zanImagePreviewsRef.current.set(String(msgId), pendingFilePreview);
+        // Don't revoke the URL yet — we're using it as the inline preview
+        setPendingFile(null);
+        setPendingFilePreview(null);
+      } else {
+        clearPendingFile();
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/admin-chat/conversations", conversationId, "messages"] });
-      clearPendingFile();
       setMessageInput("");
       setIsUploading(false);
     },
@@ -732,19 +742,34 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
                     )}
 
                     {/* Attachment card for ZAN document uploads */}
-                    {zanAttachment && (
-                      <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-xl px-2.5 py-1.5 text-xs mb-1 w-fit max-w-full">
-                        {zanAttachment.type.startsWith("image/") ? (
-                          <FileImage className="h-3.5 w-3.5 text-primary shrink-0" />
-                        ) : zanAttachment.type === "application/pdf" || zanAttachment.name.endsWith(".pdf") ? (
-                          <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
-                        ) : (
-                          <FileSpreadsheet className="h-3.5 w-3.5 text-primary shrink-0" />
-                        )}
-                        <span className="truncate max-w-[160px] text-foreground font-medium">{zanAttachment.name}</span>
-                        <span className="text-muted-foreground shrink-0">{(zanAttachment.size / 1024).toFixed(0)} KB</span>
-                      </div>
-                    )}
+                    {zanAttachment && (() => {
+                      const cachedImg = zanImagePreviewsRef.current.get(String(msg.id));
+                      if (cachedImg) {
+                        return (
+                          <div className="mb-1">
+                            <img
+                              src={cachedImg}
+                              alt={zanAttachment.name}
+                              className="max-w-[220px] max-h-[200px] rounded-xl object-cover border border-primary/20"
+                            />
+                            <p className="text-[10px] text-muted-foreground mt-0.5 ml-0.5 truncate max-w-[220px]">{zanAttachment.name}</p>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-xl px-2.5 py-1.5 text-xs mb-1 w-fit max-w-full">
+                          {zanAttachment.type.startsWith("image/") ? (
+                            <FileImage className="h-3.5 w-3.5 text-primary shrink-0" />
+                          ) : zanAttachment.type === "application/pdf" || zanAttachment.name.endsWith(".pdf") ? (
+                            <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                          ) : (
+                            <FileSpreadsheet className="h-3.5 w-3.5 text-primary shrink-0" />
+                          )}
+                          <span className="truncate max-w-[160px] text-foreground font-medium">{zanAttachment.name}</span>
+                          <span className="text-muted-foreground shrink-0">{(zanAttachment.size / 1024).toFixed(0)} KB</span>
+                        </div>
+                      );
+                    })()}
 
                     {/* Skip the bubble for bare "Document uploaded:" placeholder messages */}
                     {(!zanAttachment || !msg.content?.startsWith("[Document uploaded:")) && (
