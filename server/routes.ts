@@ -5,7 +5,7 @@ import { verifyTurnstileToken } from "./turnstile";
 import { parse as parseCookie } from "cookie";
 import { unsign as unsignCookie } from "cookie-signature";
 import { storage } from "./storage";
-import { wsClients, broadcastDocumentEvent, broadcastToUsers } from "./websocket-clients";
+import { wsClients, wsAdminClientIds, broadcastDocumentEvent, broadcastToUsers } from "./websocket-clients";
 import { db } from "./db";
 import { isAuthenticated, getAuthenticatedUserId } from "./supabase-middleware";
 import { getRegionContext } from "./middleware/region-detection";
@@ -4152,11 +4152,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/admin/online-users - Returns user IDs of currently-connected WebSocket clients
-  app.get("/api/admin/online-users", isAuthenticated, async (_req: any, res) => {
+  // GET /api/admin/online-users - Returns user IDs of currently-connected admin WebSocket clients
+  app.get("/api/admin/online-users", isAuthenticated, async (req: any, res) => {
     try {
-      const onlineUserIds = Array.from(wsClients.keys());
-      res.json(onlineUserIds);
+      const userId = req.user.claims.sub;
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser || !['admin', 'platform_admin'].includes(currentUser.userType)) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      res.json(Array.from(wsAdminClientIds));
     } catch (error) {
       console.error("Error fetching online users:", error);
       res.status(500).json({ message: "Failed to fetch online users" });
@@ -17171,12 +17175,15 @@ Sitemap: ${baseUrl}/sitemap.xml
                   isAuthenticated = true;
                   clearTimeout(authTimeout);
                   wsClients.set(userId, ws);
+                  if (['admin', 'platform_admin'].includes(dbUser.userType)) {
+                    wsAdminClientIds.add(userId);
+                  }
                   console.log('[WS] ✅ Supabase auth successful:', userId);
                   ws.send(JSON.stringify({ type: 'auth_success', userId }));
                   
-                  // Broadcast real-time presence: this user just came online
-                  const allConnected = Array.from(wsClients.keys()).filter(id => id !== userId);
-                  broadcastToUsers(allConnected, { type: 'user_online', userId });
+                  // Broadcast real-time presence to admin peers only
+                  const adminPeers = Array.from(wsAdminClientIds).filter(id => id !== userId);
+                  broadcastToUsers(adminPeers, { type: 'user_online', userId });
                   
                   // Remove auth handler and set up regular message handler
                   ws.removeListener('message', handleAuthMessage);
@@ -17293,12 +17300,17 @@ Sitemap: ${baseUrl}/sitemap.xml
         isAuthenticated = true;
         clearTimeout(authTimeout);
         wsClients.set(userId, ws);
+        // Check if this user is an admin and track them in the admin set
+        const sessionDbUser = await storage.getUser(userId);
+        if (sessionDbUser && ['admin', 'platform_admin'].includes(sessionDbUser.userType)) {
+          wsAdminClientIds.add(userId);
+        }
         console.log(`[WS] ✅ Session auth successful: ${userId}`);
         ws.send(JSON.stringify({ type: 'auth_success', userId }));
         
-        // Broadcast real-time presence: this user just came online
-        const allConnectedSession = Array.from(wsClients.keys()).filter(id => id !== userId);
-        broadcastToUsers(allConnectedSession, { type: 'user_online', userId });
+        // Broadcast real-time presence to admin peers only
+        const adminPeersSession = Array.from(wsAdminClientIds).filter(id => id !== userId);
+        broadcastToUsers(adminPeersSession, { type: 'user_online', userId });
         
         // Remove auth handler and set up regular message handler
         ws.removeListener('message', handleAuthMessage);
@@ -17318,10 +17330,11 @@ Sitemap: ${baseUrl}/sitemap.xml
       clearTimeout(authTimeout);
       if (userId) {
         wsClients.delete(userId);
+        wsAdminClientIds.delete(userId);
         console.log(`[WS] Client disconnected: ${userId}`);
-        // Broadcast real-time presence: this user just went offline
-        const remaining = Array.from(wsClients.keys());
-        broadcastToUsers(remaining, { type: 'user_offline', userId });
+        // Broadcast real-time presence: this user just went offline (to admin peers only)
+        const remainingAdmins = Array.from(wsAdminClientIds);
+        broadcastToUsers(remainingAdmins, { type: 'user_offline', userId });
       }
     });
     

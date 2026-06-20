@@ -4,6 +4,10 @@ import { WebSocket } from "ws";
 // This allows any module to send real-time messages to connected users
 export const wsClients = new Map<string, WebSocket>();
 
+// Tracks which connected users are admins (userType = 'admin' | 'platform_admin').
+// Used to scope presence broadcasts and the online-users endpoint to admin-only.
+export const wsAdminClientIds = new Set<string>();
+
 // Helper function to send a message to a specific user
 export function sendToUser(userId: string, message: object): boolean {
   const client = wsClients.get(userId);
