@@ -36,8 +36,9 @@ import { useDocumentEvents } from "@/hooks/useDocumentEvents";
 import { 
   User, GraduationCap, Building, Building2, FileText, History, MessageSquare,
   Edit, Trash2, Upload, Download, Eye, CheckCircle, XCircle, Clock,
-  AlertTriangle, Plus, Calendar, UserCheck, Send, Layers, StickyNote
+  AlertTriangle, Plus, Calendar, UserCheck, Send, Layers, StickyNote, ExternalLink
 } from "lucide-react";
+import { Link } from "wouter";
 import { format } from "date-fns";
 import { ApplicationInternalNotes } from "@/components/application-internal-notes";
 import { StudentApplicationNotes } from "@/components/student-application-notes";
@@ -641,7 +642,12 @@ export function ApplicationDetailsPanel({
 
             <div className="flex sm:flex-col items-start sm:items-end gap-2 shrink-0">
               {!isEditing && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  <Button type="button" variant="outline" size="sm" asChild data-testid="button-open-full-page">
+                    <Link href={`/admin/applications/${application.id}`}>
+                      <ExternalLink className="h-3.5 w-3.5 mr-1" />Full Page
+                    </Link>
+                  </Button>
                   <Button type="button" variant="outline" size="sm" onClick={() => setIsEditing(true)} data-testid="button-edit-application">
                     <Edit className="h-3.5 w-3.5 mr-1" />Edit
                   </Button>

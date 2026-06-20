@@ -31,6 +31,7 @@ import type { SavedFilter } from "@shared/schema";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { useAuth } from "@/hooks/useAuth";
 import { ApplicationDetailsPanel } from "@/components/application-details-panel";
+import { STAGE_COLORS, STAGE_SLA } from "@/lib/stage-config";
 import { format, differenceInDays } from "date-fns";
 
 type ApplicationStage = 
@@ -95,20 +96,6 @@ interface AdminApplication {
   documentProgress: DocumentProgress;
 }
 
-// Stage SLA configuration (days)
-const _STAGE_SLA: Record<ApplicationStage, number> = {
-  "Assessment": 3,
-  "Collect Docs": 7,
-  "Documents Verification": 5,
-  "Offer-Letter": 14,
-  "GS-Clearance": 10,
-  "COE": 7,
-  "Health Cover": 5,
-  "Visa Lodgment": 21,
-  "Application Won": 0,
-  "Refusal/Refunds": 0,
-  "Application Lost": 0,
-};
 
 // Calculate progress percentage for stage
 // Formula: (stageIndex / (totalActiveStages - 1)) * 50% + (verifiedDocs / requiredDocs) * 50%
@@ -135,19 +122,14 @@ function calculateStageProgress(stage: ApplicationStage, stageIndex: number, doc
   return Math.min(100, Math.round(stageProgress + docProgress));
 }
 
-// Get SLA status for an application
-// Uses fixed thresholds: 7 days = at-risk, 14 days = overdue
-function getSLAStatus(createdAt: string, updatedAt: string, stage: ApplicationStage): 'on-track' | 'at-risk' | 'overdue' {
-  // Terminal stages are always on-track (completed)
-  if (TERMINAL_STAGES.includes(stage)) {
-    return 'on-track';
-  }
-  
-  const daysSinceCreation = differenceInDays(new Date(), new Date(createdAt));
-  
-  // Fixed thresholds as per requirements
-  if (daysSinceCreation >= 14) return 'overdue';
-  if (daysSinceCreation >= 7) return 'at-risk';
+// Get SLA status for an application using per-stage SLA limits and time since last update
+function getSLAStatus(_createdAt: string, updatedAt: string, stage: ApplicationStage): 'on-track' | 'at-risk' | 'overdue' {
+  if (TERMINAL_STAGES.includes(stage)) return 'on-track';
+  const slaLimit = STAGE_SLA[stage];
+  if (!slaLimit) return 'on-track';
+  const daysSinceUpdate = differenceInDays(new Date(), new Date(updatedAt));
+  if (daysSinceUpdate >= slaLimit) return 'overdue';
+  if (daysSinceUpdate >= Math.ceil(slaLimit * 0.7)) return 'at-risk';
   return 'on-track';
 }
 
@@ -232,19 +214,6 @@ const TERMINAL_STAGES: ApplicationStage[] = [
   "Application Lost",
 ];
 
-const STAGE_COLORS: Record<ApplicationStage, string> = {
-  "Assessment": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  "Collect Docs": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-  "Documents Verification": "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
-  "Offer-Letter": "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
-  "GS-Clearance": "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
-  "COE": "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200",
-  "Health Cover": "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200",
-  "Visa Lodgment": "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-  "Application Won": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  "Refusal/Refunds": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-  "Application Lost": "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
-};
 
 // Zoho-style stage header colors (prominent background colors)
 const _STAGE_HEADER_COLORS: Record<ApplicationStage, string> = {

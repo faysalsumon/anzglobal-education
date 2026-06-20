@@ -14,6 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useDocumentEvents } from "@/hooks/useDocumentEvents";
 import { Link } from "wouter";
+import { STAGE_COLORS, STUDENT_STAGES, getStudentStageIndex } from "@/lib/stage-config";
 
 interface ApplicationNote {
   id: string;
@@ -151,38 +152,6 @@ const STAGE_DISPLAY_NAMES: Record<ApplicationStage, string> = {
   "Application Lost": "Application Lost",
 };
 
-const STAGE_COLORS: Record<ApplicationStage, string> = {
-  "Assessment": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  "Collect Docs": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  "Documents Verification": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-  "Offer-Letter": "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
-  "GS-Clearance": "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
-  "COE": "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200",
-  "Health Cover": "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200",
-  "Visa Lodgment": "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-  "Application Won": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  "Refusal/Refunds": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-  "Application Lost": "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
-};
-
-// Student-facing simplified stages (5 main milestones)
-const STUDENT_STAGES = [
-  { id: "assessment", name: "Initial Assessment", internalStages: ["Assessment", "Collect Docs", "Documents Verification"] },
-  { id: "applied", name: "Applied to Institution", internalStages: ["Offer-Letter"] },
-  { id: "offer", name: "Offer Letter", internalStages: ["GS-Clearance"] },
-  { id: "payment", name: "Payment", internalStages: ["COE"] },
-  { id: "coe", name: "COE Issued", internalStages: ["Health Cover", "Visa Lodgment", "Application Won"] },
-] as const;
-
-// Helper to map internal stage to student stage index
-const getStudentStageIndex = (internalStage: ApplicationStage): number => {
-  for (let i = 0; i < STUDENT_STAGES.length; i++) {
-    if ((STUDENT_STAGES[i].internalStages as readonly string[]).includes(internalStage)) {
-      return i;
-    }
-  }
-  return -1; // Terminal or unknown stage
-};
 
 export function ApplicationCard({ application, course, university, consultant }: ApplicationCardProps) {
   const { toast } = useToast();

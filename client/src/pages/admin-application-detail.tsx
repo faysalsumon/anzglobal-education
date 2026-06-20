@@ -38,6 +38,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
+import { STAGE_COLORS } from "@/lib/stage-config";
 
 type ApplicationStage = 
   | "Assessment"
@@ -111,19 +112,6 @@ interface AdminApplicationDetail {
   };
 }
 
-const STAGE_COLORS: Record<ApplicationStage, string> = {
-  "Assessment": "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  "Collect Docs": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
-  "Documents Verification": "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  "Offer-Letter": "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-  "GS-Clearance": "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300",
-  "COE": "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
-  "Health Cover": "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300",
-  "Visa Lodgment": "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-  "Application Won": "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-  "Refusal/Refunds": "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-  "Application Lost": "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
-};
 
 function AdminApplicationDetailContent() {
   const [, params] = useRoute("/admin/applications/:id");
