@@ -1127,7 +1127,9 @@ function AdminApplicationDetailContent() {
 export default function AdminApplicationDetail() {
   return (
     <AdminLayout breadcrumbTitle="Application Details">
-      <AdminApplicationDetailContent />
+      <TabErrorBoundary>
+        <AdminApplicationDetailContent />
+      </TabErrorBoundary>
     </AdminLayout>
   );
 }
