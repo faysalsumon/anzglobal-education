@@ -28,6 +28,7 @@ import {
   Download,
   CheckCheck,
   Mic,
+  MicOff,
   Laptop,
   X,
   UserPlus,
@@ -270,6 +271,8 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isMemberPanelOpen, setIsMemberPanelOpen] = useState(false);
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   const currentUser = user as any;
   const currentUserId = currentUser?.id || currentUser?.claims?.sub;
@@ -373,6 +376,63 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
       setIsTyping(false);
     }
   });
+
+  const uploadZanDocumentMutation = useMutation({
+    mutationFn: async ({ file, conversationId }: { file: File; conversationId: string }) => {
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("conversationId", conversationId);
+      const res = await fetch("/api/admin-chat/upload-document", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Upload failed" }));
+        throw new Error(err.message || "Upload failed");
+      }
+      return res.json();
+    },
+    onSuccess: (_data, { conversationId }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin-chat/conversations", conversationId, "messages"] });
+      clearPendingFile();
+      setMessageInput("");
+      setIsUploading(false);
+    },
+    onError: (err: any) => {
+      toast({ title: "Document upload failed", description: err.message, variant: "destructive" });
+      setIsUploading(false);
+    },
+  });
+
+  const handleVoiceInput = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast({ title: "Voice input not supported", description: "Please use Chrome or Edge for voice input.", variant: "destructive" });
+      return;
+    }
+    if (isRecording) {
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-AU";
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? "";
+      setMessageInput((prev) => (prev ? prev + " " : "") + transcript);
+      setIsRecording(false);
+      setTimeout(() => textareaRef.current?.focus(), 50);
+    };
+    recognition.onerror = () => setIsRecording(false);
+    recognition.onend = () => setIsRecording(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsRecording(true);
+  };
 
   const markAsReadMutation = useMutation({
     mutationFn: async (id: string) =>
@@ -538,7 +598,7 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
     // If there's a file to upload
     if (pendingFile) {
       if (activeView.type === "zan") {
-        toast({ title: "Not supported", description: "File sharing is not available with Zan." });
+        uploadZanDocumentMutation.mutate({ file: pendingFile, conversationId: activeView.id });
         return;
       }
       setIsUploading(true);
@@ -1024,7 +1084,7 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
                   )}
                   <Textarea
                     ref={textareaRef}
-                    placeholder="Type a message..."
+                    placeholder={isRecording ? "Listening…" : "Type a message..."}
                     value={messageInput}
                     onChange={handleMessageInputChange}
                     onKeyDown={(e) => {
@@ -1068,24 +1128,37 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
                       size="icon" 
                       className="h-8 w-8 rounded-lg bg-primary shadow-sm hover:opacity-90 transition-opacity"
                       onClick={handleSendMessage}
-                      disabled={isUploading}
+                      disabled={isUploading || uploadZanDocumentMutation.isPending}
                     >
-                      {isUploading ? (
+                      {(isUploading || uploadZanDocumentMutation.isPending) ? (
                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                       ) : (
                         <Send className="h-4 w-4" />
                       )}
                     </Button>
                   ) : (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground opacity-50 cursor-not-allowed no-default-hover-elevate">
-                      <Mic className="h-5 w-5" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-8 w-8 rounded-lg transition-colors ${isRecording ? "text-red-500 animate-pulse" : "text-muted-foreground"}`}
+                      onClick={handleVoiceInput}
+                      title={isRecording ? "Stop recording" : "Voice input"}
+                    >
+                      {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                     </Button>
                   )}
                 </div>
               </div>
-              <p className="hidden md:block text-[10px] text-muted-foreground mt-2 text-center font-medium opacity-60">
-                Press Enter to send, Shift + Enter for new line
-              </p>
+              {isRecording ? (
+                <p className="text-[11px] text-red-500 mt-2 text-center font-medium flex items-center justify-center gap-1">
+                  <span className="inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                  Listening… tap the mic to stop
+                </p>
+              ) : (
+                <p className="hidden md:block text-[10px] text-muted-foreground mt-2 text-center font-medium opacity-60">
+                  Press Enter to send, Shift + Enter for new line
+                </p>
+              )}
             </div>
           </>
         ) : (

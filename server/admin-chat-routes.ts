@@ -1637,19 +1637,36 @@ export function registerAdminChatRoutes(app: Express) {
       const userId = getUserId(req)!;
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-      const existing = await db
-        .select()
-        .from(chatConversations)
-        .where(eq(chatConversations.userId, userId))
-        .limit(1)
-        .then((r) => r[0]);
+      const requestedConvId = typeof req.body?.conversationId === "string" ? req.body.conversationId.trim() : null;
 
       let conversationId: string;
-      if (existing) {
-        conversationId = existing.id;
+      if (requestedConvId) {
+        const owned = await db
+          .select()
+          .from(chatConversations)
+          .where(eq(chatConversations.id, requestedConvId))
+          .limit(1)
+          .then((r) => r[0]);
+        if (owned && owned.userId === userId) {
+          conversationId = owned.id;
+        } else {
+          return res.status(403).json({ message: "Conversation not found" });
+        }
       } else {
-        const [newConv] = await db.insert(chatConversations).values({ userId }).returning();
-        conversationId = newConv.id;
+        const existing = await db
+          .select()
+          .from(chatConversations)
+          .where(eq(chatConversations.userId, userId))
+          .orderBy(desc(chatConversations.createdAt))
+          .limit(1)
+          .then((r) => r[0]);
+
+        if (existing) {
+          conversationId = existing.id;
+        } else {
+          const [newConv] = await db.insert(chatConversations).values({ userId }).returning();
+          conversationId = newConv.id;
+        }
       }
 
       const { buffer, originalname, mimetype } = req.file;
