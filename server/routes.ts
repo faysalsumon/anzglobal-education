@@ -18535,10 +18535,20 @@ Sitemap: ${baseUrl}/sitemap.xml
           where: eq(studentProfiles.id, application.studentId),
         });
         if (profile?.userId) {
-          const contact = await db.select().from(crmContacts)
+          let contact = await db.select().from(crmContacts)
             .where(eq(crmContacts.linkedUserId, profile.userId))
             .limit(1)
             .then(r => r[0]);
+          // Email fallback: if linkedUserId lookup failed, try matching by email
+          if (!contact) {
+            const user = await db.select({ email: users.email }).from(users)
+              .where(eq(users.id, profile.userId)).limit(1).then(r => r[0]);
+            if (user?.email) {
+              contact = await db.select().from(crmContacts)
+                .where(eq(crmContacts.email, user.email))
+                .limit(1).then(r => r[0]);
+            }
+          }
           if (contact) {
             const cNotes = await db
               .select({
@@ -18567,7 +18577,7 @@ Sitemap: ${baseUrl}/sitemap.xml
                 isPinned: false,
                 visibility: n.visibility ?? 'public',
                 visibleTo: n.visibleTo ?? [],
-                source: 'lead' as const,
+                source: 'crm' as const,
                 author: {
                   id: n.createdById,
                   firstName: n.authorFirstName,

@@ -72,7 +72,7 @@ export interface UnifiedNote {
     email?: string | null;
     profileImageUrl?: string | null;
   } | null;
-  source?: "lead" | "application";
+  source?: "lead" | "crm" | "application";
   isPinned?: boolean | null;
   visibility?: NoteVisibility;
   visibleTo?: string[];
@@ -718,7 +718,7 @@ function NoteItem({
   isLast?: boolean;
 }) {
   const isEditing = editingNoteId === note.id;
-  const isReadOnly = note.source === "lead" && !canEditLead;
+  const isReadOnly = (note.source === "lead" || note.source === "crm") && !canEditLead;
   const isOwn = currentUserId === note.createdById;
   const canEdit = !isReadOnly && isOwn;
 
@@ -762,8 +762,8 @@ function NoteItem({
                 >
                   {formatRelativeTime(note.createdAt)}
                 </span>
-                {note.source === "lead" && (
-                  <Badge variant="secondary" className="text-[10px] px-1 py-0 leading-tight no-default-active-elevate">Lead</Badge>
+                {(note.source === "lead" || note.source === "crm") && (
+                  <Badge variant="secondary" className="text-[10px] px-1 py-0 leading-tight no-default-active-elevate">CRM</Badge>
                 )}
                 <VisibilityBadge visibility={note.visibility} visibleTo={note.visibleTo} />
               </div>

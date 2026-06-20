@@ -18,7 +18,7 @@ interface UnifiedNoteRaw {
   createdAt: Date | string | null;
   createdById: string;
   isPinned?: boolean | null;
-  source: "lead" | "application";
+  source: "lead" | "crm" | "application";
   visibility?: "public" | "private" | "selected";
   visibleTo?: string[] | null;
   author?: {
