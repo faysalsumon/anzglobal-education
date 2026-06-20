@@ -120,7 +120,11 @@ export function ApplicationStageSelector({
     setConfirmDialog({ open: false, targetStage: null, type: null });
   };
 
-  const currentConfig = STAGE_CONFIG[currentStage];
+  const currentConfig = STAGE_CONFIG[currentStage] ?? {
+    displayName: currentStage,
+    dotColor: "bg-gray-400",
+    badgeClass: "bg-gray-100 text-gray-800",
+  };
   const currentIndex = getStageIndex(currentStage);
 
   return (
@@ -295,7 +299,7 @@ interface StageDotProps {
 }
 
 export function StageDot({ stage, size = 'md', className }: StageDotProps) {
-  const config = STAGE_CONFIG[stage];
+  const config = STAGE_CONFIG[stage] ?? { dotColor: "bg-gray-400", displayName: stage };
   const sizeClasses = {
     sm: 'h-2 w-2',
     md: 'h-3 w-3',
@@ -322,7 +326,7 @@ interface StageBadgeProps {
 }
 
 export function StageBadge({ stage, showDot = true, className }: StageBadgeProps) {
-  const config = STAGE_CONFIG[stage];
+  const config = STAGE_CONFIG[stage] ?? { badgeClass: "bg-gray-100 text-gray-800", displayName: stage, dotColor: "bg-gray-400" };
 
   return (
     <Badge className={cn(config.badgeClass, "gap-1.5", className)}>

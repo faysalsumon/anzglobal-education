@@ -162,9 +162,22 @@ class TabErrorBoundary extends Component<
   render() {
     if (this.state.error) {
       return (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-          <p className="font-semibold mb-1">Something went wrong{this.props.label ? ` in ${this.props.label}` : ""}</p>
-          <p className="text-xs font-mono opacity-80">{this.state.error.message}</p>
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-6 space-y-3 text-sm">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold text-destructive">
+                Something went wrong{this.props.label ? ` in ${this.props.label}` : ""}
+              </p>
+              <p className="text-xs text-muted-foreground font-mono">{this.state.error.message}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-destructive/30 text-xs text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <RefreshCw className="h-3 w-3" />Reload page
+          </button>
         </div>
       );
     }
@@ -768,8 +781,8 @@ function AdminApplicationDetailContent() {
               {ALL_STAGES.filter(stage => documentsByStage[stage]?.length > 0).map(stage => (
                 <div key={stage}>
                   <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-2 h-2 rounded-full ${STAGE_CONFIG[stage].dotColor}`} />
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase">{STAGE_CONFIG[stage].displayName}</h4>
+                    <div className={`w-2 h-2 rounded-full ${STAGE_CONFIG[stage]?.dotColor ?? "bg-gray-400"}`} />
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase">{STAGE_CONFIG[stage]?.displayName ?? stage}</h4>
                     <Badge variant="secondary" className="h-4 px-1 text-xs no-default-active-elevate">{documentsByStage[stage].length}</Badge>
                   </div>
                   <div className="space-y-2 ml-4">
