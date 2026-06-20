@@ -1755,6 +1755,7 @@ export function registerAdminChatRoutes(app: Express) {
         }
 
         if (!pdfDone) {
+          // eslint-disable-next-line no-control-regex
           const text = buffer.toString("utf-8").replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, " ").substring(0, 40000);
           if (text.trim().length > 100) {
             const comp = await nativeOpenAI.chat.completions.create({
