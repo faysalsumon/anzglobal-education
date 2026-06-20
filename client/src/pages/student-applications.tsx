@@ -6,18 +6,7 @@ import { FileText, AlertCircle, RefreshCw, Plus } from "lucide-react";
 import { ApplicationCard } from "@/components/application-card";
 import { StudentLayout } from "@/components/student-layout";
 
-type ApplicationStage = 
-  | "Assessment"
-  | "Collect Docs"
-  | "Documents Verification"
-  | "Offer-Letter"
-  | "GS-Clearance"
-  | "COE"
-  | "Health Cover"
-  | "Visa Lodgment"
-  | "Application Won"
-  | "Refusal/Refunds"
-  | "Application Lost";
+import type { ApplicationStage } from "@/lib/stage-config";
 
 interface ApplicationWithDetails {
   application: {

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -22,30 +23,18 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Search, User, FileText, CheckCircle, Clock, 
-  ChevronRight, UserPlus, AlertCircle, GripVertical, Bell,
+  ChevronRight, UserPlus, AlertCircle, GripVertical,
   List, LayoutGrid, ChevronDown, X, Building2, GraduationCap, Calendar, Eye, AlertTriangle,
   CheckCheck, Users, Trash2, PanelLeftClose, PanelLeft, Bookmark, Save,
-  ArrowUpDown, ChevronLeft, Globe, Download
+  ArrowUpDown, ChevronLeft, Globe, Download, Bell
 } from "lucide-react";
-import type { SavedFilter } from "@shared/schema";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
+import type { SavedFilter } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
-import { ApplicationDetailsPanel } from "@/components/application-details-panel";
-import { STAGE_COLORS, STAGE_SLA } from "@/lib/stage-config";
+import { STAGE_COLORS, STAGE_SLA, ACTIVE_STAGES, TERMINAL_STAGES, ALL_STAGES } from "@/lib/stage-config";
+import type { ApplicationStage } from "@/lib/stage-config";
 import { format, differenceInDays } from "date-fns";
 
-type ApplicationStage = 
-  | "Assessment"
-  | "Collect Docs"
-  | "Documents Verification"
-  | "Offer-Letter"
-  | "GS-Clearance"
-  | "COE"
-  | "Health Cover"
-  | "Visa Lodgment"
-  | "Application Won"
-  | "Refusal/Refunds"
-  | "Application Lost";
 
 interface DocumentProgress {
   totalDocs: number;
@@ -105,7 +94,7 @@ function calculateStageProgress(stage: ApplicationStage, stageIndex: number, doc
     return 100;
   }
   
-  const totalActiveStages = STAGES.length;
+  const totalActiveStages = ACTIVE_STAGES.length;
   // Ensure stageIndex is valid (not -1 for non-active stages)
   const validIndex = Math.max(0, stageIndex);
   
@@ -197,41 +186,6 @@ interface Consultant {
   branchId: string | null;
 }
 
-const STAGES: ApplicationStage[] = [
-  "Assessment",
-  "Collect Docs",
-  "Documents Verification",
-  "Offer-Letter",
-  "GS-Clearance",
-  "COE",
-  "Health Cover",
-  "Visa Lodgment",
-];
-
-const TERMINAL_STAGES: ApplicationStage[] = [
-  "Application Won",
-  "Refusal/Refunds",
-  "Application Lost",
-];
-
-
-// Zoho-style stage header colors (prominent background colors)
-const _STAGE_HEADER_COLORS: Record<ApplicationStage, string> = {
-  "Assessment": "bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600",
-  "Collect Docs": "bg-blue-200 dark:bg-blue-800 border-blue-300 dark:border-blue-700",
-  "Documents Verification": "bg-purple-200 dark:bg-purple-800 border-purple-300 dark:border-purple-700",
-  "Offer-Letter": "bg-orange-200 dark:bg-orange-800 border-orange-300 dark:border-orange-700",
-  "GS-Clearance": "bg-emerald-200 dark:bg-emerald-800 border-emerald-300 dark:border-emerald-700",
-  "COE": "bg-cyan-200 dark:bg-cyan-800 border-cyan-300 dark:border-cyan-700",
-  "Health Cover": "bg-pink-200 dark:bg-pink-800 border-pink-300 dark:border-pink-700",
-  "Visa Lodgment": "bg-indigo-200 dark:bg-indigo-800 border-indigo-300 dark:border-indigo-700",
-  "Application Won": "bg-green-300 dark:bg-green-700 border-green-400 dark:border-green-600",
-  "Refusal/Refunds": "bg-red-300 dark:bg-red-700 border-red-400 dark:border-red-600",
-  "Application Lost": "bg-gray-300 dark:bg-gray-700 border-gray-400 dark:border-gray-600",
-};
-
-// All stages combined for single row display
-const ALL_STAGES: ApplicationStage[] = [...STAGES, ...TERMINAL_STAGES];
 
 // Droppable stage column
 function DroppableStageColumn({ 
@@ -321,7 +275,7 @@ function DraggableApplicationCard({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const stageIndex = STAGES.indexOf(app.application.currentStage);
+  const stageIndex = ACTIVE_STAGES.indexOf(app.application.currentStage);
   const _progress = calculateStageProgress(
     app.application.currentStage, 
     stageIndex >= 0 ? stageIndex : 0, 
@@ -476,10 +430,7 @@ export function AdminApplicationsKanban() {
   const [selectedApplications, setSelectedApplications] = useState<Set<string>>(new Set());
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedConsultant, setSelectedConsultant] = useState<string | undefined>();
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [selectedApplication, setSelectedApplication] = useState<AdminApplication | null>(null);
   const [_activeId, setActiveId] = useState<string | null>(null);
-  const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name-az' | 'name-za' | 'stage' | 'sla'>('newest');
   const [currentPage, setCurrentPage] = useState(1);
@@ -489,6 +440,8 @@ export function AdminApplicationsKanban() {
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
   const [batchStageDialogOpen, setBatchStageDialogOpen] = useState(false);
   const [batchTargetStage, setBatchTargetStage] = useState<ApplicationStage | undefined>();
+  const [summaryApp, setSummaryApp] = useState<AdminApplication | null>(null);
+  const [reminderApp, setReminderApp] = useState<AdminApplication | null>(null);
 
   // Drag-and-drop sensors
   const sensors = useSensors(
@@ -826,9 +779,9 @@ export function AdminApplicationsKanban() {
 
   // Get next stage
   const getNextStage = (currentStage: ApplicationStage): ApplicationStage | null => {
-    const currentIndex = STAGES.indexOf(currentStage);
-    if (currentIndex >= 0 && currentIndex < STAGES.length - 1) {
-      return STAGES[currentIndex + 1];
+    const currentIndex = ACTIVE_STAGES.indexOf(currentStage);
+    if (currentIndex >= 0 && currentIndex < ACTIVE_STAGES.length - 1) {
+      return ACTIVE_STAGES[currentIndex + 1];
     }
     return null;
   };
@@ -851,7 +804,7 @@ export function AdminApplicationsKanban() {
     let newStage: ApplicationStage | undefined;
     
     // Check if dropped directly on a column (droppable zone)
-    if (STAGES.includes(over.id as ApplicationStage) || TERMINAL_STAGES.includes(over.id as ApplicationStage)) {
+    if (ACTIVE_STAGES.includes(over.id as ApplicationStage) || TERMINAL_STAGES.includes(over.id as ApplicationStage)) {
       newStage = over.id as ApplicationStage;
     } 
     // If dropped on another card, get its container (column)
@@ -1351,7 +1304,7 @@ export function AdminApplicationsKanban() {
             </Card>
           ) : (
             paginatedApplications.map((app) => {
-              const stageIndex = STAGES.indexOf(app.application.currentStage);
+              const stageIndex = ACTIVE_STAGES.indexOf(app.application.currentStage);
               const progress = calculateStageProgress(
                 app.application.currentStage,
                 stageIndex >= 0 ? stageIndex : 0,
@@ -1369,9 +1322,7 @@ export function AdminApplicationsKanban() {
                   className={`hover-elevate cursor-pointer transition-all ${
                     selectedApplications.has(app.application.id) ? 'ring-2 ring-primary ring-offset-1' : ''
                   } ${slaStatus === 'overdue' ? 'border-red-300 dark:border-red-800' : ''}`}
-                  onClick={() => {
-                    setLocation(`/admin/applications/${app.application.id}`);
-                  }}
+                  onClick={() => setSummaryApp(app)}
                   data-testid={`card-application-${app.application.id}`}
                 >
                   <CardContent className="p-4">
@@ -1556,9 +1507,7 @@ export function AdminApplicationsKanban() {
                                 app={app}
                                 isSelected={selectedApplications.has(app.application.id)}
                                 onToggleSelection={() => toggleSelection(app.application.id)}
-                                onViewDetails={() => {
-                                  setLocation(`/admin/applications/${app.application.id}`);
-                                }}
+                                onViewDetails={() => setSummaryApp(app)}
                                 onAdvanceStage={() => {
                                   if (!isTerminal) {
                                     const next = getNextStage(stage);
@@ -1620,48 +1569,125 @@ export function AdminApplicationsKanban() {
         </DialogContent>
       </Dialog>
 
-      {/* Details Dialog */}
-      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-application-details">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              Application Details
-              {selectedApplication && (
-                <span className="text-sm font-normal text-muted-foreground">
-                  - {selectedApplication.student.firstName} {selectedApplication.student.lastName}
-                </span>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedApplication && (
-            <ApplicationDetailsPanel
-              application={selectedApplication.application as any}
-              course={selectedApplication.course}
-              university={selectedApplication.university}
-              student={selectedApplication.student}
-              consultant={selectedApplication.consultant}
-              currentUserId={user?.id}
-              onClose={() => setDetailsDialogOpen(false)}
-              onDeleted={() => {
-                setSelectedApplication(null);
-              }}
-            />
-          )}
-          <DialogFooter className="flex-row justify-between sm:justify-between">
-            <Button 
-              variant="outline"
-              onClick={() => setReminderDialogOpen(true)}
-              data-testid="button-set-reminder"
-            >
-              <Bell className="h-4 w-4 mr-2" />
-              Set Reminder
-            </Button>
-            <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Application Summary Sheet */}
+      <Sheet open={!!summaryApp} onOpenChange={(open) => { if (!open) setSummaryApp(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-md flex flex-col gap-0 p-0" data-testid="sheet-application-summary">
+          {summaryApp && (() => {
+            const sIdx = ACTIVE_STAGES.indexOf(summaryApp.application.currentStage);
+            const prog = calculateStageProgress(
+              summaryApp.application.currentStage,
+              sIdx >= 0 ? sIdx : 0,
+              summaryApp.documentProgress
+            );
+            const slaStatus = getSLAStatus(
+              summaryApp.application.createdAt,
+              summaryApp.application.updatedAt,
+              summaryApp.application.currentStage
+            );
+            const courseName = summaryApp.externalCourseName || summaryApp.course?.title || "No course";
+            const institutionName = summaryApp.externalInstitutionName || summaryApp.university?.name || "—";
+            return (
+              <>
+                <SheetHeader className="px-5 py-4 border-b shrink-0">
+                  <SheetTitle className="text-base flex items-center gap-2">
+                    <Avatar className="h-8 w-8 shrink-0">
+                      <AvatarImage src={summaryApp.student.profileImageUrl || undefined} />
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {getInitials(summaryApp.student.firstName, summaryApp.student.lastName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="truncate">{summaryApp.student.firstName} {summaryApp.student.lastName}</span>
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+                  {/* Stage + SLA */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={`${STAGE_COLORS[summaryApp.application.currentStage]} no-default-active-elevate`} data-testid="badge-summary-stage">
+                      {summaryApp.application.currentStage}
+                    </Badge>
+                    <SLABadge status={slaStatus} />
+                  </div>
+
+                  {/* Progress ring + stats */}
+                  <div className="flex items-center gap-4 p-3 bg-muted/40 rounded-md">
+                    <CircularProgress progress={prog} size={52} strokeWidth={4} />
+                    <div className="space-y-1 text-sm">
+                      <p className="text-muted-foreground text-xs">Document Progress</p>
+                      <p className="font-medium">
+                        {summaryApp.documentProgress.requiredUploaded}/{summaryApp.documentProgress.requiredDocs} required uploaded
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {summaryApp.documentProgress.verifiedDocs} verified
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Course + University */}
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2 text-sm">
+                      <GraduationCap className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <span className="font-medium leading-snug">{courseName}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Building2 className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{institutionName}</span>
+                    </div>
+                  </div>
+
+                  {/* Consultant */}
+                  {summaryApp.consultant ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <User className="h-4 w-4 shrink-0" />
+                      <span>{summaryApp.consultant.firstName} {summaryApp.consultant.lastName}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-amber-600 border-amber-300 no-default-active-elevate">
+                        <UserPlus className="h-3 w-3 mr-1" />
+                        Unassigned
+                      </Badge>
+                    </div>
+                  )}
+
+                  {/* Submitted */}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Submitted {format(new Date(summaryApp.application.createdAt), "MMM d, yyyy")}
+                  </div>
+                </div>
+
+                {/* Footer actions */}
+                <div className="px-5 py-4 border-t flex flex-col gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    onClick={() => { setReminderApp(summaryApp); }}
+                    className="w-full"
+                    data-testid="button-set-reminder-sheet"
+                  >
+                    <Bell className="h-4 w-4 mr-2" />
+                    Set Reminder
+                  </Button>
+                  <Button
+                    onClick={() => { setSummaryApp(null); setLocation(`/admin/applications/${summaryApp.application.id}`); }}
+                    className="w-full"
+                    data-testid="button-open-full-detail"
+                  >
+                    Open Full Detail
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
+
+      {/* Reminder Modal — triggered from summary sheet */}
+      <CreateReminderModal
+        open={!!reminderApp}
+        onOpenChange={(open) => { if (!open) setReminderApp(null); }}
+        applicationId={reminderApp?.application.id}
+      />
 
       {/* Batch Stage Transition Dialog */}
       <Dialog open={batchStageDialogOpen} onOpenChange={setBatchStageDialogOpen}>
@@ -1679,7 +1705,7 @@ export function AdminApplicationsKanban() {
               </SelectTrigger>
               <SelectContent>
                 <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Active Stages</div>
-                {STAGES.map((stage) => (
+                {ACTIVE_STAGES.map((stage) => (
                   <SelectItem key={stage} value={stage}>
                     {stage}
                   </SelectItem>
@@ -1717,14 +1743,6 @@ export function AdminApplicationsKanban() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Reminder Modal */}
-      {selectedApplication && (
-        <CreateReminderModal
-          open={reminderDialogOpen}
-          onOpenChange={setReminderDialogOpen}
-          applicationId={selectedApplication.application.id}
-        />
-      )}
     </div>
   );
 }
