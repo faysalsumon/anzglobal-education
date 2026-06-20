@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -36,7 +36,7 @@ import { useDocumentEvents } from "@/hooks/useDocumentEvents";
 import { 
   User, GraduationCap, Building, Building2, FileText, History, MessageSquare,
   Edit, Trash2, Upload, Download, Eye, CheckCircle, XCircle, Clock,
-  AlertTriangle, Plus, Calendar, UserCheck, Send, Layers
+  AlertTriangle, Plus, Calendar, UserCheck, Send, Layers, StickyNote
 } from "lucide-react";
 import { format } from "date-fns";
 import { ApplicationInternalNotes } from "@/components/application-internal-notes";
@@ -596,7 +596,11 @@ export function ApplicationDetailsPanel({
   const tabTriggerClass = "rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 sm:px-4 py-2.5 text-sm gap-1.5 shrink-0";
 
   return (
-    <div className="space-y-5">
+    <div>
+      <div className="flex flex-col xl:flex-row gap-5 items-start">
+
+        {/* ── Left column: Hero + Tabs ─────────────────────── */}
+        <div className="flex-1 min-w-0 space-y-5">
 
       {/* ── Hero Banner ─────────────────────────────────────── */}
       <Card className="overflow-hidden" data-testid="card-application-hero">
@@ -669,9 +673,6 @@ export function ApplicationDetailsPanel({
           </TabsTrigger>
           <TabsTrigger value="messages" className={tabTriggerClass} data-testid="tab-messages">
             <MessageSquare className="h-3.5 w-3.5" />Messages
-          </TabsTrigger>
-          <TabsTrigger value="notes" className={tabTriggerClass} data-testid="tab-notes">
-            <User className="h-3.5 w-3.5" /><span className="hidden sm:inline">Internal Notes</span><span className="sm:hidden">Notes</span>
           </TabsTrigger>
           <TabsTrigger value="history" className={tabTriggerClass} data-testid="tab-history">
             <History className="h-3.5 w-3.5" />History
@@ -1103,19 +1104,6 @@ export function ApplicationDetailsPanel({
           />
         </TabsContent>
 
-        <TabsContent value="notes" className="mt-4">
-          <div className="space-y-2 mb-4">
-            <p className="text-sm text-muted-foreground">
-              Internal notes are only visible to team members. Use "Messages" tab to communicate with the student.
-            </p>
-          </div>
-          <ApplicationInternalNotes
-            applicationId={application.id}
-            currentUserId={currentUserId}
-            branchId={application.branchId}
-          />
-        </TabsContent>
-
         <TabsContent value="history" className="mt-4">
           <ScrollArea className="h-[400px]">
             {history.length === 0 ? (
@@ -1186,6 +1174,32 @@ export function ApplicationDetailsPanel({
           </ScrollArea>
         </TabsContent>
       </Tabs>
+
+        </div>{/* end left column */}
+
+        {/* ── Right column: Notes panel ────────────── */}
+        <div className="w-full xl:w-80 2xl:w-96 xl:sticky xl:top-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <StickyNote className="h-4 w-4 text-muted-foreground" />
+                Internal Notes
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Only visible to team members. Use the Messages tab to communicate with the student.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <ApplicationInternalNotes
+                applicationId={application.id}
+                currentUserId={currentUserId}
+                branchId={application.branchId}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+      </div>{/* end flex row */}
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent data-testid="dialog-confirm-delete-application">
