@@ -1573,12 +1573,6 @@ export function AdminApplicationsKanban() {
       <Sheet open={!!summaryApp} onOpenChange={(open) => { if (!open) setSummaryApp(null); }}>
         <SheetContent side="right" className="w-full sm:max-w-md flex flex-col gap-0 p-0" data-testid="sheet-application-summary">
           {summaryApp && (() => {
-            const sIdx = ACTIVE_STAGES.indexOf(summaryApp.application.currentStage);
-            const prog = calculateStageProgress(
-              summaryApp.application.currentStage,
-              sIdx >= 0 ? sIdx : 0,
-              summaryApp.documentProgress
-            );
             const slaStatus = getSLAStatus(
               summaryApp.application.createdAt,
               summaryApp.application.updatedAt,
@@ -1606,20 +1600,6 @@ export function AdminApplicationsKanban() {
                       {summaryApp.application.currentStage}
                     </Badge>
                     <SLABadge status={slaStatus} />
-                  </div>
-
-                  {/* Progress ring + stats */}
-                  <div className="flex items-center gap-4 p-3 bg-muted/40 rounded-md">
-                    <CircularProgress progress={prog} size={52} strokeWidth={4} />
-                    <div className="space-y-1 text-sm">
-                      <p className="text-muted-foreground text-xs">Document Progress</p>
-                      <p className="font-medium">
-                        {summaryApp.documentProgress.requiredUploaded}/{summaryApp.documentProgress.requiredDocs} required uploaded
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {summaryApp.documentProgress.verifiedDocs} verified
-                      </p>
-                    </div>
                   </div>
 
                   {/* Course + University */}

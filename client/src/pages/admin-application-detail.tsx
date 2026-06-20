@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, Component, type ReactNode } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -148,6 +148,30 @@ interface AssignableUser {
   email: string | null;
 }
 
+/* ─── Error boundary ─────────────────────────────────────────────────── */
+
+class TabErrorBoundary extends Component<
+  { children: ReactNode; label?: string },
+  { error: Error | null }
+> {
+  constructor(props: { children: ReactNode; label?: string }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+          <p className="font-semibold mb-1">Something went wrong{this.props.label ? ` in ${this.props.label}` : ""}</p>
+          <p className="text-xs font-mono opacity-80">{this.state.error.message}</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 /* ─── Main content ───────────────────────────────────────────────────── */
 
 function AdminApplicationDetailContent() {
@@ -157,6 +181,9 @@ function AdminApplicationDetailContent() {
   const { toast } = useToast();
 
   useDocumentEvents({ applicationId: applicationId ?? "" });
+
+  /* Track which tabs have ever been activated so we lazy-mount their content */
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(() => new Set(["process"]));
 
   /* dialogs & ephemeral state */
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
@@ -548,7 +575,11 @@ function AdminApplicationDetailContent() {
       </Card>
 
       {/* 5 Flat Tabs */}
-      <Tabs defaultValue="process" className="w-full">
+      <Tabs
+        defaultValue="process"
+        className="w-full"
+        onValueChange={(tab) => setVisitedTabs(prev => { const next = new Set(prev); next.add(tab); return next; })}
+      >
         <TabsList className="grid w-full grid-cols-5" data-testid="tabs-application-detail">
           <TabsTrigger value="process" className="flex items-center gap-1.5" data-testid="tab-process">
             <MessageSquare className="h-4 w-4" /><span className="hidden sm:inline">Process</span>
@@ -792,73 +823,89 @@ function AdminApplicationDetailContent() {
               <CardDescription className="text-xs">Browse and manage documents in the student's personal library.</CardDescription>
             </CardHeader>
             <CardContent>
-              <StudentDocumentOrganizer studentProfileId={student.id} />
+              {visitedTabs.has("documents") && (
+                <TabErrorBoundary label="Document Organizer">
+                  <StudentDocumentOrganizer studentProfileId={student.id} />
+                </TabErrorBoundary>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* ── Student Tab ───────────────────────────────────────────── */}
         <TabsContent value="student" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />Student Profile
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <StudentProfileViewer
+          {visitedTabs.has("student") && (
+            <TabErrorBoundary label="Student tab">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />Student Profile
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <StudentProfileViewer
+                    profileId={student.id}
+                    studentName={`${student.firstName} ${student.lastName}`}
+                  />
+                </CardContent>
+              </Card>
+
+              <StudentVerificationPanel
                 profileId={student.id}
                 studentName={`${student.firstName} ${student.lastName}`}
+                onClose={() => {}}
               />
-            </CardContent>
-          </Card>
-
-          <StudentVerificationPanel
-            profileId={student.id}
-            studentName={`${student.firstName} ${student.lastName}`}
-            onClose={() => {}}
-          />
+            </TabErrorBoundary>
+          )}
         </TabsContent>
 
         {/* ── History Tab ───────────────────────────────────────────── */}
         <TabsContent value="history" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <History className="h-4 w-4 text-muted-foreground" />Stage History
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ApplicationHistory applicationId={application.id} />
-            </CardContent>
-          </Card>
+          {visitedTabs.has("history") && (
+            <TabErrorBoundary label="History tab">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <History className="h-4 w-4 text-muted-foreground" />Stage History
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ApplicationHistory applicationId={application.id} />
+                </CardContent>
+              </Card>
 
-          <ApplicationConsultantNotes
-            applicationId={application.id}
-            studentName={`${student.firstName ?? ''} ${student.lastName ?? ''}`.trim() || 'Student'}
-            currentUserId={user?.id}
-            branchId={application.branchId}
-          />
+              <ApplicationConsultantNotes
+                applicationId={application.id}
+                studentName={`${student.firstName ?? ''} ${student.lastName ?? ''}`.trim() || 'Student'}
+                currentUserId={user?.id}
+                branchId={application.branchId}
+              />
+            </TabErrorBoundary>
+          )}
         </TabsContent>
 
         {/* ── Courses Tab ───────────────────────────────────────────── */}
         <TabsContent value="courses" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                Courses &amp; Institutions
-              </CardTitle>
-              <CardDescription className="text-xs mt-0.5">All courses attached to this application.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ApplicationMultiCourse
-                applicationId={application.id}
-                defaultCourseTitle={course.title}
-                defaultUniversityName={university.name}
-              />
-            </CardContent>
-          </Card>
+          {visitedTabs.has("courses") && (
+            <TabErrorBoundary label="Courses tab">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                    Courses &amp; Institutions
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-0.5">All courses attached to this application.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ApplicationMultiCourse
+                    applicationId={application.id}
+                    defaultCourseTitle={course.title}
+                    defaultUniversityName={university.name}
+                  />
+                </CardContent>
+              </Card>
+            </TabErrorBoundary>
+          )}
         </TabsContent>
       </Tabs>
 
