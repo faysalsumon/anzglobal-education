@@ -14,6 +14,10 @@ import {
 } from "@shared/schema";
 import { eq, and, lt, gte, lte, ne, sql, count, inArray, ilike, desc } from "drizzle-orm";
 import OpenAI from "openai";
+import multer from "multer";
+import { writeFile, unlink, mkdir } from "fs/promises";
+import { join } from "path";
+import { tmpdir } from "os";
 import { scrapeWebsite, deepScrapeInstitution } from "./web-scraper-service";
 import { extractInstitutionData, extractCourseData } from "./ai-extractor-service";
 
@@ -1604,6 +1608,182 @@ export function registerAdminChatRoutes(app: Express) {
     } catch (err) {
       console.error("[AdminChat] context error:", err);
       res.status(500).json({ message: "Failed to fetch context" });
+    }
+  });
+
+  const docUploadMiddleware = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 20 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const allowedMimes = [
+        "application/pdf",
+        "image/jpeg", "image/png", "image/webp", "image/gif",
+        "text/plain", "text/csv",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ];
+      const ext = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf("."));
+      const allowedExts = [".pdf", ".jpg", ".jpeg", ".png", ".webp", ".gif", ".txt", ".csv", ".xls", ".xlsx"];
+      if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Unsupported file type. Allowed: PDF, images (JPG/PNG/WEBP), text, CSV."));
+      }
+    },
+  });
+
+  app.post("/api/admin-chat/upload-document", requireAdmin, docUploadMiddleware.single("file"), async (req: any, res: Response) => {
+    try {
+      const userId = getUserId(req)!;
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+      const existing = await db
+        .select()
+        .from(chatConversations)
+        .where(eq(chatConversations.userId, userId))
+        .limit(1)
+        .then((r) => r[0]);
+
+      let conversationId: string;
+      if (existing) {
+        conversationId = existing.id;
+      } else {
+        const [newConv] = await db.insert(chatConversations).values({ userId }).returning();
+        conversationId = newConv.id;
+      }
+
+      const { buffer, originalname, mimetype } = req.file;
+      const lowerName = originalname.toLowerCase();
+      const isPdf = mimetype === "application/pdf" || lowerName.endsWith(".pdf");
+      const isImage = mimetype.startsWith("image/");
+      const isText = mimetype.startsWith("text/") || lowerName.endsWith(".csv") || lowerName.endsWith(".txt") || lowerName.endsWith(".xls") || lowerName.endsWith(".xlsx");
+
+      const attachmentMeta = { name: originalname, type: mimetype, size: buffer.length };
+
+      const [userMsg] = await db
+        .insert(chatMessages)
+        .values({
+          conversationId,
+          role: "user",
+          content: `[Document uploaded: ${originalname}]`,
+          sources: JSON.stringify({ attachment: attachmentMeta }),
+        })
+        .returning();
+
+      let analysis = "";
+
+      if (isImage) {
+        const base64 = buffer.toString("base64");
+        const completion = await nativeOpenAI.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: "You are Zan, an AI assistant for the ANZ Global Education admin team. Analyze this uploaded image thoroughly. Describe what you see, identify any key information, errors, data, or actionable insights relevant to an education consultancy. Be comprehensive but concise." },
+              { type: "image_url", image_url: { url: `data:${mimetype};base64,${base64}`, detail: "high" } },
+            ],
+          }],
+          max_tokens: 2048,
+        });
+        analysis = completion.choices[0]?.message?.content ?? "Could not analyze image.";
+
+      } else if (isPdf) {
+        let pdfDone = false;
+        let tmpPdfPath = "";
+        let tmpOutDir = "";
+        try {
+          tmpPdfPath = join(tmpdir(), `zan-pdf-${Date.now()}.pdf`);
+          tmpOutDir = join(tmpdir(), `zan-pdf-out-${Date.now()}`);
+          await writeFile(tmpPdfPath, buffer);
+          await mkdir(tmpOutDir, { recursive: true });
+
+          const pdfPoppler = await import("pdf-poppler");
+          const convert = (pdfPoppler as any).default?.convert ?? (pdfPoppler as any).convert;
+          await convert(tmpPdfPath, {
+            format: "jpeg",
+            out_dir: tmpOutDir,
+            out_prefix: "page",
+            page: null,
+          });
+
+          const { readdir: rd, readFile: rf } = await import("fs/promises");
+          const pageFiles = (await rd(tmpOutDir))
+            .filter((f: string) => f.endsWith(".jpg") || f.endsWith(".jpeg"))
+            .sort()
+            .slice(0, 4);
+
+          const imageContents: any[] = [
+            { type: "text", text: `You are Zan, an AI assistant for the ANZ Global Education admin team. Analyze this uploaded PDF (shown as ${pageFiles.length} page image${pageFiles.length !== 1 ? "s" : ""}). Summarize the content, identify key information, flag any errors or issues, and highlight actionable insights relevant to an education consultancy.` },
+          ];
+          for (const f of pageFiles) {
+            const imgBuf = await rf(join(tmpOutDir, f));
+            imageContents.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${imgBuf.toString("base64")}`, detail: "high" } });
+          }
+
+          const comp = await nativeOpenAI.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: imageContents }],
+            max_tokens: 2048,
+          });
+          analysis = comp.choices[0]?.message?.content ?? "Could not analyze PDF.";
+          pdfDone = true;
+        } catch (pdfErr) {
+          console.warn("[ZAN] pdf-poppler failed, falling back:", pdfErr);
+        } finally {
+          if (tmpPdfPath) try { await unlink(tmpPdfPath); } catch {}
+          if (tmpOutDir) try {
+            const { rm } = await import("fs/promises");
+            await rm(tmpOutDir, { recursive: true, force: true });
+          } catch {}
+        }
+
+        if (!pdfDone) {
+          const text = buffer.toString("utf-8").replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, " ").substring(0, 40000);
+          if (text.trim().length > 100) {
+            const comp = await nativeOpenAI.chat.completions.create({
+              model: "gpt-4o",
+              messages: [{
+                role: "user",
+                content: `You are Zan, an AI assistant for the ANZ Global Education admin team. Analyze the following content extracted from a PDF document called "${originalname}". Summarize it, identify key information, flag any errors or issues, and highlight actionable insights.\n\n${text}`,
+              }],
+              max_tokens: 2048,
+            });
+            analysis = comp.choices[0]?.message?.content ?? "Could not analyze PDF.";
+          } else {
+            analysis = `I was unable to extract readable content from "${originalname}". This PDF may be scanned or image-based. Please try exporting it as images (JPG/PNG) and upload those instead.`;
+          }
+        }
+
+      } else if (isText) {
+        const text = buffer.toString("utf-8").substring(0, 50000);
+        const fileLabel = lowerName.endsWith(".csv") || lowerName.endsWith(".xls") || lowerName.endsWith(".xlsx") ? "spreadsheet/CSV" : "text document";
+        const comp = await nativeOpenAI.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{
+            role: "user",
+            content: `You are Zan, an AI assistant for the ANZ Global Education admin team. Analyze this uploaded ${fileLabel} called "${originalname}". Summarize its content, identify key information, patterns, errors, or issues, and highlight actionable insights relevant to an education consultancy.\n\n\`\`\`\n${text}\n\`\`\``,
+          }],
+          max_tokens: 2048,
+        });
+        analysis = comp.choices[0]?.message?.content ?? "Could not analyze document.";
+
+      } else {
+        analysis = `I received "${originalname}" but this file type isn't supported for analysis. Please upload a PDF, an image (JPG/PNG/WEBP), a text file, or a CSV.`;
+      }
+
+      const [assistantMsg] = await db
+        .insert(chatMessages)
+        .values({ conversationId, role: "assistant", content: analysis, sources: null })
+        .returning();
+
+      res.json({
+        userMessage: { ...userMsg, attachment: attachmentMeta },
+        assistantMessage: assistantMsg,
+        conversationId,
+      });
+    } catch (err) {
+      console.error("[ZAN] Document upload error:", err);
+      res.status(500).json({ message: "Failed to process document" });
     }
   });
 

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Send, Minimize2, CheckCircle2, Building2, GraduationCap, AlertTriangle } from "lucide-react";
+import { X, Send, Minimize2, CheckCircle2, Building2, GraduationCap, AlertTriangle, Paperclip, Mic, MicOff, FileText, FileImage, FileSpreadsheet } from "lucide-react";
 import { ZanThinkingIndicator } from "@/components/zan-thinking-indicator";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -46,6 +46,7 @@ interface LocalMessage {
   role: "user" | "assistant";
   content: string;
   data_entry_preview?: DataEntryPreview | null;
+  attachment?: { name: string; type: string; size: number } | null;
 }
 
 const INSTITUTION_REQUIRED = ["name", "providerType", "country"];
@@ -314,7 +315,10 @@ export function AdminChatWidget() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
   const openWidgetRef = useRef<() => void>(() => {});
+  const [isRecording, setIsRecording] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -372,6 +376,41 @@ export function AdminChatWidget() {
         },
       ]);
       setHasGreeting(true);
+    },
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/admin-chat/upload-document", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Upload failed" }));
+        throw new Error(err.message || "Upload failed");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      const userMsg: LocalMessage = {
+        id: data.userMessage.id,
+        role: "user",
+        content: data.userMessage.content,
+        attachment: data.userMessage.attachment ?? null,
+      };
+      const assistantMsg: LocalMessage = {
+        id: data.assistantMessage.id,
+        role: "assistant",
+        content: data.assistantMessage.content,
+      };
+      setMessages((prev) => [...prev, userMsg, assistantMsg]);
+      if (!conversationId && data.conversationId) setConversationId(data.conversationId);
+    },
+    onError: (err: any) => {
+      toast({ title: "Document upload failed", description: err.message, variant: "destructive" });
     },
   });
 
@@ -444,6 +483,48 @@ export function AdminChatWidget() {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const tempId = `user-upload-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      { id: tempId, role: "user", content: `[Document uploaded: ${file.name}]`, attachment: { name: file.name, type: file.type, size: file.size } },
+    ]);
+    uploadMutation.mutate(file, {
+      onError: () => setMessages((prev) => prev.filter((m) => m.id !== tempId)),
+    });
+  };
+
+  const handleVoiceInput = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast({ title: "Voice input not supported", description: "Please use Chrome or Edge for voice input.", variant: "destructive" });
+      return;
+    }
+    if (isRecording) {
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-AU";
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? "";
+      setInput((prev) => (prev ? prev + " " : "") + transcript);
+      setIsRecording(false);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    };
+    recognition.onerror = () => setIsRecording(false);
+    recognition.onend = () => setIsRecording(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsRecording(true);
   };
 
   const openWidget = () => {
@@ -603,19 +684,36 @@ export function AdminChatWidget() {
                         <AvatarFallback className="text-[10px]">Z</AvatarFallback>
                       </Avatar>
                     )}
-                    <div
-                      className={`max-w-[85%] rounded-xl px-3 py-2 text-sm leading-relaxed ${
-                        msg.role === "user"
-                          ? "bg-primary text-primary-foreground rounded-tr-sm"
-                          : "bg-muted text-foreground rounded-tl-sm"
-                      }`}
-                    >
-                      {msg.role === "assistant" ? (
-                        <ReactMarkdown components={markdownComponents} remarkPlugins={[remarkGfm]}>
-                          {msg.content}
-                        </ReactMarkdown>
-                      ) : (
-                        msg.content
+                    <div className={`max-w-[85%] flex flex-col gap-1 ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                      {msg.attachment && (
+                        <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-lg px-2.5 py-1.5 text-xs w-fit max-w-full">
+                          {msg.attachment.type.startsWith("image/") ? (
+                            <FileImage className="h-3.5 w-3.5 text-primary shrink-0" />
+                          ) : msg.attachment.type === "application/pdf" || msg.attachment.name.endsWith(".pdf") ? (
+                            <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                          ) : (
+                            <FileSpreadsheet className="h-3.5 w-3.5 text-primary shrink-0" />
+                          )}
+                          <span className="truncate max-w-[160px] text-foreground font-medium">{msg.attachment.name}</span>
+                          <span className="text-muted-foreground shrink-0">{(msg.attachment.size / 1024).toFixed(0)} KB</span>
+                        </div>
+                      )}
+                      {(!msg.attachment || msg.content !== `[Document uploaded: ${msg.attachment.name}]`) && (
+                        <div
+                          className={`rounded-xl px-3 py-2 text-sm leading-relaxed ${
+                            msg.role === "user"
+                              ? "bg-primary text-primary-foreground rounded-tr-sm"
+                              : "bg-muted text-foreground rounded-tl-sm"
+                          }`}
+                        >
+                          {msg.role === "assistant" ? (
+                            <ReactMarkdown components={markdownComponents} remarkPlugins={[remarkGfm]}>
+                              {msg.content}
+                            </ReactMarkdown>
+                          ) : (
+                            msg.content
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -646,14 +744,45 @@ export function AdminChatWidget() {
 
           {/* Input */}
           <div className="shrink-0 px-3 pb-3 pt-2 border-t">
-            <div className="flex gap-2 items-end">
+            <div className="flex gap-1.5 items-end">
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.txt,.csv,.xls,.xlsx"
+                onChange={handleFileSelect}
+                data-testid="input-admin-chat-file"
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-9 w-9 shrink-0 text-muted-foreground"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadMutation.isPending}
+                title="Upload document"
+                data-testid="button-admin-chat-upload"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className={`h-9 w-9 shrink-0 ${isRecording ? "text-destructive" : "text-muted-foreground"}`}
+                onClick={handleVoiceInput}
+                title={isRecording ? "Stop recording" : "Voice input"}
+                data-testid="button-admin-chat-voice"
+              >
+                {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </Button>
               <Textarea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask Zan anything..."
-                className="resize-none text-sm min-h-[38px] max-h-[100px]"
+                placeholder={isRecording ? "Listening…" : "Ask Zan anything…"}
+                className="resize-none text-sm min-h-[38px] max-h-[100px] flex-1"
                 rows={1}
                 data-testid="input-admin-chat-message"
               />
@@ -661,12 +790,25 @@ export function AdminChatWidget() {
                 type="button"
                 size="icon"
                 onClick={handleSend}
-                disabled={!input.trim() || sendMutation.isPending || !conversationId}
+                disabled={!input.trim() || sendMutation.isPending || uploadMutation.isPending || !conversationId}
                 data-testid="button-send-admin-chat"
               >
-                <Send className="h-4 w-4" />
+                {uploadMutation.isPending ? (
+                  <span className="h-4 w-4 border-2 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
             </div>
+            {isRecording && (
+              <p className="text-[10px] text-destructive mt-1.5 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-destructive rounded-full animate-pulse" />
+                Recording — speak now, then click the mic to stop
+              </p>
+            )}
+            {uploadMutation.isPending && (
+              <p className="text-[10px] text-muted-foreground mt-1.5">Processing document with AI…</p>
+            )}
           </div>
         </>
       )}

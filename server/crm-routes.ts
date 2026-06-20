@@ -1288,16 +1288,6 @@ router.get("/team-members", requireAdmin, async (req: any, res) => {
       );
     }
 
-    if (req.accessContext) {
-      const regionFilter = buildRegionScopedFilter(req.accessContext, {
-        regionIdColumn: users.regionId,
-        branchIdColumn: users.branchId,
-      });
-      if (regionFilter) {
-        conditions.push(regionFilter);
-      }
-    }
-
     const teamMembers = await db
       .select({
         id: users.id,
@@ -1308,7 +1298,7 @@ router.get("/team-members", requireAdmin, async (req: any, res) => {
       })
       .from(users)
       .where(and(...conditions))
-      .limit(20);
+      .limit(100);
 
     res.json(teamMembers);
   } catch (error) {
