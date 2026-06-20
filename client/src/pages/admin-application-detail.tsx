@@ -177,40 +177,24 @@ function AdminApplicationDetailContent() {
 
   return (
     <div className="space-y-6 pb-16">
-      {/* Header with back button, student name, course, and status */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" data-testid="button-back" onClick={() => window.history.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold text-foreground" data-testid="text-header-student-name">
-              {student.firstName} {student.lastName}
-            </h1>
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
-              <GraduationCap className="h-3 w-3" />
-              {course.title}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge className={STAGE_COLORS[application.currentStage]} data-testid="badge-current-stage">
-            {application.currentStage}
-          </Badge>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setReminderDialogOpen(true)}
-            data-testid="button-set-reminder"
-          >
-            <Bell className="h-4 w-4 mr-2" />
-            Set Reminder
-          </Button>
-        </div>
+      {/* Toolbar: back button + action buttons */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <Button variant="ghost" data-testid="button-back" onClick={() => window.history.back()}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => setReminderDialogOpen(true)}
+          data-testid="button-set-reminder"
+        >
+          <Bell className="h-4 w-4 mr-2" />
+          Set Reminder
+        </Button>
       </div>
 
-      {/* Application Progress Bar - Visual stage indicator matching student dashboard */}
+      {/* Application Progress Bar */}
       <Card>
         <CardContent className="pt-6">
           <ApplicationProgressBar 
@@ -220,125 +204,135 @@ function AdminApplicationDetailContent() {
         </CardContent>
       </Card>
 
-      {/* Student and Course Info Cards */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Student Info Card */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Student Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={student.profilePicture || undefined} alt={`${student.firstName} ${student.lastName}`} />
-                <AvatarFallback className="text-lg">{studentInitials || 'ST'}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h2 className="text-xl font-semibold" data-testid="text-student-name">
-                  {student.firstName} {student.lastName}
-                </h2>
-                {student.nationality && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Globe className="h-3 w-3" />
-                    {student.nationality}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="grid gap-2 pt-2 border-t">
-              {student.email && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <a href={`mailto:${student.email}`} className="text-primary hover:underline" data-testid="link-student-email">
-                    {student.email}
-                  </a>
-                </div>
-              )}
-              {student.phone && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <a href={`tel:${student.phone}`} className="hover:underline" data-testid="text-student-phone">
-                    {student.phone}
-                  </a>
-                </div>
-              )}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                Applied: {format(new Date(application.createdAt), 'MMM d, yyyy')}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Course Info Card */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <GraduationCap className="h-5 w-5" />
-              Course Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-start gap-4">
-              {university.logo ? (
-                <Avatar className="h-16 w-16 rounded-md">
-                  <AvatarImage src={university.logo} alt={university.name} className="object-contain" />
-                  <AvatarFallback className="rounded-md">{university.name?.charAt(0)}</AvatarFallback>
+      {/* Unified Application Overview Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <CardTitle className="text-lg">Application Overview</CardTitle>
+            <Badge variant="outline" className="font-mono text-xs" data-testid="badge-application-id">
+              #{application.id.slice(0, 8).toUpperCase()}
+            </Badge>
+            <Badge variant="secondary" data-testid="badge-application-status">
+              {application.status}
+            </Badge>
+            <Badge className={STAGE_COLORS[application.currentStage]} data-testid="badge-current-stage">
+              {application.currentStage}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Student column */}
+            <div className="space-y-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <User className="h-3 w-3" />
+                Student
+              </p>
+              <div className="flex items-center gap-4">
+                <Avatar className="h-14 w-14">
+                  <AvatarImage src={student.profilePicture || undefined} alt={`${student.firstName} ${student.lastName}`} />
+                  <AvatarFallback className="text-base">{studentInitials || 'ST'}</AvatarFallback>
                 </Avatar>
-              ) : (
-                <div className="h-16 w-16 rounded-md bg-muted flex items-center justify-center">
-                  <Building2 className="h-8 w-8 text-muted-foreground" />
-                </div>
-              )}
-              <div className="flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold" data-testid="text-course-title">{course.title}</h3>
-                  {externalCourseName && !application.courseId && (
-                    <Badge variant="outline" className="text-[10px] px-1.5">External</Badge>
+                <div>
+                  <h2 className="font-semibold text-base" data-testid="text-student-name">
+                    {student.firstName} {student.lastName}
+                  </h2>
+                  {student.nationality && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Globe className="h-3 w-3" />
+                      {student.nationality}
+                    </p>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground" data-testid="text-university-name">{university.name}</p>
-                {course.level && (
-                  <Badge variant="secondary" className="mt-1">{course.level}</Badge>
+              </div>
+              <div className="grid gap-2 pt-2 border-t">
+                {student.email && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <a href={`mailto:${student.email}`} className="text-primary hover:underline truncate" data-testid="link-student-email">
+                      {student.email}
+                    </a>
+                  </div>
                 )}
+                {student.phone && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <a href={`tel:${student.phone}`} className="hover:underline" data-testid="text-student-phone">
+                      {student.phone}
+                    </a>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4 flex-shrink-0" />
+                  Applied: {format(new Date(application.createdAt), 'MMM d, yyyy')}
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-              <div>
-                <p className="text-xs text-muted-foreground">Duration</p>
-                <p className="text-sm font-medium flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {course.duration ?? 'Not specified'}
-                </p>
+
+            {/* Course column */}
+            <div className="space-y-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <GraduationCap className="h-3 w-3" />
+                Course
+              </p>
+              <div className="flex items-start gap-4">
+                {university.logo ? (
+                  <Avatar className="h-14 w-14 rounded-md flex-shrink-0">
+                    <AvatarImage src={university.logo} alt={university.name} className="object-contain" />
+                    <AvatarFallback className="rounded-md">{university.name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="h-14 w-14 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                    <Building2 className="h-7 w-7 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold" data-testid="text-course-title">{course.title}</h3>
+                    {externalCourseName && !application.courseId && (
+                      <Badge variant="outline" className="text-[10px] px-1.5">External</Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground" data-testid="text-university-name">{university.name}</p>
+                  {course.level && (
+                    <Badge variant="secondary" className="mt-1">{course.level}</Badge>
+                  )}
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Tuition Fees</p>
-                <p className="text-sm font-medium flex items-center gap-1">
-                  <DollarSign className="h-3 w-3" />
-                  {course.fees ?? 'Not specified'}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Destination Country</p>
-                <p className="text-sm font-medium flex items-center gap-1">
-                  <Globe className="h-3 w-3" />
-                  {externalCountry || course.country || university.country || 'Not specified'}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Consultant</p>
-                <p className="text-sm font-medium flex items-center gap-1" data-testid="text-consultant-name">
-                  <User className="h-3 w-3" />
-                  {consultant ? `${consultant.firstName} ${consultant.lastName}` : 'Unassigned'}
-                </p>
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                <div>
+                  <p className="text-xs text-muted-foreground">Duration</p>
+                  <p className="text-sm font-medium flex items-center gap-1">
+                    <Clock className="h-3 w-3 flex-shrink-0" />
+                    {course.duration ?? 'Not specified'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Tuition Fees</p>
+                  <p className="text-sm font-medium flex items-center gap-1">
+                    <DollarSign className="h-3 w-3 flex-shrink-0" />
+                    {course.fees ?? 'Not specified'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Destination</p>
+                  <p className="text-sm font-medium flex items-center gap-1">
+                    <Globe className="h-3 w-3 flex-shrink-0" />
+                    {externalCountry || course.country || university.country || 'Not specified'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Consultant</p>
+                  <p className="text-sm font-medium flex items-center gap-1" data-testid="text-consultant-name">
+                    <User className="h-3 w-3 flex-shrink-0" />
+                    {consultant ? `${consultant.firstName} ${consultant.lastName}` : 'Unassigned'}
+                  </p>
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Supplementary Info Tabs */}
       <Tabs defaultValue="overview" className="w-full">
