@@ -79,6 +79,13 @@ const STATUS_COLORS: Record<string, string> = {
   invisible: 'bg-gray-400',
 };
 
+const OFFLINE_COLOR = 'bg-gray-300 dark:bg-gray-600';
+
+function getPresenceColor(userId: string | undefined, onlineUserIds: Set<string>, availabilityStatus?: string | null): string {
+  if (!userId || !onlineUserIds.has(userId)) return OFFLINE_COLOR;
+  return STATUS_COLORS[availabilityStatus || 'available'] ?? STATUS_COLORS.available;
+}
+
 const COMMON_EMOJIS = [
   "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
   "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚",
@@ -278,6 +285,7 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
   const zanImagePreviewsRef = useRef<Map<string, string>>(new Map());
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
 
   const currentUser = user as any;
   const currentUserId = currentUser?.id || currentUser?.claims?.sub;
@@ -297,6 +305,17 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
     queryKey: ["/api/admin/team-status"],
     refetchInterval: 30000,
   });
+
+  // Seed online set from server on mount; WS events keep it live thereafter
+  const { data: onlineUsersData } = useQuery<string[]>({
+    queryKey: ["/api/admin/online-users"],
+    staleTime: 0,
+  });
+  useEffect(() => {
+    if (onlineUsersData) {
+      setOnlineUserIds(new Set(onlineUsersData));
+    }
+  }, [onlineUsersData]);
 
   const canCreateChannel = isCTO || isBranchManager || adminRole === 'ceo';
 
@@ -573,6 +592,18 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
         if (activeView?.type === "channel" && lastMessage.channelId === activeView.id) {
           queryClient.invalidateQueries({ queryKey: ["/api/channels", activeView.id, "messages"] });
         }
+      } else if (lastMessage.type === "user_online" && lastMessage.userId) {
+        setOnlineUserIds(prev => {
+          const next = new Set(prev);
+          next.add(lastMessage.userId);
+          return next;
+        });
+      } else if (lastMessage.type === "user_offline" && lastMessage.userId) {
+        setOnlineUserIds(prev => {
+          const next = new Set(prev);
+          next.delete(lastMessage.userId);
+          return next;
+        });
       }
     }
   }, [lastMessage, activeView]);
@@ -922,7 +953,7 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
                             )}
                           </Avatar>
                           <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${
-                            STATUS_COLORS[(other?.id ? teamStatusMap.get(other.id)?.availabilityStatus : null) || other?.availabilityStatus || 'available']
+                            getPresenceColor(other?.id, onlineUserIds, (other?.id ? teamStatusMap.get(other.id)?.availabilityStatus : null) ?? other?.availabilityStatus)
                           }`} />
                         </div>
                         <div className="flex-1 min-w-0 text-left">
@@ -975,7 +1006,7 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
                             <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
                           )}
                         </Avatar>
-                        <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${STATUS_COLORS[member.availabilityStatus || 'available']}`} />
+                        <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${getPresenceColor(member.id, onlineUserIds, member.availabilityStatus)}`} />
                       </div>
                       <div className="flex-1 min-w-0 text-left">
                         <p className="font-medium truncate">{member.firstName} {member.lastName}</p>
@@ -1011,8 +1042,8 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
                       </Avatar>
                       {(() => {
                         const dmOther = conversations.find(c => c.id === activeView.id)?.otherParticipant;
-                        const liveStatus = (dmOther?.id ? teamStatusMap.get(dmOther.id)?.availabilityStatus : null) || dmOther?.availabilityStatus || 'available';
-                        return <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background ${STATUS_COLORS[liveStatus]}`} />;
+                        const liveStatus = (dmOther?.id ? teamStatusMap.get(dmOther.id)?.availabilityStatus : null) ?? dmOther?.availabilityStatus;
+                        return <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background ${getPresenceColor(dmOther?.id, onlineUserIds, liveStatus)}`} />;
                       })()}
                     </div>
                     <div>

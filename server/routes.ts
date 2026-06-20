@@ -4152,6 +4152,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/admin/online-users - Returns user IDs of currently-connected WebSocket clients
+  app.get("/api/admin/online-users", isAuthenticated, async (_req: any, res) => {
+    try {
+      const onlineUserIds = Array.from(wsClients.keys());
+      res.json(onlineUserIds);
+    } catch (error) {
+      console.error("Error fetching online users:", error);
+      res.status(500).json({ message: "Failed to fetch online users" });
+    }
+  });
+
   // POST /api/admin/upload-profile-photo - Upload user profile photo (works for all user types)
   app.post("/api/admin/upload-profile-photo", isAuthenticated, upload.single('photo'), async (req: any, res) => {
     try {
@@ -17163,6 +17174,10 @@ Sitemap: ${baseUrl}/sitemap.xml
                   console.log('[WS] ✅ Supabase auth successful:', userId);
                   ws.send(JSON.stringify({ type: 'auth_success', userId }));
                   
+                  // Broadcast real-time presence: this user just came online
+                  const allConnected = Array.from(wsClients.keys()).filter(id => id !== userId);
+                  broadcastToUsers(allConnected, { type: 'user_online', userId });
+                  
                   // Remove auth handler and set up regular message handler
                   ws.removeListener('message', handleAuthMessage);
                   setupWebSocketMessageHandler(ws, userId);
@@ -17281,6 +17296,10 @@ Sitemap: ${baseUrl}/sitemap.xml
         console.log(`[WS] ✅ Session auth successful: ${userId}`);
         ws.send(JSON.stringify({ type: 'auth_success', userId }));
         
+        // Broadcast real-time presence: this user just came online
+        const allConnectedSession = Array.from(wsClients.keys()).filter(id => id !== userId);
+        broadcastToUsers(allConnectedSession, { type: 'user_online', userId });
+        
         // Remove auth handler and set up regular message handler
         ws.removeListener('message', handleAuthMessage);
         setupWebSocketMessageHandler(ws, userId);
@@ -17300,6 +17319,9 @@ Sitemap: ${baseUrl}/sitemap.xml
       if (userId) {
         wsClients.delete(userId);
         console.log(`[WS] Client disconnected: ${userId}`);
+        // Broadcast real-time presence: this user just went offline
+        const remaining = Array.from(wsClients.keys());
+        broadcastToUsers(remaining, { type: 'user_offline', userId });
       }
     });
     
