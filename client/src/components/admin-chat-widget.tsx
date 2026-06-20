@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useMutation } from "@tanstack/react-query";
+import { getCsrfToken } from "@/hooks/useCsrf";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -381,12 +382,14 @@ export function AdminChatWidget() {
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
+      const csrfToken = await getCsrfToken();
       const formData = new FormData();
       formData.append("file", file);
       const res = await fetch("/api/admin-chat/upload-document", {
         method: "POST",
         body: formData,
         credentials: "include",
+        headers: { "X-CSRF-Token": csrfToken },
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: "Upload failed" }));

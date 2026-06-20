@@ -64,6 +64,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
+import { getCsrfToken } from "@/hooks/useCsrf";
+import { FileImage, FileSpreadsheet } from "lucide-react";
 
 interface AdminMessagesTabProps {
   inSheet?: boolean;
@@ -95,6 +97,7 @@ type Message = {
   conversationId?: string;
   channelId?: string;
   senderId: string;
+  role?: string;
   content: string;
   isRead: boolean;
   createdAt: string;
@@ -102,6 +105,7 @@ type Message = {
   fileName?: string | null;
   fileSize?: number | null;
   fileType?: string | null;
+  sources?: string | null;
   sender?: {
     firstName: string | null;
     lastName: string | null;
@@ -380,6 +384,7 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
   const uploadZanDocumentMutation = useMutation({
     mutationFn: async ({ file, conversationId }: { file: File; conversationId: string }) => {
       setIsUploading(true);
+      const csrfToken = await getCsrfToken();
       const formData = new FormData();
       formData.append("file", file);
       formData.append("conversationId", conversationId);
@@ -387,6 +392,7 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
         method: "POST",
         body: formData,
         credentials: "include",
+        headers: { "X-CSRF-Token": csrfToken },
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: "Upload failed" }));
@@ -668,6 +674,8 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
   const renderMessageList = () => {
     if (isLoadingMessages) return <div className="flex-1 flex items-center justify-center">Loading...</div>;
     
+    const isZan = activeView?.type === "zan";
+
     const groupedMessages: { [key: string]: Message[] } = {};
     messages.forEach(msg => {
       const dateKey = format(parseISO(msg.createdAt), "yyyy-MM-dd");
@@ -685,41 +693,76 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
               </span>
             </div>
             {msgs.map((msg, idx) => {
-              const isMine = msg.senderId === currentUserId;
+              const isMine = isZan ? msg.role === "user" : msg.senderId === currentUserId;
               const prevMsg = msgs[idx - 1];
-              const isSameSenderAsPrev = prevMsg && prevMsg.senderId === msg.senderId;
-              
+              const isSameSenderAsPrev = isZan
+                ? prevMsg?.role === msg.role
+                : prevMsg && prevMsg.senderId === msg.senderId;
+
+              // Parse attachment metadata from sources JSON (ZAN messages only)
+              let zanAttachment: { name: string; type: string; size: number } | null = null;
+              if (isZan && msg.sources) {
+                try {
+                  const parsed = JSON.parse(msg.sources);
+                  if (parsed?.attachment) zanAttachment = parsed.attachment;
+                } catch { /* ignore */ }
+              }
+
               return (
                 <div key={msg.id} className={`flex gap-3 min-w-0 ${isMine ? "flex-row-reverse" : "flex-row"} ${isSameSenderAsPrev ? "mt-[-12px]" : ""}`}>
                   {!isMine && !isSameSenderAsPrev && (
-                    <Avatar className="h-8 w-8">
-                      {msg.sender?.profileImageUrl ? (
+                    <Avatar className={`h-8 w-8 shrink-0 ${isZan ? "border-2 border-purple-200" : ""}`}>
+                      {isZan ? (
+                        <>
+                          <AvatarImage src={zanAvatarImage} />
+                          <AvatarFallback className="bg-purple-600 text-white text-xs">Z</AvatarFallback>
+                        </>
+                      ) : msg.sender?.profileImageUrl ? (
                         <AvatarImage src={msg.sender.profileImageUrl} />
                       ) : (
                         <AvatarFallback>{getInitials(msg.sender?.firstName, msg.sender?.lastName)}</AvatarFallback>
                       )}
                     </Avatar>
                   )}
-                  {!isMine && isSameSenderAsPrev && <div className="w-8" />}
+                  {!isMine && isSameSenderAsPrev && <div className="w-8 shrink-0" />}
                   
-                  <div className={`flex flex-col max-w-[70%] ${isMine ? "items-end" : "items-start"}`}>
-                    {!isSameSenderAsPrev && !isMine && (
+                  <div className={`flex flex-col max-w-[75%] ${isMine ? "items-end" : "items-start"}`}>
+                    {!isSameSenderAsPrev && !isMine && !isZan && (
                       <span className="text-xs font-bold mb-1 ml-1">{msg.sender?.firstName} {msg.sender?.lastName}</span>
                     )}
-                    <div className={`group relative p-3 rounded-2xl text-sm ${
-                      isMine ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-muted rounded-tl-none"
-                    }`}>
-                      {msg.fileUrl && msg.content?.startsWith("Shared a file:") ? null : msg.content}
-                      {msg.fileUrl && (
-                        <ChatFileMessage fileUrl={msg.fileUrl} fileName={msg.fileName ?? null} isMine={isMine} />
-                      )}
-                      <div className={`text-[10px] mt-1 opacity-70 flex items-center gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
-                        {format(parseISO(msg.createdAt), "h:mm a")}
-                        {isMine && activeView?.type === "dm" && (
-                          msg.isRead ? <CheckCheck className="h-3 w-3 text-white" /> : <CheckCheck className="h-3 w-3" />
+
+                    {/* Attachment card for ZAN document uploads */}
+                    {zanAttachment && (
+                      <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-xl px-2.5 py-1.5 text-xs mb-1 w-fit max-w-full">
+                        {zanAttachment.type.startsWith("image/") ? (
+                          <FileImage className="h-3.5 w-3.5 text-primary shrink-0" />
+                        ) : zanAttachment.type === "application/pdf" || zanAttachment.name.endsWith(".pdf") ? (
+                          <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                        ) : (
+                          <FileSpreadsheet className="h-3.5 w-3.5 text-primary shrink-0" />
                         )}
+                        <span className="truncate max-w-[160px] text-foreground font-medium">{zanAttachment.name}</span>
+                        <span className="text-muted-foreground shrink-0">{(zanAttachment.size / 1024).toFixed(0)} KB</span>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Skip the bubble for bare "Document uploaded:" placeholder messages */}
+                    {(!zanAttachment || !msg.content?.startsWith("[Document uploaded:")) && (
+                      <div className={`group relative p-3 rounded-2xl text-sm ${
+                        isMine ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-muted rounded-tl-none"
+                      }`}>
+                        {msg.fileUrl && msg.content?.startsWith("Shared a file:") ? null : msg.content}
+                        {msg.fileUrl && (
+                          <ChatFileMessage fileUrl={msg.fileUrl} fileName={msg.fileName ?? null} isMine={isMine} />
+                        )}
+                        <div className={`text-[10px] mt-1 opacity-70 flex items-center gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
+                          {format(parseISO(msg.createdAt), "h:mm a")}
+                          {isMine && activeView?.type === "dm" && (
+                            msg.isRead ? <CheckCheck className="h-3 w-3 text-white" /> : <CheckCheck className="h-3 w-3" />
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
