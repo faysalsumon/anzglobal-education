@@ -112,6 +112,7 @@ interface ApplicationDetailsPanelProps {
   currentUserId?: string;
   onClose: () => void;
   onDeleted?: () => void;
+  hideHero?: boolean;
 }
 
 interface StageDocument {
@@ -181,6 +182,7 @@ export function ApplicationDetailsPanel({
   currentUserId,
   onClose,
   onDeleted,
+  hideHero = false,
 }: ApplicationDetailsPanelProps) {
   const { toast } = useToast();
   
@@ -603,6 +605,7 @@ export function ApplicationDetailsPanel({
         <div className="flex-1 min-w-0 space-y-5">
 
       {/* ── Hero Banner ─────────────────────────────────────── */}
+      {!hideHero && (
       <Card className="overflow-hidden" data-testid="card-application-hero">
         <CardContent className="p-5">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -658,6 +661,7 @@ export function ApplicationDetailsPanel({
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* ── Tabs ─────────────────────────────────────────────── */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
