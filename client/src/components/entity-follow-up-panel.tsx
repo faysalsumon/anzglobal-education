@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bell, CheckCircle2, Plus, Clock } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -48,10 +49,18 @@ export function EntityFollowUpPanel({ entityType, entityId }: EntityFollowUpPane
 
   const getTimeBadge = (reminderAt: Date | string) => {
     const date = typeof reminderAt === "string" ? new Date(reminderAt) : reminderAt;
-    if (isPast(date) && !isToday(date)) return { label: "Overdue", variant: "destructive" as const };
-    if (isToday(date)) return { label: "Today", variant: "default" as const };
-    if (isTomorrow(date)) return { label: "Tomorrow", variant: "secondary" as const };
-    return { label: format(date, "d MMM"), variant: "outline" as const };
+    if (isPast(date) && !isToday(date))
+      return { label: "Overdue", variant: "destructive" as const, className: undefined };
+    if (isToday(date))
+      return {
+        label: "Today",
+        variant: "outline" as const,
+        className:
+          "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700",
+      };
+    if (isTomorrow(date))
+      return { label: "Tomorrow", variant: "default" as const, className: undefined };
+    return { label: format(date, "d MMM"), variant: "default" as const, className: undefined };
   };
 
   return (
@@ -97,51 +106,60 @@ export function EntityFollowUpPanel({ entityType, entityId }: EntityFollowUpPane
           No follow-ups scheduled — click to add one
         </button>
       ) : (
-        <div className="space-y-1.5">
-          {activeReminders.map((reminder) => {
-            const badge = getTimeBadge(reminder.reminderAt);
-            const dateObj =
-              typeof reminder.reminderAt === "string"
-                ? new Date(reminder.reminderAt)
-                : reminder.reminderAt;
-            return (
-              <div
-                key={reminder.id}
-                className="flex items-start gap-2 px-2.5 py-2 rounded-md border bg-card"
-                data-testid={`followup-item-${reminder.id}`}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <Badge variant={badge.variant} className="text-xs px-1.5 py-0">
-                      {badge.label}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground flex items-center gap-0.5">
-                      <Clock className="h-3 w-3" />
-                      {format(dateObj, "p")}
-                    </span>
-                  </div>
-                  {reminder.message && (
-                    <p className="text-xs mt-0.5 line-clamp-2 text-foreground">
-                      {reminder.message}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 shrink-0 mt-0.5"
-                  onClick={() => completeMutation.mutate(reminder.id)}
-                  disabled={completeMutation.isPending}
-                  title="Mark as done"
-                  data-testid={`button-complete-followup-${reminder.id}`}
+        <ScrollArea className="max-h-[220px]">
+          <div className="space-y-1.5 pr-3">
+            {activeReminders.map((reminder) => {
+              const badge = getTimeBadge(reminder.reminderAt);
+              const dateObj =
+                typeof reminder.reminderAt === "string"
+                  ? new Date(reminder.reminderAt)
+                  : reminder.reminderAt;
+              return (
+                <div
+                  key={reminder.id}
+                  className="flex items-start gap-2 px-2.5 py-2 rounded-md border bg-card"
+                  data-testid={`followup-item-${reminder.id}`}
                 >
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                </Button>
-              </div>
-            );
-          })}
-        </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge
+                        variant={badge.variant}
+                        className={`text-xs px-1.5 py-0${badge.className ? ` ${badge.className}` : ""}`}
+                      >
+                        {badge.label}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                        <Clock className="h-3 w-3" />
+                        {format(dateObj, "p")}
+                      </span>
+                    </div>
+                    {reminder.message ? (
+                      <p className="text-xs mt-0.5 line-clamp-2 text-foreground">
+                        {reminder.message}
+                      </p>
+                    ) : (
+                      <p className="text-xs mt-0.5 italic text-muted-foreground">
+                        No message
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 shrink-0 mt-0.5"
+                    onClick={() => completeMutation.mutate(reminder.id)}
+                    disabled={completeMutation.isPending}
+                    title="Mark as done"
+                    data-testid={`button-complete-followup-${reminder.id}`}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
       )}
 
       <CreateReminderModal
