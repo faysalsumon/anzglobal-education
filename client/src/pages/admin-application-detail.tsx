@@ -31,8 +31,6 @@ import { AdminLayout } from "@/components/admin-layout";
 import { ApplicationProgressBar } from "@/components/application-progress-bar";
 import {
   ApplicationHistory,
-  ApplicationConsultantNotes,
-  ApplicationStageDocuments,
   ApplicationMultiCourse,
 } from "@/components/application-details-panel";
 import { ApplicationInternalNotes } from "@/components/application-internal-notes";
@@ -887,12 +885,27 @@ function AdminApplicationDetailContent() {
                 </CardContent>
               </Card>
 
-              <ApplicationConsultantNotes
-                applicationId={application.id}
-                studentName={`${student.firstName ?? ''} ${student.lastName ?? ''}`.trim() || 'Student'}
-                currentUserId={user?.id}
-                branchId={application.branchId}
-              />
+              <div className="space-y-4">
+                <StudentApplicationNotes
+                  applicationId={application.id}
+                  studentName={`${student.firstName ?? ''} ${student.lastName ?? ''}`.trim() || 'Student'}
+                />
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                      <StickyNote className="h-4 w-4 text-muted-foreground" />Internal Notes
+                    </CardTitle>
+                    <CardDescription className="text-xs">Only visible to team members.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <ApplicationInternalNotes
+                      applicationId={application.id}
+                      currentUserId={user?.id}
+                      branchId={application.branchId}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
             </TabErrorBoundary>
           )}
         </TabsContent>
