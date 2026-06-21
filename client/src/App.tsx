@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, Component, type ReactNode } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -66,6 +66,41 @@ const PrintInvoice = lazy(() => import("@/pages/print-invoice"));
 const AdminContactForm = lazy(() => import("@/pages/admin-contact-form"));
 const AdminAccountForm = lazy(() => import("@/pages/admin-account-form"));
 const StudyAbroad = lazy(() => import("@/pages/study-abroad"));
+
+/* ─── Global error boundary ─────────────────────────────────────────── */
+class AppErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex items-center justify-center min-h-screen w-full p-6">
+          <div className="max-w-md w-full rounded-md border border-destructive/30 bg-destructive/5 p-6 space-y-4 text-sm">
+            <div className="flex items-start gap-3">
+              <div className="space-y-1">
+                <p className="font-semibold text-destructive text-base">Something went wrong</p>
+                <p className="text-xs text-muted-foreground font-mono break-all">{this.state.error.message}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-destructive/30 text-xs text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              Reload page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function PageLoader() {
   return (
@@ -265,15 +300,17 @@ function AppContent() {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <SupabaseAuthProvider>
-          <RegionProvider>
-            <AppContent />
-            <Toaster />
-          </RegionProvider>
-        </SupabaseAuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <SupabaseAuthProvider>
+            <RegionProvider>
+              <AppContent />
+              <Toaster />
+            </RegionProvider>
+          </SupabaseAuthProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   );
 }
