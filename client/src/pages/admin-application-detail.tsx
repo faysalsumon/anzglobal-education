@@ -623,12 +623,20 @@ function AdminApplicationDetailContent() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-4 items-start">
-            <Avatar className="h-14 w-14 shrink-0 ring-2 ring-background ring-offset-2">
-              <AvatarImage src={student.profilePicture || undefined} alt={studentName} />
-              <AvatarFallback className="text-base font-semibold bg-primary/10 text-primary">
-                {studentInitials || 'ST'}
-              </AvatarFallback>
-            </Avatar>
+            <div className="flex items-center gap-3 shrink-0">
+              <Avatar className="h-14 w-14 ring-2 ring-background ring-offset-2">
+                <AvatarImage src={student.profilePicture || undefined} alt={studentName} />
+                <AvatarFallback className="text-base font-semibold bg-primary/10 text-primary">
+                  {studentInitials || 'ST'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-semibold text-foreground leading-tight" data-testid="text-summary-student-name">{studentName}</p>
+                {application.applicationNumber && (
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5">{application.applicationNumber}</p>
+                )}
+              </div>
+            </div>
 
             <div className="flex flex-wrap gap-x-6 gap-y-2 flex-1 min-w-0">
               {student.nationality && (
@@ -754,9 +762,9 @@ function AdminApplicationDetailContent() {
       </Card>
 
       {/* ── TWO-COLUMN BODY ─────────────────────────────────────── */}
-      <div className="flex gap-4 items-start">
+      <div className="flex flex-col lg:flex-row gap-4 items-start">
       {/* ── LEFT: TABS ──────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 w-full">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full border-b bg-transparent h-auto p-0 rounded-none justify-start overflow-x-auto" data-testid="tabs-application-detail">
           {[
@@ -1197,7 +1205,7 @@ function AdminApplicationDetailContent() {
       </div>{/* end left column */}
 
       {/* ── RIGHT: STICKY PANEL ─────────────────────────────────── */}
-      <div className="hidden lg:flex w-72 shrink-0 flex-col gap-4 sticky top-4">
+      <div className="flex flex-col gap-4 w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-4">
         <EntityFollowUpPanel entityType="application" entityId={application.id} />
         <div>
           <p className="text-xs font-semibold mb-2 text-muted-foreground flex items-center gap-1.5">
