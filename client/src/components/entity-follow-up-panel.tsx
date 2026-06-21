@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bell, CheckCircle2, Plus, Clock, Trash2 } from "lucide-react";
+import { Bell, CheckCircle2, Plus, Clock, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +15,7 @@ interface EntityReminder {
   reminderAt: Date | string;
   message: string | null;
   isCompleted: boolean | null;
+  completedAt: Date | string | null;
 }
 
 interface EntityFollowUpPanelProps {
@@ -25,6 +26,7 @@ interface EntityFollowUpPanelProps {
 export function EntityFollowUpPanel({ entityType, entityId }: EntityFollowUpPanelProps) {
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const { data: reminders = [], isLoading } = useQuery<EntityReminder[]>({
     queryKey: ["/api/reminders/by-entity", { entityType, entityId }],
@@ -59,6 +61,7 @@ export function EntityFollowUpPanel({ entityType, entityId }: EntityFollowUpPane
   });
 
   const activeReminders = (reminders || []).filter((r) => !r.isCompleted);
+  const completedReminders = (reminders || []).filter((r) => r.isCompleted);
 
   const getTimeBadge = (reminderAt: Date | string) => {
     const date = typeof reminderAt === "string" ? new Date(reminderAt) : reminderAt;
@@ -185,6 +188,61 @@ export function EntityFollowUpPanel({ entityType, entityId }: EntityFollowUpPane
             })}
           </div>
         </ScrollArea>
+      )}
+
+      {!isLoading && completedReminders.length > 0 && (
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={() => setShowCompleted((v) => !v)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover-elevate px-1 py-0.5 rounded"
+            data-testid="button-toggle-completed-followups"
+          >
+            {showCompleted ? (
+              <ChevronDown className="h-3 w-3" />
+            ) : (
+              <ChevronRight className="h-3 w-3" />
+            )}
+            Show completed ({completedReminders.length})
+          </button>
+
+          {showCompleted && (
+            <div className="mt-1.5 space-y-1.5">
+              {completedReminders.map((reminder) => {
+                const completedDate = reminder.completedAt
+                  ? typeof reminder.completedAt === "string"
+                    ? new Date(reminder.completedAt)
+                    : reminder.completedAt
+                  : null;
+                return (
+                  <div
+                    key={reminder.id}
+                    className="flex items-start gap-2 px-2.5 py-2 rounded-md border border-border/40 bg-muted/30 opacity-60"
+                    data-testid={`followup-completed-item-${reminder.id}`}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      {reminder.message ? (
+                        <p className="text-xs line-through text-muted-foreground line-clamp-2">
+                          {reminder.message}
+                        </p>
+                      ) : (
+                        <p className="text-xs italic line-through text-muted-foreground">
+                          No message
+                        </p>
+                      )}
+                      {completedDate && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Completed {format(completedDate, "d MMM yyyy 'at' p")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       <CreateReminderModal
