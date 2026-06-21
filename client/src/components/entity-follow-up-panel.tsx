@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bell, CheckCircle2, Plus, Clock } from "lucide-react";
+import { Bell, CheckCircle2, Plus, Clock, Trash2 } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +42,19 @@ export function EntityFollowUpPanel({ entityType, entityId }: EntityFollowUpPane
     },
     onError: () => {
       toast({ title: "Error", description: "Could not mark reminder as done", variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (reminderId: string) =>
+      apiRequest("DELETE", `/api/reminders/${reminderId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reminders/by-entity", { entityType, entityId }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reminders/upcoming"] });
+      toast({ title: "Follow-up removed" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Could not delete reminder", variant: "destructive" });
     },
   });
 
@@ -149,11 +162,23 @@ export function EntityFollowUpPanel({ entityType, entityId }: EntityFollowUpPane
                     size="icon"
                     className="h-6 w-6 shrink-0 mt-0.5"
                     onClick={() => completeMutation.mutate(reminder.id)}
-                    disabled={completeMutation.isPending}
+                    disabled={completeMutation.isPending || deleteMutation.isPending}
                     title="Mark as done"
                     data-testid={`button-complete-followup-${reminder.id}`}
                   >
                     <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 shrink-0 mt-0.5"
+                    onClick={() => deleteMutation.mutate(reminder.id)}
+                    disabled={deleteMutation.isPending || completeMutation.isPending}
+                    title="Delete follow-up"
+                    data-testid={`button-delete-followup-${reminder.id}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                   </Button>
                 </div>
               );
