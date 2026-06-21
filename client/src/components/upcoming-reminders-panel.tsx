@@ -12,6 +12,9 @@ import {
   FileText,
   ListTodo,
   ExternalLink,
+  UserRound,
+  Receipt,
+  Building2,
 } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -22,6 +25,9 @@ interface Reminder {
   id: string;
   taskId: string | null;
   applicationId: string | null;
+  crmContactId: string | null;
+  accInvoiceId: string | null;
+  accountId: string | null;
   userId: string;
   reminderAt: Date | string;
   message: string | null;
@@ -50,6 +56,12 @@ export function UpcomingRemindersPanel({
       setLocation(`/admin?tab=my-tasks&taskId=${reminder.taskId}`);
     } else if (reminder.applicationId) {
       setLocation(`/admin/applications/${reminder.applicationId}`);
+    } else if (reminder.crmContactId) {
+      setLocation(`/admin?tab=crm-contacts&contactId=${reminder.crmContactId}`);
+    } else if (reminder.accInvoiceId) {
+      setLocation(`/admin?tab=accounting`);
+    } else if (reminder.accountId) {
+      setLocation(`/admin/accounts/${reminder.accountId}`);
     }
   };
 
@@ -189,7 +201,7 @@ export function UpcomingRemindersPanel({
             <Bell className="h-10 w-10 mx-auto mb-3 opacity-30" />
             <p className="text-sm">No upcoming reminders</p>
             <p className="text-xs mt-1">
-              Set reminders from application or task details
+              Set reminders from applications, tasks, contacts, invoices, or accounts
             </p>
           </div>
         ) : (
@@ -197,7 +209,7 @@ export function UpcomingRemindersPanel({
             <div className="space-y-2 pr-4">
               {displayedReminders.map((reminder) => {
                 const timeInfo = getTimeLabel(reminder.reminderAt);
-                const isNavigable = !!(reminder.taskId || reminder.applicationId);
+                const isNavigable = !!(reminder.taskId || reminder.applicationId || reminder.crmContactId || reminder.accInvoiceId || reminder.accountId);
                 return (
                   <div
                     key={reminder.id}
@@ -221,6 +233,12 @@ export function UpcomingRemindersPanel({
                             <FileText className="h-4 w-4 text-primary" />
                           ) : reminder.taskId ? (
                             <ListTodo className="h-4 w-4 text-amber-500" />
+                          ) : reminder.crmContactId ? (
+                            <UserRound className="h-4 w-4 text-violet-500" />
+                          ) : reminder.accInvoiceId ? (
+                            <Receipt className="h-4 w-4 text-emerald-500" />
+                          ) : reminder.accountId ? (
+                            <Building2 className="h-4 w-4 text-sky-500" />
                           ) : (
                             <Bell className="h-4 w-4 text-muted-foreground" />
                           )}
@@ -246,6 +264,12 @@ export function UpcomingRemindersPanel({
                                 ? "Application follow-up"
                                 : reminder.taskId
                                 ? "Task reminder"
+                                : reminder.crmContactId
+                                ? "Contact follow-up"
+                                : reminder.accInvoiceId
+                                ? "Invoice follow-up"
+                                : reminder.accountId
+                                ? "Account follow-up"
                                 : "Reminder"}
                             </p>
                           )}

@@ -18683,6 +18683,43 @@ Sitemap: ${baseUrl}/sitemap.xml
   // FOLLOW-UP REMINDERS API
   // ============================================
 
+  // Get reminders for a specific entity (CRM contact, invoice, account, etc.)
+  app.get("/api/reminders/by-entity", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const { entityType, entityId } = req.query as { entityType?: string; entityId?: string };
+      if (!entityType || !entityId) {
+        return res.status(400).json({ message: "entityType and entityId are required" });
+      }
+
+      let reminders: any[] = [];
+      switch (entityType) {
+        case "crm_contact":
+          reminders = await storage.getRemindersByCrmContactId(entityId);
+          break;
+        case "invoice":
+          reminders = await storage.getRemindersByAccInvoiceId(entityId);
+          break;
+        case "account":
+          reminders = await storage.getRemindersByAccountId(entityId);
+          break;
+        case "application":
+          reminders = await storage.getRemindersByApplicationId(entityId);
+          break;
+        default:
+          return res.status(400).json({ message: `Unsupported entityType: ${entityType}` });
+      }
+
+      res.json(reminders);
+    } catch (error: any) {
+      console.error("Error fetching entity reminders:", error);
+      res.status(500).json({ message: "Failed to fetch reminders" });
+    }
+  });
+
   // Get my upcoming reminders
   app.get("/api/reminders/upcoming", isAuthenticated, async (req: any, res) => {
     try {
@@ -18736,29 +18773,26 @@ Sitemap: ${baseUrl}/sitemap.xml
       
       const reminder = await storage.createReminder(data);
       
-      // Log activity with user attribution - Use parent entity type since reminders are linked to tasks/applications
+      // Log activity for parent entity
       try {
-        if (reminder.taskId) {
+        const logEntityType = reminder.taskId ? 'task'
+          : reminder.applicationId ? 'application'
+          : reminder.crmContactId ? 'crm_contact'
+          : reminder.accInvoiceId ? 'acc_invoice'
+          : reminder.accountId ? 'account'
+          : null;
+        const logEntityId = reminder.taskId ?? reminder.applicationId ?? reminder.crmContactId ?? reminder.accInvoiceId ?? reminder.accountId ?? null;
+        if (logEntityType && logEntityId) {
           await logCreate({
             req,
-            entityType: 'task',
-            entityId: reminder.taskId,
-            entityName: 'Follow-up reminder',
-            metadata: { reminderId: reminder.id, reminderAt: reminder.reminderAt },
-          });
-        } else if (reminder.applicationId) {
-          await logCreate({
-            req,
-            entityType: 'application',
-            entityId: reminder.applicationId,
+            entityType: logEntityType,
+            entityId: logEntityId,
             entityName: 'Follow-up reminder',
             metadata: { reminderId: reminder.id, reminderAt: reminder.reminderAt },
           });
         }
-        // Note: Reminders without task or application links are not logged (standalone reminders)
       } catch (logError) {
         console.warn("Activity log warning for reminder creation:", logError);
-        // Continue with request - activity logging failure should not block reminder creation
       }
       
       res.json(reminder);

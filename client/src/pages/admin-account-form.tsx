@@ -22,8 +22,9 @@ import {
   ArrowLeft, Save, Loader2, Plus, X, Check,
   Package, Trash2, Edit, ImageIcon, UserRound, ChevronsUpDown, ExternalLink,
   Link2, FileText, Users, Building2, ReceiptText, ChevronRight,
-  Upload, Download,
+  Upload, Download, Bell,
 } from "lucide-react";
+import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { NotesThread, type UnifiedNote, type ThreadTeamMember, type NoteVisibilityOpts } from "@/components/notes-thread";
 import { GoogleAddressAutocomplete, type AddressComponents } from "@/components/ui/google-address-autocomplete";
 import { supabase } from "@/lib/supabase";
@@ -1452,6 +1453,8 @@ export default function AdminAccountForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inheritedLogoRef = useRef<string | null>(null);
 
+  const [reminderOpen, setReminderOpen] = useState(false);
+
   // Products state
   const [addingProduct, setAddingProduct] = useState(false);
   const [newProduct, setNewProduct] = useState<Partial<AccountProduct>>(emptyProduct());
@@ -1710,16 +1713,26 @@ export default function AdminAccountForm() {
 
           <div className="flex items-center gap-2 shrink-0">
             {!isNew && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => deactivateMutation.mutate()}
-                disabled={deactivateMutation.isPending}
-                className="text-destructive border-destructive/30 hover:bg-destructive/5"
-                data-testid="button-deactivate-account"
-              >
-                Deactivate
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setReminderOpen(true)}
+                  data-testid="button-set-reminder-account"
+                >
+                  <Bell className="h-3.5 w-3.5 mr-1.5" />Reminder
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => deactivateMutation.mutate()}
+                  disabled={deactivateMutation.isPending}
+                  className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                  data-testid="button-deactivate-account"
+                >
+                  Deactivate
+                </Button>
+              </>
             )}
             <Button
               size="sm"
@@ -1734,6 +1747,14 @@ export default function AdminAccountForm() {
               )}
             </Button>
           </div>
+          {!isNew && id && (
+            <CreateReminderModal
+              open={reminderOpen}
+              onOpenChange={setReminderOpen}
+              entityType="account"
+              entityId={id}
+            />
+          )}
         </div>
       </header>
 

@@ -2391,9 +2391,12 @@ export const applicationNotes = pgTable("application_notes", {
 export const followUpReminders = pgTable("follow_up_reminders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   
-  // Can be linked to task, application, or both
+  // Can be linked to task, application, CRM contact, invoice, or account
   taskId: varchar("task_id").references(() => tasks.id, { onDelete: "cascade" }),
   applicationId: varchar("application_id").references(() => applications.id, { onDelete: "cascade" }),
+  crmContactId: varchar("crm_contact_id").references((): any => crmContacts.id, { onDelete: "cascade" }),
+  accInvoiceId: varchar("acc_invoice_id").references((): any => accInvoices.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id").references((): any => accounts.id, { onDelete: "cascade" }),
   
   // Who gets reminded
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -2415,6 +2418,9 @@ export const followUpReminders = pgTable("follow_up_reminders", {
   index("reminders_user_idx").on(table.userId),
   index("reminders_task_idx").on(table.taskId),
   index("reminders_application_idx").on(table.applicationId),
+  index("reminders_crm_contact_idx").on(table.crmContactId),
+  index("reminders_acc_invoice_idx").on(table.accInvoiceId),
+  index("reminders_account_idx").on(table.accountId),
   index("reminders_reminder_at_idx").on(table.reminderAt),
   index("reminders_is_completed_idx").on(table.isCompleted),
 ]);

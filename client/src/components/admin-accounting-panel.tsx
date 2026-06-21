@@ -60,6 +60,7 @@ import {
   ExternalLink,
   Briefcase,
 } from "lucide-react";
+import { CreateReminderModal } from "@/components/create-reminder-modal";
 import {
   BarChart,
   Bar,
@@ -306,6 +307,7 @@ function InvoiceDetail({
   paymentDialog, onClosePaymentDialog, onSubmitPayment, paymentPending,
   onNavigate, onEdit
 }: any) {
+  const [reminderOpen, setReminderOpen] = useState(false);
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -317,6 +319,9 @@ function InvoiceDetail({
           <StatusBadge status={invoice.status} />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button type="button" variant="outline" size="sm" onClick={() => setReminderOpen(true)} data-testid="button-set-reminder-invoice">
+            <Bell className="h-4 w-4 mr-1" /> Reminder
+          </Button>
           {(invoice.status === "draft" || invoice.status === "sent") && onEdit && (
             <Button type="button" variant="outline" onClick={onEdit} data-testid="button-edit-invoice">
               <PenLine className="h-4 w-4 mr-1" /> Edit
@@ -346,6 +351,12 @@ function InvoiceDetail({
           )}
         </div>
       </div>
+      <CreateReminderModal
+        open={reminderOpen}
+        onOpenChange={setReminderOpen}
+        entityType="invoice"
+        entityId={invoice.id}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-4">

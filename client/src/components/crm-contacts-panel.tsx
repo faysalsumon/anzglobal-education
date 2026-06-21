@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { LeadNotes } from "@/components/lead-notes";
+import { CreateReminderModal } from "@/components/create-reminder-modal";
 
 import { 
   Search, 
@@ -35,6 +36,7 @@ import {
   Edit,
   Eye,
   ChevronLeft,
+  Bell,
   Building2,
   Globe,
   List,
@@ -2047,6 +2049,7 @@ type EditSection = 'contact_info' | 'address' | 'inquiry' | 'ownership' | 'emerg
 
 function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign, isAccountsOfficer = false }: ContactDetailViewProps) {
   const { toast } = useToast();
+  const [reminderOpen, setReminderOpen] = useState(false);
   const [isAddInstitutionOpen, setIsAddInstitutionOpen] = useState(false);
   const [institutionSearch, setInstitutionSearch] = useState("");
   const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null);
@@ -2262,6 +2265,9 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
               <ChevronLeft className="h-4 w-4" />Back
             </Button>
             <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setReminderOpen(true)} data-testid="button-set-reminder-contact">
+                <Bell className="h-3.5 w-3.5 mr-1" />Reminder
+              </Button>
               {!isAccountsOfficer && (
                 <>
                   <Button type="button" variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-contact">
@@ -2274,6 +2280,12 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
               )}
             </div>
           </div>
+          <CreateReminderModal
+            open={reminderOpen}
+            onOpenChange={setReminderOpen}
+            entityType="crm_contact"
+            entityId={contact.id}
+          />
 
           {/* Avatar + identity */}
           <div className="flex items-start gap-4">

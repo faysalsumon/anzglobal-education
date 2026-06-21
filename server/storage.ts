@@ -2287,6 +2287,30 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(followUpReminders.reminderAt));
   }
 
+  async getRemindersByCrmContactId(crmContactId: string): Promise<FollowUpReminder[]> {
+    return await db
+      .select()
+      .from(followUpReminders)
+      .where(eq(followUpReminders.crmContactId, crmContactId))
+      .orderBy(desc(followUpReminders.reminderAt));
+  }
+
+  async getRemindersByAccInvoiceId(accInvoiceId: string): Promise<FollowUpReminder[]> {
+    return await db
+      .select()
+      .from(followUpReminders)
+      .where(eq(followUpReminders.accInvoiceId, accInvoiceId))
+      .orderBy(desc(followUpReminders.reminderAt));
+  }
+
+  async getRemindersByAccountId(accountId: string): Promise<FollowUpReminder[]> {
+    return await db
+      .select()
+      .from(followUpReminders)
+      .where(eq(followUpReminders.accountId, accountId))
+      .orderBy(desc(followUpReminders.reminderAt));
+  }
+
   async createReminder(reminder: InsertFollowUpReminder): Promise<FollowUpReminder> {
     const [newReminder] = await db.insert(followUpReminders).values(reminder).returning();
     return newReminder;

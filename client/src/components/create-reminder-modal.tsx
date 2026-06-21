@@ -21,11 +21,33 @@ import { cn } from "@/lib/utils";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+export type ReminderEntityType = 'application' | 'task' | 'crm_contact' | 'invoice' | 'account';
+
+const ENTITY_LABELS: Record<ReminderEntityType, string> = {
+  application: 'application',
+  task: 'task',
+  crm_contact: 'contact',
+  invoice: 'invoice',
+  account: 'account',
+};
+
+const ENTITY_FIELD_MAP: Record<ReminderEntityType, string> = {
+  application: 'applicationId',
+  task: 'taskId',
+  crm_contact: 'crmContactId',
+  invoice: 'accInvoiceId',
+  account: 'accountId',
+};
+
 interface CreateReminderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // Legacy props (kept for backwards compat)
   applicationId?: string;
   taskId?: string;
+  // Generic entity props
+  entityType?: ReminderEntityType;
+  entityId?: string;
   onSuccess?: () => void;
 }
 
@@ -44,6 +66,8 @@ export function CreateReminderModal({
   onOpenChange,
   applicationId,
   taskId,
+  entityType,
+  entityId,
   onSuccess,
 }: CreateReminderModalProps) {
   const { toast } = useToast();
@@ -52,6 +76,13 @@ export function CreateReminderModal({
   const [selectedTime, setSelectedTime] = useState("09:00");
   const [message, setMessage] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const resolvedEntityLabel = (() => {
+    if (entityType) return ENTITY_LABELS[entityType];
+    if (applicationId) return 'application';
+    if (taskId) return 'task';
+    return 'item';
+  })();
 
   const calculateReminderDate = (option: string): Date => {
     const now = new Date();
@@ -89,13 +120,27 @@ export function CreateReminderModal({
     return null;
   };
 
+  const buildRequestBody = (reminderAt: string, msg: string): Record<string, unknown> => {
+    const body: Record<string, unknown> = { reminderAt, message: msg };
+    if (entityType && entityId) {
+      body[ENTITY_FIELD_MAP[entityType]] = entityId;
+    } else {
+      if (applicationId) body.applicationId = applicationId;
+      if (taskId) body.taskId = taskId;
+    }
+    return body;
+  };
+
   const createReminderMutation = useMutation({
-    mutationFn: async (data: { reminderAt: string; message: string; applicationId?: string; taskId?: string }) => {
+    mutationFn: async (data: Record<string, unknown>) => {
       return apiRequest("POST", "/api/reminders", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/reminders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/reminders/upcoming"] });
+      if (entityType && entityId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/reminders/by-entity", entityType, entityId] });
+      }
       toast({
         title: "Reminder created",
         description: "You'll be notified at the scheduled time",
@@ -132,12 +177,7 @@ export function CreateReminderModal({
       return;
     }
 
-    createReminderMutation.mutate({
-      reminderAt: reminderAt.toISOString(),
-      message: message.trim() || "",
-      applicationId,
-      taskId,
-    });
+    createReminderMutation.mutate(buildRequestBody(reminderAt.toISOString(), message.trim() || ""));
   };
 
   const handleQuickOptionChange = (value: string) => {
@@ -163,7 +203,7 @@ export function CreateReminderModal({
             Create Reminder
           </DialogTitle>
           <DialogDescription>
-            Set a follow-up reminder for this {applicationId ? "application" : "task"}.
+            Set a follow-up reminder for this {resolvedEntityLabel}.
           </DialogDescription>
         </DialogHeader>
 
