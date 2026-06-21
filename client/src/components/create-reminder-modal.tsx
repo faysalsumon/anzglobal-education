@@ -139,7 +139,7 @@ export function CreateReminderModal({
       queryClient.invalidateQueries({ queryKey: ["/api/reminders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/reminders/upcoming"] });
       if (entityType && entityId) {
-        queryClient.invalidateQueries({ queryKey: ["/api/reminders/by-entity", entityType, entityId] });
+        queryClient.invalidateQueries({ queryKey: ["/api/reminders/by-entity", { entityType, entityId }] });
       }
       toast({
         title: "Reminder created",

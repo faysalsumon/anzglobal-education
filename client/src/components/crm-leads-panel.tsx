@@ -25,6 +25,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { LeadNotes } from "@/components/lead-notes";
+import { EntityFollowUpPanel } from "@/components/entity-follow-up-panel";
 
 // Helper to get auth headers for fetch requests
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -1766,11 +1767,14 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, isAccountsOfficer = fa
         <div className="w-full lg:w-[360px] shrink-0 lg:sticky lg:top-4 flex flex-col" style={{ maxHeight: "calc(100vh - 90px)" }}>
           <Card className="flex flex-col flex-1 min-h-0 overflow-hidden">
             <CardContent className="flex-1 flex flex-col min-h-0 pt-4 px-4 pb-4 overflow-hidden">
-              <LeadNotes
-                leadId={lead.id}
-                leadName={`${lead.firstName} ${lead.lastName}`}
-                branchId={lead.branchId}
-              />
+              <EntityFollowUpPanel entityType="crm_contact" entityId={lead.id} />
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <LeadNotes
+                  leadId={lead.id}
+                  leadName={`${lead.firstName} ${lead.lastName}`}
+                  branchId={lead.branchId}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>

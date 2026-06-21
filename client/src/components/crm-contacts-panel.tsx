@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { LeadNotes } from "@/components/lead-notes";
+import { EntityFollowUpPanel } from "@/components/entity-follow-up-panel";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
 
 import { 
@@ -2888,11 +2889,14 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
         <div className="w-full lg:w-[360px] shrink-0 lg:sticky lg:top-4 flex flex-col" style={{ maxHeight: "calc(100vh - 90px)" }}>
           <Card className="flex flex-col flex-1 min-h-0 overflow-hidden">
             <CardContent className="flex-1 flex flex-col min-h-0 pt-4 px-4 pb-4 overflow-hidden">
-              <LeadNotes
-                leadId={contact.id}
-                leadName={`${contact.firstName} ${contact.lastName}`}
-                branchId={contact.branchId}
-              />
+              <EntityFollowUpPanel entityType="crm_contact" entityId={contact.id} />
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <LeadNotes
+                  leadId={contact.id}
+                  leadName={`${contact.firstName} ${contact.lastName}`}
+                  branchId={contact.branchId}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>

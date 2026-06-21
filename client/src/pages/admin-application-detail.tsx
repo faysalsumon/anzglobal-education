@@ -72,6 +72,7 @@ import { ApplicationProgressBar } from "@/components/application-progress-bar";
 import { ApplicationStageSelector } from "@/components/application-stage-selector";
 import { ApplicationInternalNotes } from "@/components/application-internal-notes";
 import { StudentApplicationNotes } from "@/components/student-application-notes";
+import { EntityFollowUpPanel } from "@/components/entity-follow-up-panel";
 import { StudentVerificationPanel } from "@/components/admin/student-verification-panel";
 import { StudentProfileViewer } from "@/components/admin/student-profile-viewer";
 import { StudentDocumentOrganizer } from "@/components/admin/student-document-organizer";
@@ -1072,6 +1073,7 @@ function AdminApplicationDetailContent() {
 
         {/* ── MESSAGES TAB ──────────────────────────────────────── */}
         <TabsContent value="messages" className="mt-4">
+          <EntityFollowUpPanel entityType="application" entityId={application.id} />
           {/* Segmented toggle */}
           <div className="flex items-center gap-1 bg-muted rounded-lg p-1 w-fit mb-4">
             <button

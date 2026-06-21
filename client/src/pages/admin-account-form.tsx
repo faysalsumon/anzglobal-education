@@ -6,6 +6,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { EntityFollowUpPanel } from "@/components/entity-follow-up-panel";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -2627,6 +2628,7 @@ export default function AdminAccountForm() {
               <Card className="sticky top-16 max-h-[calc(100vh-4.5rem)] overflow-y-auto" data-section="notes">
                 <CardContent className="pt-5 pb-5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Notes &amp; Activity</p>
+                  <EntityFollowUpPanel entityType="account" entityId={id} />
                   <AccountNotes accountId={id} />
                 </CardContent>
               </Card>

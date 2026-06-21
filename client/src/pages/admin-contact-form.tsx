@@ -26,6 +26,7 @@ import { getCountryCode } from "@/lib/country-flags";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { AddressAutocomplete, AddressComponents } from "@/components/ui/address-autocomplete";
 import { LeadNotes } from "@/components/lead-notes";
+import { EntityFollowUpPanel } from "@/components/entity-follow-up-panel";
 import { LeadActivityLog } from "@/components/lead-activity-log";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -1763,6 +1764,7 @@ export default function AdminContactForm() {
       {/* Lead Notes + Activity Log — lead mode edit only */}
       {isLeadMode && isEditing && params.id && (
         <div className="mt-6 space-y-6">
+          <EntityFollowUpPanel entityType="crm_contact" entityId={params.id} />
           <LeadNotes leadId={params.id} leadName={`${formData.firstName || ''} ${formData.lastName || ''}`} />
           <LeadActivityLog leadId={params.id} />
         </div>
