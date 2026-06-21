@@ -753,7 +753,10 @@ function AdminApplicationDetailContent() {
         </CardContent>
       </Card>
 
-      {/* ── UNIFIED TABS ────────────────────────────────────────── */}
+      {/* ── TWO-COLUMN BODY ─────────────────────────────────────── */}
+      <div className="flex gap-4 items-start">
+      {/* ── LEFT: TABS ──────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full border-b bg-transparent h-auto p-0 rounded-none justify-start overflow-x-auto" data-testid="tabs-application-detail">
           {[
@@ -1073,7 +1076,6 @@ function AdminApplicationDetailContent() {
 
         {/* ── MESSAGES TAB ──────────────────────────────────────── */}
         <TabsContent value="messages" className="mt-4">
-          <EntityFollowUpPanel entityType="application" entityId={application.id} />
           {/* Segmented toggle */}
           <div className="flex items-center gap-1 bg-muted rounded-lg p-1 w-fit mb-4">
             <button
@@ -1192,6 +1194,25 @@ function AdminApplicationDetailContent() {
           </ScrollArea>
         </TabsContent>
       </Tabs>
+      </div>{/* end left column */}
+
+      {/* ── RIGHT: STICKY PANEL ─────────────────────────────────── */}
+      <div className="hidden lg:flex w-72 shrink-0 flex-col gap-4 sticky top-4">
+        <EntityFollowUpPanel entityType="application" entityId={application.id} />
+        <div>
+          <p className="text-xs font-semibold mb-2 text-muted-foreground flex items-center gap-1.5">
+            <StickyNote className="h-3.5 w-3.5" />
+            Internal Notes
+          </p>
+          <ApplicationInternalNotes
+            applicationId={application.id}
+            currentUserId={user?.id}
+            branchId={application.branchId}
+          />
+        </div>
+      </div>
+
+      </div>{/* end two-column body */}
 
       {/* ── MODALS ─────────────────────────────────────────────────── */}
 
