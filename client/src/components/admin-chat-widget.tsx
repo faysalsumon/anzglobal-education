@@ -318,8 +318,6 @@ export function AdminChatWidget() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
   const openWidgetRef = useRef<() => void>(() => {});
   const [isRecording, setIsRecording] = useState(false);
 
@@ -504,86 +502,32 @@ export function AdminChatWidget() {
     });
   };
 
-  const handleVoiceInput = async () => {
+  const handleVoiceInput = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (SpeechRecognition) {
-      if (isRecording) {
-        recognitionRef.current?.stop();
-        setIsRecording(false);
-        return;
-      }
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = "en-AU";
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0]?.[0]?.transcript ?? "";
-        setInput((prev) => (prev ? prev + " " : "") + transcript);
-        setIsRecording(false);
-        setTimeout(() => inputRef.current?.focus(), 50);
-      };
-      recognition.onerror = () => setIsRecording(false);
-      recognition.onend = () => setIsRecording(false);
-      recognitionRef.current = recognition;
-      recognition.start();
-      setIsRecording(true);
+    if (!SpeechRecognition) {
+      toast({ title: "Voice input not supported", description: "Please use Chrome or Edge for voice input.", variant: "destructive" });
       return;
     }
-
     if (isRecording) {
-      mediaRecorderRef.current?.stop();
+      recognitionRef.current?.stop();
+      setIsRecording(false);
       return;
     }
-
-    if (typeof MediaRecorder === "undefined") {
-      toast({ title: "Voice input not supported", description: "Your browser does not support audio recording. Please use Chrome, Safari 14.1+, or Edge.", variant: "destructive" });
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      const candidateTypes = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/mpeg", "audio/ogg"];
-      const mimeType = candidateTypes.find((t) => MediaRecorder.isTypeSupported(t)) ?? null;
-      const ext = mimeType?.includes("mp4") || mimeType?.includes("mpeg") ? "mp4" : mimeType?.includes("ogg") ? "ogg" : "webm";
-
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-      audioChunksRef.current = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-
-      recorder.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
-        setIsRecording(false);
-        const blob = new Blob(audioChunksRef.current, { type: mimeType ?? "audio/webm" });
-        const formData = new FormData();
-        formData.append("audio", blob, `recording.${ext}`);
-        try {
-          const res = await fetch("/api/admin-chat/transcribe", {
-            method: "POST",
-            body: formData,
-            credentials: "include",
-          });
-          if (!res.ok) throw new Error("Transcription failed");
-          const { transcript } = await res.json();
-          if (transcript) {
-            setInput((prev) => (prev ? prev + " " : "") + transcript);
-            setTimeout(() => inputRef.current?.focus(), 50);
-          }
-        } catch {
-          toast({ title: "Transcription failed", description: "Could not transcribe audio. Please try again.", variant: "destructive" });
-        }
-      };
-
-      mediaRecorderRef.current = recorder;
-      recorder.start();
-      setIsRecording(true);
-    } catch {
-      toast({ title: "Microphone access denied", description: "Please allow microphone access to use voice input.", variant: "destructive" });
-    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-AU";
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? "";
+      setInput((prev) => (prev ? prev + " " : "") + transcript);
+      setIsRecording(false);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    };
+    recognition.onerror = () => setIsRecording(false);
+    recognition.onend = () => setIsRecording(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsRecording(true);
   };
 
   const openWidget = () => {

@@ -2,11 +2,22 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { FileText, AlertCircle, RefreshCw, Plus } from "lucide-react";
+import { FileText, AlertCircle, RefreshCw } from "lucide-react";
 import { ApplicationCard } from "@/components/application-card";
 import { StudentLayout } from "@/components/student-layout";
 
-import type { ApplicationStage } from "@/lib/stage-config";
+type ApplicationStage = 
+  | "Assessment"
+  | "Collect Docs"
+  | "Documents Verification"
+  | "Offer-Letter"
+  | "GS-Clearance"
+  | "COE"
+  | "Health Cover"
+  | "Visa Lodgment"
+  | "Application Won"
+  | "Refusal/Refunds"
+  | "Application Lost";
 
 interface ApplicationWithDetails {
   application: {
@@ -50,24 +61,15 @@ interface ApplicationWithDetails {
 function StudentApplicationsContent() {
   const { data, isLoading, isError, error, refetch} = useQuery<{ applications: ApplicationWithDetails[] }>({
     queryKey: ["/api/student/applications"],
-    refetchInterval: 30000,
   });
   
   const applications = data?.applications || [];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">My Applications</h1>
-          <p className="text-muted-foreground">Track the status of your course applications and manage documents</p>
-        </div>
-        <Button asChild data-testid="button-find-course">
-          <a href="/student/courses">
-            <Plus className="mr-2 h-4 w-4" />
-            Find a Course
-          </a>
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold text-foreground mb-2">My Applications</h1>
+        <p className="text-muted-foreground">Track the status of your course applications and manage documents</p>
       </div>
 
       {isError ? (

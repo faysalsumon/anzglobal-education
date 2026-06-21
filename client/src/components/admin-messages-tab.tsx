@@ -79,13 +79,6 @@ const STATUS_COLORS: Record<string, string> = {
   invisible: 'bg-gray-400',
 };
 
-const OFFLINE_COLOR = 'bg-gray-300 dark:bg-gray-600';
-
-function getPresenceColor(userId: string | undefined, onlineUserIds: Set<string>, availabilityStatus?: string | null): string {
-  if (!userId || !onlineUserIds.has(userId)) return OFFLINE_COLOR;
-  return STATUS_COLORS[availabilityStatus || 'available'] ?? STATUS_COLORS.available;
-}
-
 const COMMON_EMOJIS = [
   "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
   "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚",
@@ -285,9 +278,6 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
   const zanImagePreviewsRef = useRef<Map<string, string>>(new Map());
-  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
 
   const currentUser = user as any;
   const currentUserId = currentUser?.id || currentUser?.claims?.sub;
@@ -307,17 +297,6 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
     queryKey: ["/api/admin/team-status"],
     refetchInterval: 30000,
   });
-
-  // Seed online set from server on mount; WS events keep it live thereafter
-  const { data: onlineUsersData } = useQuery<string[]>({
-    queryKey: ["/api/admin/online-users"],
-    staleTime: 0,
-  });
-  useEffect(() => {
-    if (onlineUsersData) {
-      setOnlineUserIds(new Set(onlineUsersData));
-    }
-  }, [onlineUsersData]);
 
   const canCreateChannel = isCTO || isBranchManager || adminRole === 'ceo';
 
@@ -443,86 +422,32 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
     },
   });
 
-  const handleVoiceInput = async () => {
+  const handleVoiceInput = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (SpeechRecognition) {
-      if (isRecording) {
-        recognitionRef.current?.stop();
-        setIsRecording(false);
-        return;
-      }
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = "en-AU";
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0]?.[0]?.transcript ?? "";
-        setMessageInput((prev) => (prev ? prev + " " : "") + transcript);
-        setIsRecording(false);
-        setTimeout(() => textareaRef.current?.focus(), 50);
-      };
-      recognition.onerror = () => setIsRecording(false);
-      recognition.onend = () => setIsRecording(false);
-      recognitionRef.current = recognition;
-      recognition.start();
-      setIsRecording(true);
+    if (!SpeechRecognition) {
+      toast({ title: "Voice input not supported", description: "Please use Chrome or Edge for voice input.", variant: "destructive" });
       return;
     }
-
     if (isRecording) {
-      mediaRecorderRef.current?.stop();
+      recognitionRef.current?.stop();
+      setIsRecording(false);
       return;
     }
-
-    if (typeof MediaRecorder === "undefined") {
-      toast({ title: "Voice input not supported", description: "Your browser does not support audio recording. Please use Chrome, Safari 14.1+, or Edge.", variant: "destructive" });
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      const candidateTypes = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/mpeg", "audio/ogg"];
-      const mimeType = candidateTypes.find((t) => MediaRecorder.isTypeSupported(t)) ?? null;
-      const ext = mimeType?.includes("mp4") || mimeType?.includes("mpeg") ? "mp4" : mimeType?.includes("ogg") ? "ogg" : "webm";
-
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-      audioChunksRef.current = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-
-      recorder.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
-        setIsRecording(false);
-        const blob = new Blob(audioChunksRef.current, { type: mimeType ?? "audio/webm" });
-        const formData = new FormData();
-        formData.append("audio", blob, `recording.${ext}`);
-        try {
-          const res = await fetch("/api/admin-chat/transcribe", {
-            method: "POST",
-            body: formData,
-            credentials: "include",
-          });
-          if (!res.ok) throw new Error("Transcription failed");
-          const { transcript } = await res.json();
-          if (transcript) {
-            setMessageInput((prev) => (prev ? prev + " " : "") + transcript);
-            setTimeout(() => textareaRef.current?.focus(), 50);
-          }
-        } catch {
-          toast({ title: "Transcription failed", description: "Could not transcribe audio. Please try again.", variant: "destructive" });
-        }
-      };
-
-      mediaRecorderRef.current = recorder;
-      recorder.start();
-      setIsRecording(true);
-    } catch {
-      toast({ title: "Microphone access denied", description: "Please allow microphone access to use voice input.", variant: "destructive" });
-    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-AU";
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? "";
+      setMessageInput((prev) => (prev ? prev + " " : "") + transcript);
+      setIsRecording(false);
+      setTimeout(() => textareaRef.current?.focus(), 50);
+    };
+    recognition.onerror = () => setIsRecording(false);
+    recognition.onend = () => setIsRecording(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsRecording(true);
   };
 
   const markAsReadMutation = useMutation({
@@ -648,18 +573,6 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
         if (activeView?.type === "channel" && lastMessage.channelId === activeView.id) {
           queryClient.invalidateQueries({ queryKey: ["/api/channels", activeView.id, "messages"] });
         }
-      } else if (lastMessage.type === "user_online" && lastMessage.userId) {
-        setOnlineUserIds(prev => {
-          const next = new Set(prev);
-          next.add(lastMessage.userId);
-          return next;
-        });
-      } else if (lastMessage.type === "user_offline" && lastMessage.userId) {
-        setOnlineUserIds(prev => {
-          const next = new Set(prev);
-          next.delete(lastMessage.userId);
-          return next;
-        });
       }
     }
   }, [lastMessage, activeView]);
@@ -1009,7 +922,7 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
                             )}
                           </Avatar>
                           <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${
-                            getPresenceColor(other?.id, onlineUserIds, (other?.id ? teamStatusMap.get(other.id)?.availabilityStatus : null) ?? other?.availabilityStatus)
+                            STATUS_COLORS[(other?.id ? teamStatusMap.get(other.id)?.availabilityStatus : null) || other?.availabilityStatus || 'available']
                           }`} />
                         </div>
                         <div className="flex-1 min-w-0 text-left">
@@ -1062,7 +975,7 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
                             <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
                           )}
                         </Avatar>
-                        <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${getPresenceColor(member.id, onlineUserIds, member.availabilityStatus)}`} />
+                        <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${STATUS_COLORS[member.availabilityStatus || 'available']}`} />
                       </div>
                       <div className="flex-1 min-w-0 text-left">
                         <p className="font-medium truncate">{member.firstName} {member.lastName}</p>
@@ -1098,8 +1011,8 @@ export function AdminMessagesTab({ inSheet: _inSheet = false }: AdminMessagesTab
                       </Avatar>
                       {(() => {
                         const dmOther = conversations.find(c => c.id === activeView.id)?.otherParticipant;
-                        const liveStatus = (dmOther?.id ? teamStatusMap.get(dmOther.id)?.availabilityStatus : null) ?? dmOther?.availabilityStatus;
-                        return <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background ${getPresenceColor(dmOther?.id, onlineUserIds, liveStatus)}`} />;
+                        const liveStatus = (dmOther?.id ? teamStatusMap.get(dmOther.id)?.availabilityStatus : null) || dmOther?.availabilityStatus || 'available';
+                        return <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background ${STATUS_COLORS[liveStatus]}`} />;
                       })()}
                     </div>
                     <div>

@@ -4147,7 +4147,6 @@ export default function AdminDashboard() {
       isCTO={isCTO}
       isMarketingExecutive={isMarketingExecutive}
       isAdmissionsDirector={isAdmissionsDirector}
-      isAccountsOfficer={isAccountsOfficer}
       onLogout={handleLogout}
     />
 

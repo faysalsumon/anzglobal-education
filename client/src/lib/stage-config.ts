@@ -185,9 +185,8 @@ export const STUDENT_STAGES: StudentStage[] = [
   { id: "assessment", name: "Initial Assessment", internalStages: ["Assessment", "Collect Docs", "Documents Verification"] },
   { id: "applied", name: "Applied to Institution", internalStages: ["Offer-Letter"] },
   { id: "offer", name: "Offer Letter", internalStages: ["GS-Clearance"] },
-  { id: "payment", name: "Payment & COE", internalStages: ["COE"] },
-  { id: "health_visa", name: "Health & Visa", internalStages: ["Health Cover", "Visa Lodgment"] },
-  { id: "won", name: "Application Won", internalStages: ["Application Won"] },
+  { id: "payment", name: "Payment", internalStages: ["COE"] },
+  { id: "coe", name: "COE Issued", internalStages: ["Health Cover", "Visa Lodgment", "Application Won"] },
 ];
 
 // Helper to map internal stage to student stage index
@@ -222,33 +221,3 @@ export function getPreviousStage(currentStage: ApplicationStage): ApplicationSta
   if (index <= 0) return null;
   return ACTIVE_STAGES[index - 1];
 }
-
-// Canonical stage badge colours — single source of truth for kanban, admin detail page, and student card
-export const STAGE_COLORS: Record<ApplicationStage, string> = {
-  "Assessment": "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  "Collect Docs": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
-  "Documents Verification": "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  "Offer-Letter": "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-  "GS-Clearance": "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300",
-  "COE": "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
-  "Health Cover": "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300",
-  "Visa Lodgment": "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-  "Application Won": "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-  "Refusal/Refunds": "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-  "Application Lost": "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
-};
-
-// Per-stage SLA limits in days — used to calculate at-risk / overdue status in the admin kanban
-export const STAGE_SLA: Record<ApplicationStage, number> = {
-  "Assessment": 3,
-  "Collect Docs": 7,
-  "Documents Verification": 5,
-  "Offer-Letter": 14,
-  "GS-Clearance": 10,
-  "COE": 7,
-  "Health Cover": 5,
-  "Visa Lodgment": 21,
-  "Application Won": 0,
-  "Refusal/Refunds": 0,
-  "Application Lost": 0,
-};

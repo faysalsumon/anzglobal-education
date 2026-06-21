@@ -51,10 +51,6 @@ import {
   UserCheck,
   Mail,
   TrendingUp,
-  Target,
-  DollarSign,
-  Package,
-  ImageIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -65,7 +61,6 @@ interface AdminMobileBottomNavProps {
   isCTO?: boolean;
   isMarketingExecutive?: boolean;
   isAdmissionsDirector?: boolean;
-  isAccountsOfficer?: boolean;
   onLogout: () => void;
 }
 
@@ -94,7 +89,6 @@ export function AdminMobileBottomNav({
   isCTO = false,
   isMarketingExecutive = false,
   isAdmissionsDirector = false,
-  isAccountsOfficer = false,
   onLogout,
 }: AdminMobileBottomNavProps) {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
@@ -165,9 +159,7 @@ export function AdminMobileBottomNav({
         { icon: Mail, label: "Email", value: "email", show: true },
         { icon: ListTodo, label: "My Tasks", value: "my-tasks", show: true },
         { icon: BarChart3, label: "Team Workload", value: "team-workload", show: isCTO },
-        { icon: Target, label: "KPI Reports", value: "kpi-reports", show: isCTO },
         { icon: Contact, label: "Contacts", value: "crm-contacts", show: adminRole !== 'junior_consultant' && adminRole !== 'support_staff' },
-        { icon: Building2, label: "Accounts", value: "accounts", show: true },
       ],
     },
     {
@@ -204,21 +196,6 @@ export function AdminMobileBottomNav({
       ],
     },
     {
-      id: "finance",
-      label: "Finance",
-      icon: DollarSign,
-      colorClass: "text-amber-600 bg-amber-50 dark:bg-amber-950/60 dark:text-amber-400",
-      showSection: canSeeNav("finance"),
-      items: [
-        { icon: BarChart3, label: "Dashboard", value: "finance-dashboard", show: hasFullAdminAccess || isAccountsOfficer },
-        { icon: FileText, label: "Invoices", value: "finance-invoices", show: hasFullAdminAccess || isAccountsOfficer || isAdmissionsDirector },
-        { icon: Users, label: "Customers", value: "finance-customers", show: hasFullAdminAccess || isAccountsOfficer },
-        { icon: Package, label: "Items", value: "finance-items", show: hasFullAdminAccess || isAccountsOfficer },
-        { icon: BookOpen, label: "Chart of Accounts", value: "finance-accounts", show: hasFullAdminAccess || isAccountsOfficer },
-        { icon: DollarSign, label: "Accounting", value: "accounting", show: hasFullAdminAccess || isAccountsOfficer },
-      ],
-    },
-    {
       id: "people",
       label: "People",
       icon: UsersRound,
@@ -237,7 +214,6 @@ export function AdminMobileBottomNav({
       items: [
         { icon: Upload, label: "Data Import", value: "data-import", show: hasFullAdminAccess && canSeeFeature("dataImport") },
         { icon: Globe, label: "Web Scraping", value: "web-scraping", show: hasFullAdminAccess && canSeeFeature("webScraping") },
-        { icon: ImageIcon, label: "Thumbnails", value: "thumbnails", show: hasFullAdminAccess },
         { icon: Activity, label: "Activity Logs", value: "activity-logs", show: hasFullAdminAccess },
         { icon: Bot, label: "AI Settings", value: "ai-settings", show: isCTO && canSeeFeature("aiSettings") },
         { icon: Key, label: "Partner API", value: "api-keys", show: (hasFullAdminAccess || isCTO) && canSeeFeature("partnerApi") },
