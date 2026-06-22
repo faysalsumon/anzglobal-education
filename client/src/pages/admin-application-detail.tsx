@@ -145,6 +145,7 @@ interface AdminApplicationDetail {
     phone: string | null;
     userId: string | null;
     crmContactId: string | null;
+    crmMobile: string | null;
   };
   consultant: {
     id: string;
@@ -617,19 +618,14 @@ function AdminApplicationDetailContent() {
               <div className="leading-tight">
                 <HoverCard openDelay={300} closeDelay={100}>
                   <HoverCardTrigger asChild>
-                    {student.crmContactId ? (
-                      <Link
-                        href={`/admin?tab=crm-contacts&contactId=${student.crmContactId}`}
-                        className="text-sm font-semibold text-foreground cursor-pointer underline-offset-2 hover:underline hover:text-primary transition-colors"
-                        data-testid="link-summary-student-name"
-                      >
-                        {studentName}
-                      </Link>
-                    ) : (
-                      <span className="text-sm font-semibold text-foreground cursor-default" data-testid="text-summary-student-name">
-                        {studentName}
-                      </span>
-                    )}
+                    <a
+                      href={student.crmContactId ? `/admin?tab=crm-contacts&contactId=${student.crmContactId}` : undefined}
+                      onClick={!student.crmContactId ? (e) => e.preventDefault() : undefined}
+                      className={`text-sm font-semibold text-foreground transition-colors ${student.crmContactId ? 'cursor-pointer underline-offset-2 hover:underline hover:text-primary' : 'cursor-default'}`}
+                      data-testid={student.crmContactId ? "link-summary-student-name" : "text-summary-student-name"}
+                    >
+                      {studentName}
+                    </a>
                   </HoverCardTrigger>
                   <HoverCardContent className="w-72 p-3" side="bottom" align="start">
                     <div className="flex items-start gap-3">
@@ -649,7 +645,12 @@ function AdminApplicationDetailContent() {
                             <Mail className="h-3 w-3 shrink-0" />{student.email}
                           </a>
                         )}
-                        {student.phone && (
+                        {student.crmMobile && (
+                          <a href={`tel:${student.crmMobile}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:underline">
+                            <Phone className="h-3 w-3 shrink-0" />{student.crmMobile}
+                          </a>
+                        )}
+                        {!student.crmMobile && student.phone && (
                           <a href={`tel:${student.phone}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:underline">
                             <Phone className="h-3 w-3 shrink-0" />{student.phone}
                           </a>
@@ -658,7 +659,12 @@ function AdminApplicationDetailContent() {
                     </div>
                   </HoverCardContent>
                 </HoverCard>
-                {student.phone && (
+                {student.crmMobile && (
+                  <a href={`tel:${student.crmMobile}`} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:underline mt-0.5" data-testid="link-summary-mobile-inline">
+                    <Phone className="h-3 w-3 shrink-0" />{student.crmMobile}
+                  </a>
+                )}
+                {!student.crmMobile && student.phone && (
                   <a href={`tel:${student.phone}`} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:underline mt-0.5" data-testid="link-summary-phone-inline">
                     <Phone className="h-3 w-3 shrink-0" />{student.phone}
                   </a>

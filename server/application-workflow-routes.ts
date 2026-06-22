@@ -599,22 +599,36 @@ export function registerApplicationWorkflowRoutes(app: Express) {
 
       const appData = result[0];
 
-      // Get student user email and CRM contact id
+      // Get student user email and CRM contact id + mobile
       let studentEmail: string | null = null;
       let crmContactId: string | null = null;
+      let crmMobile: string | null = null;
       if (appData.student?.userId) {
         const studentUser = await db.query.users.findFirst({
           where: eq(users.id, appData.student.userId),
         });
         studentEmail = studentUser?.email || null;
 
-        const crmContact = await db
-          .select({ id: crmContacts.id })
+        // Primary lookup: by linkedUserId
+        let crmContact = await db
+          .select({ id: crmContacts.id, mobile: crmContacts.mobile })
           .from(crmContacts)
           .where(eq(crmContacts.linkedUserId, appData.student.userId))
           .limit(1)
           .then(r => r[0]);
+
+        // Email fallback: contact created manually may not have linkedUserId set
+        if (!crmContact && studentEmail) {
+          crmContact = await db
+            .select({ id: crmContacts.id, mobile: crmContacts.mobile })
+            .from(crmContacts)
+            .where(eq(crmContacts.email, studentEmail))
+            .limit(1)
+            .then(r => r[0]);
+        }
+
         crmContactId = crmContact?.id || null;
+        crmMobile = crmContact?.mobile || null;
       }
 
       // Get document progress for this application
@@ -683,6 +697,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           phone: appData.student?.phone || null,
           userId: appData.student?.userId || null,
           crmContactId,
+          crmMobile,
         },
         consultant: appData.consultant ? {
           id: appData.consultant.id,
