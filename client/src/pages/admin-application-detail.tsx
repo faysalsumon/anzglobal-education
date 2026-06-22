@@ -598,60 +598,60 @@ function AdminApplicationDetailContent() {
 
       {/* ── SUMMARY STRIP ───────────────────────────────────────── */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 items-start">
-            <div className="flex items-center gap-3 shrink-0">
-              <Avatar className="h-14 w-14 ring-2 ring-background ring-offset-2">
+        <CardContent className="px-4 py-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Avatar + name */}
+            <div className="flex items-center gap-2.5 shrink-0">
+              <Avatar className="h-9 w-9">
                 <AvatarImage src={student.profilePicture || undefined} alt={studentName} />
-                <AvatarFallback className="text-base font-semibold bg-primary/10 text-primary">
+                <AvatarFallback className="text-sm font-semibold bg-primary/10 text-primary">
                   {studentInitials || 'ST'}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <p className="font-semibold text-foreground leading-tight" data-testid="text-summary-student-name">{studentName}</p>
+              <div className="leading-tight">
+                <p className="text-sm font-semibold text-foreground" data-testid="text-summary-student-name">{studentName}</p>
                 {application.applicationNumber && (
-                  <p className="text-xs text-muted-foreground font-mono mt-0.5">{application.applicationNumber}</p>
+                  <p className="text-[11px] text-muted-foreground font-mono">{application.applicationNumber}</p>
                 )}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-x-6 gap-y-2 flex-1 min-w-0">
+            <div className="w-px h-8 bg-border shrink-0" />
+
+            {/* Contact details row */}
+            <div className="flex items-center gap-4 flex-wrap flex-1 min-w-0">
               {student.nationality && (
-                <div className="flex items-center gap-1.5 text-sm">
-                  <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span data-testid="text-student-nationality">{student.nationality}</span>
-                </div>
+                <span className="flex items-center gap-1 text-xs text-muted-foreground" data-testid="text-student-nationality">
+                  <Globe className="h-3.5 w-3.5 shrink-0" />{student.nationality}
+                </span>
               )}
               {student.email && (
-                <div className="flex items-center gap-1.5 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <a href={`mailto:${student.email}`} className="text-primary hover:underline" data-testid="link-student-email">
-                    {student.email}
-                  </a>
-                </div>
+                <a href={`mailto:${student.email}`} className="flex items-center gap-1 text-xs text-primary hover:underline" data-testid="link-student-email">
+                  <Mail className="h-3.5 w-3.5 shrink-0" />{student.email}
+                </a>
               )}
               {student.phone && (
-                <div className="flex items-center gap-1.5 text-sm">
-                  <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <a href={`tel:${student.phone}`} className="hover:underline" data-testid="link-student-phone">
-                    {student.phone}
-                  </a>
-                </div>
+                <a href={`tel:${student.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:underline" data-testid="link-student-phone">
+                  <Phone className="h-3.5 w-3.5 shrink-0" />{student.phone}
+                </a>
               )}
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4 shrink-0" />
-                Applied {format(new Date(application.createdAt), 'MMM d, yyyy')}
-              </div>
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Calendar className="h-3.5 w-3.5 shrink-0" />Applied {format(new Date(application.createdAt), 'MMM d, yyyy')}
+              </span>
+            </div>
 
-              {/* Consultant assignment inline */}
-              <div className="flex items-center gap-2 text-sm">
-                <UserCheck className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="w-px h-8 bg-border shrink-0 hidden sm:block" />
+
+            {/* Consultant + docs */}
+            <div className="flex items-center gap-3 shrink-0 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <UserCheck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 <Select
                   value={application.assignedConsultantId || "_unassigned"}
                   onValueChange={(v) => assignConsultantMutation.mutate(v === "_unassigned" ? null : v)}
                   disabled={assignConsultantMutation.isPending}
                 >
-                  <SelectTrigger className="h-7 text-xs border-dashed w-[160px]" data-testid="select-assign-consultant">
+                  <SelectTrigger className="h-7 text-xs border-dashed w-[140px]" data-testid="select-assign-consultant">
                     <SelectValue placeholder="Assign consultant" />
                   </SelectTrigger>
                   <SelectContent>
@@ -664,19 +664,10 @@ function AdminApplicationDetailContent() {
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Doc progress mini-bar */}
-              <div className="flex items-center gap-2 text-sm min-w-[180px]">
-                <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div className="flex-1">
-                  <div className="flex justify-between text-xs mb-0.5">
-                    <span className="text-muted-foreground">Docs</span>
-                    <span className="font-medium">{documentProgress.requiredUploaded}/{documentProgress.requiredDocs}</span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-1.5">
-                    <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
-                  </div>
-                </div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+                <span>Docs</span>
+                <span className="font-semibold text-foreground">{documentProgress.requiredUploaded}/{documentProgress.requiredDocs}</span>
               </div>
             </div>
           </div>
