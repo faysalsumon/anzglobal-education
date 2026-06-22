@@ -587,36 +587,13 @@ function AdminApplicationDetailContent() {
     <div className="space-y-4 pb-16">
 
       {/* ── HEADER ──────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3 flex-wrap">
-          <Button variant="ghost" size="sm" onClick={() => window.history.back()} data-testid="button-back">
-            <ArrowLeft className="h-4 w-4 mr-1" />Back
-          </Button>
-          {application.applicationNumber && (
-            <Badge variant="outline" className="font-mono text-xs no-default-active-elevate" data-testid="badge-application-number">
-              {application.applicationNumber}
-            </Badge>
-          )}
-          <h1 className="text-lg font-bold text-foreground" data-testid="text-header-student-name">
-            {studentName}
-          </h1>
-          <Badge className={cn("text-xs no-default-active-elevate", STAGE_COLORS[application.currentStage])} data-testid="badge-current-stage">
-            {application.currentStage}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setReminderDialogOpen(true)}
-            data-testid="button-set-reminder"
-          >
-            <Bell className="h-4 w-4 mr-1" />Set Reminder
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setDeleteConfirmOpen(true)} data-testid="button-delete-application">
-            <Trash2 className="h-4 w-4 mr-1" />Delete
-          </Button>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <Button variant="ghost" size="sm" onClick={() => window.history.back()} data-testid="button-back">
+          <ArrowLeft className="h-4 w-4 mr-1" />Back
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setDeleteConfirmOpen(true)} data-testid="button-delete-application">
+          <Trash2 className="h-4 w-4 mr-1" />Delete
+        </Button>
       </div>
 
       {/* ── SUMMARY STRIP ───────────────────────────────────────── */}
