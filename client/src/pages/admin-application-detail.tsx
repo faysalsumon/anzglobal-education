@@ -620,16 +620,6 @@ function AdminApplicationDetailContent() {
 
             {/* Contact details row */}
             <div className="flex items-center gap-4 flex-wrap flex-1 min-w-0">
-              {student.nationality && (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground" data-testid="text-student-nationality">
-                  <Globe className="h-3.5 w-3.5 shrink-0" />{student.nationality}
-                </span>
-              )}
-              {student.email && (
-                <a href={`mailto:${student.email}`} className="flex items-center gap-1 text-xs text-primary hover:underline" data-testid="link-student-email">
-                  <Mail className="h-3.5 w-3.5 shrink-0" />{student.email}
-                </a>
-              )}
               {student.phone && (
                 <a href={`tel:${student.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:underline" data-testid="link-student-phone">
                   <Phone className="h-3.5 w-3.5 shrink-0" />{student.phone}
