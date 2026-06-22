@@ -777,36 +777,6 @@ function AdminApplicationDetailContent() {
               />
             </div>
 
-            {/* Course chips */}
-            <div className="flex items-center gap-1.5 flex-wrap ml-auto">
-              {applicationCourses.length > 0 ? applicationCourses.map((ac, idx) => {
-                const name = ac.courseId ? (ac.course?.title ?? "(Untitled)") : (ac.externalCourseName ?? "(External)");
-                return (
-                  <div key={ac.id} className="flex items-center gap-1 bg-muted rounded-md px-2 py-1 text-xs" data-testid={`course-chip-${idx}`}>
-                    <GraduationCap className="h-3 w-3 text-muted-foreground" />
-                    <span className="truncate max-w-[120px]">{name}</span>
-                    {ac.isPrimary && <Badge variant="secondary" className="text-[9px] px-1 h-3.5 no-default-active-elevate">Primary</Badge>}
-                    {applicationCourses.length > 1 && (
-                      <button
-                        onClick={() => removeCourseMutation.mutate(ac.id)}
-                        className="text-muted-foreground hover:text-destructive ml-0.5"
-                        data-testid={`button-remove-course-${idx}`}
-                      >
-                        <XCircle className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
-                );
-              }) : (
-                <div className="flex items-center gap-1 bg-muted rounded-md px-2 py-1 text-xs">
-                  <GraduationCap className="h-3 w-3 text-muted-foreground" />
-                  <span className="truncate max-w-[120px]">{course.title}</span>
-                </div>
-              )}
-              <Button variant="ghost" size="sm" onClick={() => setAddCourseDialogOpen(true)} data-testid="button-add-course">
-                <Plus className="h-3.5 w-3.5 mr-1" />Add Course
-              </Button>
-            </div>
           </div>
 
           <ApplicationProgressBar
@@ -851,11 +821,14 @@ function AdminApplicationDetailContent() {
         <TabsContent value="overview" className="mt-4 space-y-4">
           {/* Course details card */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2 flex-wrap">
               <CardTitle className="text-base flex items-center gap-2">
                 <GraduationCap className="h-5 w-5" />
                 Course Details
               </CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => setAddCourseDialogOpen(true)} data-testid="button-add-course">
+                <Plus className="h-3.5 w-3.5 mr-1" />Add Course
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start gap-4">
@@ -900,6 +873,32 @@ function AdminApplicationDetailContent() {
                   </p>
                 </div>
               </div>
+              {applicationCourses.length > 1 && (
+                <div className="pt-2 border-t space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">All Courses</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {applicationCourses.map((ac, idx) => {
+                      const name = ac.courseId ? (ac.course?.title ?? "(Untitled)") : (ac.externalCourseName ?? "(External)");
+                      return (
+                        <div key={ac.id} className="flex items-center gap-1 bg-muted rounded-md px-2 py-1 text-xs" data-testid={`course-chip-${idx}`}>
+                          <GraduationCap className="h-3 w-3 text-muted-foreground" />
+                          <span className="truncate max-w-[140px]">{name}</span>
+                          {ac.isPrimary && <Badge variant="secondary" className="text-[9px] px-1 h-3.5 no-default-active-elevate">Primary</Badge>}
+                          {!ac.isPrimary && (
+                            <button
+                              onClick={() => removeCourseMutation.mutate(ac.id)}
+                              className="text-muted-foreground hover:text-destructive ml-0.5"
+                              data-testid={`button-remove-course-${idx}`}
+                            >
+                              <XCircle className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
