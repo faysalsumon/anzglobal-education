@@ -38,6 +38,16 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   ArrowLeft,
   AlertCircle,
   RefreshCw,
@@ -305,6 +315,7 @@ function AdminApplicationDetailContent() {
   const [manualCourseName, setManualCourseName] = useState("");
   const [manualInstitutionName, setManualInstitutionName] = useState("");
   const [manualCountry, setManualCountry] = useState("Australia");
+  const [consultantPopoverOpen, setConsultantPopoverOpen] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<{ url: string; name: string; mimeType?: string } | null>(null);
   const [verifyNotes, setVerifyNotes] = useState("");
   const [rejectReason, setRejectReason] = useState("");
@@ -695,26 +706,51 @@ function AdminApplicationDetailContent() {
 
             {/* Consultant + docs */}
             <div className="flex items-center gap-3 shrink-0 flex-wrap">
-              <div className="flex items-center gap-1.5">
-                <UserCheck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <Select
-                  value={application.assignedConsultantId || "_unassigned"}
-                  onValueChange={(v) => assignConsultantMutation.mutate(v === "_unassigned" ? null : v)}
-                  disabled={assignConsultantMutation.isPending}
-                >
-                  <SelectTrigger className="h-7 text-xs border-dashed w-[140px]" data-testid="select-assign-consultant">
-                    <SelectValue placeholder="Assign consultant" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_unassigned">Unassigned</SelectItem>
+              <Popover open={consultantPopoverOpen} onOpenChange={setConsultantPopoverOpen}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <PopoverTrigger asChild>
+                      <button
+                        className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        disabled={assignConsultantMutation.isPending}
+                        data-testid="button-assign-consultant"
+                      >
+                        <Avatar className="h-7 w-7">
+                          <AvatarFallback className={cn("text-[10px] font-semibold", consultant ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
+                            {consultant
+                              ? `${(consultant.firstName ?? '')[0] ?? ''}${(consultant.lastName ?? '')[0] ?? ''}`
+                              : <UserCheck className="h-3.5 w-3.5" />
+                            }
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </PopoverTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>{consultant ? `${consultant.firstName} ${consultant.lastName}` : 'Unassigned — click to assign'}</p>
+                  </TooltipContent>
+                </Tooltip>
+                <PopoverContent className="w-52 p-2" side="bottom" align="start">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Assign Consultant</p>
+                  <div className="space-y-0.5">
+                    <button
+                      className={cn("w-full text-left text-sm px-2 py-1.5 rounded-md transition-colors", !application.assignedConsultantId ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted")}
+                      onClick={() => { assignConsultantMutation.mutate(null); setConsultantPopoverOpen(false); }}
+                    >
+                      Unassigned
+                    </button>
                     {assignableUsers.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
+                      <button
+                        key={c.id}
+                        className={cn("w-full text-left text-sm px-2 py-1.5 rounded-md transition-colors", application.assignedConsultantId === c.id ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted")}
+                        onClick={() => { assignConsultantMutation.mutate(c.id); setConsultantPopoverOpen(false); }}
+                      >
                         {c.firstName} {c.lastName}
-                      </SelectItem>
+                      </button>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <FolderOpen className="h-3.5 w-3.5 shrink-0" />
                 <span>Docs</span>
