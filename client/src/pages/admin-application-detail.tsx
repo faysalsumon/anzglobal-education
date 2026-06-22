@@ -782,6 +782,23 @@ function AdminApplicationDetailContent() {
           <ApplicationProgressBar
             currentStage={application.currentStage as ApplicationStage}
             adminView={true}
+            stageTimings={history.reduce<Record<string, number>>((acc, r) => {
+              if (r.history.fromStage && r.history.durationInStage != null) {
+                acc[r.history.fromStage] = (acc[r.history.fromStage] ?? 0) + r.history.durationInStage;
+              }
+              return acc;
+            }, {})}
+            currentStageEnteredAt={(() => {
+              const transitionsIn = history.filter(
+                r => r.history.toStage === application.currentStage && r.history.fromStage !== application.currentStage
+              );
+              if (transitionsIn.length > 0) {
+                return [...transitionsIn].sort(
+                  (a, b) => new Date(b.history.createdAt).getTime() - new Date(a.history.createdAt).getTime()
+                )[0].history.createdAt;
+              }
+              return application.createdAt;
+            })()}
           />
         </CardContent>
       </Card>

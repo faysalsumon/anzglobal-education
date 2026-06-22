@@ -1,4 +1,5 @@
-import { CheckCircle, Trophy, XCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, Trophy, XCircle, AlertCircle, Clock } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   ApplicationStage, 
   STUDENT_STAGES, 
@@ -14,6 +15,21 @@ interface ApplicationProgressBarProps {
   showInternalStage?: boolean;
   compact?: boolean;
   adminView?: boolean;
+  stageTimings?: Record<string, number>;
+  currentStageEnteredAt?: string | null;
+}
+
+function formatStageDuration(hours: number): string {
+  if (hours < 1) return "<1h";
+  if (hours < 48) return `${Math.round(hours)}h`;
+  const days = Math.round(hours / 24);
+  return `${days}d`;
+}
+
+function calcCurrentDurationHours(enteredAt: string | null | undefined): number | null {
+  if (!enteredAt) return null;
+  const ms = Date.now() - new Date(enteredAt).getTime();
+  return ms / (1000 * 60 * 60);
 }
 
 function calculateAdminProgress(stage: ApplicationStage): number {
@@ -24,7 +40,11 @@ function calculateAdminProgress(stage: ApplicationStage): number {
   return Math.round(((index + 1) / ACTIVE_STAGES.length) * 100);
 }
 
-function AdminProgressBar({ currentStage }: { currentStage: ApplicationStage }) {
+function AdminProgressBar({ currentStage, stageTimings, currentStageEnteredAt }: {
+  currentStage: ApplicationStage;
+  stageTimings?: Record<string, number>;
+  currentStageEnteredAt?: string | null;
+}) {
   const isTerminal = TERMINAL_STAGES.includes(currentStage);
   const activeIndex = ACTIVE_STAGES.indexOf(currentStage);
   const progressPercentage = calculateAdminProgress(currentStage);
@@ -123,6 +143,7 @@ function AdminProgressBar({ currentStage }: { currentStage: ApplicationStage }) 
               const isCompleted = index < activeIndex;
               const isActive = index === activeIndex;
               const label = STAGE_CONFIG[stage]?.displayName || stage;
+              const pastDurationHours = isCompleted && stageTimings ? stageTimings[stage] : undefined;
               return (
                 <div
                   key={stage}
@@ -141,48 +162,74 @@ function AdminProgressBar({ currentStage }: { currentStage: ApplicationStage }) 
                       </div>
                     </div>
                   )}
-                  {isCompleted && (
+                  {isCompleted && pastDurationHours != null ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="relative w-6 h-6 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mb-1 cursor-default">
+                          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <span>{formatStageDuration(pastDurationHours)} in this stage</span>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : isCompleted ? (
                     <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mb-1">
                       <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                     </div>
-                  )}
-                  {!isActive && !isCompleted && (
+                  ) : !isActive ? (
                     <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mb-1">
                       <span className="text-xs text-muted-foreground">{index + 1}</span>
                     </div>
-                  )}
+                  ) : null}
                   <span className="leading-tight text-[10px] sm:text-xs">{label}</span>
+                  {isCompleted && pastDurationHours != null && (
+                    <span className="text-[9px] text-muted-foreground mt-0.5 leading-none">
+                      {formatStageDuration(pastDurationHours)}
+                    </span>
+                  )}
                 </div>
               );
             })}
           </div>
 
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" style={{ animationDuration: "2s" }} />
-              <div className="relative flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground">
-                <span className="text-lg font-bold">{activeIndex + 1}</span>
+          {(() => {
+            const currentDurationHours = calcCurrentDurationHours(currentStageEnteredAt);
+            return (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" style={{ animationDuration: "2s" }} />
+                  <div className="relative flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground">
+                    <span className="text-lg font-bold">{activeIndex + 1}</span>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground">Current Stage</p>
+                  <p className="font-semibold text-primary truncate">{STAGE_CONFIG[currentStage]?.displayName || currentStage}</p>
+                  {currentDurationHours != null && (
+                    <p className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5" data-testid="current-stage-duration">
+                      <Clock className="h-3 w-3 flex-shrink-0" />
+                      {formatStageDuration(currentDurationHours)} in this stage
+                    </p>
+                  )}
+                </div>
+                {activeIndex < ACTIVE_STAGES.length - 1 && (
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-xs text-muted-foreground">Next</p>
+                    <p className="text-sm font-medium truncate">
+                      {STAGE_CONFIG[ACTIVE_STAGES[activeIndex + 1]]?.displayName || ACTIVE_STAGES[activeIndex + 1]}
+                    </p>
+                  </div>
+                )}
+                {activeIndex === ACTIVE_STAGES.length - 1 && (
+                  <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                    <CheckCircle className="h-5 w-5" />
+                    <span className="text-sm font-medium">Final Stage</span>
+                  </div>
+                )}
               </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground">Current Stage</p>
-              <p className="font-semibold text-primary truncate">{STAGE_CONFIG[currentStage]?.displayName || currentStage}</p>
-            </div>
-            {activeIndex < ACTIVE_STAGES.length - 1 && (
-              <div className="text-right flex-shrink-0">
-                <p className="text-xs text-muted-foreground">Next</p>
-                <p className="text-sm font-medium truncate">
-                  {STAGE_CONFIG[ACTIVE_STAGES[activeIndex + 1]]?.displayName || ACTIVE_STAGES[activeIndex + 1]}
-                </p>
-              </div>
-            )}
-            {activeIndex === ACTIVE_STAGES.length - 1 && (
-              <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                <CheckCircle className="h-5 w-5" />
-                <span className="text-sm font-medium">Final Stage</span>
-              </div>
-            )}
-          </div>
+            );
+          })()}
         </>
       )}
     </div>
@@ -253,9 +300,17 @@ export function ApplicationProgressBar({
   showInternalStage = false,
   compact = false,
   adminView = false,
+  stageTimings,
+  currentStageEnteredAt,
 }: ApplicationProgressBarProps) {
   if (adminView) {
-    return <AdminProgressBar currentStage={currentStage} />;
+    return (
+      <AdminProgressBar
+        currentStage={currentStage}
+        stageTimings={stageTimings}
+        currentStageEnteredAt={currentStageEnteredAt}
+      />
+    );
   }
 
   const currentStudentStageIndex = getStudentStageIndex(currentStage);
