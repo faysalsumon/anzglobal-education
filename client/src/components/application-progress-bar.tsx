@@ -189,6 +189,65 @@ function AdminProgressBar({ currentStage }: { currentStage: ApplicationStage }) 
   );
 }
 
+export function MiniAdminProgressBar({ currentStage }: { currentStage: ApplicationStage }) {
+  const isTerminal = TERMINAL_STAGES.includes(currentStage);
+  const activeIdx = ACTIVE_STAGES.indexOf(currentStage);
+
+  if (isTerminal) {
+    const terminalStyle: Record<string, string> = {
+      "Application Won": "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+      "Refusal/Refunds": "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+      "Application Lost": "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+    };
+    const label: Record<string, string> = {
+      "Application Won": "Won",
+      "Refusal/Refunds": "Refusal/Refunds",
+      "Application Lost": "Lost",
+    };
+    return (
+      <div className="flex items-center gap-2">
+        <div className={`flex-shrink-0 px-2 py-0.5 rounded text-xs font-medium ${terminalStyle[currentStage] ?? ""}`}>
+          {label[currentStage] ?? currentStage}
+        </div>
+        <div className="flex-1 flex items-center gap-0.5">
+          {ACTIVE_STAGES.map((_, i) => (
+            <div key={i} className="flex-1 h-1 rounded-full bg-muted-foreground/20" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-0.5" data-testid={`mini-stage-nodes-${currentStage}`}>
+      {ACTIVE_STAGES.map((stage, index) => {
+        const isCompleted = index < activeIdx;
+        const isActive = index === activeIdx;
+        return (
+          <div key={stage} className="flex items-center flex-1">
+            <div
+              className={`h-2 w-2 rounded-full flex-shrink-0 transition-all ${
+                isActive
+                  ? "bg-primary ring-2 ring-primary/30 scale-125"
+                  : isCompleted
+                  ? "bg-primary/70"
+                  : "bg-muted-foreground/25"
+              }`}
+              title={`${stage}${isActive ? " (current)" : isCompleted ? " (done)" : ""}`}
+            />
+            {index < ACTIVE_STAGES.length - 1 && (
+              <div className={`flex-1 h-0.5 ${isCompleted ? "bg-primary/70" : "bg-muted-foreground/20"}`} />
+            )}
+          </div>
+        );
+      })}
+      <span className="ml-2 text-xs text-muted-foreground flex-shrink-0">
+        {activeIdx + 1}/{ACTIVE_STAGES.length}
+      </span>
+    </div>
+  );
+}
+
 export function ApplicationProgressBar({ 
   currentStage, 
   showInternalStage = false,

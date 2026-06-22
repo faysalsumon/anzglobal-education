@@ -31,6 +31,7 @@ import type { SavedFilter } from "@shared/schema";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { useAuth } from "@/hooks/useAuth";
 import { ApplicationDetailsPanel } from "@/components/application-details-panel";
+import { MiniAdminProgressBar } from "@/components/application-progress-bar";
 import { format, differenceInDays } from "date-fns";
 
 type ApplicationStage = 
@@ -1502,6 +1503,11 @@ export function AdminApplicationsKanban() {
                           </Button>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Compact admin pipeline progress strip */}
+                    <div className="mt-3 pt-3 border-t" data-testid={`progress-strip-${app.application.id}`}>
+                      <MiniAdminProgressBar currentStage={app.application.currentStage} />
                     </div>
                   </CardContent>
                 </Card>
