@@ -237,6 +237,18 @@ export function EntityFollowUpPanel({ entityType, entityId }: EntityFollowUpPane
                         </p>
                       )}
                     </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0 mt-0.5"
+                      onClick={() => deleteMutation.mutate(reminder.id)}
+                      disabled={deleteMutation.isPending}
+                      title="Delete follow-up"
+                      data-testid={`button-delete-completed-followup-${reminder.id}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
                   </div>
                 );
               })}
