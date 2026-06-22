@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Bell, CheckCircle2, Plus, Clock, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -27,6 +28,17 @@ export function EntityFollowUpPanel({ entityType, entityId }: EntityFollowUpPane
   const { toast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [justCompletedId, setJustCompletedId] = useState<string | null>(null);
+  const [justCompletedAt, setJustCompletedAt] = useState<Date | null>(null);
+  const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (completionTimerRef.current !== null) {
+        clearTimeout(completionTimerRef.current);
+      }
+    };
+  }, []);
 
   const { data: reminders = [], isLoading } = useQuery<EntityReminder[]>({
     queryKey: ["/api/reminders/by-entity", { entityType, entityId }],
@@ -35,11 +47,28 @@ export function EntityFollowUpPanel({ entityType, entityId }: EntityFollowUpPane
   });
 
   const completeMutation = useMutation({
-    mutationFn: async (reminderId: string) =>
-      apiRequest("POST", `/api/reminders/${reminderId}/complete`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/reminders/by-entity", { entityType, entityId }] });
-      queryClient.invalidateQueries({ queryKey: ["/api/reminders/upcoming"] });
+    mutationFn: async (reminderId: string) => {
+      const res = await apiRequest("POST", `/api/reminders/${reminderId}/complete`);
+      return res.json() as Promise<EntityReminder>;
+    },
+    onSuccess: (data, reminderId) => {
+      const completedAt = data?.completedAt
+        ? typeof data.completedAt === "string"
+          ? new Date(data.completedAt)
+          : data.completedAt
+        : new Date();
+      if (completionTimerRef.current !== null) {
+        clearTimeout(completionTimerRef.current);
+      }
+      setJustCompletedId(reminderId);
+      setJustCompletedAt(completedAt);
+      completionTimerRef.current = setTimeout(() => {
+        setJustCompletedId(null);
+        setJustCompletedAt(null);
+        completionTimerRef.current = null;
+        queryClient.invalidateQueries({ queryKey: ["/api/reminders/by-entity", { entityType, entityId }] });
+        queryClient.invalidateQueries({ queryKey: ["/api/reminders/upcoming"] });
+      }, 2000);
       toast({ title: "Marked as done" });
     },
     onError: () => {
@@ -130,33 +159,45 @@ export function EntityFollowUpPanel({ entityType, entityId }: EntityFollowUpPane
                 typeof reminder.reminderAt === "string"
                   ? new Date(reminder.reminderAt)
                   : reminder.reminderAt;
+              const isJustCompleted = justCompletedId === reminder.id;
               return (
                 <div
                   key={reminder.id}
-                  className="flex items-start gap-2 px-2.5 py-2 rounded-md border bg-card"
+                  className={`flex items-start gap-2 px-2.5 py-2 rounded-md border transition-colors duration-300 ${isJustCompleted ? "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800" : "bg-card"}`}
                   data-testid={`followup-item-${reminder.id}`}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <Badge
-                        variant={badge.variant}
-                        className={`text-xs px-1.5 py-0${badge.className ? ` ${badge.className}` : ""}`}
-                      >
-                        {badge.label}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground flex items-center gap-0.5">
-                        <Clock className="h-3 w-3" />
-                        {format(dateObj, "p")}
-                      </span>
-                    </div>
-                    {reminder.message ? (
-                      <p className="text-xs mt-0.5 line-clamp-2 text-foreground">
-                        {reminder.message}
-                      </p>
+                    {isJustCompleted && justCompletedAt ? (
+                      <div className="flex items-center gap-1.5" data-testid={`followup-completed-at-${reminder.id}`}>
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                        <span className="text-xs text-green-700 dark:text-green-400 font-medium">
+                          Done — {format(justCompletedAt, "d MMM yyyy 'at' p")}
+                        </span>
+                      </div>
                     ) : (
-                      <p className="text-xs mt-0.5 italic text-muted-foreground">
-                        No message
-                      </p>
+                      <>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge
+                            variant={badge.variant}
+                            className={`text-xs px-1.5 py-0${badge.className ? ` ${badge.className}` : ""}`}
+                          >
+                            {badge.label}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                            <Clock className="h-3 w-3" />
+                            {format(dateObj, "p")}
+                          </span>
+                        </div>
+                        {reminder.message ? (
+                          <p className="text-xs mt-0.5 line-clamp-2 text-foreground">
+                            {reminder.message}
+                          </p>
+                        ) : (
+                          <p className="text-xs mt-0.5 italic text-muted-foreground">
+                            No message
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                   <Button
@@ -165,7 +206,7 @@ export function EntityFollowUpPanel({ entityType, entityId }: EntityFollowUpPane
                     size="icon"
                     className="h-6 w-6 shrink-0 mt-0.5"
                     onClick={() => completeMutation.mutate(reminder.id)}
-                    disabled={completeMutation.isPending || deleteMutation.isPending}
+                    disabled={completeMutation.isPending || deleteMutation.isPending || isJustCompleted}
                     title="Mark as done"
                     data-testid={`button-complete-followup-${reminder.id}`}
                   >
@@ -220,7 +261,16 @@ export function EntityFollowUpPanel({ entityType, entityId }: EntityFollowUpPane
                     className="flex items-start gap-2 px-2.5 py-2 rounded-md border border-border/40 bg-muted/30 opacity-60"
                     data-testid={`followup-completed-item-${reminder.id}`}
                   >
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0 cursor-default" />
+                      </TooltipTrigger>
+                      {completedDate && (
+                        <TooltipContent side="top" className="text-xs">
+                          Completed {completedDate.toISOString()}
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
                     <div className="flex-1 min-w-0">
                       {reminder.message ? (
                         <p className="text-xs line-through text-muted-foreground line-clamp-2">
