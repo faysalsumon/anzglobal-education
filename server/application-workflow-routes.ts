@@ -622,7 +622,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           crmContact = await db
             .select({ id: crmContacts.id, mobile: crmContacts.mobile })
             .from(crmContacts)
-            .where(eq(crmContacts.email, studentEmail))
+            .where(sql`lower(${crmContacts.email}) = lower(${studentEmail})`)
             .limit(1)
             .then(r => r[0]);
         }
