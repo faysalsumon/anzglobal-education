@@ -33,6 +33,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import {
   ArrowLeft,
   AlertCircle,
   RefreshCw,
@@ -139,6 +144,7 @@ interface AdminApplicationDetail {
     nationality: string | null;
     phone: string | null;
     userId: string | null;
+    crmContactId: string | null;
   };
   consultant: {
     id: string;
@@ -600,7 +606,7 @@ function AdminApplicationDetailContent() {
       <Card>
         <CardContent className="px-4 py-3">
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Avatar + name */}
+            {/* Avatar + name + phone/email */}
             <div className="flex items-center gap-2.5 shrink-0">
               <Avatar className="h-9 w-9">
                 <AvatarImage src={student.profilePicture || undefined} alt={studentName} />
@@ -609,9 +615,58 @@ function AdminApplicationDetailContent() {
                 </AvatarFallback>
               </Avatar>
               <div className="leading-tight">
-                <p className="text-sm font-semibold text-foreground" data-testid="text-summary-student-name">{studentName}</p>
-                {application.applicationNumber && (
-                  <p className="text-[11px] text-muted-foreground font-mono">{application.applicationNumber}</p>
+                <HoverCard openDelay={300} closeDelay={100}>
+                  <HoverCardTrigger asChild>
+                    {student.crmContactId ? (
+                      <Link
+                        href={`/admin?tab=crm-contacts&contactId=${student.crmContactId}`}
+                        className="text-sm font-semibold text-foreground cursor-pointer underline-offset-2 hover:underline hover:text-primary transition-colors"
+                        data-testid="link-summary-student-name"
+                      >
+                        {studentName}
+                      </Link>
+                    ) : (
+                      <span className="text-sm font-semibold text-foreground cursor-default" data-testid="text-summary-student-name">
+                        {studentName}
+                      </span>
+                    )}
+                  </HoverCardTrigger>
+                  <HoverCardContent className="w-72 p-3" side="bottom" align="start">
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarImage src={student.profilePicture || undefined} alt={studentName} />
+                        <AvatarFallback className="text-sm font-semibold bg-primary/10 text-primary">
+                          {studentInitials || 'ST'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="space-y-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground leading-none">{studentName}</p>
+                        {student.nationality && (
+                          <p className="text-xs text-muted-foreground">{student.nationality}</p>
+                        )}
+                        {student.email && (
+                          <a href={`mailto:${student.email}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:underline truncate">
+                            <Mail className="h-3 w-3 shrink-0" />{student.email}
+                          </a>
+                        )}
+                        {student.phone && (
+                          <a href={`tel:${student.phone}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:underline">
+                            <Phone className="h-3 w-3 shrink-0" />{student.phone}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </HoverCardContent>
+                </HoverCard>
+                {student.phone && (
+                  <a href={`tel:${student.phone}`} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:underline mt-0.5" data-testid="link-summary-phone-inline">
+                    <Phone className="h-3 w-3 shrink-0" />{student.phone}
+                  </a>
+                )}
+                {student.email && (
+                  <a href={`mailto:${student.email}`} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:underline" data-testid="link-summary-email-inline">
+                    <Mail className="h-3 w-3 shrink-0" />{student.email}
+                  </a>
                 )}
               </div>
             </div>
@@ -620,14 +675,14 @@ function AdminApplicationDetailContent() {
 
             {/* Contact details row */}
             <div className="flex items-center gap-4 flex-wrap flex-1 min-w-0">
-              {student.phone && (
-                <a href={`tel:${student.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:underline" data-testid="link-student-phone">
-                  <Phone className="h-3.5 w-3.5 shrink-0" />{student.phone}
-                </a>
-              )}
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Calendar className="h-3.5 w-3.5 shrink-0" />Applied {format(new Date(application.createdAt), 'MMM d, yyyy')}
               </span>
+              {application.applicationNumber && (
+                <Badge variant="default" className="font-mono text-xs px-1.5 py-0" data-testid="badge-application-number">
+                  {application.applicationNumber}
+                </Badge>
+              )}
             </div>
 
             <div className="w-px h-8 bg-border shrink-0 hidden sm:block" />

@@ -14,6 +14,7 @@ import {
   courses,
   universities,
   adminTeamMembers,
+  crmContacts,
   type Application,
   type ApplicationStageHistory,
   type ApplicationStageDocument,
@@ -598,13 +599,22 @@ export function registerApplicationWorkflowRoutes(app: Express) {
 
       const appData = result[0];
 
-      // Get student user email
+      // Get student user email and CRM contact id
       let studentEmail: string | null = null;
+      let crmContactId: string | null = null;
       if (appData.student?.userId) {
         const studentUser = await db.query.users.findFirst({
           where: eq(users.id, appData.student.userId),
         });
         studentEmail = studentUser?.email || null;
+
+        const crmContact = await db
+          .select({ id: crmContacts.id })
+          .from(crmContacts)
+          .where(eq(crmContacts.linkedUserId, appData.student.userId))
+          .limit(1)
+          .then(r => r[0]);
+        crmContactId = crmContact?.id || null;
       }
 
       // Get document progress for this application
@@ -672,6 +682,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           nationality: appData.student?.nationality || null,
           phone: appData.student?.phone || null,
           userId: appData.student?.userId || null,
+          crmContactId,
         },
         consultant: appData.consultant ? {
           id: appData.consultant.id,
