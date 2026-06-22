@@ -781,7 +781,7 @@ function AdminApplicationDetailContent() {
 
           <ApplicationProgressBar
             currentStage={application.currentStage as ApplicationStage}
-            showInternalStage={true}
+            adminView={true}
           />
         </CardContent>
       </Card>
