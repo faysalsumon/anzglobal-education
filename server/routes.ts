@@ -4616,6 +4616,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PATCH /api/admin/student-profiles/:profileId - Update flat profile fields (consultant+)
+  app.patch("/api/admin/student-profiles/:profileId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const adminCheck = await checkAdminAccess(userId, CONSULTANT_AND_ABOVE_ROLES);
+      if (!adminCheck) {
+        return res.status(403).json({ message: "Access denied. Consultant role or above required." });
+      }
+
+      const { profileId } = req.params;
+      const profile = await storage.getStudentProfileById(profileId);
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const { userId: _uid, id: _id, ...sanitizedBody } = req.body;
+      const data = insertStudentProfileSchema.partial().parse(sanitizedBody);
+
+      const { detectChanges, trackProfileChanges } = await import("./verificationService");
+      const changes = detectChanges(profile as any, data);
+      if (changes.length > 0) {
+        await trackProfileChanges(profile.id, changes, userId);
+      }
+
+      const updated = await storage.updateStudentProfile(profileId, data);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating student profile (admin):", error);
+      res.status(400).json({ message: error.message || "Failed to update profile" });
+    }
+  });
+
+  // POST /api/admin/student-profiles/:profileId/education - Add education record (consultant+)
+  app.post("/api/admin/student-profiles/:profileId/education", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const adminCheck = await checkAdminAccess(userId, CONSULTANT_AND_ABOVE_ROLES);
+      if (!adminCheck) return res.status(403).json({ message: "Access denied." });
+
+      const { profileId } = req.params;
+      const profile = await storage.getStudentProfileById(profileId);
+      if (!profile) return res.status(404).json({ message: "Student profile not found" });
+
+      const bodyWithLevel = {
+        ...req.body,
+        studentProfileId: profileId,
+        level: req.body.level || (req.body.qualificationTypeId ? 'other' : undefined),
+      };
+      const data = insertStudentEducationSchema.parse(bodyWithLevel);
+      const education = await storage.createEducation(data);
+
+      const { trackEducationChange } = await import("./verificationService");
+      await trackEducationChange(profileId, 'create', null, education, userId);
+
+      res.json(education);
+    } catch (error: any) {
+      console.error("Error creating education (admin):", error);
+      res.status(400).json({ message: error.message || "Failed to create education record" });
+    }
+  });
+
+  // DELETE /api/admin/student-profiles/:profileId/education/:id - Delete education record (consultant+)
+  app.delete("/api/admin/student-profiles/:profileId/education/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const adminCheck = await checkAdminAccess(userId, CONSULTANT_AND_ABOVE_ROLES);
+      if (!adminCheck) return res.status(403).json({ message: "Access denied." });
+
+      const education = await storage.getEducationById(req.params.id);
+      if (!education || education.studentProfileId !== req.params.profileId) {
+        return res.status(404).json({ message: "Education record not found" });
+      }
+      await storage.deleteEducation(req.params.id);
+
+      const { trackEducationChange } = await import("./verificationService");
+      await trackEducationChange(req.params.profileId, 'delete', education, null, userId);
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting education (admin):", error);
+      res.status(400).json({ message: error.message || "Failed to delete education record" });
+    }
+  });
+
+  // POST /api/admin/student-profiles/:profileId/language-scores - Add language score (consultant+)
+  app.post("/api/admin/student-profiles/:profileId/language-scores", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const adminCheck = await checkAdminAccess(userId, CONSULTANT_AND_ABOVE_ROLES);
+      if (!adminCheck) return res.status(403).json({ message: "Access denied." });
+
+      const { profileId } = req.params;
+      const profile = await storage.getStudentProfileById(profileId);
+      if (!profile) return res.status(404).json({ message: "Student profile not found" });
+
+      const data = insertStudentLanguageScoreSchema.parse({ ...req.body, studentProfileId: profileId });
+      const score = await storage.createLanguageScore(data);
+
+      const { trackLanguageChange } = await import("./verificationService");
+      await trackLanguageChange(profileId, 'create', null, score, userId);
+
+      res.json(score);
+    } catch (error: any) {
+      console.error("Error creating language score (admin):", error);
+      res.status(400).json({ message: error.message || "Failed to create language score" });
+    }
+  });
+
+  // DELETE /api/admin/student-profiles/:profileId/language-scores/:id - Delete language score (consultant+)
+  app.delete("/api/admin/student-profiles/:profileId/language-scores/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const adminCheck = await checkAdminAccess(userId, CONSULTANT_AND_ABOVE_ROLES);
+      if (!adminCheck) return res.status(403).json({ message: "Access denied." });
+
+      const score = await storage.getLanguageScoreById(req.params.id);
+      if (!score || score.studentProfileId !== req.params.profileId) {
+        return res.status(404).json({ message: "Language score not found" });
+      }
+      await storage.deleteLanguageScore(req.params.id);
+
+      const { trackLanguageChange } = await import("./verificationService");
+      await trackLanguageChange(req.params.profileId, 'delete', score, null, userId);
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting language score (admin):", error);
+      res.status(400).json({ message: error.message || "Failed to delete language score" });
+    }
+  });
+
+  // POST /api/admin/student-profiles/:profileId/employment - Add employment record (consultant+)
+  app.post("/api/admin/student-profiles/:profileId/employment", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const adminCheck = await checkAdminAccess(userId, CONSULTANT_AND_ABOVE_ROLES);
+      if (!adminCheck) return res.status(403).json({ message: "Access denied." });
+
+      const { profileId } = req.params;
+      const profile = await storage.getStudentProfileById(profileId);
+      if (!profile) return res.status(404).json({ message: "Student profile not found" });
+
+      const data = insertStudentEmploymentSchema.parse({ ...req.body, studentProfileId: profileId });
+      const employment = await storage.createEmployment(data);
+
+      const { trackEmploymentChange } = await import("./verificationService");
+      await trackEmploymentChange(profileId, 'create', null, employment, userId);
+
+      res.json(employment);
+    } catch (error: any) {
+      console.error("Error creating employment (admin):", error);
+      res.status(400).json({ message: error.message || "Failed to create employment record" });
+    }
+  });
+
+  // DELETE /api/admin/student-profiles/:profileId/employment/:id - Delete employment record (consultant+)
+  app.delete("/api/admin/student-profiles/:profileId/employment/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const adminCheck = await checkAdminAccess(userId, CONSULTANT_AND_ABOVE_ROLES);
+      if (!adminCheck) return res.status(403).json({ message: "Access denied." });
+
+      const employment = await storage.getEmploymentById(req.params.id);
+      if (!employment || employment.studentProfileId !== req.params.profileId) {
+        return res.status(404).json({ message: "Employment record not found" });
+      }
+      await storage.deleteEmployment(req.params.id);
+
+      const { trackEmploymentChange } = await import("./verificationService");
+      await trackEmploymentChange(req.params.profileId, 'delete', employment, null, userId);
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting employment (admin):", error);
+      res.status(400).json({ message: error.message || "Failed to delete employment record" });
+    }
+  });
+
   // GET /api/student/application-slots - Check available application slots
   app.get("/api/student/application-slots", isAuthenticated, async (req: any, res) => {
     try {
