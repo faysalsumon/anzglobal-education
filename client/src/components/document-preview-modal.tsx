@@ -253,7 +253,7 @@ export function DocumentPreviewModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[92vw] max-h-[92vh] w-full h-full flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-[92vw] max-h-[92vh] w-full h-full flex flex-col p-0 gap-0 [&>button:last-child]:hidden">
 
         {/* ── Toolbar ──────────────────────────────────────────────── */}
         <DialogHeader className="flex flex-row items-center justify-between gap-2 px-4 py-2.5 border-b shrink-0 flex-wrap">
