@@ -1926,19 +1926,6 @@ export default function Landing() {
                 ))}
               </Accordion>
 
-              <div className="text-center mt-10">
-                <Button
-                  asChild
-                  size="lg"
-                  className="px-8 bg-primary text-white border-0"
-                  data-testid="button-faq-contact"
-                >
-                  <Link href="/contact">
-                    <Phone className="mr-2 h-5 w-5" />
-                    {t("landing.bdStudyAbroad.officeContact") || "Contact Our Dhaka Office"}
-                  </Link>
-                </Button>
-              </div>
             </div>
           </div>
         </section>
