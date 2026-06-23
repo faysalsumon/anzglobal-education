@@ -1927,9 +1927,6 @@ export default function Landing() {
               </Accordion>
 
               <div className="text-center mt-10">
-                <p className="text-muted-foreground mb-4">
-                  {t("landing.bdStudyAbroad.officeDesc") || "Have more questions? Our Dhaka counsellors are ready to help."}
-                </p>
                 <Button
                   asChild
                   size="lg"
