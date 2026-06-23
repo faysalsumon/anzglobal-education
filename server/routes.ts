@@ -355,6 +355,9 @@ export const ALL_STAFF_ROLES: RoleName[] = [
   'support_staff', // legacy — some users may still carry this name in old records
 ];
 
+// Roles that can upload/delete documents on behalf of students (consultant level and above)
+export const CONSULTANT_AND_ABOVE_ROLES: RoleName[] = ALL_STAFF_ROLES;
+
 // Kept as alias so nothing outside this file breaks
 type AdminRole = RoleName;
 
@@ -6569,8 +6572,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Student profile not found" });
       }
 
-      const documents = await storage.getDocumentsByStudentProfileId(profile.id);
-      res.json(documents);
+      const rawDocs = await storage.getDocumentsByStudentProfileId(profile.id);
+      const enriched = await Promise.all(rawDocs.map(async (doc) => {
+        let senderName: string | null = null;
+        if (doc.senderType === 'admin' && doc.senderId) {
+          const sender = await storage.getUser(doc.senderId);
+          if (sender) {
+            senderName = [sender.firstName, sender.lastName].filter(Boolean).join(' ') || sender.email || 'ANZ Staff';
+          }
+        }
+        return { ...doc, senderName };
+      }));
+      res.json(enriched);
     } catch (error) {
       console.error("Error fetching documents:", error);
       res.status(500).json({ message: "Failed to fetch documents" });
@@ -6667,6 +6680,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const document = await storage.getDocumentById(req.params.id);
       if (!document || document.studentProfileId !== profile.id) {
         return res.status(404).json({ message: "Document not found" });
+      }
+
+      // Students cannot delete admin-uploaded documents (server-side enforcement)
+      if (document.senderType === 'admin') {
+        return res.status(403).json({ message: "Cannot delete documents uploaded by ANZ staff" });
       }
 
       await storage.deleteDocument(req.params.id);
@@ -7058,6 +7076,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching student documents:", error);
       res.status(500).json({ message: "Failed to fetch student documents" });
+    }
+  });
+
+  // Admin: Upload a document on behalf of a student (consultant role or above)
+  app.post("/api/admin/students/:studentProfileId/documents/upload", isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const adminCheck = await checkAdminAccess(userId, CONSULTANT_AND_ABOVE_ROLES);
+      if (!adminCheck) {
+        return res.status(403).json({ message: "Access denied. Consultant role or above required." });
+      }
+
+      const { studentProfileId } = req.params;
+      const profile = await storage.getStudentProfileById(studentProfileId);
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file provided" });
+      }
+
+      const { folderId, type, description, title, expiryDate } = req.body;
+
+      const fileName = `${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const osDocPath = `.private/documents/${profile.id}/${fileName}`;
+      const { uploadFile: osUpload } = await import("./file-storage");
+      const osResult = await osUpload(osDocPath, req.file.buffer, req.file.mimetype);
+      if (!osResult.ok) {
+        console.error('[ADMIN UPLOAD] Object Storage upload failed:', osResult.error);
+        return res.status(500).json({ message: "File upload failed. Please try again." });
+      }
+
+      const document = await storage.createDocument({
+        type: type || 'other',
+        title: title || req.file.originalname,
+        filePath: osDocPath,
+        fileName: req.file.originalname,
+        senderId: userId,
+        senderType: 'admin',
+        studentProfileId: profile.id,
+        folderId: (folderId && folderId !== 'none') ? folderId : null,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype,
+        status: 'verified',
+        description: description || null,
+        expiryDate: expiryDate || null,
+      });
+
+      res.json(document);
+    } catch (error) {
+      console.error("Error uploading document (admin):", error);
+      res.status(500).json({ message: "Failed to upload document" });
+    }
+  });
+
+  // Admin: Delete an admin-uploaded document for a student (consultant role or above)
+  app.delete("/api/admin/students/:studentProfileId/documents/:documentId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const adminCheck = await checkAdminAccess(userId, CONSULTANT_AND_ABOVE_ROLES);
+      if (!adminCheck) {
+        return res.status(403).json({ message: "Access denied. Consultant role or above required." });
+      }
+
+      const document = await storage.getDocumentById(req.params.documentId);
+      if (!document || document.studentProfileId !== req.params.studentProfileId) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      if (document.senderType !== 'admin') {
+        return res.status(403).json({ message: "Cannot delete student-uploaded documents" });
+      }
+
+      const isCto = await checkAdminAccess(userId, CTO_ROLES);
+      if (!isCto && document.senderId !== userId) {
+        return res.status(403).json({ message: "You can only delete documents you uploaded" });
+      }
+
+      await storage.deleteDocument(req.params.documentId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting admin document:", error);
+      res.status(500).json({ message: "Failed to delete document" });
     }
   });
 

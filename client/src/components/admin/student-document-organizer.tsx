@@ -1,10 +1,37 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -26,12 +53,15 @@ import {
   ShieldCheck,
   Send,
   Plus,
+  Upload,
   Trash2,
   Layers,
   Grid3x3,
   List,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { STAGE_CONFIG, ALL_STAGES } from "@/lib/stage-config";
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -56,6 +86,7 @@ interface LibraryDocument {
   description: string | null;
   folderId: string | null;
   studentProfileId: string;
+  senderId: string | null;
   createdAt: Date;
   reviewNotes?: string;
   senderType?: string;
@@ -94,6 +125,22 @@ interface StudentDocumentOrganizerProps {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────
+
+const documentTypes = [
+  { value: "transcript", label: "Academic Transcript" },
+  { value: "diploma", label: "Diploma/Degree" },
+  { value: "language_test", label: "Language Test Results" },
+  { value: "passport", label: "Passport Copy" },
+  { value: "visa", label: "Visa Copy" },
+  { value: "cv", label: "CV/Resume" },
+  { value: "recommendation", label: "Letter of Recommendation" },
+  { value: "financial", label: "Financial Document" },
+  { value: "sop", label: "Statement of Purpose" },
+  { value: "offer_letter", label: "Offer Letter" },
+  { value: "coe", label: "COE" },
+  { value: "gte", label: "GTE Document" },
+  { value: "other", label: "Other" },
+];
 
 const libraryStatusConfig = {
   pending:  { label: "Pending Review", icon: Clock,       color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
@@ -159,13 +206,23 @@ function LibraryDocumentRow({
   isAttached = false,
   onView,
   onDownload,
+  currentUserId,
+  isCTO,
+  studentProfileId,
+  onDeleted,
 }: {
   doc: LibraryDocument;
   onAttach?: (id: string) => void;
   isAttached?: boolean;
   onView?: (url: string, name: string) => void;
   onDownload?: (url: string, name: string) => void;
+  currentUserId?: string;
+  isCTO?: boolean;
+  studentProfileId?: string;
+  onDeleted?: () => void;
 }) {
+  const { toast } = useToast();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const FileIcon = getFileIcon(doc.mimeType);
   const status = libraryStatusConfig[doc.status as keyof typeof libraryStatusConfig] || libraryStatusConfig.pending;
   const StatusIcon = status.icon;
@@ -173,81 +230,137 @@ function LibraryDocumentRow({
   const viewUrl = `/api/admin/documents/${doc.id}/download`;
   const downloadUrl = `/api/admin/documents/${doc.id}/download?dl=1`;
 
+  const canDelete =
+    doc.senderType === "admin" &&
+    !!studentProfileId &&
+    !!onDeleted &&
+    (isCTO || doc.senderId === currentUserId);
+
+  const deleteMutation = useMutation({
+    mutationFn: async () =>
+      apiRequest("DELETE", `/api/admin/students/${studentProfileId}/documents/${doc.id}`),
+    onSuccess: () => {
+      toast({ title: "Document deleted" });
+      onDeleted?.();
+      setConfirmOpen(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to delete document", variant: "destructive" });
+    },
+  });
+
   return (
-    <div
-      className={cn(
-        "flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate",
-        doc.status === "rejected" && "border-red-200 dark:border-red-800"
-      )}
-      data-testid={`admin-doc-${doc.id}`}
-    >
-      <FileIcon className="h-8 w-8 text-primary flex-shrink-0" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-sm truncate">{doc.title || doc.fileName}</span>
-          <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", status.color)}>
-            <StatusIcon className="h-3 w-3 mr-1" />{status.label}
-          </Badge>
-          {expiryBadge && (
-            <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", expiryBadge.color)}>
-              <AlertTriangle className="h-3 w-3 mr-1" />{expiryBadge.label}
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-3 mt-1 flex-wrap">
-          <UploaderLabel doc={doc} />
-          <span className="text-xs text-muted-foreground">{formatDate(doc.createdAt)}</span>
-          {doc.expiryDate && (
-            <span className="text-xs text-muted-foreground">Expires {formatDate(doc.expiryDate)}</span>
-          )}
-          <span className="text-xs text-muted-foreground">{formatFileSize(doc.fileSize)}</span>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0">{doc.type}</Badge>
-        </div>
-        {doc.description && (
-          <p className="text-xs text-muted-foreground mt-1 truncate">{doc.description}</p>
+    <>
+      <div
+        className={cn(
+          "flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate",
+          doc.status === "rejected" && "border-red-200 dark:border-red-800"
         )}
-      </div>
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button size="icon" variant="ghost"
-              onClick={() => onView?.(viewUrl, doc.title || doc.fileName)}
-              data-testid={`button-view-${doc.id}`}>
-              <Eye className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>View Document</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button size="icon" variant="ghost"
-              onClick={() => onDownload?.(downloadUrl, doc.title || doc.fileName)}
-              data-testid={`button-download-${doc.id}`}>
-              <Download className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Download</TooltipContent>
-        </Tooltip>
-        {onAttach && (
-          isAttached ? (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 no-default-active-elevate">
-              <CheckCircle className="h-3 w-3 mr-1" />Attached
+        data-testid={`admin-doc-${doc.id}`}
+      >
+        <FileIcon className="h-8 w-8 text-primary flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-medium text-sm truncate">{doc.title || doc.fileName}</span>
+            <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", status.color)}>
+              <StatusIcon className="h-3 w-3 mr-1" />{status.label}
             </Badge>
-          ) : (
+            {expiryBadge && (
+              <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", expiryBadge.color)}>
+                <AlertTriangle className="h-3 w-3 mr-1" />{expiryBadge.label}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            <UploaderLabel doc={doc} />
+            <span className="text-xs text-muted-foreground">{formatDate(doc.createdAt)}</span>
+            {doc.expiryDate && (
+              <span className="text-xs text-muted-foreground">Expires {formatDate(doc.expiryDate)}</span>
+            )}
+            <span className="text-xs text-muted-foreground">{formatFileSize(doc.fileSize)}</span>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">{doc.type}</Badge>
+          </div>
+          {doc.description && (
+            <p className="text-xs text-muted-foreground mt-1 truncate">{doc.description}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="icon" variant="ghost"
+                onClick={() => onView ? onView(viewUrl, doc.title || doc.fileName) : window.open(viewUrl, "_blank")}
+                data-testid={`button-view-${doc.id}`}>
+                <Eye className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>View Document</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="icon" variant="ghost"
+                onClick={() => onDownload ? onDownload(downloadUrl, doc.title || doc.fileName) : window.open(downloadUrl, "_blank")}
+                data-testid={`button-download-${doc.id}`}>
+                <Download className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Download</TooltipContent>
+          </Tooltip>
+          {onAttach && (
+            isAttached ? (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 no-default-active-elevate">
+                <CheckCircle className="h-3 w-3 mr-1" />Attached
+              </Badge>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="icon" variant="ghost"
+                    onClick={() => onAttach(doc.id)}
+                    data-testid={`button-attach-to-app-${doc.id}`}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add to Application</TooltipContent>
+              </Tooltip>
+            )
+          )}
+          {canDelete && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost"
-                  onClick={() => onAttach(doc.id)}
-                  data-testid={`button-attach-to-app-${doc.id}`}>
-                  <Plus className="h-4 w-4" />
+                <Button size="icon" variant="ghost" className="text-destructive"
+                  onClick={() => setConfirmOpen(true)}
+                  data-testid={`button-delete-admin-doc-${doc.id}`}>
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Add to Application</TooltipContent>
+              <TooltipContent>Delete</TooltipContent>
             </Tooltip>
-          )
-        )}
+          )}
+        </div>
       </div>
-    </div>
+
+      {canDelete && (
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Document</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete &quot;{doc.title || doc.fileName}&quot;? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                data-testid={`button-confirm-delete-${doc.id}`}
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </>
   );
 }
 
@@ -426,6 +539,172 @@ function AppDocumentRow({
   );
 }
 
+// ── Admin Upload Dialog ────────────────────────────────────────────
+
+interface AdminUploadDialogProps {
+  studentProfileId: string;
+  folders: DocumentFolder[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+
+function AdminUploadDialog({ studentProfileId, folders, open, onOpenChange, onSuccess }: AdminUploadDialogProps) {
+  const { toast } = useToast();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const res = await fetch(`/api/admin/students/${studentProfileId}/documents/upload`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Upload failed" }));
+        throw new Error(err.message || "Upload failed");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Document uploaded successfully" });
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      onSuccess();
+    },
+    onError: (err: Error) => {
+      toast({ title: err.message || "Failed to upload document", variant: "destructive" });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedFile) return;
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    formData.append("file", selectedFile);
+    const folderId = formData.get("folderId") as string;
+    if (!folderId || folderId === "none") formData.delete("folderId");
+    uploadMutation.mutate(formData);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Upload Document for Student</DialogTitle>
+          <DialogDescription>
+            Upload a document on behalf of this student. It will be visible in their document library.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div
+            className={cn(
+              "relative border-2 border-dashed rounded-lg p-6 text-center transition-colors",
+              selectedFile ? "border-primary" : "border-border"
+            )}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              onChange={(e) => e.target.files && setSelectedFile(e.target.files[0])}
+              data-testid="input-admin-file-upload"
+            />
+            {selectedFile ? (
+              <div className="space-y-1">
+                <FileText className="h-10 w-10 mx-auto text-primary" />
+                <p className="font-medium text-sm">{selectedFile.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                >
+                  Remove
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Upload className="h-10 w-10 mx-auto text-muted-foreground" />
+                <p className="font-medium text-sm">Drop file here or click to browse</p>
+                <p className="text-xs text-muted-foreground">PDF, DOC, DOCX, JPG, PNG (Max 10MB)</p>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="admin-doc-type">Document Type</Label>
+              <Select name="type" defaultValue="other">
+                <SelectTrigger data-testid="select-admin-doc-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {documentTypes.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="admin-doc-folder">Folder</Label>
+              <Select name="folderId" defaultValue="none">
+                <SelectTrigger data-testid="select-admin-doc-folder">
+                  <SelectValue placeholder="Select folder" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">All Documents (No Folder)</SelectItem>
+                  {folders.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="admin-doc-title">Title (Optional)</Label>
+            <Input
+              id="admin-doc-title"
+              name="title"
+              placeholder="Leave blank to use filename"
+              data-testid="input-admin-doc-title"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="admin-doc-expiry">Expiry Date (Optional)</Label>
+            <Input
+              id="admin-doc-expiry"
+              name="expiryDate"
+              type="date"
+              data-testid="input-admin-doc-expiry"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!selectedFile || uploadMutation.isPending}
+              data-testid="button-submit-admin-upload"
+            >
+              {uploadMutation.isPending ? "Uploading..." : "Upload Document"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Main Export ────────────────────────────────────────────────────
 
 export function StudentDocumentOrganizer({
@@ -448,6 +727,9 @@ export function StudentDocumentOrganizer({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState<string>(hasAppDocs ? "__app__" : "__all__");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [uploadOpen, setUploadOpen] = useState(false);
+
+  const { user, isAdmin, isCTO } = useAuth();
 
   const { data: libraryDocuments = [], isLoading } = useQuery<LibraryDocument[]>({
     queryKey: [`/api/admin/students/${studentProfileId}/documents`],
@@ -460,6 +742,15 @@ export function StudentDocumentOrganizer({
   });
 
   // ── Derived state ──────────────────────────────────────────────
+
+  const refreshDocs = () => {
+    queryClient.invalidateQueries({ queryKey: [`/api/admin/students/${studentProfileId}/documents`] });
+  };
+
+  const refreshAfterUpload = () => {
+    setUploadOpen(false);
+    refreshDocs();
+  };
 
   const isAppView = selectedFolderId === "__app__" || selectedFolderId.startsWith("__stage_");
   const selectedStageName = selectedFolderId.startsWith("__stage_")
@@ -475,7 +766,6 @@ export function StudentDocumentOrganizer({
   const stagesWithDocs = ALL_STAGES.filter(s => (appDocsByStage[s]?.length ?? 0) > 0);
   const totalAppDocs = applicationDocuments?.length ?? 0;
 
-  // Set of library document IDs that are already attached to this application
   const attachedLibraryDocIds = new Set<string>(
     (applicationDocuments ?? []).filter(d => d.documentId).map(d => d.documentId!)
   );
@@ -519,6 +809,8 @@ export function StudentDocumentOrganizer({
   const overallStats = {
     total: libraryDocuments.length,
     pending: libraryDocuments.filter(d => d.status === "pending").length,
+    verified: libraryDocuments.filter(d => d.status === "verified" || d.status === "approved").length,
+    rejected: libraryDocuments.filter(d => d.status === "rejected").length,
   };
 
   // ── Loading ────────────────────────────────────────────────────
@@ -535,29 +827,59 @@ export function StudentDocumentOrganizer({
     return (
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Folder className="h-5 w-5" />Student Documents
-          </CardTitle>
-          <div className="flex items-center gap-3 text-sm flex-wrap">
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-yellow-500" />{overallStats.pending} Pending
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-green-500" />
-              {libraryDocuments.filter(d => d.status === "verified" || d.status === "approved").length} Verified
-            </span>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Folder className="h-5 w-5" />Student Documents
+              </CardTitle>
+              <div className="flex items-center gap-3 text-sm flex-wrap mt-1">
+                <span className="flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-yellow-500" />{overallStats.pending} Pending
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-green-500" />{overallStats.verified} Verified
+                </span>
+                {overallStats.rejected > 0 && (
+                  <span className="flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-red-500" />{overallStats.rejected} Rejected
+                  </span>
+                )}
+              </div>
+            </div>
+            {isAdmin && (
+              <Button size="sm" onClick={() => setUploadOpen(true)} data-testid="button-admin-upload-compact">
+                <Upload className="h-4 w-4 mr-1.5" />Upload
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
           {libraryDocuments.length === 0 ? (
             <p className="text-center text-muted-foreground py-4">No documents uploaded</p>
           ) : (
-            libraryDocuments.slice(0, 5).map(doc => <LibraryDocumentRow key={doc.id} doc={doc} />)
+            libraryDocuments.slice(0, 5).map(doc => (
+              <LibraryDocumentRow
+                key={doc.id}
+                doc={doc}
+                currentUserId={user?.id}
+                isCTO={isCTO}
+                studentProfileId={studentProfileId}
+                onDeleted={refreshDocs}
+              />
+            ))
           )}
           {libraryDocuments.length > 5 && (
             <p className="text-center text-sm text-muted-foreground pt-2">+{libraryDocuments.length - 5} more documents</p>
           )}
         </CardContent>
+
+        <AdminUploadDialog
+          studentProfileId={studentProfileId}
+          folders={apiFolders}
+          open={uploadOpen}
+          onOpenChange={setUploadOpen}
+          onSuccess={refreshAfterUpload}
+        />
       </Card>
     );
   }
@@ -723,6 +1045,11 @@ export function StudentDocumentOrganizer({
                     <Plus className="h-3.5 w-3.5 mr-1" />Upload Document
                   </Button>
                 )}
+                {!isAppView && isAdmin && (
+                  <Button size="sm" onClick={() => setUploadOpen(true)} data-testid="button-admin-upload-doc">
+                    <Upload className="h-3.5 w-3.5 mr-1" />Upload
+                  </Button>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -802,6 +1129,10 @@ export function StudentDocumentOrganizer({
                         isAttached={attachedLibraryDocIds.has(doc.id)}
                         onView={onViewLibraryDoc}
                         onDownload={onDownloadLibraryDoc}
+                        currentUserId={user?.id}
+                        isCTO={isCTO}
+                        studentProfileId={studentProfileId}
+                        onDeleted={refreshDocs}
                       />
                     ))}
                   </div>
@@ -811,6 +1142,14 @@ export function StudentDocumentOrganizer({
           </CardContent>
         </Card>
       </div>
+
+      <AdminUploadDialog
+        studentProfileId={studentProfileId}
+        folders={apiFolders}
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        onSuccess={refreshAfterUpload}
+      />
     </div>
   );
 }

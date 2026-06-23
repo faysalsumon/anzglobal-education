@@ -56,6 +56,7 @@ import {
   XCircle,
   Info,
   AlertCircle,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Tooltip,
@@ -88,6 +89,8 @@ interface Document {
   studentProfileId: string;
   createdAt: Date;
   uploadedAt: Date | null;
+  senderType?: string;
+  senderName?: string | null;
 }
 
 const documentTypes = [
@@ -483,17 +486,19 @@ function StudentDocumentsContent() {
                                     <Download className="h-4 w-4 mr-2" />
                                     Download
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setSelectedDocument(doc);
-                                      setDeleteDialogOpen(true);
-                                    }}
-                                    className="text-destructive"
-                                    data-testid={`button-delete-${doc.id}`}
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
+                                  {doc.senderType !== "admin" && (
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setSelectedDocument(doc);
+                                        setDeleteDialogOpen(true);
+                                      }}
+                                      className="text-destructive"
+                                      data-testid={`button-delete-${doc.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
@@ -512,9 +517,17 @@ function StudentDocumentsContent() {
                                 <span>{statusConfig[doc.status as keyof typeof statusConfig]?.label}</span>
                               </div>
                             </div>
-                            <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
-                              {formatDate(doc.createdAt)}
-                            </div>
+                            {doc.senderType === "admin" && (
+                              <div className="mt-2 pt-2 border-t flex items-center gap-1 text-xs text-blue-700 dark:text-blue-400">
+                                <ShieldCheck className="h-3 w-3 flex-shrink-0" />
+                                <span>Uploaded by {doc.senderName || "ANZ Staff"}</span>
+                              </div>
+                            )}
+                            {doc.senderType !== "admin" && (
+                              <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
+                                {formatDate(doc.createdAt)}
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       );
@@ -535,6 +548,12 @@ function StudentDocumentsContent() {
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-sm truncate">{doc.title}</h3>
                             <p className="text-xs text-muted-foreground truncate">{doc.fileName}</p>
+                            {doc.senderType === "admin" && (
+                              <span className="inline-flex items-center gap-1 text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+                                <ShieldCheck className="h-3 w-3" />
+                                Uploaded by {doc.senderName || "ANZ Staff"}
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-4 flex-shrink-0">
                             <span className="text-xs text-muted-foreground">
@@ -562,17 +581,19 @@ function StudentDocumentsContent() {
                                   <Download className="h-4 w-4 mr-2" />
                                   Download
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedDocument(doc);
-                                    setDeleteDialogOpen(true);
-                                  }}
-                                  className="text-destructive"
-                                  data-testid={`button-delete-list-${doc.id}`}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
+                                {doc.senderType !== "admin" && (
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedDocument(doc);
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                    className="text-destructive"
+                                    data-testid={`button-delete-list-${doc.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
