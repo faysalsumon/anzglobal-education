@@ -42,6 +42,20 @@ process.on('uncaughtException', (err) => {
   console.error('[Server] Uncaught exception:', err);
 });
 
+// Bun compatibility: Error.captureStackTrace requires its first argument to be an actual Error
+// instance, but multer's MulterError constructor calls it before the prototype chain is wired.
+// Wrap it to swallow that case gracefully so multer error handling works correctly.
+if (typeof Error.captureStackTrace === 'function') {
+  const _originalCaptureStackTrace = Error.captureStackTrace;
+  (Error as any).captureStackTrace = function (target: object, constructor?: Function) {
+    try {
+      _originalCaptureStackTrace(target, constructor);
+    } catch {
+      // Bun: skip silently; multer MulterError still constructs with code/message intact
+    }
+  };
+}
+
 // Log OS-level signals so we know what is killing the process
 process.on('SIGTERM', () => {
   console.error('[Server] Received SIGTERM — process will exit');

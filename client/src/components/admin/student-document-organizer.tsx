@@ -556,15 +556,7 @@ function AdminUploadDialog({ studentProfileId, folders, open, onOpenChange, onSu
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const res = await fetch(`/api/admin/students/${studentProfileId}/documents/upload`, {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: "Upload failed" }));
-        throw new Error(err.message || "Upload failed");
-      }
+      const res = await apiRequest("POST", `/api/admin/students/${studentProfileId}/documents/upload`, formData);
       return res.json();
     },
     onSuccess: () => {
