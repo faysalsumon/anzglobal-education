@@ -24484,7 +24484,7 @@ Sitemap: ${baseUrl}/sitemap.xml
     console.error('[routes] Failed to start background workers:', err);
   }
 
-  // ─── One-time local-to-Object-Storage migration endpoint ────────────────────
+  // ─── One-time local-to-Supabase-Storage migration endpoint ─────────────────
   app.post("/api/admin/migrate-local-files", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -24496,6 +24496,25 @@ Sitemap: ${baseUrl}/sitemap.xml
       res.json({ success: true, results });
     } catch (error: any) {
       console.error("[Migration] Error running local file migration:", error);
+      res.status(500).json({ message: "Migration failed", error: error.message });
+    }
+  });
+
+  // ─── One-time Replit Object Storage → Supabase Storage migration ────────────
+  // Copies all existing files from Replit Object Storage into Supabase buckets.
+  // Safe to run multiple times — already-migrated files are skipped.
+  app.post("/api/admin/migrate-replit-to-supabase", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, CTO_ROLES);
+      if (!access) return res.status(403).json({ message: "Access denied: CTO role required" });
+
+      const { runMigrationFromReplitToSupabase } = await import("./file-storage");
+      const messages: string[] = [];
+      const results = await runMigrationFromReplitToSupabase((msg) => messages.push(msg));
+      res.json({ success: true, results, log: messages });
+    } catch (error: any) {
+      console.error("[Migration] Replit → Supabase migration error:", error);
       res.status(500).json({ message: "Migration failed", error: error.message });
     }
   });

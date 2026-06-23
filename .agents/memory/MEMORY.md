@@ -11,3 +11,4 @@
 - [Migration journal monotonicity](drizzle-migration-journal-monotonicity.md) — migrator silently skips journal entries whose `when` ≤ max-applied; keep timestamps strictly increasing; enum/DB drift needs a hand-written forward migration
 - [Drizzle DO block migration crash](drizzle-do-block-crash.md) — PL/pgSQL DO $$ blocks in migration files crash the server at startup; never use them in migration SQL files
 - [Production startup order](production-startup-order.md) — server.listen() must be called before runMigrations(); Neon wakeup can exceed Replit's ~60s health-check window if listen() is last
+- [File storage: Supabase migration](file-storage-supabase.md) — object storage migrated from Replit to Supabase; file-storage.ts is the ONLY abstraction layer; all paths map to 2 buckets (anz-public/anz-private); Replit fallback in downloadFile() remains until migration endpoint is run

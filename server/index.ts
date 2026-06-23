@@ -320,6 +320,14 @@ app.use((req, res, next) => {
       console.error('[Server] Startup task failed (migrations/seeds):', err);
     }
 
+    // Ensure Supabase Storage buckets exist (non-blocking)
+    try {
+      const { ensureBuckets } = await import("./file-storage");
+      await ensureBuckets();
+    } catch (err) {
+      console.error('[Server] Supabase Storage bucket init failed:', err);
+    }
+
     // Initialize Pinecone index in background (non-blocking)
     initializePineconeIndex().catch((error) => {
       console.error('[Pinecone] Failed to initialize index:', error);

@@ -2524,32 +2524,15 @@ router.get("/notes/attachment/:encodedPath(*)", async (req: any, res) => {
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
-      return res.status(503).json({ message: "Object storage not configured" });
-    }
+    const { downloadFile, getMimeType } = await import("./file-storage");
+    const buffer = await downloadFile(objectPath);
 
-    const { Client } = await import("@replit/object-storage");
-    const storageClient = new Client();
-    const result = await storageClient.downloadAsBytes(objectPath);
-
-    if (!result.ok || !result.value) {
+    if (!buffer || buffer.length === 0) {
       return res.status(404).json({ message: "File not found" });
     }
 
     const ext = path.extname(objectPath).toLowerCase();
-    const contentTypeMap: Record<string, string> = {
-      ".jpg": "image/jpeg",
-      ".jpeg": "image/jpeg",
-      ".png": "image/png",
-      ".gif": "image/gif",
-      ".webp": "image/webp",
-      ".pdf": "application/pdf",
-    };
-    const contentType = contentTypeMap[ext] || "application/octet-stream";
-
-    const buffer = Buffer.concat(
-      (result.value as Buffer[]).map((c) => (Buffer.isBuffer(c) ? c : Buffer.from(c)))
-    );
+    const contentType = getMimeType(objectPath.split("/").pop() || objectPath);
 
     res.set("Content-Type", contentType);
     res.set("Cache-Control", "private, max-age=3600");
