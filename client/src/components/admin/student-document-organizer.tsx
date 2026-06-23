@@ -73,6 +73,7 @@ export interface AppDocument {
   uploadedByRole: string | null;
   rejectionReason: string | null;
   createdAt: string;
+  documentId?: string | null;
 }
 
 interface StudentDocumentOrganizerProps {
@@ -149,7 +150,15 @@ function UploaderLabel({ doc }: { doc: LibraryDocument }) {
 
 // ── Library Document Row ───────────────────────────────────────────
 
-function LibraryDocumentRow({ doc, onAttach }: { doc: LibraryDocument; onAttach?: (id: string) => void }) {
+function LibraryDocumentRow({
+  doc,
+  onAttach,
+  isAttached = false,
+}: {
+  doc: LibraryDocument;
+  onAttach?: (id: string) => void;
+  isAttached?: boolean;
+}) {
   const FileIcon = getFileIcon(doc.mimeType);
   const status = libraryStatusConfig[doc.status as keyof typeof libraryStatusConfig] || libraryStatusConfig.pending;
   const StatusIcon = status.icon;
@@ -211,16 +220,22 @@ function LibraryDocumentRow({ doc, onAttach }: { doc: LibraryDocument; onAttach?
           <TooltipContent>Download</TooltipContent>
         </Tooltip>
         {onAttach && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="icon" variant="ghost"
-                onClick={() => onAttach(doc.id)}
-                data-testid={`button-attach-to-app-${doc.id}`}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Add to Application</TooltipContent>
-          </Tooltip>
+          isAttached ? (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 no-default-active-elevate">
+              <CheckCircle className="h-3 w-3 mr-1" />Attached
+            </Badge>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon" variant="ghost"
+                  onClick={() => onAttach(doc.id)}
+                  data-testid={`button-attach-to-app-${doc.id}`}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Add to Application</TooltipContent>
+            </Tooltip>
+          )
         )}
       </div>
     </div>
@@ -362,6 +377,11 @@ export function StudentDocumentOrganizer({
 
   const stagesWithDocs = ALL_STAGES.filter(s => (appDocsByStage[s]?.length ?? 0) > 0);
   const totalAppDocs = applicationDocuments?.length ?? 0;
+
+  // Set of library document IDs that are already attached to this application
+  const attachedLibraryDocIds = new Set<string>(
+    (applicationDocuments ?? []).filter(d => d.documentId).map(d => d.documentId!)
+  );
 
   const baseStageView: Record<string, AppDocument[]> = selectedStageName
     ? { [selectedStageName]: appDocsByStage[selectedStageName] ?? [] }
@@ -635,7 +655,12 @@ export function StudentDocumentOrganizer({
                 ) : (
                   <div className="space-y-2">
                     {visibleLibraryDocs.map(doc => (
-                      <LibraryDocumentRow key={doc.id} doc={doc} onAttach={onAttachDoc} />
+                      <LibraryDocumentRow
+                        key={doc.id}
+                        doc={doc}
+                        onAttach={onAttachDoc}
+                        isAttached={attachedLibraryDocIds.has(doc.id)}
+                      />
                     ))}
                   </div>
                 )}

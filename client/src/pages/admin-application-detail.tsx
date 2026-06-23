@@ -188,6 +188,7 @@ interface StageDocument {
   verificationNotes: string | null;
   rejectionReason: string | null;
   createdAt: string;
+  documentId?: string | null;
 }
 
 interface StageHistoryRecord {
