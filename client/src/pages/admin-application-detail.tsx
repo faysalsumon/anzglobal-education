@@ -968,6 +968,8 @@ function AdminApplicationDetailContent() {
             onDeleteDoc={(docId) => setDeleteDocConfirmOpen(docId)}
             onViewAppDoc={(url, name) => openDocumentPreview(url, name)}
             onDownloadAppDoc={(url, name) => downloadDocument(url, name)}
+            onViewLibraryDoc={(url, name) => openDocumentPreview(url, name)}
+            onDownloadLibraryDoc={(url, name) => downloadDocument(url, name)}
           />
         </TabsContent>
 

@@ -89,6 +89,8 @@ interface StudentDocumentOrganizerProps {
   onDeleteDoc?: (docId: string) => void;
   onViewAppDoc?: (url: string, name: string) => void;
   onDownloadAppDoc?: (url: string, name: string) => void;
+  onViewLibraryDoc?: (url: string, name: string) => void;
+  onDownloadLibraryDoc?: (url: string, name: string) => void;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -155,15 +157,21 @@ function LibraryDocumentRow({
   doc,
   onAttach,
   isAttached = false,
+  onView,
+  onDownload,
 }: {
   doc: LibraryDocument;
   onAttach?: (id: string) => void;
   isAttached?: boolean;
+  onView?: (url: string, name: string) => void;
+  onDownload?: (url: string, name: string) => void;
 }) {
   const FileIcon = getFileIcon(doc.mimeType);
   const status = libraryStatusConfig[doc.status as keyof typeof libraryStatusConfig] || libraryStatusConfig.pending;
   const StatusIcon = status.icon;
   const expiryBadge = getExpiryBadge(doc.expiryDate);
+  const viewUrl = `/api/admin/documents/${doc.id}/download`;
+  const downloadUrl = `/api/admin/documents/${doc.id}/download?dl=1`;
 
   return (
     <div
@@ -203,7 +211,7 @@ function LibraryDocumentRow({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button size="icon" variant="ghost"
-              onClick={() => window.open(`/api/admin/documents/${doc.id}/download`, "_blank")}
+              onClick={() => onView?.(viewUrl, doc.title || doc.fileName)}
               data-testid={`button-view-${doc.id}`}>
               <Eye className="h-4 w-4" />
             </Button>
@@ -213,7 +221,7 @@ function LibraryDocumentRow({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button size="icon" variant="ghost"
-              onClick={() => window.open(`/api/admin/documents/${doc.id}/download?dl=1`, "_blank")}
+              onClick={() => onDownload?.(downloadUrl, doc.title || doc.fileName)}
               data-testid={`button-download-${doc.id}`}>
               <Download className="h-4 w-4" />
             </Button>
@@ -249,15 +257,21 @@ function LibraryDocumentCard({
   doc,
   onAttach,
   isAttached = false,
+  onView,
+  onDownload,
 }: {
   doc: LibraryDocument;
   onAttach?: (id: string) => void;
   isAttached?: boolean;
+  onView?: (url: string, name: string) => void;
+  onDownload?: (url: string, name: string) => void;
 }) {
   const FileIcon = getFileIcon(doc.mimeType);
   const status = libraryStatusConfig[doc.status as keyof typeof libraryStatusConfig] || libraryStatusConfig.pending;
   const StatusIcon = status.icon;
   const expiryBadge = getExpiryBadge(doc.expiryDate);
+  const viewUrl = `/api/admin/documents/${doc.id}/download`;
+  const downloadUrl = `/api/admin/documents/${doc.id}/download?dl=1`;
 
   return (
     <Card className="hover-elevate" data-testid={`admin-doc-card-${doc.id}`}>
@@ -268,7 +282,7 @@ function LibraryDocumentCard({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button size="icon" variant="ghost"
-                  onClick={() => window.open(`/api/admin/documents/${doc.id}/download`, "_blank")}
+                  onClick={() => onView?.(viewUrl, doc.title || doc.fileName)}
                   data-testid={`button-view-card-${doc.id}`}>
                   <Eye className="h-4 w-4" />
                 </Button>
@@ -278,7 +292,7 @@ function LibraryDocumentCard({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button size="icon" variant="ghost"
-                  onClick={() => window.open(`/api/admin/documents/${doc.id}/download?dl=1`, "_blank")}
+                  onClick={() => onDownload?.(downloadUrl, doc.title || doc.fileName)}
                   data-testid={`button-download-card-${doc.id}`}>
                   <Download className="h-4 w-4" />
                 </Button>
@@ -426,6 +440,8 @@ export function StudentDocumentOrganizer({
   onDeleteDoc,
   onViewAppDoc,
   onDownloadAppDoc,
+  onViewLibraryDoc,
+  onDownloadLibraryDoc,
 }: StudentDocumentOrganizerProps) {
   const hasAppDocs = applicationDocuments !== undefined;
 
@@ -771,6 +787,8 @@ export function StudentDocumentOrganizer({
                         doc={doc}
                         onAttach={onAttachDoc}
                         isAttached={attachedLibraryDocIds.has(doc.id)}
+                        onView={onViewLibraryDoc}
+                        onDownload={onDownloadLibraryDoc}
                       />
                     ))}
                   </div>
@@ -782,6 +800,8 @@ export function StudentDocumentOrganizer({
                         doc={doc}
                         onAttach={onAttachDoc}
                         isAttached={attachedLibraryDocIds.has(doc.id)}
+                        onView={onViewLibraryDoc}
+                        onDownload={onDownloadLibraryDoc}
                       />
                     ))}
                   </div>
