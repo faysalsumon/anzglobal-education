@@ -200,26 +200,16 @@ export function DocumentPreviewModal({
           {blobUrl && !loading && !error && (
             <>
               {isPdf && (
-                <object
-                  data={blobUrl}
-                  type="application/pdf"
-                  className="w-full h-full"
+                <iframe
+                  src={blobUrl}
+                  title={documentName}
+                  className="w-full h-full border-0"
                   style={{
                     transform: `scale(${zoom / 100})`,
                     transformOrigin: "top center",
+                    minHeight: "70vh",
                   }}
-                >
-                  <div className="flex flex-col items-center gap-4 text-center p-8">
-                    <FileText className="h-16 w-16 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      PDF preview is not available in your browser
-                    </p>
-                    <Button onClick={handleDownload} data-testid="button-download-pdf-fallback">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download PDF
-                    </Button>
-                  </div>
-                </object>
+                />
               )}
 
               {isImage && (
