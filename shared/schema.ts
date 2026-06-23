@@ -2636,6 +2636,8 @@ export const documents = pgTable("documents", {
   reviewedBy: varchar("reviewed_by").references(() => users.id, { onDelete: "set null" }),
   reviewedAt: timestamp("reviewed_at"),
   
+  expiryDate: date("expiry_date"), // Optional expiry date for time-sensitive documents
+
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

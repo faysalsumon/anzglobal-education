@@ -1275,7 +1275,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         return res.status(400).json({ error: "No file provided" });
       }
 
-      const { stage, documentType, documentName, isRequired, folderId: bodyFolderId } = req.body;
+      const { stage, documentType, documentName, isRequired, folderId: bodyFolderId, expiryDate } = req.body;
 
       if (!stage || !documentType || !documentName) {
         return res.status(400).json({ error: "stage, documentType, and documentName are required" });
@@ -1320,6 +1320,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         mimeType: req.file.mimetype,
         status: 'pending',
         description: null,
+        expiryDate: expiryDate || null,
       });
 
       // Also insert into applicationStageDocuments, linked to the document record.

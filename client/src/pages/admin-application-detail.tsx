@@ -323,6 +323,7 @@ function AdminApplicationDetailContent() {
   const [newDocUpload, setNewDocUpload] = useState({ stage: "" as ApplicationStage, documentType: "", documentName: "", isRequired: false });
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadFolderId, setUploadFolderId] = useState<string | null>(null);
+  const [uploadExpiryDate, setUploadExpiryDate] = useState<string>("");
 
   /* ── Queries ─────────────────────────────────────────────────── */
   const { data, isLoading, isError, error, refetch } = useQuery<AdminApplicationDetail>({
@@ -483,6 +484,7 @@ function AdminApplicationDetailContent() {
       formData.append("documentName", newDocUpload.documentName);
       formData.append("isRequired", String(newDocUpload.isRequired));
       if (uploadFolderId) formData.append("folderId", uploadFolderId);
+      if (uploadExpiryDate) formData.append("expiryDate", uploadExpiryDate);
       return apiRequest("POST", `/api/admin/applications/${applicationId}/upload-document`, formData);
     },
     onSuccess: () => {
@@ -493,6 +495,7 @@ function AdminApplicationDetailContent() {
       if (data) setNewDocUpload({ stage: data.application.currentStage as ApplicationStage, documentType: "", documentName: "", isRequired: false });
       setUploadFile(null);
       setUploadFolderId(null);
+      setUploadExpiryDate("");
     },
     onError: (err: any) => toast({ title: "Upload Failed", description: err.message, variant: "destructive" }),
   });
@@ -1472,6 +1475,17 @@ function AdminApplicationDetailContent() {
             <div>
               <Label htmlFor="upload-name">Document Name</Label>
               <Input id="upload-name" value={newDocUpload.documentName} onChange={(e) => setNewDocUpload({ ...newDocUpload, documentName: e.target.value })} placeholder="e.g., Offer Letter" data-testid="input-upload-doc-name" />
+            </div>
+            <div>
+              <Label htmlFor="upload-expiry">Expiry Date <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Input
+                id="upload-expiry"
+                type="date"
+                value={uploadExpiryDate}
+                onChange={(e) => setUploadExpiryDate(e.target.value)}
+                data-testid="input-upload-expiry-date"
+              />
+              <p className="text-xs text-muted-foreground mt-1">For time-sensitive documents like visas or test results.</p>
             </div>
             <div>
               <Label htmlFor="upload-file">File</Label>

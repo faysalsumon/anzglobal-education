@@ -6590,7 +6590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file provided" });
       }
 
-      const { folderId, type, description, title } = req.body;
+      const { folderId, type, description, title, expiryDate } = req.body;
 
       // Verify folder ownership if provided
       if (folderId) {
@@ -6623,6 +6623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mimeType: req.file.mimetype,
         status: 'pending',
         description: description || null,
+        expiryDate: expiryDate || null,
       });
 
       res.json(document);
@@ -6977,6 +6978,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Get student's document folders (auto-creates defaults if none exist)
+  app.get("/api/admin/students/:studentProfileId/folders", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !['admin', 'platform_admin'].includes(user.userType || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const profile = await storage.getStudentProfileById(req.params.studentProfileId);
+      if (!profile?.userId) return res.json([]);
+
+      let folders = await storage.getFoldersByOwnerId(profile.userId);
+
+      // If the student has no folders, auto-create the standard default set
+      // (same defaults the student-facing and application-facing routes use)
+      if (folders.length === 0) {
+        const defaultStudentFolders = [
+          { name: "Academics",        color: "#3b82f6", sortOrder: 1 },
+          { name: "Personal",         color: "#8b5cf6", sortOrder: 2 },
+          { name: "Visa",             color: "#ec4899", sortOrder: 3 },
+          { name: "Job",              color: "#f59e0b", sortOrder: 4 },
+          { name: "English Language", color: "#10b981", sortOrder: 5 },
+          { name: "Payments",         color: "#ef4444", sortOrder: 6 },
+          { name: "Offer-Letter",     color: "#06b6d4", sortOrder: 7 },
+          { name: "COE",              color: "#84cc16", sortOrder: 8 },
+          { name: "GS/GTE",           color: "#6366f1", sortOrder: 9 },
+        ];
+        for (const f of defaultStudentFolders) {
+          await storage.createFolder({
+            name: f.name,
+            color: f.color,
+            sortOrder: f.sortOrder,
+            ownerId: profile.userId,
+            ownerType: "student",
+            studentProfileId: profile.id,
+            isDefault: true,
+          });
+        }
+        folders = await storage.getFoldersByOwnerId(profile.userId);
+      }
+
+      res.json(folders);
+    } catch (error) {
+      console.error("Error fetching student folders:", error);
+      res.status(500).json({ message: "Failed to fetch student folders" });
+    }
+  });
+
   // Admin: Get student's personal document library
   app.get("/api/admin/students/:studentProfileId/documents", isAuthenticated, async (req: any, res) => {
     try {
@@ -6987,8 +7036,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const documents = await storage.getDocumentsByStudentProfileId(req.params.studentProfileId);
-      res.json(documents);
+      const rawDocs = await storage.getDocumentsByStudentProfileId(req.params.studentProfileId);
+
+      // Enrich each document with the sender's display name
+      const enriched = await Promise.all(rawDocs.map(async (doc) => {
+        let senderName: string | null = null;
+        if (doc.senderType !== 'student' && doc.senderId) {
+          const sender = await storage.getUser(doc.senderId);
+          if (sender) {
+            if (sender.firstName || sender.lastName) {
+              senderName = [sender.firstName, sender.lastName].filter(Boolean).join(' ');
+            } else {
+              senderName = sender.email || 'Admin';
+            }
+          }
+        }
+        return { ...doc, senderName };
+      }));
+
+      res.json(enriched);
     } catch (error) {
       console.error("Error fetching student documents:", error);
       res.status(500).json({ message: "Failed to fetch student documents" });
