@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Search, CheckCircle, Clock, XCircle, FolderOpen, Upload, Loader2 } from "lucide-react";
+import { FileText, Search, CheckCircle, Clock, XCircle, FolderOpen, Upload, Loader2, Info } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useFileCompressor, type CompressionResult } from "@/hooks/useFileCompressor";
@@ -332,6 +332,12 @@ export function StudentDocumentPicker({
                       <div className="text-left">
                         <p className="text-sm font-medium">{uploadFile.name}</p>
                         <p className="text-xs text-muted-foreground">{formatFileSize(uploadFile.size)}</p>
+                        {uploadFile.size > 8 * 1024 * 1024 && !compressing && !compressionResult && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5" data-testid="text-large-file-warning-picker">
+                            <Info className="h-3 w-3" />
+                            This file is large — it will be compressed before upload
+                          </p>
+                        )}
                         {compressing && (
                           <p className="text-xs text-primary flex items-center gap-1 mt-0.5" data-testid="text-compressing-picker">
                             <Loader2 className="h-3 w-3 animate-spin" />

@@ -37,6 +37,7 @@ import {
   Plus,
   Paperclip,
   Loader2,
+  Info,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -595,6 +596,12 @@ function SectionUploadForm({ section, defaultType, onSuccess }: SectionUploadFor
             <p className="text-xs text-muted-foreground">
               {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
             </p>
+            {selectedFile.size > 8 * 1024 * 1024 && !compressing && !compressionResult && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center justify-center gap-1" data-testid="text-large-file-warning-section">
+                <Info className="h-3 w-3" />
+                This file is large — it will be compressed before upload
+              </p>
+            )}
             {compressing && (
               <p className="text-sm text-primary flex items-center justify-center gap-1.5" data-testid="text-compressing-section">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
