@@ -57,6 +57,7 @@ import {
   Info,
   AlertCircle,
   ShieldCheck,
+  Loader2,
 } from "lucide-react";
 import {
   Tooltip,
@@ -65,6 +66,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { StudentLayout } from "@/components/student-layout";
+import { useFileCompressor, type CompressionResult } from "@/hooks/useFileCompressor";
 
 interface DocumentFolder {
   id: string;
@@ -663,6 +665,8 @@ function UploadDocumentForm({ folderId: initialFolderId, folders, onSuccess }: U
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null);
+  const { compress, compressing } = useFileCompressor();
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
@@ -698,15 +702,19 @@ function UploadDocumentForm({ folderId: initialFolderId, folders, onSuccess }: U
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       setSelectedFile(e.dataTransfer.files[0]);
+      setCompressionResult(null);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedFile) return;
 
+    const result = await compress(selectedFile);
+    setCompressionResult(result);
+
     const formData = new FormData(e.currentTarget);
-    formData.append("file", selectedFile);
+    formData.set("file", result.file);
     
     // Normalize "none" or empty folderId to null (for "All Documents" case)
     const folderId = formData.get("folderId");
@@ -734,7 +742,7 @@ function UploadDocumentForm({ folderId: initialFolderId, folders, onSuccess }: U
           type="file"
           id="file"
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          onChange={(e) => e.target.files && setSelectedFile(e.target.files[0])}
+          onChange={(e) => { if (e.target.files?.[0]) { setSelectedFile(e.target.files[0]); setCompressionResult(null); } }}
           data-testid="input-file-upload"
         />
         {selectedFile ? (
@@ -744,11 +752,22 @@ function UploadDocumentForm({ folderId: initialFolderId, folders, onSuccess }: U
             <p className="text-sm text-muted-foreground">
               {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
             </p>
+            {compressing && (
+              <p className="text-sm text-primary flex items-center justify-center gap-1.5" data-testid="text-compressing">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Compressing…
+              </p>
+            )}
+            {compressionResult?.wasCompressed && !compressing && (
+              <p className="text-xs text-green-700 dark:text-green-400" data-testid="text-compression-result">
+                Compressed from {compressionResult.originalMB.toFixed(2)} MB → {compressionResult.compressedMB.toFixed(2)} MB
+              </p>
+            )}
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setSelectedFile(null)}
+              onClick={() => { setSelectedFile(null); setCompressionResult(null); }}
               data-testid="button-remove-file"
             >
               Remove
@@ -812,10 +831,19 @@ function UploadDocumentForm({ folderId: initialFolderId, folders, onSuccess }: U
       <DialogFooter>
         <Button
           type="submit"
-          disabled={!selectedFile || uploadMutation.isPending}
+          disabled={!selectedFile || compressing || uploadMutation.isPending}
           data-testid="button-submit-upload"
         >
-          {uploadMutation.isPending ? "Uploading..." : "Upload Document"}
+          {compressing ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Compressing…
+            </>
+          ) : uploadMutation.isPending ? (
+            "Uploading..."
+          ) : (
+            "Upload Document"
+          )}
         </Button>
       </DialogFooter>
     </form>

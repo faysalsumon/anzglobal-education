@@ -36,9 +36,11 @@ import {
   XCircle,
   Plus,
   Paperclip,
+  Loader2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useFileCompressor, type CompressionResult } from "@/hooks/useFileCompressor";
 
 interface Document {
   id: string;
@@ -466,6 +468,8 @@ function SectionUploadForm({ section, defaultType, onSuccess }: SectionUploadFor
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null);
+  const { compress, compressing } = useFileCompressor();
 
   const { data: existingDocuments = [] } = useQuery<Document[]>({
     queryKey: ["/api/student/documents"],
@@ -526,6 +530,7 @@ function SectionUploadForm({ section, defaultType, onSuccess }: SectionUploadFor
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       setSelectedFile(file);
+      setCompressionResult(null);
       checkForDuplicate(file);
     }
   };
@@ -534,20 +539,24 @@ function SectionUploadForm({ section, defaultType, onSuccess }: SectionUploadFor
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
+      setCompressionResult(null);
       checkForDuplicate(file);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedFile) return;
 
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-    formData.append("type", defaultType);
-    formData.append("title", selectedFile.name);
-    
     const description = (e.currentTarget.elements.namedItem("description") as HTMLInputElement)?.value;
+
+    const result = await compress(selectedFile);
+    setCompressionResult(result);
+
+    const formData = new FormData();
+    formData.append("file", result.file);
+    formData.append("type", defaultType);
+    formData.append("title", result.file.name);
     if (description) {
       formData.append("description", description);
     }
@@ -586,6 +595,17 @@ function SectionUploadForm({ section, defaultType, onSuccess }: SectionUploadFor
             <p className="text-xs text-muted-foreground">
               {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
             </p>
+            {compressing && (
+              <p className="text-sm text-primary flex items-center justify-center gap-1.5" data-testid="text-compressing-section">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Compressing…
+              </p>
+            )}
+            {compressionResult?.wasCompressed && !compressing && (
+              <p className="text-xs text-green-700 dark:text-green-400" data-testid="text-compression-result-section">
+                Compressed from {compressionResult.originalMB.toFixed(2)} MB → {compressionResult.compressedMB.toFixed(2)} MB
+              </p>
+            )}
             <Button
               type="button"
               variant="ghost"
@@ -593,6 +613,7 @@ function SectionUploadForm({ section, defaultType, onSuccess }: SectionUploadFor
               onClick={() => {
                 setSelectedFile(null);
                 setDuplicateWarning(null);
+                setCompressionResult(null);
               }}
               data-testid="button-remove-section-file"
             >
@@ -640,10 +661,19 @@ function SectionUploadForm({ section, defaultType, onSuccess }: SectionUploadFor
       <DialogFooter>
         <Button
           type="submit"
-          disabled={!selectedFile || uploadMutation.isPending}
+          disabled={!selectedFile || compressing || uploadMutation.isPending}
           data-testid="button-submit-section-upload"
         >
-          {uploadMutation.isPending ? "Uploading..." : "Upload Document"}
+          {compressing ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Compressing…
+            </>
+          ) : uploadMutation.isPending ? (
+            "Uploading..."
+          ) : (
+            "Upload Document"
+          )}
         </Button>
       </DialogFooter>
     </form>

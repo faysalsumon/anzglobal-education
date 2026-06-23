@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Search, CheckCircle, Clock, XCircle, FolderOpen, Upload, Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useFileCompressor, type CompressionResult } from "@/hooks/useFileCompressor";
 
 interface PersonalDocument {
   id: string;
@@ -67,6 +68,8 @@ export function StudentDocumentPicker({
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadType, setUploadType] = useState<string>("");
   const [uploadTitle, setUploadTitle] = useState<string>("");
+  const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null);
+  const { compress, compressing } = useFileCompressor();
 
   const { data: documents = [], isLoading } = useQuery<PersonalDocument[]>({
     queryKey: ["/api/student/documents"],
@@ -132,13 +135,14 @@ export function StudentDocumentPicker({
     const file = e.target.files?.[0];
     if (file) {
       setUploadFile(file);
+      setCompressionResult(null);
       if (!uploadTitle) {
         setUploadTitle(file.name.replace(/\.[^/.]+$/, ""));
       }
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!uploadFile || !uploadType || !uploadTitle.trim()) {
       toast({
         title: "Missing Information",
@@ -148,8 +152,11 @@ export function StudentDocumentPicker({
       return;
     }
 
+    const result = await compress(uploadFile);
+    setCompressionResult(result);
+
     const formData = new FormData();
-    formData.append("file", uploadFile);
+    formData.append("file", result.file);
     formData.append("type", uploadType);
     formData.append("title", uploadTitle.trim());
     if (applicationId) {
@@ -163,6 +170,7 @@ export function StudentDocumentPicker({
     setUploadFile(null);
     setUploadType("");
     setUploadTitle("");
+    setCompressionResult(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -324,6 +332,17 @@ export function StudentDocumentPicker({
                       <div className="text-left">
                         <p className="text-sm font-medium">{uploadFile.name}</p>
                         <p className="text-xs text-muted-foreground">{formatFileSize(uploadFile.size)}</p>
+                        {compressing && (
+                          <p className="text-xs text-primary flex items-center gap-1 mt-0.5" data-testid="text-compressing-picker">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Compressing…
+                          </p>
+                        )}
+                        {compressionResult?.wasCompressed && !compressing && (
+                          <p className="text-xs text-green-700 dark:text-green-400 mt-0.5" data-testid="text-compression-result-picker">
+                            Compressed from {compressionResult.originalMB.toFixed(2)} MB → {compressionResult.compressedMB.toFixed(2)} MB
+                          </p>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -370,10 +389,15 @@ export function StudentDocumentPicker({
               </Button>
               <Button 
                 onClick={handleUpload} 
-                disabled={!uploadFile || !uploadType || !uploadTitle.trim() || uploadMutation.isPending}
+                disabled={!uploadFile || !uploadType || !uploadTitle.trim() || compressing || uploadMutation.isPending}
                 data-testid="button-upload-and-attach"
               >
-                {uploadMutation.isPending ? (
+                {compressing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Compressing…
+                  </>
+                ) : uploadMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Uploading...
