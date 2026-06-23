@@ -25,10 +25,11 @@ import {
   User,
   ShieldCheck,
   Send,
-  Upload,
   Plus,
   Trash2,
   Layers,
+  Grid3x3,
+  List,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STAGE_CONFIG, ALL_STAGES } from "@/lib/stage-config";
@@ -242,6 +243,85 @@ function LibraryDocumentRow({
   );
 }
 
+// ── Library Document Card (grid mode) ─────────────────────────────
+
+function LibraryDocumentCard({
+  doc,
+  onAttach,
+  isAttached = false,
+}: {
+  doc: LibraryDocument;
+  onAttach?: (id: string) => void;
+  isAttached?: boolean;
+}) {
+  const FileIcon = getFileIcon(doc.mimeType);
+  const status = libraryStatusConfig[doc.status as keyof typeof libraryStatusConfig] || libraryStatusConfig.pending;
+  const StatusIcon = status.icon;
+  const expiryBadge = getExpiryBadge(doc.expiryDate);
+
+  return (
+    <Card className="hover-elevate" data-testid={`admin-doc-card-${doc.id}`}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between mb-3">
+          <FileIcon className="h-8 w-8 text-primary" />
+          <div className="flex items-center gap-0.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon" variant="ghost"
+                  onClick={() => window.open(`/api/admin/documents/${doc.id}/download`, "_blank")}
+                  data-testid={`button-view-card-${doc.id}`}>
+                  <Eye className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>View</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon" variant="ghost"
+                  onClick={() => window.open(`/api/admin/documents/${doc.id}/download?dl=1`, "_blank")}
+                  data-testid={`button-download-card-${doc.id}`}>
+                  <Download className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Download</TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
+        <h3 className="font-semibold text-sm mb-1.5 truncate" title={doc.title || doc.fileName}>
+          {doc.title || doc.fileName}
+        </h3>
+        <div className="flex flex-wrap items-center gap-1.5 mb-2">
+          <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", status.color)}>
+            <StatusIcon className="h-3 w-3 mr-1" />{status.label}
+          </Badge>
+          {expiryBadge && (
+            <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", expiryBadge.color)}>
+              <AlertTriangle className="h-3 w-3 mr-1" />{expiryBadge.label}
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center justify-between mt-2">
+          <UploaderLabel doc={doc} />
+          <span className="text-xs text-muted-foreground">{formatDate(doc.createdAt)}</span>
+        </div>
+        {onAttach && (
+          <div className="mt-3 pt-3 border-t">
+            {isAttached ? (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 no-default-active-elevate">
+                <CheckCircle className="h-3 w-3 mr-1" />Attached
+              </Badge>
+            ) : (
+              <Button size="sm" variant="outline" className="w-full" onClick={() => onAttach(doc.id)} data-testid={`button-attach-card-${doc.id}`}>
+                <Plus className="h-3.5 w-3.5 mr-1" />Add to Application
+              </Button>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Application Document Row ───────────────────────────────────────
 
 function AppDocumentRow({
@@ -351,6 +431,7 @@ export function StudentDocumentOrganizer({
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState<string>(hasAppDocs ? "__app__" : "__all__");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
   const { data: libraryDocuments = [], isLoading } = useQuery<LibraryDocument[]>({
     queryKey: [`/api/admin/students/${studentProfileId}/documents`],
@@ -586,6 +667,36 @@ export function StudentDocumentOrganizer({
                     data-testid="input-search-admin-docs"
                   />
                 </div>
+                {!isAppView && (
+                  <div className="flex items-center gap-0.5">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant={viewMode === "grid" ? "secondary" : "ghost"}
+                          onClick={() => setViewMode("grid")}
+                          data-testid="button-view-grid"
+                        >
+                          <Grid3x3 className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Grid view</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant={viewMode === "list" ? "secondary" : "ghost"}
+                          onClick={() => setViewMode("list")}
+                          data-testid="button-view-list"
+                        >
+                          <List className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>List view</TooltipContent>
+                    </Tooltip>
+                  </div>
+                )}
                 {onRequestDoc && (
                   <Button variant="outline" size="sm" onClick={onRequestDoc} data-testid="button-request-document">
                     <Send className="h-3.5 w-3.5 mr-1" />Request
@@ -593,7 +704,7 @@ export function StudentDocumentOrganizer({
                 )}
                 {onUploadDoc && (
                   <Button size="sm" onClick={onUploadDoc} data-testid="button-upload-document">
-                    <Upload className="h-3.5 w-3.5 mr-1" />Upload
+                    <Plus className="h-3.5 w-3.5 mr-1" />Upload Document
                   </Button>
                 )}
               </div>
@@ -652,6 +763,17 @@ export function StudentDocumentOrganizer({
                   <p className="text-center text-muted-foreground py-8">
                     {searchQuery ? `No results for "${searchQuery}"` : "No documents in this folder"}
                   </p>
+                ) : viewMode === "grid" ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {visibleLibraryDocs.map(doc => (
+                      <LibraryDocumentCard
+                        key={doc.id}
+                        doc={doc}
+                        onAttach={onAttachDoc}
+                        isAttached={attachedLibraryDocIds.has(doc.id)}
+                      />
+                    ))}
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     {visibleLibraryDocs.map(doc => (
