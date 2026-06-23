@@ -218,17 +218,6 @@ interface AssignableUser {
   profileImageUrl?: string | null;
 }
 
-interface PersonalDocument {
-  id: string;
-  type: string;
-  title: string;
-  fileName: string;
-  fileUrl: string | null;
-  filePath: string | null;
-  fileSize: number | null;
-  status: string;
-  createdAt: string;
-}
 
 interface ApplicationCourse {
   id: string;
@@ -281,12 +270,6 @@ const STAGE_FOLDER_MAP: Record<string, string> = {
   "Documents Verification": "Academics",
 };
 
-function getDocumentStatus(doc: StageDocument) {
-  if (!doc.documentUrl) return { label: "Pending", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" };
-  if (doc.isVerified) return { label: "Verified", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" };
-  if (doc.rejectionReason) return { label: "Rejected", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" };
-  return { label: "Uploaded", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" };
-}
 
 /* ── Main Content ───────────────────────────────────────────────── */
 
@@ -361,11 +344,6 @@ function AdminApplicationDetailContent() {
     enabled: uploadDocDialogOpen,
   });
 
-  const { data: studentLibraryData } = useQuery<{ documents: PersonalDocument[] }>({
-    queryKey: ["/api/admin/students", data?.student?.id, "documents"],
-    enabled: !!data?.student?.id,
-  });
-  const studentLibrary = studentLibraryData?.documents || [];
 
   interface SearchCourse { id: string; title: string; level: string | null; university?: { id: string; name: string; logo?: string | null } }
   const { data: courseSearchData } = useQuery<{ courses: SearchCourse[]; total: number }>({
@@ -384,12 +362,6 @@ function AdminApplicationDetailContent() {
   const assignableUsers = assignableUsersData?.users || [];
   const searchableCourses = courseSearchData?.courses || [];
   const addCourseInstitutions = Array.isArray(addCourseInstitutionsData) ? addCourseInstitutionsData : [];
-  const documentsByStage = documents.reduce((acc, doc) => {
-    if (!acc[doc.stage]) acc[doc.stage] = [];
-    acc[doc.stage].push(doc);
-    return acc;
-  }, {} as Record<ApplicationStage, StageDocument[]>);
-
   /* ── useDocumentEvents hook ───────────────────────────────────── */
   useDocumentEvents({ applicationId: applicationId || "" });
 
@@ -977,174 +949,25 @@ function AdminApplicationDetailContent() {
         </TabsContent>
 
         {/* ── DOCUMENTS TAB ─────────────────────────────────────── */}
-        <TabsContent value="documents" className="mt-4 space-y-6">
-
-          {/* Stage Documents sub-section */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                Stage Documents
-              </h3>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => { setNewDocRequest({ stage: application.currentStage as ApplicationStage, documentType: "", documentName: "", isRequired: true }); setRequestDocDialogOpen(true); }} data-testid="button-request-document">
-                  <Send className="h-3.5 w-3.5 mr-1" />Request
-                </Button>
-                <Button size="sm" onClick={() => { setNewDocUpload({ stage: application.currentStage as ApplicationStage, documentType: "", documentName: "", isRequired: false }); setUploadDocDialogOpen(true); }} data-testid="button-upload-document">
-                  <Upload className="h-3.5 w-3.5 mr-1" />Upload
-                </Button>
-              </div>
-            </div>
-
-            {documents.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <FileText className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                  <p className="text-sm">No stage documents yet</p>
-                  <p className="text-xs mt-1">Request or upload documents to get started</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {ALL_STAGES.filter(stage => documentsByStage[stage]?.length > 0).map((stage) => (
-                  <div key={stage}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-2 h-2 rounded-full ${STAGE_CONFIG[stage].dotColor}`} />
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase">
-                        {STAGE_CONFIG[stage].displayName}
-                      </h4>
-                      <Badge variant="secondary" className="h-4 px-1 text-xs no-default-active-elevate">
-                        {documentsByStage[stage].length}
-                      </Badge>
-                    </div>
-                    <div className="space-y-2 ml-4">
-                      {documentsByStage[stage].map((doc) => {
-                        const status = getDocumentStatus(doc);
-                        return (
-                          <div
-                            key={doc.id}
-                            className="flex items-center justify-between p-2 rounded-md border bg-card"
-                            data-testid={`document-item-${doc.id}`}
-                          >
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium truncate">{doc.documentName}</p>
-                                <p className="text-xs text-muted-foreground">{doc.documentType}</p>
-                              </div>
-                              <Badge className={`text-xs no-default-active-elevate ${status.color}`}>{status.label}</Badge>
-                              {doc.uploadedByRole === 'admin' && (
-                                <Badge variant="secondary" className="text-xs no-default-active-elevate">Consultant upload</Badge>
-                              )}
-                              {doc.isRequired && (
-                                <Badge variant="outline" className="text-xs no-default-active-elevate">Required</Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              {doc.documentUrl && (
-                                <>
-                                  <Button variant="ghost" size="icon" onClick={() => openDocumentPreview(`/api/admin/applications/${applicationId}/documents/${doc.id}/download`, doc.documentName || 'document')} data-testid={`button-view-doc-${doc.id}`}>
-                                    <Eye className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" onClick={() => downloadDocument(`/api/admin/applications/${applicationId}/documents/${doc.id}/download`, doc.documentName || 'document')} data-testid={`button-download-doc-${doc.id}`}>
-                                    <Download className="h-3.5 w-3.5" />
-                                  </Button>
-                                  {!doc.isVerified && !doc.rejectionReason && (
-                                    <Button variant="ghost" size="icon" onClick={() => setVerifyDocDialogOpen(doc.id)} data-testid={`button-verify-doc-${doc.id}`}>
-                                      <CheckCircle className="h-3.5 w-3.5 text-green-600" />
-                                    </Button>
-                                  )}
-                                </>
-                              )}
-                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteDocConfirmOpen(doc.id)} data-testid={`button-delete-doc-${doc.id}`}>
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <Separator />
-
-          {/* Attach from Library sub-section */}
-          {studentLibrary.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <Plus className="h-4 w-4 text-muted-foreground" />
-                  Attach from Student Library
-                </h3>
-                <Badge variant="secondary" className="text-xs no-default-active-elevate">
-                  {studentLibrary.length} available
-                </Badge>
-              </div>
-              <ScrollArea className="max-h-64">
-                <div className="rounded-md border bg-muted/30 p-3 space-y-2">
-                  {studentLibrary.map((doc) => {
-                    const isVerified = doc.status === "verified";
-                    const isPending = doc.status === "pending";
-                    return (
-                      <div
-                        key={doc.id}
-                        className="flex items-center justify-between p-2 rounded-md bg-card border"
-                        data-testid={`student-lib-doc-${doc.id}`}
-                      >
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{doc.title}</p>
-                            <p className="text-xs text-muted-foreground">{doc.type}</p>
-                          </div>
-                          <Badge className={cn("text-xs no-default-active-elevate", isVerified ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : isPending ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400')}>
-                            {isVerified ? 'Verified' : isPending ? 'Pending' : 'Rejected'}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {doc.filePath && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openDocumentPreview(`/api/admin/documents/${doc.id}/download`, doc.fileName || doc.title)}
-                              data-testid={`button-view-lib-doc-${doc.id}`}
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => attachFromLibraryMutation.mutate({ documentId: doc.id, stage: application.currentStage as ApplicationStage })}
-                            disabled={attachFromLibraryMutation.isPending}
-                            data-testid={`button-attach-lib-doc-${doc.id}`}
-                          >
-                            <Plus className="h-3 w-3 mr-1" />Attach
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            </div>
-          )}
-
-          <Separator />
-
-          {/* Student Document Library sub-section */}
-          <div>
-            <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
-              <FolderOpen className="h-4 w-4 text-muted-foreground" />
-              Student Document Library
-            </h3>
-            <StudentDocumentOrganizer studentProfileId={student.id} />
-          </div>
+        <TabsContent value="documents" className="mt-4">
+          <StudentDocumentOrganizer
+            studentProfileId={student.id}
+            applicationId={applicationId ?? ""}
+            applicationDocuments={documents}
+            onRequestDoc={() => {
+              setNewDocRequest({ stage: application.currentStage as ApplicationStage, documentType: "", documentName: "", isRequired: true });
+              setRequestDocDialogOpen(true);
+            }}
+            onUploadDoc={() => {
+              setNewDocUpload({ stage: application.currentStage as ApplicationStage, documentType: "", documentName: "", isRequired: false });
+              setUploadDocDialogOpen(true);
+            }}
+            onAttachDoc={(docId) => attachFromLibraryMutation.mutate({ documentId: docId, stage: application.currentStage as ApplicationStage })}
+            onVerifyDoc={(docId) => setVerifyDocDialogOpen(docId)}
+            onDeleteDoc={(docId) => setDeleteDocConfirmOpen(docId)}
+            onViewAppDoc={(url, name) => openDocumentPreview(url, name)}
+            onDownloadAppDoc={(url, name) => downloadDocument(url, name)}
+          />
         </TabsContent>
 
         {/* ── VERIFICATION TAB ──────────────────────────────────── */}
