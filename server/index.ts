@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
 import cookieParser from "cookie-parser";
@@ -14,6 +15,22 @@ import { botProtectionMiddleware, securityHeadersMiddleware, protectedPathsMiddl
 import { runMigrations } from "./migrate";
 import { seedDefaultRoles } from "./seed-roles";
 import { seedDefaultProfiles } from "./seed-profiles";
+
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || "development",
+    tracesSampleRate: 0.1,
+    ignoreErrors: [
+      // Neon DB cold-start timeouts — transient infrastructure noise
+      "timeout exceeded when trying to connect",
+      "NeonDbError",
+      // Expected auth failures
+      "Invalid token",
+      "jwt expired",
+    ],
+  });
+}
 
 // Intercept process.exit(1) before Vite's error logger can use it to crash the dev server.
 // Vite's custom logger in server/vite.ts calls process.exit(1) on ANY Vite error, which
@@ -189,6 +206,11 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+
+  // Sentry error handler must come right after routes, before any other error handlers
+  if (process.env.SENTRY_DSN) {
+    Sentry.setupExpressErrorHandler(app);
+  }
 
   app.use(csrfErrorHandler);
 
