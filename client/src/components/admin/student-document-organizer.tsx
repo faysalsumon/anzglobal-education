@@ -554,6 +554,7 @@ function AdminUploadDialog({ studentProfileId, folders, open, onOpenChange, onSu
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [compressionLabel, setCompressionLabel] = useState<string | null>(null);
+  const [fileTooLarge, setFileTooLarge] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { compress, compressing } = useFileCompressor();
 
@@ -576,9 +577,15 @@ function AdminUploadDialog({ studentProfileId, folders, open, onOpenChange, onSu
 
   const handleFileChange = async (file: File | null) => {
     setCompressionLabel(null);
+    setFileTooLarge(false);
     if (!file) { setSelectedFile(null); return; }
     try {
       const result = await compress(file);
+      if (!result.wasCompressed && result.compressedMB > 10) {
+        setFileTooLarge(true);
+        setSelectedFile(result.file);
+        return;
+      }
       setSelectedFile(result.file);
       if (result.wasCompressed) {
         setCompressionLabel(
@@ -640,11 +647,14 @@ function AdminUploadDialog({ studentProfileId, folders, open, onOpenChange, onSu
                 {compressionLabel && (
                   <p className="text-xs text-green-600">{compressionLabel}</p>
                 )}
+                {fileTooLarge && (
+                  <p className="text-xs text-destructive" data-testid="warning-admin-file-too-large">This file is too large to upload. Max 10 MB — please choose a smaller file.</p>
+                )}
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={(e) => { e.stopPropagation(); setSelectedFile(null); setCompressionLabel(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                  onClick={(e) => { e.stopPropagation(); setSelectedFile(null); setCompressionLabel(null); setFileTooLarge(false); if (fileInputRef.current) fileInputRef.current.value = ""; }}
                 >
                   Remove
                 </Button>
@@ -714,7 +724,7 @@ function AdminUploadDialog({ studentProfileId, folders, open, onOpenChange, onSu
             </Button>
             <Button
               type="submit"
-              disabled={!selectedFile || uploadMutation.isPending || compressing}
+              disabled={!selectedFile || uploadMutation.isPending || compressing || fileTooLarge}
               data-testid="button-submit-admin-upload"
             >
               {uploadMutation.isPending ? "Uploading..." : "Upload Document"}

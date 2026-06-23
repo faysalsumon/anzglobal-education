@@ -310,6 +310,7 @@ function AdminApplicationDetailContent() {
   const [uploadFolderId, setUploadFolderId] = useState<string | null>(null);
   const [uploadExpiryDate, setUploadExpiryDate] = useState<string>("");
   const [uploadCompressionLabel, setUploadCompressionLabel] = useState<string | null>(null);
+  const [uploadFileTooLarge, setUploadFileTooLarge] = useState(false);
   const { compress: compressUploadFile, compressing: uploadCompressing } = useFileCompressor();
 
   /* ── Queries ─────────────────────────────────────────────────── */
@@ -472,6 +473,8 @@ function AdminApplicationDetailContent() {
       setUploadFile(null);
       setUploadFolderId(null);
       setUploadExpiryDate("");
+      setUploadCompressionLabel(null);
+      setUploadFileTooLarge(false);
     },
     onError: (err: any) => toast({ title: "Upload Failed", description: err.message, variant: "destructive" }),
   });
@@ -1325,11 +1328,14 @@ function AdminApplicationDetailContent() {
                 onChange={async (e) => {
                   const file = e.target.files?.[0] ?? null;
                   setUploadCompressionLabel(null);
+                  setUploadFileTooLarge(false);
                   if (!file) { setUploadFile(null); return; }
                   try {
                     const result = await compressUploadFile(file);
                     setUploadFile(result.file);
-                    if (result.wasCompressed) {
+                    if (!result.wasCompressed && result.compressedMB > 10) {
+                      setUploadFileTooLarge(true);
+                    } else if (result.wasCompressed) {
                       setUploadCompressionLabel(
                         `Compressed from ${result.originalMB.toFixed(2)} MB → ${result.compressedMB.toFixed(2)} MB`
                       );
@@ -1353,6 +1359,9 @@ function AdminApplicationDetailContent() {
               {!uploadCompressing && uploadFile && (
                 <p className="text-xs text-muted-foreground mt-1">{uploadFile.name} ({(uploadFile.size / 1024).toFixed(0)} KB)</p>
               )}
+              {!uploadCompressing && uploadFileTooLarge && (
+                <p className="text-xs text-destructive mt-1" data-testid="warning-upload-file-too-large">This file is too large to upload. Max 10 MB — please choose a smaller file.</p>
+              )}
               {!uploadCompressing && uploadCompressionLabel && (
                 <p className="text-xs text-green-600 mt-0.5">{uploadCompressionLabel}</p>
               )}
@@ -1360,7 +1369,7 @@ function AdminApplicationDetailContent() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setUploadDocDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => uploadDocMutation.mutate()} disabled={!newDocUpload.documentType || !newDocUpload.documentName || !uploadFile || uploadDocMutation.isPending || uploadCompressing} data-testid="button-confirm-upload">
+            <Button onClick={() => uploadDocMutation.mutate()} disabled={!newDocUpload.documentType || !newDocUpload.documentName || !uploadFile || uploadDocMutation.isPending || uploadCompressing || uploadFileTooLarge} data-testid="button-confirm-upload">
               <Upload className="h-4 w-4 mr-1" />{uploadDocMutation.isPending ? "Uploading..." : "Upload"}
             </Button>
           </DialogFooter>
