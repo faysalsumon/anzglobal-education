@@ -19123,11 +19123,8 @@ Sitemap: ${baseUrl}/sitemap.xml
       try {
         const logEntityType = reminder.taskId ? 'task'
           : reminder.applicationId ? 'application'
-          : reminder.crmContactId ? 'crm_contact'
-          : reminder.accInvoiceId ? 'acc_invoice'
-          : reminder.accountId ? 'account'
           : null;
-        const logEntityId = reminder.taskId ?? reminder.applicationId ?? reminder.crmContactId ?? reminder.accInvoiceId ?? reminder.accountId ?? null;
+        const logEntityId = reminder.taskId ?? reminder.applicationId ?? null;
         if (logEntityType && logEntityId) {
           await logCreate({
             req,

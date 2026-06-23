@@ -94,6 +94,7 @@ import { StudentDocumentOrganizer } from "@/components/admin/student-document-or
 import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { DocumentPreviewModal } from "@/components/document-preview-modal";
 import { useDocumentEvents } from "@/hooks/useDocumentEvents";
+import { useFileCompressor } from "@/hooks/useFileCompressor";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -308,6 +309,8 @@ function AdminApplicationDetailContent() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadFolderId, setUploadFolderId] = useState<string | null>(null);
   const [uploadExpiryDate, setUploadExpiryDate] = useState<string>("");
+  const [uploadCompressionLabel, setUploadCompressionLabel] = useState<string | null>(null);
+  const { compress: compressUploadFile, compressing: uploadCompressing } = useFileCompressor();
 
   /* ── Queries ─────────────────────────────────────────────────── */
   const { data, isLoading, isError, error, refetch } = useQuery<AdminApplicationDetail>({
@@ -1319,23 +1322,45 @@ function AdminApplicationDetailContent() {
                 id="upload-file"
                 type="file"
                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls,.csv"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0] ?? null;
-                  setUploadFile(file);
-                  if (file && !newDocUpload.documentName) {
+                  setUploadCompressionLabel(null);
+                  if (!file) { setUploadFile(null); return; }
+                  try {
+                    const result = await compressUploadFile(file);
+                    setUploadFile(result.file);
+                    if (result.wasCompressed) {
+                      setUploadCompressionLabel(
+                        `Compressed from ${result.originalMB.toFixed(2)} MB → ${result.compressedMB.toFixed(2)} MB`
+                      );
+                    }
+                  } catch {
+                    setUploadFile(file);
+                    toast({ title: "Compression failed", description: "File will be uploaded as-is.", variant: "destructive" });
+                  }
+                  if (!newDocUpload.documentName) {
                     setNewDocUpload((prev) => ({ ...prev, documentName: file.name }));
                   }
                 }}
                 data-testid="input-upload-file"
               />
-              {uploadFile && (
+              {uploadCompressing && (
+                <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                  <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                  Compressing…
+                </p>
+              )}
+              {!uploadCompressing && uploadFile && (
                 <p className="text-xs text-muted-foreground mt-1">{uploadFile.name} ({(uploadFile.size / 1024).toFixed(0)} KB)</p>
+              )}
+              {!uploadCompressing && uploadCompressionLabel && (
+                <p className="text-xs text-green-600 mt-0.5">{uploadCompressionLabel}</p>
               )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setUploadDocDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => uploadDocMutation.mutate()} disabled={!newDocUpload.documentType || !newDocUpload.documentName || !uploadFile || uploadDocMutation.isPending} data-testid="button-confirm-upload">
+            <Button onClick={() => uploadDocMutation.mutate()} disabled={!newDocUpload.documentType || !newDocUpload.documentName || !uploadFile || uploadDocMutation.isPending || uploadCompressing} data-testid="button-confirm-upload">
               <Upload className="h-4 w-4 mr-1" />{uploadDocMutation.isPending ? "Uploading..." : "Upload"}
             </Button>
           </DialogFooter>
