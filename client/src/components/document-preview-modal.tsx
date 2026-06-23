@@ -200,16 +200,23 @@ export function DocumentPreviewModal({
           {blobUrl && !loading && !error && (
             <>
               {isPdf && (
-                <embed
-                  src={blobUrl}
-                  type="application/pdf"
-                  className="w-full border-0"
-                  style={{
-                    height: "70vh",
-                    transform: `scale(${zoom / 100})`,
-                    transformOrigin: "top center",
-                  }}
-                />
+                <div className="flex flex-col items-center gap-4 text-center">
+                  <FileText className="h-16 w-16 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground max-w-xs">
+                    Inline PDF rendering is being upgraded. Open in a new tab to view.
+                  </p>
+                  <Button
+                    onClick={() => window.open(blobUrl, "_blank")}
+                    data-testid="button-open-pdf-tab"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open PDF
+                  </Button>
+                  <Button variant="outline" onClick={handleDownload} data-testid="button-download-pdf">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                </div>
               )}
 
               {isImage && (
