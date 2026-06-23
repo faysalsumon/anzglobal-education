@@ -4637,7 +4637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { detectChanges, trackProfileChanges } = await import("./verificationService");
       const changes = detectChanges(profile as any, data);
       if (changes.length > 0) {
-        await trackProfileChanges(profile.id, changes, userId);
+        await trackProfileChanges(profile.id, changes, userId, 'admin');
       }
 
       const updated = await storage.updateStudentProfile(profileId, data);
@@ -4668,7 +4668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const education = await storage.createEducation(data);
 
       const { trackEducationChange } = await import("./verificationService");
-      await trackEducationChange(profileId, 'create', null, education, userId);
+      await trackEducationChange(profileId, 'create', null, education, userId, 'admin');
 
       res.json(education);
     } catch (error: any) {
@@ -4691,7 +4691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteEducation(req.params.id);
 
       const { trackEducationChange } = await import("./verificationService");
-      await trackEducationChange(req.params.profileId, 'delete', education, null, userId);
+      await trackEducationChange(req.params.profileId, 'delete', education, null, userId, 'admin');
 
       res.json({ success: true });
     } catch (error: any) {
@@ -4715,7 +4715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const score = await storage.createLanguageScore(data);
 
       const { trackLanguageChange } = await import("./verificationService");
-      await trackLanguageChange(profileId, 'create', null, score, userId);
+      await trackLanguageChange(profileId, 'create', null, score, userId, 'admin');
 
       res.json(score);
     } catch (error: any) {
@@ -4738,7 +4738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteLanguageScore(req.params.id);
 
       const { trackLanguageChange } = await import("./verificationService");
-      await trackLanguageChange(req.params.profileId, 'delete', score, null, userId);
+      await trackLanguageChange(req.params.profileId, 'delete', score, null, userId, 'admin');
 
       res.json({ success: true });
     } catch (error: any) {
@@ -4762,7 +4762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const employment = await storage.createEmployment(data);
 
       const { trackEmploymentChange } = await import("./verificationService");
-      await trackEmploymentChange(profileId, 'create', null, employment, userId);
+      await trackEmploymentChange(profileId, 'create', null, employment, userId, 'admin');
 
       res.json(employment);
     } catch (error: any) {
@@ -4785,7 +4785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteEmployment(req.params.id);
 
       const { trackEmploymentChange } = await import("./verificationService");
-      await trackEmploymentChange(req.params.profileId, 'delete', employment, null, userId);
+      await trackEmploymentChange(req.params.profileId, 'delete', employment, null, userId, 'admin');
 
       res.json({ success: true });
     } catch (error: any) {

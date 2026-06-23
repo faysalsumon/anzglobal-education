@@ -246,6 +246,7 @@ export function StudentProfileViewer({ profileId, studentName }: StudentProfileV
   });
 
   const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [openSections, setOpenSections] = useState<string[]>(["personal", "passport", "education", "english", "preferences", "work", "financial", "sop"]);
   const [formData, setFormData] = useState<Record<string, any>>({});
 
   const [addingEducation, setAddingEducation] = useState(false);
@@ -326,6 +327,8 @@ export function StudentProfileViewer({ profileId, studentName }: StudentProfileV
     fields.forEach(f => { initial[f] = (profile as any)[f]; });
     setFormData(initial);
     setEditingSection(section);
+    // Auto-expand the target section so the edit form is always visible
+    setOpenSections(prev => prev.includes(section) ? prev : [...prev, section]);
   };
 
   const fd = (key: string) => formData[key] ?? "";
@@ -383,7 +386,7 @@ export function StudentProfileViewer({ profileId, studentName }: StudentProfileV
         )}
       </div>
 
-      <Accordion type="multiple" defaultValue={["personal", "passport", "education", "english", "preferences", "work", "financial", "sop"]} className="space-y-2">
+      <Accordion type="multiple" value={openSections} onValueChange={setOpenSections} className="space-y-2">
 
         {/* ── Personal Information ────────────────────────── */}
         <AccordionItem value="personal" className="border rounded-lg px-4">

@@ -167,7 +167,8 @@ export async function trackEducationChange(
   action: 'create' | 'update' | 'delete',
   oldData?: any,
   newData?: any,
-  changedBy?: string
+  changedBy?: string,
+  source?: string
 ): Promise<void> {
   await db.insert(profileChangeHistory).values({
     studentProfileId,
@@ -176,7 +177,7 @@ export async function trackEducationChange(
     oldValue: oldData ? JSON.stringify(oldData) : null,
     newValue: newData ? JSON.stringify(newData) : null,
     changedBy,
-    changeReason: `Education record ${action}d`,
+    changeReason: source ? `[${source}] Education record ${action}d` : `Education record ${action}d`,
   });
   
   await markSectionNeedsReverification(studentProfileId, 'education');
@@ -187,7 +188,8 @@ export async function trackLanguageChange(
   action: 'create' | 'update' | 'delete',
   oldData?: any,
   newData?: any,
-  changedBy?: string
+  changedBy?: string,
+  source?: string
 ): Promise<void> {
   await db.insert(profileChangeHistory).values({
     studentProfileId,
@@ -196,7 +198,7 @@ export async function trackLanguageChange(
     oldValue: oldData ? JSON.stringify(oldData) : null,
     newValue: newData ? JSON.stringify(newData) : null,
     changedBy,
-    changeReason: `Language score ${action}d`,
+    changeReason: source ? `[${source}] Language score ${action}d` : `Language score ${action}d`,
   });
   
   await markSectionNeedsReverification(studentProfileId, 'language');
@@ -207,7 +209,8 @@ export async function trackEmploymentChange(
   action: 'create' | 'update' | 'delete',
   oldData?: any,
   newData?: any,
-  changedBy?: string
+  changedBy?: string,
+  source?: string
 ): Promise<void> {
   await db.insert(profileChangeHistory).values({
     studentProfileId,
@@ -216,7 +219,7 @@ export async function trackEmploymentChange(
     oldValue: oldData ? JSON.stringify(oldData) : null,
     newValue: newData ? JSON.stringify(newData) : null,
     changedBy,
-    changeReason: `Employment record ${action}d`,
+    changeReason: source ? `[${source}] Employment record ${action}d` : `Employment record ${action}d`,
   });
   
   await markSectionNeedsReverification(studentProfileId, 'employment');
