@@ -200,14 +200,14 @@ export function DocumentPreviewModal({
           {blobUrl && !loading && !error && (
             <>
               {isPdf && (
-                <iframe
+                <embed
                   src={blobUrl}
-                  title={documentName}
-                  className="w-full h-full border-0"
+                  type="application/pdf"
+                  className="w-full border-0"
                   style={{
+                    height: "70vh",
                     transform: `scale(${zoom / 100})`,
                     transformOrigin: "top center",
-                    minHeight: "70vh",
                   }}
                 />
               )}

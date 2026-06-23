@@ -398,12 +398,12 @@ function buildCspDirectives(nonce: string): string {
     // clarity.ms for Microsoft Clarity telemetry
     // https://www.facebook.com: Meta Pixel fires conversion events to /tr on this origin
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://maps.googleapis.com https://api.openai.com https://*.clarity.ms https://www.facebook.com ws://localhost:* wss://localhost:*",
-    // GTM noscript iframe + blob: for PDF preview iframes
-    "frame-src 'self' blob: https://www.googletagmanager.com",
+    // GTM noscript iframe
+    "frame-src 'self' https://www.googletagmanager.com",
     // Belt-and-suspenders alongside X-Frame-Options: SAMEORIGIN
     "frame-ancestors 'self'",
-    // Blocks Flash, Silverlight, and other plugins
-    "object-src 'none'",
+    // blob: allows <embed> PDF previews (blob is created from authenticated fetch, safe)
+    "object-src blob:",
     // Prevents base-tag hijacking
     "base-uri 'self'",
     // Restricts form submissions to same origin
