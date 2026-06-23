@@ -1,11 +1,4 @@
 import { useState, useCallback } from "react";
-import * as pdfjs from "pdfjs-dist";
-import { PDFDocument } from "pdf-lib";
-
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url,
-).toString();
 
 const COMPRESSIBLE_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 const MAX_IMAGE_DIMENSION = 3000;
@@ -78,6 +71,18 @@ async function compressImage(file: File): Promise<CompressionResult> {
 async function compressPdf(file: File): Promise<CompressionResult> {
   const originalMB = file.size / (1024 * 1024);
   const arrayBuffer = await file.arrayBuffer();
+
+  const [pdfjs, { PDFDocument }] = await Promise.all([
+    import("pdfjs-dist"),
+    import("pdf-lib"),
+  ]);
+
+  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+      "pdfjs-dist/build/pdf.worker.min.mjs",
+      import.meta.url,
+    ).toString();
+  }
 
   const loadingTask = pdfjs.getDocument({ data: arrayBuffer.slice(0) });
   const pdfDoc = await loadingTask.promise;
