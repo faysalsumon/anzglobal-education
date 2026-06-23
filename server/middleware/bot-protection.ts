@@ -392,7 +392,7 @@ function buildCspDirectives(nonce: string): string {
     `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com https://maps.googleapis.com https://maps.gstatic.com https://connect.facebook.net https://www.clarity.ms https://scripts.clarity.ms`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
-    // blob: needed for PDF previews and canvas exports; https: allows institution/student image CDNs
+    // blob: needed for canvas exports; https: allows institution/student image CDNs
     "img-src 'self' data: blob: https:",
     // wss: for Supabase Realtime; ws://localhost for dev HMR
     // clarity.ms for Microsoft Clarity telemetry
@@ -402,8 +402,10 @@ function buildCspDirectives(nonce: string): string {
     "frame-src 'self' https://www.googletagmanager.com",
     // Belt-and-suspenders alongside X-Frame-Options: SAMEORIGIN
     "frame-ancestors 'self'",
-    // blob: allows <embed> PDF previews (blob is created from authenticated fetch, safe)
-    "object-src blob:",
+    // react-pdf (pdfjs) loads its worker from bundled origin; blob: covers inline worker fallback
+    "worker-src blob: 'self'",
+    // No plugin content needed — react-pdf renders via canvas
+    "object-src 'none'",
     // Prevents base-tag hijacking
     "base-uri 'self'",
     // Restricts form submissions to same origin
