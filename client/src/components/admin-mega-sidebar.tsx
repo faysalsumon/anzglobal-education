@@ -113,7 +113,7 @@ export function AdminMegaSidebar({
       routes: [
         { icon: ListTodo, label: "My Tasks", value: "my-tasks", show: true },
         { icon: BarChart3, label: "Team Workload", value: "team-workload", show: isCTO },
-        { icon: Target, label: "KPI Reports", value: "kpi-reports", show: isCTO },
+        { icon: Target, label: "KPI Reports", value: "kpi-reports", show: true },
         { icon: Mail, label: "Email", value: "email", show: true },
         { icon: TrendingUp, label: "Leads", value: "crm-leads", show: true },
         { icon: Contact, label: "Contacts", value: "crm-contacts", show: adminRole !== 'junior_consultant' && adminRole !== 'support_staff' },

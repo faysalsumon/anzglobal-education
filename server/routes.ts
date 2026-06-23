@@ -18326,14 +18326,14 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
-  // KPI Team Report — CTO only
+  // KPI Team Report — all admin roles
   app.get("/api/kpi/team-report", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { isAdmin, role } = await isAdminTeamMember(userId);
+      const { isAdmin } = await isAdminTeamMember(userId);
 
-      if (!isAdmin || role !== 'cto') {
-        return res.status(403).json({ message: "Only CTO can view KPI reports" });
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required to view KPI reports" });
       }
 
       const { from, to } = req.query as { from?: string; to?: string };
