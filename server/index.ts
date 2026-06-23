@@ -192,6 +192,22 @@ app.use((req, res, next) => {
 
   app.use(csrfErrorHandler);
 
+  // Multer upload-limit errors → proper HTTP status codes instead of generic 500
+  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
+    const multerMessages: Record<string, { status: number; message: string }> = {
+      LIMIT_FILE_SIZE:       { status: 413, message: "File is too large. Maximum size is 10 MB." },
+      LIMIT_FILE_COUNT:      { status: 400, message: "Too many files uploaded at once." },
+      LIMIT_UNEXPECTED_FILE: { status: 400, message: "Unexpected file field in the upload." },
+      LIMIT_FIELD_COUNT:     { status: 400, message: "Too many form fields." },
+      LIMIT_PART_COUNT:      { status: 400, message: "Too many parts in the upload." },
+    };
+    if (err && err.code && multerMessages[err.code]) {
+      const { status, message } = multerMessages[err.code];
+      return res.status(status).json({ message });
+    }
+    next(err);
+  });
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";

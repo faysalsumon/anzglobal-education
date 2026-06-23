@@ -4,15 +4,21 @@ import { supabase } from "./supabase";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    if (res.status === 403) {
-      const text = await res.text();
-      if (text.includes("CSRF")) {
-        clearCsrfToken();
-      }
-      throw new Error(`${res.status}: ${text || res.statusText}`);
+    const text = await res.text();
+    if (res.status === 403 && text.includes("CSRF")) {
+      clearCsrfToken();
     }
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    // Try to extract a clean message from JSON error bodies
+    try {
+      const json = JSON.parse(text);
+      const msg = json.message || json.error || text;
+      throw new Error(msg);
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        throw new Error(`${res.status}: ${text || res.statusText}`);
+      }
+      throw e;
+    }
   }
 }
 
