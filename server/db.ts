@@ -11,13 +11,17 @@ if (!process.env.DATABASE_URL) {
 
 const { Pool } = pkg;
 
-// Bun 1.0.23 / NixOS: the bundled TLS library fails to parse Neon's certificate
-// name constraints ("unsupported name constraint type"). We bypass that check
-// while keeping full TLS encryption by supplying a custom agent.
+// TODO: rejectUnauthorized is intentionally false even in production.
+// Bun 1.0.23 on NixOS (Replit's runtime for both dev and deployed builds)
+// fails to parse Neon's certificate name constraints with
+// "unsupported name constraint type", so cert verification cannot be enabled
+// here. Full TLS encryption is still active — only server certificate
+// verification is skipped. Revisit once Bun's TLS CA-bundle handling is fixed:
+// https://github.com/oven-sh/bun/issues/4398
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false,
+    rejectUnauthorized: false, // see TODO above
   },
   max: 5,
   idleTimeoutMillis: 30000,
