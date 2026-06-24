@@ -273,7 +273,7 @@ function BillToSelector({
             data-testid="button-bill-to-institution"
           >
             <Building2 className="h-3.5 w-3.5 mr-1.5" />
-            Institution
+            Account
           </Button>
           <Button
             type="button"
