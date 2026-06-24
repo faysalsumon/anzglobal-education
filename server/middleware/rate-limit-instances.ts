@@ -27,3 +27,6 @@ export const contactInquiryLimiter = createRateLimiter(60 * 60 * 1000, 20);
 export const zanChatLimiter = createRateLimiter(60 * 60 * 1000, 60);
 export const scrapingTriggerLimiter = createRateLimiter(60 * 60 * 1000, 20);
 export const scrapingTestLimiter = createRateLimiter(60 * 60 * 1000, 20);
+export const verifyTotpLimiter = createRateLimiter(15 * 60 * 1000, 10);
+export const resendVerificationLimiter = createRateLimiter(60 * 60 * 1000, 5);
+export const checkEmailLimiter = createRateLimiter(60 * 1000, 20);

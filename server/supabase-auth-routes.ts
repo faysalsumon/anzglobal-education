@@ -10,7 +10,7 @@ import { getRegionContext } from './middleware/region-detection';
 import crypto from 'crypto';
 import { createCrmContactForUser } from './crm-routes';
 import { getClientIp, replyTooManyRequests } from './middleware/rate-limit';
-import { signinLimiter, forgotPasswordLimiter } from './middleware/rate-limit-instances';
+import { signinLimiter, forgotPasswordLimiter, verifyTotpLimiter, resendVerificationLimiter, checkEmailLimiter } from './middleware/rate-limit-instances';
 import { logSecurityEvent, isSafeRedirect, safeRedirectUrl } from './middleware/bot-protection';
 
 const router = Router();
@@ -288,6 +288,9 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
 // Resend verification email for unverified users
 router.post('/resend-verification', async (req: Request, res: Response) => {
   try {
+    const rl = resendVerificationLimiter(getClientIp(req));
+    if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many verification email requests');
+
     if (!supabase) {
       return res.status(503).json({ error: 'Supabase is not configured' });
     }
@@ -326,6 +329,9 @@ router.post('/resend-verification', async (req: Request, res: Response) => {
 // Check if email exists (for better UX on signup)
 router.post('/check-email', async (req: Request, res: Response) => {
   try {
+    const rl = checkEmailLimiter(getClientIp(req));
+    if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many email check requests');
+
     const { email } = req.body;
 
     if (!email) {
@@ -354,6 +360,9 @@ router.post('/check-email', async (req: Request, res: Response) => {
 
 router.post('/reset-password', async (req: Request, res: Response) => {
   try {
+    const rl = forgotPasswordLimiter(getClientIp(req));
+    if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many password reset requests');
+
     if (!supabase) {
       return res.status(503).json({ error: 'Supabase is not configured' });
     }
@@ -645,6 +654,9 @@ router.post('/enroll-totp', async (req: Request, res: Response) => {
 
 router.post('/verify-totp', async (req: Request, res: Response) => {
   try {
+    const rl = verifyTotpLimiter(getClientIp(req));
+    if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many verification attempts');
+
     if (!supabase) {
       return res.status(503).json({ error: 'Supabase is not configured' });
     }
