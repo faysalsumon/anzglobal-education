@@ -143,13 +143,15 @@ export async function downloadFile(storagePath: string): Promise<Buffer | null> 
     const client = new Client();
     const result = await client.downloadAsBytes(storagePath);
     if (result.ok && result.value != null) {
-      const val = result.value;
+      const val: unknown = result.value;
       let buf: Buffer;
       if (Buffer.isBuffer(val)) {
         buf = val;
       } else if (Array.isArray(val)) {
         buf = Buffer.concat(val.map((c: unknown) => Buffer.isBuffer(c) ? c : Buffer.from(c as Uint8Array)));
-      } else if (val instanceof Uint8Array || val instanceof ArrayBuffer) {
+      } else if (val instanceof Uint8Array) {
+        buf = Buffer.from(val);
+      } else if (val instanceof ArrayBuffer) {
         buf = Buffer.from(val);
       } else {
         buf = Buffer.from(val as ArrayBufferLike);
@@ -274,18 +276,97 @@ export async function runLocalFileMigration(): Promise<Record<string, { total: n
   return results;
 }
 
+// ─── Migration state (for background runs) ───────────────────────────────────
+export type MigrationStats = {
+  total: number;
+  copied: number;
+  skipped: number;
+  failed: number;
+  errors: string[];
+};
+
+export type MigrationState = {
+  status: "idle" | "running" | "completed" | "failed";
+  startedAt: number | null;
+  finishedAt: number | null;
+  stats: MigrationStats;
+  currentPrefix: string | null;
+  recentLog: string[];
+  error?: string;
+};
+
+let migrationState: MigrationState = {
+  status: "idle",
+  startedAt: null,
+  finishedAt: null,
+  stats: { total: 0, copied: 0, skipped: 0, failed: 0, errors: [] },
+  currentPrefix: null,
+  recentLog: [],
+};
+
+export function getMigrationState(): MigrationState {
+  return migrationState;
+}
+
+/**
+ * Start the Replit → Supabase migration in the background and return immediately.
+ * This avoids the HTTP proxy timeout (≈60s) that caused 502 errors when the
+ * migration was awaited inline. Progress is exposed via getMigrationState().
+ * Concurrent runs are prevented — a second call while running is a no-op.
+ */
+export function startBackgroundMigration(): { state: MigrationState; startedNew: boolean } {
+  if (migrationState.status === "running") {
+    return { state: migrationState, startedNew: false };
+  }
+
+  const stats: MigrationStats = { total: 0, copied: 0, skipped: 0, failed: 0, errors: [] };
+  migrationState = {
+    status: "running",
+    startedAt: Date.now(),
+    finishedAt: null,
+    stats,
+    currentPrefix: null,
+    recentLog: [],
+  };
+
+  // Fire-and-forget; do NOT await here so the HTTP handler can respond instantly.
+  void (async () => {
+    try {
+      await runMigrationFromReplitToSupabase((msg) => {
+        if (msg.startsWith("Scanning prefix: ")) {
+          migrationState.currentPrefix = msg.slice("Scanning prefix: ".length);
+        }
+        migrationState.recentLog.push(msg);
+        if (migrationState.recentLog.length > 50) {
+          migrationState.recentLog = migrationState.recentLog.slice(-50);
+        }
+      }, stats);
+      migrationState.status = "completed";
+      migrationState.finishedAt = Date.now();
+      migrationState.currentPrefix = null;
+    } catch (err: any) {
+      migrationState.status = "failed";
+      migrationState.error = err?.message ?? String(err);
+      migrationState.finishedAt = Date.now();
+    }
+  })();
+
+  return { state: migrationState, startedNew: true };
+}
+
 // ─── Migration: Replit Object Storage → Supabase ─────────────────────────────
 // Run this once from the admin panel to copy all legacy files to Supabase.
 // After migration is confirmed, the fallback in downloadFile() becomes a no-op.
 export async function runMigrationFromReplitToSupabase(
-  onProgress?: (msg: string) => void
+  onProgress?: (msg: string) => void,
+  externalStats?: MigrationStats
 ): Promise<{ total: number; copied: number; skipped: number; failed: number; errors: string[] }> {
   const log = (msg: string) => {
     console.log(`[Migration] ${msg}`);
     onProgress?.(msg);
   };
 
-  const stats = { total: 0, copied: 0, skipped: 0, failed: 0, errors: [] as string[] };
+  const stats = externalStats ?? { total: 0, copied: 0, skipped: 0, failed: 0, errors: [] as string[] };
 
   // All known prefixes in Replit Object Storage
   const prefixes = [

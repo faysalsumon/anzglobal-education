@@ -24509,13 +24509,37 @@ Sitemap: ${baseUrl}/sitemap.xml
       const access = await checkAdminAccess(userId, CTO_ROLES);
       if (!access) return res.status(403).json({ message: "Access denied: CTO role required" });
 
-      const { runMigrationFromReplitToSupabase } = await import("./file-storage");
-      const messages: string[] = [];
-      const results = await runMigrationFromReplitToSupabase((msg) => messages.push(msg));
-      res.json({ success: true, results, log: messages });
+      const { startBackgroundMigration } = await import("./file-storage");
+      const { state, startedNew } = startBackgroundMigration();
+
+      // Respond immediately — the migration runs in the background to avoid the
+      // proxy's request timeout (which previously surfaced as a 502). Poll
+      // GET /api/admin/migrate-replit-to-supabase/status for progress.
+      res.status(202).json({
+        success: true,
+        message: startedNew
+          ? "Migration started in the background. Poll the status endpoint for progress."
+          : "Migration already running. Poll the status endpoint for progress.",
+        statusUrl: "/api/admin/migrate-replit-to-supabase/status",
+        state,
+      });
     } catch (error: any) {
       console.error("[Migration] Replit → Supabase migration error:", error);
       res.status(500).json({ message: "Migration failed", error: error.message });
+    }
+  });
+
+  app.get("/api/admin/migrate-replit-to-supabase/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, CTO_ROLES);
+      if (!access) return res.status(403).json({ message: "Access denied: CTO role required" });
+
+      const { getMigrationState } = await import("./file-storage");
+      res.json(getMigrationState());
+    } catch (error: any) {
+      console.error("[Migration] status error:", error);
+      res.status(500).json({ message: "Failed to get migration status", error: error.message });
     }
   });
 

@@ -27,8 +27,11 @@ description: Object storage migrated from Replit Object Storage to Supabase Stor
 `downloadFile()` tries Supabase first; if not found, falls back to Replit Object Storage. This ensures zero data loss during migration. Remove the fallback block once `runMigrationFromReplitToSupabase()` has been confirmed successful.
 
 ## Migration endpoints (CTO only)
-- `POST /api/admin/migrate-replit-to-supabase` — copies all files from Replit → Supabase (idempotent, skips already-migrated files)
-- `POST /api/admin/migrate-local-files` — copies local filesystem uploads → Supabase
+- `POST /api/admin/migrate-replit-to-supabase` — starts the Replit → Supabase copy **in the background**, returns `202` immediately (idempotent, skips already-migrated files).
+- `GET /api/admin/migrate-replit-to-supabase/status` — poll for `{status, stats, currentPrefix, recentLog}`.
+- `POST /api/admin/migrate-local-files` — copies local filesystem uploads → Supabase.
+
+**Why background:** the copy moves hundreds of files and takes far longer than the hosting proxy's ~60s request timeout. Awaiting it inline returned a **502 (HTML error page → "Unexpected token '<'" when the client did `res.json()`)** even though the server kept copying. Long-running admin jobs here must be fire-and-forget (no Redis/queue available) + a status-poll endpoint, never awaited in the request. A concurrent-run guard (in-memory `status === "running"`) prevents duplicate clicks from stacking redundant runs.
 
 ## Startup
 `ensureBuckets()` is called after seeds complete in `server/index.ts`. Creates `anz-public` and `anz-private` if they don't exist.
