@@ -95,12 +95,12 @@ interface StudentProfileData {
   };
   education: Array<{
     id: string;
-    institutionName: string | null;
-    qualification: string | null;
+    institution: string | null;
+    level: string | null;
     fieldOfStudy: string | null;
     startDate: string | null;
     endDate: string | null;
-    grade: string | null;
+    gradeResult: string | null;
     country: string | null;
     isCurrentlyStudying: boolean | null;
   }>;
@@ -117,12 +117,12 @@ interface StudentProfileData {
   }>;
   employment: Array<{
     id: string;
-    companyName: string | null;
+    company: string | null;
     jobTitle: string | null;
     industry: string | null;
     startDate: string | null;
     endDate: string | null;
-    isCurrentJob: boolean | null;
+    isCurrentlyWorking: boolean | null;
     responsibilities: string | null;
     country: string | null;
   }>;
@@ -523,8 +523,8 @@ export function StudentProfileViewer({ profileId, studentName }: StudentProfileV
                   <CardContent className="py-3">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <p className="font-medium">{edu.qualification}</p>
-                        <p className="text-sm text-muted-foreground">{edu.institutionName}</p>
+                        <p className="font-medium">{edu.level}</p>
+                        <p className="text-sm text-muted-foreground">{edu.institution}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         {edu.isCurrentlyStudying && <Badge variant="secondary">Current</Badge>}
@@ -548,10 +548,10 @@ export function StudentProfileViewer({ profileId, studentName }: StudentProfileV
                         <Calendar className="h-3 w-3" />
                         {formatDate(edu.startDate)} - {edu.isCurrentlyStudying ? "Present" : formatDate(edu.endDate)}
                       </div>
-                      {edu.grade && (
+                      {edu.gradeResult && (
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Award className="h-3 w-3" />
-                          Grade: {edu.grade}
+                          Grade: {edu.gradeResult}
                         </div>
                       )}
                       {edu.country && (
@@ -572,10 +572,10 @@ export function StudentProfileViewer({ profileId, studentName }: StudentProfileV
                       <CardContent className="py-3 space-y-3">
                         <p className="text-sm font-medium text-muted-foreground">New Education Record</p>
                         <div className="grid gap-3 sm:grid-cols-2">
-                          <FField label="Institution Name"><Input value={newEdu.institutionName || ""} onChange={e => setNewEdu(p => ({ ...p, institutionName: e.target.value }))} /></FField>
-                          <FField label="Qualification"><Input value={newEdu.qualification || ""} onChange={e => setNewEdu(p => ({ ...p, qualification: e.target.value }))} /></FField>
+                          <FField label="Institution Name"><Input value={newEdu.institution || ""} onChange={e => setNewEdu(p => ({ ...p, institution: e.target.value }))} /></FField>
+                          <FField label="Qualification Level"><Input value={newEdu.level || ""} onChange={e => setNewEdu(p => ({ ...p, level: e.target.value }))} /></FField>
                           <FField label="Field of Study"><Input value={newEdu.fieldOfStudy || ""} onChange={e => setNewEdu(p => ({ ...p, fieldOfStudy: e.target.value }))} /></FField>
-                          <FField label="Grade"><Input value={newEdu.grade || ""} onChange={e => setNewEdu(p => ({ ...p, grade: e.target.value }))} /></FField>
+                          <FField label="Grade / Result"><Input value={newEdu.gradeResult || ""} onChange={e => setNewEdu(p => ({ ...p, gradeResult: e.target.value }))} /></FField>
                           <FField label="Start Date"><Input type="date" value={newEdu.startDate || ""} onChange={e => setNewEdu(p => ({ ...p, startDate: e.target.value || null }))} /></FField>
                           <FField label="End Date"><Input type="date" value={newEdu.endDate || ""} onChange={e => setNewEdu(p => ({ ...p, endDate: e.target.value || null }))} /></FField>
                           <FField label="Country"><Input value={newEdu.country || ""} onChange={e => setNewEdu(p => ({ ...p, country: e.target.value }))} /></FField>
@@ -809,10 +809,10 @@ export function StudentProfileViewer({ profileId, studentName }: StudentProfileV
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <p className="font-medium">{job.jobTitle}</p>
-                          <p className="text-sm text-muted-foreground">{job.companyName}</p>
+                          <p className="text-sm text-muted-foreground">{job.company}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          {job.isCurrentJob && <Badge variant="secondary">Current</Badge>}
+                          {job.isCurrentlyWorking && <Badge variant="secondary">Current</Badge>}
                           {editingSection === "work-entries" && isStaff && (
                             <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive"
                               onClick={() => { if (confirm("Remove this employment record?")) deleteEmpMutation.mutate(job.id); }}
@@ -826,7 +826,7 @@ export function StudentProfileViewer({ profileId, studentName }: StudentProfileV
                       </div>
                       <div className="grid gap-1 text-sm text-muted-foreground">
                         {job.industry && <div className="flex items-center gap-2"><Building2 className="h-3 w-3" />{job.industry}</div>}
-                        <div className="flex items-center gap-2"><Calendar className="h-3 w-3" />{formatDate(job.startDate)} - {job.isCurrentJob ? "Present" : formatDate(job.endDate)}</div>
+                        <div className="flex items-center gap-2"><Calendar className="h-3 w-3" />{formatDate(job.startDate)} - {job.isCurrentlyWorking ? "Present" : formatDate(job.endDate)}</div>
                         {job.country && <div className="flex items-center gap-2"><Globe className="h-3 w-3" />{job.country}</div>}
                       </div>
                       {job.responsibilities && <p className="text-sm mt-2 text-muted-foreground">{job.responsibilities}</p>}
@@ -843,7 +843,7 @@ export function StudentProfileViewer({ profileId, studentName }: StudentProfileV
                             <CardContent className="py-3 space-y-3">
                               <p className="text-sm font-medium text-muted-foreground">New Employment Record</p>
                               <div className="grid gap-3 sm:grid-cols-2">
-                                <FField label="Company Name"><Input value={newEmp.companyName || ""} onChange={e => setNewEmp(p => ({ ...p, companyName: e.target.value }))} /></FField>
+                                <FField label="Company Name"><Input value={newEmp.company || ""} onChange={e => setNewEmp(p => ({ ...p, company: e.target.value }))} /></FField>
                                 <FField label="Job Title"><Input value={newEmp.jobTitle || ""} onChange={e => setNewEmp(p => ({ ...p, jobTitle: e.target.value }))} /></FField>
                                 <FField label="Industry"><Input value={newEmp.industry || ""} onChange={e => setNewEmp(p => ({ ...p, industry: e.target.value }))} /></FField>
                                 <FField label="Country"><Input value={newEmp.country || ""} onChange={e => setNewEmp(p => ({ ...p, country: e.target.value }))} /></FField>
@@ -851,8 +851,8 @@ export function StudentProfileViewer({ profileId, studentName }: StudentProfileV
                                 <FField label="End Date"><Input type="date" value={newEmp.endDate || ""} onChange={e => setNewEmp(p => ({ ...p, endDate: e.target.value || null }))} /></FField>
                                 <FField label="Currently Working">
                                   <div className="flex items-center gap-2 pt-1">
-                                    <Switch checked={!!newEmp.isCurrentJob} onCheckedChange={v => setNewEmp(p => ({ ...p, isCurrentJob: v }))} />
-                                    <span className="text-sm">{newEmp.isCurrentJob ? "Yes" : "No"}</span>
+                                    <Switch checked={!!newEmp.isCurrentlyWorking} onCheckedChange={v => setNewEmp(p => ({ ...p, isCurrentlyWorking: v }))} />
+                                    <span className="text-sm">{newEmp.isCurrentlyWorking ? "Yes" : "No"}</span>
                                   </div>
                                 </FField>
                               </div>
