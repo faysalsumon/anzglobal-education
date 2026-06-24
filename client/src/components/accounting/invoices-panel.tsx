@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus, Eye, Send, Ban, BellRing, CreditCard, FileText,
-  Trash2, ChevronLeft,
+  Trash2, ChevronLeft, Building2, User, X, Search,
 } from "lucide-react";
 import type { AccCustomer, AccItem, AccInvoice, AccInvoiceLineItem, AccPaymentReceived, AccCreditNote } from "@shared/schema";
 
@@ -44,8 +44,40 @@ interface CreditNoteFormData {
   items: Array<{ description: string; quantity: string; unitPrice: string }>;
 }
 
+interface BillingEmailOption {
+  label: string;
+  email: string;
+}
+
+interface BillingInfo {
+  name: string;
+  emailOptions: BillingEmailOption[];
+  address: string | null;
+  phone: string | null;
+}
+
+interface InstitutionResult {
+  id: string;
+  name: string;
+  country: string | null;
+  contactEmail: string | null;
+}
+
+interface StudentResult {
+  id: string;
+  fullName: string;
+  email: string | null;
+  city: string | null;
+  country: string | null;
+}
+
 interface InvoiceFormData {
-  customerId: string;
+  billToType: "institution" | "student";
+  institutionId: string;
+  studentId: string;
+  clientName: string;
+  clientEmail: string;
+  sendToEmail: string;
   issueDate: string;
   dueDate: string;
   currency: string;
@@ -84,6 +116,230 @@ interface InvoicesPanelProps {
   initialInvoiceId?: string;
 }
 
+const defaultForm = (): InvoiceFormData => ({
+  billToType: "institution",
+  institutionId: "",
+  studentId: "",
+  clientName: "",
+  clientEmail: "",
+  sendToEmail: "",
+  issueDate: new Date().toISOString().split("T")[0],
+  dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
+  currency: "AUD",
+  gstEnabled: false,
+  notes: "",
+  terms: "",
+  regionCode: "AU",
+});
+
+function BillToSelector({
+  form,
+  setForm,
+}: {
+  form: InvoiceFormData;
+  setForm: React.Dispatch<React.SetStateAction<InvoiceFormData>>;
+}) {
+  const [search, setSearch] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [billingEmails, setBillingEmails] = useState<BillingEmailOption[]>([]);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  const { data: institutionResults = [] } = useQuery<InstitutionResult[]>({
+    queryKey: ["/api/accounting/search/institutions", search, form.billToType],
+    queryFn: async () => {
+      if (form.billToType !== "institution" || search.length < 1) return [];
+      const res = await apiRequest("GET", `/api/accounting/search/institutions?q=${encodeURIComponent(search)}`);
+      return res.json();
+    },
+    enabled: form.billToType === "institution" && search.length >= 1,
+  });
+
+  const { data: studentResults = [] } = useQuery<StudentResult[]>({
+    queryKey: ["/api/accounting/search/students", search, form.billToType],
+    queryFn: async () => {
+      if (form.billToType !== "student" || search.length < 1) return [];
+      const res = await apiRequest("GET", `/api/accounting/search/students?q=${encodeURIComponent(search)}`);
+      return res.json();
+    },
+    enabled: form.billToType === "student" && search.length >= 1,
+  });
+
+  const results = form.billToType === "institution"
+    ? institutionResults.map(r => ({ id: r.id, label: r.name, sublabel: r.country || "" }))
+    : studentResults.map(r => ({ id: r.id, label: r.fullName, sublabel: r.email || "" }));
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  async function handleSelectResult(id: string, name: string) {
+    setSearch("");
+    setDropdownOpen(false);
+    setBillingEmails([]);
+
+    const type = form.billToType;
+    setForm(f => ({
+      ...f,
+      institutionId: type === "institution" ? id : "",
+      studentId: type === "student" ? id : "",
+      clientName: name,
+      clientEmail: "",
+      sendToEmail: "",
+    }));
+
+    try {
+      const res = await apiRequest("GET", `/api/accounting/billing-info/${type}/${id}`);
+      const info: BillingInfo = await res.json();
+      setBillingEmails(info.emailOptions);
+      if (info.emailOptions.length === 1) {
+        setForm(f => ({ ...f, sendToEmail: info.emailOptions[0].email }));
+      }
+    } catch {
+      setBillingEmails([]);
+    }
+  }
+
+  function clearSelection() {
+    setForm(f => ({ ...f, institutionId: "", studentId: "", clientName: "", clientEmail: "", sendToEmail: "" }));
+    setBillingEmails([]);
+    setSearch("");
+  }
+
+  function switchMode(mode: "institution" | "student") {
+    setForm(f => ({ ...f, billToType: mode, institutionId: "", studentId: "", clientName: "", clientEmail: "", sendToEmail: "" }));
+    setBillingEmails([]);
+    setSearch("");
+  }
+
+  const hasSelection = !!form.clientName;
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="mb-2 block">Bill To</Label>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={form.billToType === "institution" ? "default" : "outline"}
+            onClick={() => switchMode("institution")}
+            data-testid="button-bill-to-institution"
+          >
+            <Building2 className="h-3.5 w-3.5 mr-1.5" />
+            Institution
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={form.billToType === "student" ? "default" : "outline"}
+            onClick={() => switchMode("student")}
+            data-testid="button-bill-to-student"
+          >
+            <User className="h-3.5 w-3.5 mr-1.5" />
+            Student
+          </Button>
+        </div>
+      </div>
+
+      {!hasSelection ? (
+        <div ref={searchRef} className="relative">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              className="pl-8"
+              placeholder={form.billToType === "institution" ? "Search institution by name…" : "Search student by name or email…"}
+              value={search}
+              onChange={e => { setSearch(e.target.value); setDropdownOpen(true); }}
+              onFocus={() => setDropdownOpen(true)}
+              data-testid="input-bill-to-search"
+            />
+          </div>
+          {dropdownOpen && results.length > 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-md max-h-52 overflow-y-auto">
+              {results.map(r => (
+                <button
+                  key={r.id}
+                  type="button"
+                  className="w-full text-left px-3 py-2 hover-elevate flex flex-col gap-0.5"
+                  onClick={() => handleSelectResult(r.id, r.label)}
+                  data-testid={`option-bill-to-${r.id}`}
+                >
+                  <span className="text-sm font-medium">{r.label}</span>
+                  {r.sublabel && <span className="text-xs text-muted-foreground">{r.sublabel}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+          {dropdownOpen && search.length >= 1 && results.length === 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-md px-3 py-4 text-sm text-center text-muted-foreground">
+              No results found
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-md border bg-muted/30 px-3 py-2.5 space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-0.5">
+                {form.billToType === "institution" ? "Institution" : "Student"}
+              </p>
+              <p className="font-medium text-sm" data-testid="text-selected-bill-to">{form.clientName}</p>
+            </div>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 shrink-0"
+              onClick={clearSelection}
+              data-testid="button-clear-bill-to"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          {billingEmails.length > 0 && (
+            <div className="space-y-1">
+              <Label className="text-xs">Send Invoice To</Label>
+              <Select
+                value={form.sendToEmail}
+                onValueChange={v => setForm(f => ({ ...f, sendToEmail: v }))}
+              >
+                <SelectTrigger className="h-8 text-xs" data-testid="select-send-to-email">
+                  <SelectValue placeholder="Select email address…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {billingEmails.map(opt => (
+                    <SelectItem key={opt.email} value={opt.email}>
+                      <span className="font-medium">{opt.label}:</span> {opt.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {billingEmails.length === 0 && (
+            <div className="space-y-1">
+              <Label className="text-xs">Send Invoice To (Email)</Label>
+              <Input
+                className="h-8 text-xs"
+                placeholder="Enter email address…"
+                value={form.sendToEmail}
+                onChange={e => setForm(f => ({ ...f, sendToEmail: e.target.value }))}
+                data-testid="input-send-to-email-manual"
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
   const { toast } = useToast();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -95,18 +351,9 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
-  const [invoiceForm, setInvoiceForm] = useState<InvoiceFormData>({
-    customerId: "",
-    issueDate: new Date().toISOString().split('T')[0],
-    dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-    currency: "AUD",
-    gstEnabled: false,
-    notes: "",
-    terms: "",
-    regionCode: "AU",
-  });
+  const [invoiceForm, setInvoiceForm] = useState<InvoiceFormData>(defaultForm);
   const [lineItems, setLineItems] = useState<LineItemForm[]>([{ itemId: "", description: "", quantity: "1", unitPrice: "0" }]);
-  const [paymentForm, setPaymentForm] = useState<PaymentFormData>({ amount: "", paymentDate: new Date().toISOString().split('T')[0], method: "bank", reference: "", notes: "" });
+  const [paymentForm, setPaymentForm] = useState<PaymentFormData>({ amount: "", paymentDate: new Date().toISOString().split("T")[0], method: "bank", reference: "", notes: "" });
   const [creditNoteForm, setCreditNoteForm] = useState<CreditNoteFormData>({ reason: "", items: [{ description: "", quantity: "1", unitPrice: "0" }] });
 
   const { data: customers = [] } = useQuery<AccCustomer[]>({ queryKey: ["/api/accounting/customers"] });
@@ -155,10 +402,11 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
   });
 
   const sendMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("POST", `/api/accounting/invoices/${id}/send`),
+    mutationFn: ({ id, sendToEmail }: { id: string; sendToEmail?: string }) =>
+      apiRequest("POST", `/api/accounting/invoices/${id}/send`, sendToEmail ? { sendToEmail } : undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/accounting/invoices"] });
-      toast({ title: "Invoice sent to customer" });
+      toast({ title: "Invoice sent" });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -211,8 +459,14 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
   const total = subtotal + gstAmount;
 
   const handleCreateInvoice = () => {
-    if (!invoiceForm.customerId) { toast({ title: "Select a customer", variant: "destructive" }); return; }
-    if (lineItems.every(li => !li.description.trim())) { toast({ title: "Add at least one line item", variant: "destructive" }); return; }
+    if (!invoiceForm.clientName) {
+      toast({ title: "Select a recipient", description: "Please choose an institution or student to bill.", variant: "destructive" });
+      return;
+    }
+    if (lineItems.every(li => !li.description.trim())) {
+      toast({ title: "Add at least one line item", variant: "destructive" });
+      return;
+    }
     createMutation.mutate({ ...invoiceForm, lineItems: lineItems.filter(li => li.description.trim()) });
   };
 
@@ -230,7 +484,7 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
   };
 
   const openCreate = () => {
-    setInvoiceForm({ customerId: "", issueDate: new Date().toISOString().split('T')[0], dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0], currency: "AUD", gstEnabled: false, notes: "", terms: "", regionCode: "AU" });
+    setInvoiceForm(defaultForm());
     setLineItems([{ itemId: "", description: "", quantity: "1", unitPrice: "0" }]);
     setCreateDialogOpen(true);
   };
@@ -239,10 +493,10 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
     return <InvoiceDetailView
       invoice={invoiceDetail}
       onBack={() => setViewingId(null)}
-      onSend={(id) => sendMutation.mutate(id)}
+      onSend={(id, sendToEmail) => sendMutation.mutate({ id, sendToEmail })}
       onVoid={(id) => { if (confirm("Void this invoice?")) voidMutation.mutate(id); }}
       onReminder={(id) => reminderMutation.mutate(id)}
-      onRecordPayment={() => { setPaymentForm({ amount: "", paymentDate: new Date().toISOString().split('T')[0], method: "bank", reference: "", notes: "" }); setPaymentDialogOpen(true); }}
+      onRecordPayment={() => { setPaymentForm({ amount: "", paymentDate: new Date().toISOString().split("T")[0], method: "bank", reference: "", notes: "" }); setPaymentDialogOpen(true); }}
       onCreditNote={() => { setCreditNoteForm({ reason: "", items: [{ description: "", quantity: "1", unitPrice: "0" }] }); setCreditNoteDialogOpen(true); }}
       sendPending={sendMutation.isPending}
       reminderPending={reminderMutation.isPending}
@@ -350,7 +604,8 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="text-left p-3 font-medium">Invoice #</th>
-                  <th className="text-left p-3 font-medium">Customer</th>
+                  <th className="text-left p-3 font-medium">Billed To</th>
+                  <th className="text-left p-3 font-medium">Type</th>
                   <th className="text-left p-3 font-medium">Application</th>
                   <th className="text-left p-3 font-medium">Date</th>
                   <th className="text-left p-3 font-medium">Due</th>
@@ -362,9 +617,9 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Loading...</td></tr>
+                  <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">Loading...</td></tr>
                 ) : invoices.length === 0 ? (
-                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">No invoices found</td></tr>
+                  <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">No invoices found</td></tr>
                 ) : (
                   invoices.map((inv) => {
                     const balance = parseFloat(inv.total) - parseFloat(inv.amountPaid || "0");
@@ -372,6 +627,21 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
                       <tr key={inv.id} className="border-b" data-testid={`row-invoice-${inv.id}`}>
                         <td className="p-3 font-mono font-medium" data-testid={`text-invoice-number-${inv.id}`}>{inv.invoiceNumber}</td>
                         <td className="p-3">{inv.customer?.name || "—"}</td>
+                        <td className="p-3">
+                          {inv.billToType === "institution" && (
+                            <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate text-xs">
+                              <Building2 className="h-3 w-3 mr-1" />Institution
+                            </Badge>
+                          )}
+                          {inv.billToType === "student" && (
+                            <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate text-xs">
+                              <User className="h-3 w-3 mr-1" />Student
+                            </Badge>
+                          )}
+                          {inv.billToType === "manual" && (
+                            <Badge variant="outline" className="no-default-hover-elevate no-default-active-elevate text-xs">Manual</Badge>
+                          )}
+                        </td>
                         <td className="p-3">
                           {inv.applicationId ? (
                             <a
@@ -393,9 +663,6 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
                         <td className="p-3 text-right">
                           <div className="flex justify-end gap-1">
                             <Button size="icon" variant="ghost" onClick={() => setViewingId(inv.id)} data-testid={`button-view-invoice-${inv.id}`}><Eye className="h-4 w-4" /></Button>
-                            {(inv.status === "draft" || inv.status === "sent") && (
-                              <Button size="icon" variant="ghost" onClick={() => sendMutation.mutate(inv.id)} data-testid={`button-send-invoice-${inv.id}`}><Send className="h-4 w-4" /></Button>
-                            )}
                             {inv.status !== "void" && inv.status !== "paid" && (
                               <Button size="icon" variant="ghost" onClick={() => { if (confirm("Void this invoice?")) voidMutation.mutate(inv.id); }} data-testid={`button-void-invoice-${inv.id}`}><Ban className="h-4 w-4" /></Button>
                             )}
@@ -414,90 +681,91 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Create Invoice</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-5">
+            <BillToSelector form={invoiceForm} setForm={setInvoiceForm} />
+
+            <Separator />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label>Customer *</Label>
-                <Select value={invoiceForm.customerId} onValueChange={v => {
-                  const cust = customers.find(c => c.id === v);
-                  setInvoiceForm({ ...invoiceForm, customerId: v, currency: cust?.currency || invoiceForm.currency });
-                }}>
-                  <SelectTrigger data-testid="select-invoice-customer"><SelectValue placeholder="Select customer" /></SelectTrigger>
-                  <SelectContent>
-                    {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
                 <Label>Currency</Label>
-                <Select value={invoiceForm.currency} onValueChange={v => setInvoiceForm({ ...invoiceForm, currency: v })}>
+                <Select value={invoiceForm.currency} onValueChange={v => setInvoiceForm(f => ({ ...f, currency: v }))}>
                   <SelectTrigger data-testid="select-invoice-currency"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="AUD">AUD</SelectItem>
                     <SelectItem value="BDT">BDT</SelectItem>
                     <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="GBP">GBP</SelectItem>
+                    <SelectItem value="NZD">NZD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Region</Label>
+                <Select value={invoiceForm.regionCode} onValueChange={v => setInvoiceForm(f => ({ ...f, regionCode: v }))}>
+                  <SelectTrigger data-testid="select-invoice-region"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AU">Australia</SelectItem>
+                    <SelectItem value="BD">Bangladesh</SelectItem>
+                    <SelectItem value="NZ">New Zealand</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label>Issue Date</Label>
-                <Input type="date" value={invoiceForm.issueDate} onChange={e => setInvoiceForm({ ...invoiceForm, issueDate: e.target.value })} data-testid="input-invoice-issue-date" />
+                <Input type="date" value={invoiceForm.issueDate} onChange={e => setInvoiceForm(f => ({ ...f, issueDate: e.target.value }))} data-testid="input-invoice-issue-date" />
               </div>
               <div>
                 <Label>Due Date</Label>
-                <Input type="date" value={invoiceForm.dueDate} onChange={e => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })} data-testid="input-invoice-due-date" />
-              </div>
-              <div>
-                <Label>Region</Label>
-                <Select value={invoiceForm.regionCode} onValueChange={v => setInvoiceForm({ ...invoiceForm, regionCode: v })}>
-                  <SelectTrigger data-testid="select-invoice-region"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="AU">Australia (AU)</SelectItem>
-                    <SelectItem value="BD">Bangladesh (BD)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-3 pt-6">
-                <Switch checked={invoiceForm.gstEnabled} onCheckedChange={v => setInvoiceForm({ ...invoiceForm, gstEnabled: v })} data-testid="switch-gst" />
-                <Label>GST 10%</Label>
+                <Input type="date" value={invoiceForm.dueDate} onChange={e => setInvoiceForm(f => ({ ...f, dueDate: e.target.value }))} data-testid="input-invoice-due-date" />
               </div>
             </div>
 
-            <Separator />
+            <div className="flex items-center gap-3">
+              <Switch id="gst-main" checked={invoiceForm.gstEnabled} onCheckedChange={v => setInvoiceForm(f => ({ ...f, gstEnabled: v }))} data-testid="switch-gst-enabled" />
+              <Label htmlFor="gst-main">Include GST (10%)</Label>
+            </div>
+
             <div>
-              <Label className="text-base font-semibold">Line Items</Label>
-              {lineItems.map((item, idx) => (
-                <div key={idx} className="flex gap-2 mt-2 items-end flex-wrap">
-                  <div className="w-40">
-                    <Label className="text-xs">Item</Label>
-                    <Select value={item.itemId} onValueChange={v => updateLineItem(idx, "itemId", v)}>
-                      <SelectTrigger data-testid={`select-line-item-${idx}`}><SelectValue placeholder="Pick item" /></SelectTrigger>
-                      <SelectContent>
-                        {catalogItems.map(ci => <SelectItem key={ci.id} value={ci.id}>{ci.code}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex-1 min-w-[150px]">
-                    <Label className="text-xs">Description</Label>
-                    <Input value={item.description} onChange={e => updateLineItem(idx, "description", e.target.value)} data-testid={`input-line-desc-${idx}`} />
-                  </div>
-                  <div className="w-20">
-                    <Label className="text-xs">Qty</Label>
-                    <Input type="number" value={item.quantity} onChange={e => updateLineItem(idx, "quantity", e.target.value)} data-testid={`input-line-qty-${idx}`} />
-                  </div>
-                  <div className="w-28">
-                    <Label className="text-xs">Price</Label>
-                    <Input type="number" step="0.01" value={item.unitPrice} onChange={e => updateLineItem(idx, "unitPrice", e.target.value)} data-testid={`input-line-price-${idx}`} />
-                  </div>
-                  <div className="w-24 text-right pt-5 text-sm font-medium">
-                    {invoiceForm.currency} {((parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)).toFixed(2)}
-                  </div>
-                  <Button size="icon" variant="ghost" onClick={() => removeLineItem(idx)} disabled={lineItems.length <= 1} data-testid={`button-remove-line-${idx}`}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" className="mt-3" onClick={addLineItem} data-testid="button-add-line-item"><Plus className="h-3 w-3 mr-1" /> Add Line</Button>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Line Items</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addLineItem} data-testid="button-add-line-item"><Plus className="h-3 w-3 mr-1" />Add Line</Button>
+              </div>
+              <div className="rounded-md border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left p-2 font-medium">Description</th>
+                      <th className="text-right p-2 font-medium w-20">Qty</th>
+                      <th className="text-right p-2 font-medium w-28">Unit Price</th>
+                      <th className="text-right p-2 font-medium w-28">Amount</th>
+                      <th className="p-2 w-8" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lineItems.map((item, idx) => {
+                      const amt = (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0);
+                      return (
+                        <tr key={idx} className="border-b last:border-0">
+                          <td className="p-1.5">
+                            <div className="flex gap-1">
+                              <Select value={item.itemId} onValueChange={v => updateLineItem(idx, "itemId", v)}>
+                                <SelectTrigger className="h-8 w-28 text-xs shrink-0" data-testid={`select-catalog-item-${idx}`}><SelectValue placeholder="Catalog" /></SelectTrigger>
+                                <SelectContent>{catalogItems.map(ci => <SelectItem key={ci.id} value={ci.id}>{ci.code}</SelectItem>)}</SelectContent>
+                              </Select>
+                              <Input className="h-8 text-sm flex-1" placeholder="Description" value={item.description} onChange={e => updateLineItem(idx, "description", e.target.value)} data-testid={`input-line-desc-${idx}`} />
+                            </div>
+                          </td>
+                          <td className="p-1.5"><Input type="number" className="h-8 text-right text-sm" value={item.quantity} onChange={e => updateLineItem(idx, "quantity", e.target.value)} data-testid={`input-line-qty-${idx}`} /></td>
+                          <td className="p-1.5"><Input type="number" step="0.01" className="h-8 text-right text-sm" value={item.unitPrice} onChange={e => updateLineItem(idx, "unitPrice", e.target.value)} data-testid={`input-line-price-${idx}`} /></td>
+                          <td className="p-1.5 text-right pr-3 text-muted-foreground">{amt.toFixed(2)}</td>
+                          <td className="p-1.5 text-center">{lineItems.length > 1 && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeLineItem(idx)} data-testid={`button-remove-line-${idx}`}><Trash2 className="h-3 w-3" /></Button>}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <Separator />
@@ -511,8 +779,8 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><Label>Notes</Label><Textarea value={invoiceForm.notes} onChange={e => setInvoiceForm({ ...invoiceForm, notes: e.target.value })} data-testid="input-invoice-notes" /></div>
-              <div><Label>Terms</Label><Textarea value={invoiceForm.terms} onChange={e => setInvoiceForm({ ...invoiceForm, terms: e.target.value })} data-testid="input-invoice-terms" /></div>
+              <div><Label>Notes</Label><Textarea value={invoiceForm.notes} onChange={e => setInvoiceForm(f => ({ ...f, notes: e.target.value }))} data-testid="input-invoice-notes" /></div>
+              <div><Label>Terms</Label><Textarea value={invoiceForm.terms} onChange={e => setInvoiceForm(f => ({ ...f, terms: e.target.value }))} data-testid="input-invoice-terms" /></div>
             </div>
           </div>
           <DialogFooter>
@@ -528,7 +796,7 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
 function InvoiceDetailView({ invoice, onBack, onSend, onVoid, onReminder, onRecordPayment, onCreditNote, sendPending, reminderPending, paymentDialog, creditNoteDialog }: {
   invoice: InvoiceDetail;
   onBack: () => void;
-  onSend: (id: string) => void;
+  onSend: (id: string, sendToEmail?: string) => void;
   onVoid: (id: string) => void;
   onReminder: (id: string) => void;
   onRecordPayment: () => void;
@@ -541,6 +809,38 @@ function InvoiceDetailView({ invoice, onBack, onSend, onVoid, onReminder, onReco
   const balance = parseFloat(invoice.total) - parseFloat(invoice.amountPaid || "0");
   const isOverdue = invoice.status !== "paid" && invoice.status !== "void" && new Date(invoice.dueDate) < new Date();
 
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [selectedSendEmail, setSelectedSendEmail] = useState("");
+
+  const { data: billingInfo } = useQuery<{ emailOptions: BillingEmailOption[] }>({
+    queryKey: ["/api/accounting/billing-info", invoice.billToType, invoice.institutionId || invoice.studentId],
+    queryFn: async () => {
+      const entityId = invoice.institutionId || invoice.studentId;
+      if (!entityId) return { emailOptions: [] };
+      const res = await apiRequest("GET", `/api/accounting/billing-info/${invoice.billToType}/${entityId}`);
+      return res.json();
+    },
+    enabled: (invoice.billToType === "institution" && !!invoice.institutionId) || (invoice.billToType === "student" && !!invoice.studentId),
+  });
+
+  const emailOptions = billingInfo?.emailOptions || [];
+  const customerEmail = invoice.customer?.email;
+  const allEmails: BillingEmailOption[] = emailOptions.length > 0
+    ? emailOptions
+    : customerEmail
+      ? [{ label: "Email on file", email: customerEmail }]
+      : [];
+
+  function openSendDialog() {
+    setSelectedSendEmail(allEmails[0]?.email || "");
+    setSendDialogOpen(true);
+  }
+
+  function handleConfirmSend() {
+    onSend(invoice.id, selectedSendEmail || undefined);
+    setSendDialogOpen(false);
+  }
+
   return (
     <div className="space-y-4" data-testid="invoice-detail-view">
       <div className="flex items-center gap-2 flex-wrap">
@@ -548,11 +848,23 @@ function InvoiceDetailView({ invoice, onBack, onSend, onVoid, onReminder, onReco
         <h2 className="text-2xl font-bold tracking-tight" data-testid="text-invoice-detail-number">{invoice.invoiceNumber}</h2>
         <Badge className={`no-default-hover-elevate no-default-active-elevate ${STATUS_COLORS[invoice.status]}`}>{STATUS_LABELS[invoice.status]}</Badge>
         {isOverdue && <Badge className="no-default-hover-elevate no-default-active-elevate bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">Overdue</Badge>}
+        {invoice.billToType === "institution" && (
+          <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
+            <Building2 className="h-3 w-3 mr-1" />Institution
+          </Badge>
+        )}
+        {invoice.billToType === "student" && (
+          <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
+            <User className="h-3 w-3 mr-1" />Student
+          </Badge>
+        )}
       </div>
 
       <div className="flex gap-2 flex-wrap">
         {(invoice.status === "draft" || invoice.status === "sent") && (
-          <Button onClick={() => onSend(invoice.id)} disabled={sendPending} data-testid="button-send-invoice-detail"><Send className="h-4 w-4 mr-2" />{sendPending ? "Sending..." : "Send Invoice"}</Button>
+          <Button onClick={openSendDialog} disabled={sendPending} data-testid="button-send-invoice-detail">
+            <Send className="h-4 w-4 mr-2" />{sendPending ? "Sending..." : "Send Invoice"}
+          </Button>
         )}
         {invoice.status !== "void" && invoice.status !== "paid" && (
           <>
@@ -569,10 +881,20 @@ function InvoiceDetailView({ invoice, onBack, onSend, onVoid, onReminder, onReco
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardContent className="p-4 space-y-2">
-            <h3 className="font-semibold text-sm text-muted-foreground">Customer</h3>
+            <h3 className="font-semibold text-sm text-muted-foreground">
+              {invoice.billToType === "institution" ? "Institution" : invoice.billToType === "student" ? "Student" : "Customer"}
+            </h3>
             <p className="font-medium" data-testid="text-detail-customer">{invoice.customer?.name || "—"}</p>
             {invoice.customer?.email && <p className="text-sm text-muted-foreground">{invoice.customer.email}</p>}
             {invoice.customer?.phone && <p className="text-sm text-muted-foreground">{invoice.customer.phone}</p>}
+            {allEmails.length > 1 && (
+              <div className="pt-1">
+                <p className="text-xs text-muted-foreground font-medium mb-1">Available Billing Emails</p>
+                {allEmails.map(opt => (
+                  <p key={opt.email} className="text-xs text-muted-foreground">{opt.label}: {opt.email}</p>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -687,6 +1009,59 @@ function InvoiceDetailView({ invoice, onBack, onSend, onVoid, onReminder, onReco
 
       {paymentDialog}
       {creditNoteDialog}
+
+      <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send Invoice {invoice.invoiceNumber}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Choose which email address to send this invoice to.
+            </p>
+            {allEmails.length > 0 ? (
+              <div className="space-y-1.5">
+                <Label>Send to</Label>
+                <Select value={selectedSendEmail} onValueChange={setSelectedSendEmail}>
+                  <SelectTrigger data-testid="select-send-email">
+                    <SelectValue placeholder="Select email…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allEmails.map(opt => (
+                      <SelectItem key={opt.email} value={opt.email}>
+                        <span className="font-medium">{opt.label}:</span> {opt.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label>Email address</Label>
+                <Input
+                  type="email"
+                  placeholder="Enter email address…"
+                  value={selectedSendEmail}
+                  onChange={e => setSelectedSendEmail(e.target.value)}
+                  data-testid="input-send-email-manual"
+                />
+                <p className="text-xs text-muted-foreground">No email found on record. Enter an address manually.</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSendDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleConfirmSend}
+              disabled={!selectedSendEmail || sendPending}
+              data-testid="button-confirm-send-invoice"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {sendPending ? "Sending…" : "Send Invoice"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

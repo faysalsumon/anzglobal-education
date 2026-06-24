@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Plus, DollarSign, TrendingUp, Clock, CheckCircle2, Eye, Receipt,
+  Plus, DollarSign, TrendingUp, Clock, CheckCircle2, Eye, Receipt, Building2, User,
 } from "lucide-react";
 
 interface InvoiceSummary {
@@ -34,6 +34,11 @@ interface AppInvoice {
   currency: string;
   applicationId: string | null;
   customer: { id: string; name: string; email: string | null } | null;
+}
+
+interface BillingEmailOption {
+  label: string;
+  email: string;
 }
 
 interface ApplicationFinancePanelProps {
@@ -85,6 +90,8 @@ export function ApplicationFinancePanel({
 }: ApplicationFinancePanelProps) {
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
+  const [billToMode, setBillToMode] = useState<"institution" | "student">("institution");
+  const [sendToEmail, setSendToEmail] = useState("");
 
   const today = new Date().toISOString().split("T")[0];
   const due30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
@@ -103,6 +110,24 @@ export function ApplicationFinancePanel({
   const [lineItems, setLineItems] = useState<LineItem[]>([
     { description: "", quantity: "1", unitPrice: "" },
   ]);
+
+  const { data: institutionBillingInfo } = useQuery<{ emailOptions: BillingEmailOption[] }>({
+    queryKey: ["/api/accounting/billing-info/institution", institutionId],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/accounting/billing-info/institution/${institutionId}`);
+      return res.json();
+    },
+    enabled: !!institutionId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const institutionEmailOptions: BillingEmailOption[] = institutionBillingInfo?.emailOptions || [];
+
+  const studentEmailOptions: BillingEmailOption[] = studentEmail
+    ? [{ label: "Student Email", email: studentEmail }]
+    : [];
+
+  const activeEmailOptions = billToMode === "institution" ? institutionEmailOptions : studentEmailOptions;
 
   const { data, isLoading } = useQuery<{ invoices: AppInvoice[]; summary: InvoiceSummary }>({
     queryKey: ["/api/accounting/invoices/by-application", applicationId],
@@ -127,6 +152,13 @@ export function ApplicationFinancePanel({
   function resetForm() {
     setForm({ issueDate: today, dueDate: due30, currency: "AUD", gstEnabled: false, notes: defaultNotes, regionCode: "AU" });
     setLineItems([{ description: "", quantity: "1", unitPrice: "" }]);
+    setBillToMode("institution");
+    setSendToEmail("");
+  }
+
+  function switchBillToMode(mode: "institution" | "student") {
+    setBillToMode(mode);
+    setSendToEmail("");
   }
 
   function addLineItem() {
@@ -159,19 +191,30 @@ export function ApplicationFinancePanel({
       return;
     }
 
-    createMutation.mutate({
-      billToType: "institution",
-      institutionId,
-      clientName: institutionName,
-      studentId,
-      applicationId,
+    const payload: Record<string, unknown> = {
       ...form,
+      applicationId,
       lineItems: lineItems.map((li) => ({
         description: li.description,
         quantity: li.quantity,
         unitPrice: li.unitPrice,
       })),
-    });
+    };
+
+    if (billToMode === "institution") {
+      payload.billToType = "institution";
+      payload.institutionId = institutionId;
+      payload.clientName = institutionName;
+      payload.studentId = studentId;
+      if (sendToEmail) payload.clientEmail = sendToEmail;
+    } else {
+      payload.billToType = "student";
+      payload.studentId = studentId;
+      payload.clientName = studentName;
+      if (studentEmail) payload.clientEmail = studentEmail;
+    }
+
+    createMutation.mutate(payload);
   }
 
   const summary = data?.summary;
@@ -344,11 +387,114 @@ export function ApplicationFinancePanel({
             <DialogTitle>Create Invoice</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="rounded-md bg-muted/50 px-4 py-3 text-sm space-y-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Billing To (Institution)</p>
-              <p className="font-medium">{institutionName}</p>
-              <p className="text-muted-foreground text-xs">Student: {studentName}{applicationNumber ? ` · ${applicationNumber}` : ""}</p>
+          <div className="space-y-5">
+            {/* Bill To Mode */}
+            <div className="space-y-3">
+              <div>
+                <Label className="mb-2 block">Bill To</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={billToMode === "institution" ? "default" : "outline"}
+                    onClick={() => switchBillToMode("institution")}
+                    data-testid="button-bill-to-institution"
+                  >
+                    <Building2 className="h-3.5 w-3.5 mr-1.5" />
+                    Institution
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={billToMode === "student" ? "default" : "outline"}
+                    onClick={() => switchBillToMode("student")}
+                    data-testid="button-bill-to-student"
+                  >
+                    <User className="h-3.5 w-3.5 mr-1.5" />
+                    Student
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-md border bg-muted/30 px-3 py-2.5 space-y-2">
+                {billToMode === "institution" ? (
+                  <>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-0.5">Institution</p>
+                      <p className="font-medium text-sm" data-testid="text-bill-to-institution">{institutionName}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Student: {studentName}{applicationNumber ? ` · ${applicationNumber}` : ""}</p>
+                    </div>
+                    {activeEmailOptions.length > 0 && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">Send Invoice To</Label>
+                        <Select value={sendToEmail} onValueChange={setSendToEmail}>
+                          <SelectTrigger className="h-8 text-xs" data-testid="select-institution-send-email">
+                            <SelectValue placeholder="Select billing email…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {activeEmailOptions.map(opt => (
+                              <SelectItem key={opt.email} value={opt.email}>
+                                <span className="font-medium">{opt.label}:</span> {opt.email}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {activeEmailOptions.length === 0 && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">Send Invoice To (Email)</Label>
+                        <Input
+                          className="h-8 text-xs"
+                          type="email"
+                          placeholder="Enter institution billing email…"
+                          value={sendToEmail}
+                          onChange={e => setSendToEmail(e.target.value)}
+                          data-testid="input-institution-email-manual"
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-0.5">Student</p>
+                      <p className="font-medium text-sm" data-testid="text-bill-to-student">{studentName}</p>
+                      {studentEmail && <p className="text-xs text-muted-foreground mt-0.5">{studentEmail}</p>}
+                    </div>
+                    {studentEmailOptions.length > 0 && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">Send Invoice To</Label>
+                        <Select value={sendToEmail} onValueChange={setSendToEmail}>
+                          <SelectTrigger className="h-8 text-xs" data-testid="select-student-send-email">
+                            <SelectValue placeholder="Select email…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {studentEmailOptions.map(opt => (
+                              <SelectItem key={opt.email} value={opt.email}>
+                                {opt.label}: {opt.email}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {studentEmailOptions.length === 0 && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">Send Invoice To (Email)</Label>
+                        <Input
+                          className="h-8 text-xs"
+                          type="email"
+                          placeholder="Enter student email…"
+                          value={sendToEmail}
+                          onChange={e => setSendToEmail(e.target.value)}
+                          data-testid="input-student-email-manual"
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

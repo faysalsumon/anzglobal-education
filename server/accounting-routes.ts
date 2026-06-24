@@ -302,6 +302,77 @@ export function registerAccountingRoutes(app: Express) {
     }
   });
 
+  app.get("/api/accounting/billing-info/:type/:id", isAuthenticated, async (req, res) => {
+    if (!await requireFinanceAdmin(req, res)) return;
+    try {
+      const { type, id } = req.params;
+
+      if (type === "institution") {
+        const [inst] = await db.select().from(universities).where(eq(universities.id, id));
+        if (!inst) return res.status(404).json({ message: "Institution not found" });
+
+        const [account] = await db.select({
+          email: accounts.email,
+          accountsEmail: accounts.accountsEmail,
+          admissionEmail: accounts.admissionEmail,
+        }).from(accounts).where(eq(accounts.institutionCmsId, id)).limit(1);
+
+        const emailOptions: Array<{ label: string; email: string }> = [];
+        if (account?.accountsEmail) emailOptions.push({ label: "Accounts Dept", email: account.accountsEmail });
+        if (account?.admissionEmail) emailOptions.push({ label: "Admissions", email: account.admissionEmail });
+        if (account?.email) emailOptions.push({ label: "General Email", email: account.email });
+        if (inst.contactEmail && !emailOptions.find(e => e.email === inst.contactEmail)) {
+          emailOptions.push({ label: "Contact Email", email: inst.contactEmail });
+        }
+
+        return res.json({
+          name: inst.name,
+          emailOptions,
+          address: inst.campusAddresses
+            ? (Array.isArray(inst.campusAddresses) ? (inst.campusAddresses as string[])[0] : String(inst.campusAddresses))
+            : null,
+          phone: inst.contactPhone || null,
+        });
+      }
+
+      if (type === "student") {
+        const [student] = await db.select({
+          id: studentProfiles.id,
+          firstName: studentProfiles.firstName,
+          lastName: studentProfiles.lastName,
+          phone: studentProfiles.phone,
+          street: studentProfiles.street,
+          city: studentProfiles.city,
+          state: studentProfiles.state,
+          postcode: studentProfiles.postcode,
+          country: studentProfiles.country,
+          email: users.email,
+        }).from(studentProfiles)
+          .innerJoin(users, eq(users.id, studentProfiles.userId))
+          .where(eq(studentProfiles.id, id));
+
+        if (!student) return res.status(404).json({ message: "Student not found" });
+
+        const fullName = [student.firstName, student.lastName].filter(Boolean).join(" ") || "Unnamed Student";
+        const address = [student.street, student.city, student.state, student.postcode, student.country].filter(Boolean).join(", ");
+        const emailOptions: Array<{ label: string; email: string }> = [];
+        if (student.email) emailOptions.push({ label: "Student Email", email: student.email });
+
+        return res.json({
+          name: fullName,
+          emailOptions,
+          address: address || null,
+          phone: student.phone || null,
+        });
+      }
+
+      return res.status(400).json({ message: "Invalid type. Must be institution or student" });
+    } catch (error) {
+      console.error("Error fetching billing info:", error);
+      res.status(500).json({ message: "Failed to fetch billing info" });
+    }
+  });
+
   app.get("/api/accounting/search/enrollments", isAuthenticated, async (req, res) => {
     if (!await requireFinanceAdmin(req, res)) return;
     try {
@@ -1003,11 +1074,13 @@ export function registerAccountingRoutes(app: Express) {
       if (!invoice) return res.status(404).json({ message: "Invoice not found" });
 
       const [customer] = await db.select().from(accCustomers).where(eq(accCustomers.id, invoice.customerId));
-      if (!customer?.email) return res.status(400).json({ message: "Customer has no email address" });
+
+      const sendToEmail: string | undefined = req.body?.sendToEmail || customer?.email || undefined;
+      if (!sendToEmail) return res.status(400).json({ message: "No email address available. Please specify a send-to email." });
 
       const lineItems = await db.select().from(accInvoiceLineItems).where(eq(accInvoiceLineItems.invoiceId, invoice.id));
 
-      await sendInvoiceEmail(customer.email, customer.name, invoice as any, lineItems as any, invoice.regionCode || undefined);
+      await sendInvoiceEmail(sendToEmail, customer?.name || "Customer", invoice as any, lineItems as any, invoice.regionCode || undefined);
 
       if (invoice.status === 'draft') {
         await db.update(accInvoices).set({ status: 'sent', updatedAt: new Date() }).where(eq(accInvoices.id, invoice.id));
