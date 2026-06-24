@@ -750,9 +750,12 @@ export function registerAccountingRoutes(app: Express) {
       let customerId = invoiceData.customerId;
 
       if (!customerId) {
+        // Use sendToEmail as clientEmail if clientEmail not explicitly provided
+        const resolvedClientEmail: string | null = invoiceData.clientEmail || invoiceData.sendToEmail || null;
+
         const customerData: any = {
           name: invoiceData.clientName || "Unknown",
-          email: invoiceData.clientEmail || null,
+          email: resolvedClientEmail,
           phone: invoiceData.clientPhone || null,
           address: invoiceData.clientAddress || null,
           currency: invoiceData.currency || "AUD",
@@ -764,11 +767,13 @@ export function registerAccountingRoutes(app: Express) {
             .where(eq(accCustomers.institutionId, invoiceData.institutionId)).limit(1);
           if (existing) {
             customerId = existing.id;
+            // Only overwrite email if caller explicitly provided one — never null out an existing email
+            const emailUpdate = resolvedClientEmail ? { email: resolvedClientEmail } : {};
             await db.update(accCustomers).set({
               name: customerData.name,
-              email: customerData.email,
-              phone: customerData.phone,
-              address: customerData.address,
+              ...emailUpdate,
+              phone: customerData.phone || existing.phone,
+              address: customerData.address || existing.address,
             }).where(eq(accCustomers.id, existing.id));
           }
         } else if (billToType === "student" && invoiceData.studentId) {
@@ -777,11 +782,12 @@ export function registerAccountingRoutes(app: Express) {
             .where(eq(accCustomers.studentId, invoiceData.studentId)).limit(1);
           if (existing) {
             customerId = existing.id;
+            const emailUpdate = resolvedClientEmail ? { email: resolvedClientEmail } : {};
             await db.update(accCustomers).set({
               name: customerData.name,
-              email: customerData.email,
-              phone: customerData.phone,
-              address: customerData.address,
+              ...emailUpdate,
+              phone: customerData.phone || existing.phone,
+              address: customerData.address || existing.address,
             }).where(eq(accCustomers.id, existing.id));
           }
         }

@@ -206,12 +206,17 @@ export function ApplicationFinancePanel({
       payload.institutionId = institutionId;
       payload.clientName = institutionName;
       payload.studentId = studentId;
-      if (sendToEmail) payload.clientEmail = sendToEmail;
+      // clientEmail drives customer record email; sendToEmail is also passed for backend fallback
+      payload.clientEmail = sendToEmail || "";
+      payload.sendToEmail = sendToEmail || "";
     } else {
       payload.billToType = "student";
       payload.studentId = studentId;
       payload.clientName = studentName;
-      if (studentEmail) payload.clientEmail = studentEmail;
+      // Include manually entered email or the known student email
+      const resolvedEmail = sendToEmail || studentEmail || "";
+      payload.clientEmail = resolvedEmail;
+      payload.sendToEmail = resolvedEmail;
     }
 
     createMutation.mutate(payload);

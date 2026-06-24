@@ -72,7 +72,7 @@ interface StudentResult {
 }
 
 interface InvoiceFormData {
-  billToType: "institution" | "student";
+  billToType: "" | "institution" | "student";
   institutionId: string;
   studentId: string;
   clientName: string;
@@ -117,7 +117,7 @@ interface InvoicesPanelProps {
 }
 
 const defaultForm = (): InvoiceFormData => ({
-  billToType: "institution",
+  billToType: "",
   institutionId: "",
   studentId: "",
   clientName: "",
@@ -144,29 +144,31 @@ function BillToSelector({
   const [billingEmails, setBillingEmails] = useState<BillingEmailOption[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
 
+  const activeMode = form.billToType; // "" | "institution" | "student"
+
   const { data: institutionResults = [] } = useQuery<InstitutionResult[]>({
-    queryKey: ["/api/accounting/search/institutions", search, form.billToType],
+    queryKey: ["/api/accounting/search/institutions", search],
     queryFn: async () => {
-      if (form.billToType !== "institution" || search.length < 1) return [];
       const res = await apiRequest("GET", `/api/accounting/search/institutions?q=${encodeURIComponent(search)}`);
       return res.json();
     },
-    enabled: form.billToType === "institution" && search.length >= 1,
+    enabled: activeMode === "institution" && search.length >= 1,
   });
 
   const { data: studentResults = [] } = useQuery<StudentResult[]>({
-    queryKey: ["/api/accounting/search/students", search, form.billToType],
+    queryKey: ["/api/accounting/search/students", search],
     queryFn: async () => {
-      if (form.billToType !== "student" || search.length < 1) return [];
       const res = await apiRequest("GET", `/api/accounting/search/students?q=${encodeURIComponent(search)}`);
       return res.json();
     },
-    enabled: form.billToType === "student" && search.length >= 1,
+    enabled: activeMode === "student" && search.length >= 1,
   });
 
-  const results = form.billToType === "institution"
+  const results = activeMode === "institution"
     ? institutionResults.map(r => ({ id: r.id, label: r.name, sublabel: r.country || "" }))
-    : studentResults.map(r => ({ id: r.id, label: r.fullName, sublabel: r.email || "" }));
+    : activeMode === "student"
+      ? studentResults.map(r => ({ id: r.id, label: r.fullName, sublabel: r.email || "" }))
+      : [];
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -183,22 +185,23 @@ function BillToSelector({
     setDropdownOpen(false);
     setBillingEmails([]);
 
-    const type = form.billToType;
     setForm(f => ({
       ...f,
-      institutionId: type === "institution" ? id : "",
-      studentId: type === "student" ? id : "",
+      institutionId: activeMode === "institution" ? id : "",
+      studentId: activeMode === "student" ? id : "",
       clientName: name,
       clientEmail: "",
       sendToEmail: "",
     }));
 
     try {
-      const res = await apiRequest("GET", `/api/accounting/billing-info/${type}/${id}`);
+      const res = await apiRequest("GET", `/api/accounting/billing-info/${activeMode}/${id}`);
       const info: BillingInfo = await res.json();
       setBillingEmails(info.emailOptions);
-      if (info.emailOptions.length === 1) {
-        setForm(f => ({ ...f, sendToEmail: info.emailOptions[0].email }));
+      // Auto-select if only one option — set both sendToEmail and clientEmail
+      if (info.emailOptions.length >= 1) {
+        const autoEmail = info.emailOptions[0].email;
+        setForm(f => ({ ...f, sendToEmail: autoEmail, clientEmail: autoEmail }));
       }
     } catch {
       setBillingEmails([]);
@@ -212,7 +215,15 @@ function BillToSelector({
   }
 
   function switchMode(mode: "institution" | "student") {
-    setForm(f => ({ ...f, billToType: mode, institutionId: "", studentId: "", clientName: "", clientEmail: "", sendToEmail: "" }));
+    setForm(f => ({
+      ...f,
+      billToType: mode,
+      institutionId: "",
+      studentId: "",
+      clientName: "",
+      clientEmail: "",
+      sendToEmail: "",
+    }));
     setBillingEmails([]);
     setSearch("");
   }
@@ -227,7 +238,7 @@ function BillToSelector({
           <Button
             type="button"
             size="sm"
-            variant={form.billToType === "institution" ? "default" : "outline"}
+            variant={activeMode === "institution" ? "default" : "outline"}
             onClick={() => switchMode("institution")}
             data-testid="button-bill-to-institution"
           >
@@ -237,7 +248,7 @@ function BillToSelector({
           <Button
             type="button"
             size="sm"
-            variant={form.billToType === "student" ? "default" : "outline"}
+            variant={activeMode === "student" ? "default" : "outline"}
             onClick={() => switchMode("student")}
             data-testid="button-bill-to-student"
           >
@@ -245,15 +256,18 @@ function BillToSelector({
             Student
           </Button>
         </div>
+        {activeMode === "" && (
+          <p className="text-xs text-muted-foreground mt-1.5">Select Institution or Student to continue.</p>
+        )}
       </div>
 
-      {!hasSelection ? (
+      {activeMode !== "" && !hasSelection && (
         <div ref={searchRef} className="relative">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
               className="pl-8"
-              placeholder={form.billToType === "institution" ? "Search institution by name…" : "Search student by name or email…"}
+              placeholder={activeMode === "institution" ? "Search institution by name…" : "Search student by name or email…"}
               value={search}
               onChange={e => { setSearch(e.target.value); setDropdownOpen(true); }}
               onFocus={() => setDropdownOpen(true)}
@@ -282,12 +296,14 @@ function BillToSelector({
             </div>
           )}
         </div>
-      ) : (
+      )}
+
+      {hasSelection && (
         <div className="rounded-md border bg-muted/30 px-3 py-2.5 space-y-2">
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-0.5">
-                {form.billToType === "institution" ? "Institution" : "Student"}
+                {activeMode === "institution" ? "Institution" : "Student"}
               </p>
               <p className="font-medium text-sm" data-testid="text-selected-bill-to">{form.clientName}</p>
             </div>
@@ -307,7 +323,7 @@ function BillToSelector({
               <Label className="text-xs">Send Invoice To</Label>
               <Select
                 value={form.sendToEmail}
-                onValueChange={v => setForm(f => ({ ...f, sendToEmail: v }))}
+                onValueChange={v => setForm(f => ({ ...f, sendToEmail: v, clientEmail: v }))}
               >
                 <SelectTrigger className="h-8 text-xs" data-testid="select-send-to-email">
                   <SelectValue placeholder="Select email address…" />
@@ -329,7 +345,7 @@ function BillToSelector({
                 className="h-8 text-xs"
                 placeholder="Enter email address…"
                 value={form.sendToEmail}
-                onChange={e => setForm(f => ({ ...f, sendToEmail: e.target.value }))}
+                onChange={e => setForm(f => ({ ...f, sendToEmail: e.target.value, clientEmail: e.target.value }))}
                 data-testid="input-send-to-email-manual"
               />
             </div>
@@ -459,14 +475,19 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
   const total = subtotal + gstAmount;
 
   const handleCreateInvoice = () => {
+    if (!invoiceForm.billToType) {
+      toast({ title: "Select a billing type", description: "Choose Institution or Student before continuing.", variant: "destructive" });
+      return;
+    }
     if (!invoiceForm.clientName) {
-      toast({ title: "Select a recipient", description: "Please choose an institution or student to bill.", variant: "destructive" });
+      toast({ title: "Select a recipient", description: "Search and select an institution or student to bill.", variant: "destructive" });
       return;
     }
     if (lineItems.every(li => !li.description.trim())) {
       toast({ title: "Add at least one line item", variant: "destructive" });
       return;
     }
+    // sendToEmail is also stored in clientEmail via BillToSelector; pass both for backend
     createMutation.mutate({ ...invoiceForm, lineItems: lineItems.filter(li => li.description.trim()) });
   };
 
