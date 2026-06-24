@@ -8,13 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Plus, DollarSign, TrendingUp, Clock, CheckCircle2, Eye, Receipt, ArrowLeft,
+  Plus, DollarSign, TrendingUp, Clock, CheckCircle2, Eye, Receipt,
 } from "lucide-react";
 
 interface InvoiceSummary {
@@ -35,31 +34,6 @@ interface AppInvoice {
   currency: string;
   applicationId: string | null;
   customer: { id: string; name: string; email: string | null } | null;
-}
-
-interface InvoiceDetailLineItem {
-  id: string;
-  description: string;
-  quantity: string;
-  unitPrice: string;
-  amount: string;
-}
-
-interface InvoiceDetail {
-  id: string;
-  invoiceNumber: string;
-  status: string;
-  total: string;
-  amountPaid: string | null;
-  issueDate: string;
-  dueDate: string;
-  currency: string;
-  notes: string | null;
-  terms: string | null;
-  gstEnabled: boolean;
-  customer: { id: string; name: string; email: string | null } | null;
-  lineItems: InvoiceDetailLineItem[];
-  payments: Array<{ id: string; amount: string; paymentDate: string; method: string }>;
 }
 
 interface ApplicationFinancePanelProps {
@@ -111,7 +85,6 @@ export function ApplicationFinancePanel({
 }: ApplicationFinancePanelProps) {
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
-  const [viewingInvoiceId, setViewingInvoiceId] = useState<string | null>(null);
 
   const today = new Date().toISOString().split("T")[0];
   const due30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
@@ -134,15 +107,6 @@ export function ApplicationFinancePanel({
   const { data, isLoading } = useQuery<{ invoices: AppInvoice[]; summary: InvoiceSummary }>({
     queryKey: ["/api/accounting/invoices/by-application", applicationId],
     enabled: !!applicationId,
-  });
-
-  const { data: invoiceDetail, isLoading: detailLoading } = useQuery<InvoiceDetail>({
-    queryKey: ["/api/accounting/invoices", viewingInvoiceId],
-    queryFn: async () => {
-      const res = await apiRequest("GET", `/api/accounting/invoices/${viewingInvoiceId}`);
-      return res.json();
-    },
-    enabled: !!viewingInvoiceId,
   });
 
   const createMutation = useMutation({
@@ -350,10 +314,17 @@ export function ApplicationFinancePanel({
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setViewingInvoiceId(inv.id)}
+                            asChild
                             data-testid={`button-view-invoice-${inv.id}`}
                           >
-                            <Eye className="h-4 w-4" />
+                            <a
+                              href={`/admin?tab=finance-invoices&invoice=${inv.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={`View invoice ${inv.invoiceNumber} in Accounting`}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </a>
                           </Button>
                         </td>
                       </tr>
@@ -365,137 +336,6 @@ export function ApplicationFinancePanel({
           </CardContent>
         </Card>
       )}
-
-      {/* ── Invoice Detail Dialog ─────────────────────────────── */}
-      <Dialog open={!!viewingInvoiceId} onOpenChange={(open) => { if (!open) setViewingInvoiceId(null); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={() => setViewingInvoiceId(null)} data-testid="button-back-invoice-list">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <DialogTitle>
-                {detailLoading ? "Loading…" : invoiceDetail ? `Invoice ${invoiceDetail.invoiceNumber}` : "Invoice Detail"}
-              </DialogTitle>
-              {invoiceDetail && (
-                <Badge className={`no-default-hover-elevate no-default-active-elevate text-xs ${STATUS_COLORS[invoiceDetail.status] ?? ""}`}>
-                  {STATUS_LABELS[invoiceDetail.status] ?? invoiceDetail.status}
-                </Badge>
-              )}
-            </div>
-          </DialogHeader>
-
-          {detailLoading && (
-            <div className="space-y-3">
-              <Skeleton className="h-5 w-48" />
-              <Skeleton className="h-28 rounded-md" />
-              <Skeleton className="h-16 rounded-md" />
-            </div>
-          )}
-
-          {!detailLoading && invoiceDetail && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Billed To</p>
-                  <p className="font-medium">{invoiceDetail.customer?.name || "—"}</p>
-                  {invoiceDetail.customer?.email && (
-                    <p className="text-muted-foreground text-xs">{invoiceDetail.customer.email}</p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Dates</p>
-                  <p>Issued: <span className="font-medium">{invoiceDetail.issueDate}</span></p>
-                  <p>Due: <span className="font-medium">{invoiceDetail.dueDate}</span></p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Line Items</p>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left pb-1 font-medium">Description</th>
-                      <th className="text-right pb-1 font-medium w-14">Qty</th>
-                      <th className="text-right pb-1 font-medium w-20">Price</th>
-                      <th className="text-right pb-1 font-medium w-20">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {invoiceDetail.lineItems.map((li) => (
-                      <tr key={li.id} className="border-b last:border-0">
-                        <td className="py-1.5">{li.description}</td>
-                        <td className="py-1.5 text-right text-muted-foreground">{li.quantity}</td>
-                        <td className="py-1.5 text-right text-muted-foreground">{parseFloat(li.unitPrice).toFixed(2)}</td>
-                        <td className="py-1.5 text-right font-medium">{parseFloat(li.amount).toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="flex justify-end">
-                <div className="space-y-1 text-sm w-56">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>{invoiceDetail.currency} {(parseFloat(invoiceDetail.total) / (invoiceDetail.gstEnabled ? 1.1 : 1)).toFixed(2)}</span>
-                  </div>
-                  {invoiceDetail.gstEnabled && (
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>GST (10%)</span>
-                      <span>{invoiceDetail.currency} {(parseFloat(invoiceDetail.total) - parseFloat(invoiceDetail.total) / 1.1).toFixed(2)}</span>
-                    </div>
-                  )}
-                  <Separator />
-                  <div className="flex justify-between font-bold">
-                    <span>Total</span>
-                    <span>{invoiceDetail.currency} {parseFloat(invoiceDetail.total).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-green-600 dark:text-green-400">
-                    <span>Paid</span>
-                    <span>{invoiceDetail.currency} {parseFloat(invoiceDetail.amountPaid || "0").toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between font-semibold">
-                    <span>Balance Due</span>
-                    <span>{invoiceDetail.currency} {(parseFloat(invoiceDetail.total) - parseFloat(invoiceDetail.amountPaid || "0")).toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {invoiceDetail.payments.length > 0 && (
-                <>
-                  <Separator />
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Payments Received</p>
-                    {invoiceDetail.payments.map((pmt) => (
-                      <div key={pmt.id} className="flex justify-between text-sm py-1">
-                        <span className="text-muted-foreground">{pmt.paymentDate} · {pmt.method}</span>
-                        <span className="font-medium">{invoiceDetail.currency} {parseFloat(pmt.amount).toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {invoiceDetail.notes && (
-                <>
-                  <Separator />
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Notes</p>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{invoiceDetail.notes}</p>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setViewingInvoiceId(null)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* ── Create Invoice Dialog ─────────────────────────────── */}
       <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>

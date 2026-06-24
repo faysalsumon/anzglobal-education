@@ -80,12 +80,16 @@ interface LineItemForm {
   unitPrice: string;
 }
 
-export function InvoicesPanel() {
+interface InvoicesPanelProps {
+  initialInvoiceId?: string;
+}
+
+export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
   const { toast } = useToast();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [creditNoteDialogOpen, setCreditNoteDialogOpen] = useState(false);
-  const [viewingId, setViewingId] = useState<string | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(initialInvoiceId ?? null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [customerFilter, setCustomerFilter] = useState("all");
   const [fromDate, setFromDate] = useState("");

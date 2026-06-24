@@ -3403,7 +3403,7 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === "finance-dashboard" && <FinanceDashboardPanel />}
-        {activeTab === "finance-invoices" && <InvoicesPanel />}
+        {activeTab === "finance-invoices" && <InvoicesPanel initialInvoiceId={new URLSearchParams(window.location.search).get("invoice") ?? undefined} />}
         {activeTab === "finance-customers" && <CustomersPanel />}
         {activeTab === "finance-items" && <ItemsPanel />}
         {activeTab === "finance-accounts" && <ChartOfAccountsPanel />}
