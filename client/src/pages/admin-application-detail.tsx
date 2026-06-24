@@ -95,6 +95,7 @@ import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { DocumentPreviewModal } from "@/components/document-preview-modal";
 import { useDocumentEvents } from "@/hooks/useDocumentEvents";
 import { useFileCompressor } from "@/hooks/useFileCompressor";
+import { ApplicationFinancePanel } from "@/components/application-finance-panel";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -280,6 +281,12 @@ function AdminApplicationDetailContent() {
   const applicationId = params?.id;
   const { user } = useAuth();
   const { toast } = useToast();
+
+  /* ── Role checks ─────────────────────────────────────────────── */
+  const showAccountingTab =
+    user?.adminRole === "cto" ||
+    user?.adminRole === "accounts_officer" ||
+    user?.userType === "platform_admin";
 
   /* ── UI state ─────────────────────────────────────────────────── */
   const [activeTab, setActiveTab] = useState("overview");
@@ -798,6 +805,7 @@ function AdminApplicationDetailContent() {
             { value: "verification", icon: ShieldCheck, label: "Verification" },
             { value: "messages", icon: MessageSquare, label: "Messages" },
             { value: "history", icon: History, label: "History" },
+            ...(showAccountingTab ? [{ value: "accounting", icon: DollarSign, label: "Accounting" }] : []),
           ].map(({ value, icon: Icon, label }) => (
             <button
               key={value}
@@ -1107,6 +1115,19 @@ function AdminApplicationDetailContent() {
             )}
           </ScrollArea>
         </TabsContent>
+
+        {/* ── ACCOUNTING TAB ────────────────────────────────────── */}
+        {showAccountingTab && (
+          <TabsContent value="accounting" className="mt-4">
+            <ApplicationFinancePanel
+              applicationId={application.id}
+              studentId={student.id}
+              studentName={studentName}
+              studentEmail={student.email}
+              applicationNumber={application.applicationNumber}
+            />
+          </TabsContent>
+        )}
       </Tabs>
       </div>{/* end left column */}
 

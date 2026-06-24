@@ -514,6 +514,50 @@ export function registerAccountingRoutes(app: Express) {
     res.json(enriched);
   });
 
+  app.get("/api/accounting/invoices/by-application/:applicationId", isAuthenticated, async (req, res) => {
+    const userId = (req as any).supabaseUser?.id || (req as any).user?.claims?.sub || (req as any).user?.id;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+    const access = await checkAdminAccess(userId, ['cto', 'accounts_officer']);
+    if (!access) return res.status(403).json({ message: "CTO or Accounts Officer access required" });
+
+    const { applicationId } = req.params;
+    await markOverdueInvoices();
+
+    try {
+      const invoiceList = await db.select().from(accInvoices)
+        .where(eq(accInvoices.applicationId, applicationId))
+        .orderBy(desc(accInvoices.createdAt));
+
+      const customerIds = Array.from(new Set(invoiceList.map(i => i.customerId)));
+      const customerList = customerIds.length > 0
+        ? await db.select().from(accCustomers).where(sql`${accCustomers.id} IN (${sql.join(customerIds.map(id => sql`${id}`), sql`, `)})`)
+        : [];
+      const customerMap = Object.fromEntries(customerList.map(c => [c.id, c]));
+
+      const enriched = invoiceList.map(inv => ({
+        ...inv,
+        customer: customerMap[inv.customerId] || null,
+      }));
+
+      const totalInvoiced = invoiceList.reduce((sum, i) => sum + parseFloat(i.total || "0"), 0);
+      const totalPaid = invoiceList.reduce((sum, i) => sum + parseFloat(i.amountPaid || "0"), 0);
+      const outstanding = totalInvoiced - totalPaid;
+
+      res.json({
+        invoices: enriched,
+        summary: {
+          count: invoiceList.length,
+          totalInvoiced: totalInvoiced.toFixed(2),
+          totalPaid: totalPaid.toFixed(2),
+          outstanding: outstanding.toFixed(2),
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching invoices by application:", error);
+      res.status(500).json({ message: "Failed to fetch application invoices" });
+    }
+  });
+
   app.get("/api/accounting/invoices/:id", isAuthenticated, async (req, res) => {
     if (!await requireFinanceAdmin(req, res)) return;
     const [invoice] = await db.select().from(accInvoices).where(eq(accInvoices.id, req.params.id));
