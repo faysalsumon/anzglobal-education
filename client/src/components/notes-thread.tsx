@@ -182,6 +182,7 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>((props, ref) =>
             className={`flex items-center gap-2 w-full px-3 py-2 text-left text-sm hover-elevate ${
               index === selectedIndex ? "bg-accent text-accent-foreground" : ""
             }`}
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => selectItem(index)}
             data-testid={`mention-option-${item.id}`}
           >
