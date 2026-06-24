@@ -6,17 +6,13 @@ import { storage } from "../storage";
 
 const isProd = process.env.NODE_ENV === "production";
 
-if (isProd && !process.env.SESSION_SECRET) {
-  throw new Error("SESSION_SECRET environment variable is required in production");
-}
-
 const csrfConfig = doubleCsrf({
   getSecret: () => {
     const secret = process.env.SESSION_SECRET;
-    if (!secret && process.env.NODE_ENV === "production") {
-      throw new Error("SESSION_SECRET is required in production");
+    if (!secret && process.env.NODE_ENV === 'production') {
+      throw new Error('SESSION_SECRET environment variable is required in production');
     }
-    return secret || "development-csrf-secret";
+    return secret || 'development-csrf-secret';
   },
   getSessionIdentifier: (req: Request) => {
     // For Supabase-authenticated users, use their user ID/email as session identifier
