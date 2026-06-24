@@ -68,7 +68,7 @@ process.on('uncaughtException', (err) => {
 // Wrap it to swallow that case gracefully so multer error handling works correctly.
 if (typeof Error.captureStackTrace === 'function') {
   const _originalCaptureStackTrace = Error.captureStackTrace;
-  (Error as any).captureStackTrace = function (target: object, constructor?: Function) {
+  (Error as any).captureStackTrace = function (target: object, constructor?: (...args: unknown[]) => unknown) {
     try {
       _originalCaptureStackTrace(target, constructor);
     } catch {
