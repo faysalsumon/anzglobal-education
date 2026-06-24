@@ -220,40 +220,29 @@ export function registerAccountingRoutes(app: Express) {
     if (!await requireFinanceAdmin(req, res)) return;
     try {
       const q = (req.query.q as string || "").trim();
-      const conditions = q ? [ilike(universities.name, `%${q}%`)] : [];
+      const conditions: any[] = [eq(accounts.isActive, true)];
+      if (q) conditions.push(ilike(accounts.name, `%${q}%`));
       const results = await db.select({
-        id: universities.id,
-        name: universities.name,
-        logo: universities.logo,
-        contactEmail: universities.contactEmail,
-        contactPhone: universities.contactPhone,
-        country: universities.country,
-        campusAddresses: universities.campusAddresses,
-        providerType: universities.providerType,
-      }).from(universities)
-        .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .orderBy(universities.name)
+        id: accounts.id,
+        name: accounts.name,
+        accountType: accounts.accountType,
+        email: accounts.email,
+        accountsEmail: accounts.accountsEmail,
+        admissionEmail: accounts.admissionEmail,
+        phone: accounts.phone,
+        institutionCmsId: accounts.institutionCmsId,
+        address: accounts.address,
+        city: accounts.city,
+        country: accounts.country,
+        abn: accounts.abn,
+      }).from(accounts)
+        .where(and(...conditions))
+        .orderBy(accounts.name)
         .limit(50);
-
-      const institutionIds = results.map(r => r.id);
-      let termsMap: Record<string, any> = {};
-      if (institutionIds.length > 0) {
-        const terms = await db.select().from(institutionBusinessTerms)
-          .where(sql`${institutionBusinessTerms.institutionId} IN (${sql.join(institutionIds.map(id => sql`${id}`), sql`, `)})`);
-        termsMap = Object.fromEntries(terms.map(t => [t.institutionId, t]));
-      }
-
-      const enriched = results.map(inst => ({
-        ...inst,
-        commissionPercentage: termsMap[inst.id]?.commissionPercentage || null,
-        paymentTerms: termsMap[inst.id]?.paymentTerms || null,
-        contractStatus: termsMap[inst.id]?.contractStatus || null,
-      }));
-
-      res.json(enriched);
+      res.json(results);
     } catch (error) {
-      console.error("Error searching institutions:", error);
-      res.status(500).json({ message: "Failed to search institutions" });
+      console.error("Error searching accounts:", error);
+      res.status(500).json({ message: "Failed to search accounts" });
     }
   });
 
@@ -308,19 +297,48 @@ export function registerAccountingRoutes(app: Express) {
       const { type, id } = req.params;
 
       if (type === "institution") {
+        // Try accounts table first (new flow: id is accounts.id UUID)
+        const [acc] = await db.select({
+          id: accounts.id,
+          name: accounts.name,
+          email: accounts.email,
+          accountsEmail: accounts.accountsEmail,
+          admissionEmail: accounts.admissionEmail,
+          phone: accounts.phone,
+          address: accounts.address,
+          city: accounts.city,
+          state: accounts.state,
+          country: accounts.country,
+        }).from(accounts).where(eq(accounts.id, id)).limit(1);
+
+        if (acc) {
+          const emailOptions: Array<{ label: string; email: string }> = [];
+          if (acc.accountsEmail) emailOptions.push({ label: "Accounts Dept", email: acc.accountsEmail });
+          if (acc.admissionEmail) emailOptions.push({ label: "Admissions", email: acc.admissionEmail });
+          if (acc.email) emailOptions.push({ label: "General Email", email: acc.email });
+          const addr = [acc.address, acc.city, acc.state, acc.country].filter(Boolean).join(", ");
+          return res.json({
+            name: acc.name,
+            emailOptions,
+            address: addr || null,
+            phone: acc.phone || null,
+          });
+        }
+
+        // Fallback: old flow — id is universities.id (for existing invoices with institutionId only)
         const [inst] = await db.select().from(universities).where(eq(universities.id, id));
         if (!inst) return res.status(404).json({ message: "Institution not found" });
 
-        const [account] = await db.select({
+        const [linkedAcc] = await db.select({
           email: accounts.email,
           accountsEmail: accounts.accountsEmail,
           admissionEmail: accounts.admissionEmail,
         }).from(accounts).where(eq(accounts.institutionCmsId, id)).limit(1);
 
         const emailOptions: Array<{ label: string; email: string }> = [];
-        if (account?.accountsEmail) emailOptions.push({ label: "Accounts Dept", email: account.accountsEmail });
-        if (account?.admissionEmail) emailOptions.push({ label: "Admissions", email: account.admissionEmail });
-        if (account?.email) emailOptions.push({ label: "General Email", email: account.email });
+        if (linkedAcc?.accountsEmail) emailOptions.push({ label: "Accounts Dept", email: linkedAcc.accountsEmail });
+        if (linkedAcc?.admissionEmail) emailOptions.push({ label: "Admissions", email: linkedAcc.admissionEmail });
+        if (linkedAcc?.email) emailOptions.push({ label: "General Email", email: linkedAcc.email });
         if (inst.contactEmail && !emailOptions.find(e => e.email === inst.contactEmail)) {
           emailOptions.push({ label: "Contact Email", email: inst.contactEmail });
         }
@@ -734,8 +752,8 @@ export function registerAccountingRoutes(app: Express) {
       if (!["institution", "student", "manual"].includes(billToType)) {
         return res.status(400).json({ message: "Invalid billToType. Must be institution, student, or manual" });
       }
-      if (billToType === "institution" && !invoiceData.institutionId) {
-        return res.status(400).json({ message: "institutionId is required when billToType is institution" });
+      if (billToType === "institution" && !invoiceData.accountId && !invoiceData.institutionId) {
+        return res.status(400).json({ message: "accountId (or institutionId) is required when billToType is institution" });
       }
       if (billToType === "student" && !invoiceData.studentId) {
         return res.status(400).json({ message: "studentId is required when billToType is student" });
@@ -748,6 +766,7 @@ export function registerAccountingRoutes(app: Express) {
       const invoiceNumber = await generateInvoiceNumber(regionCode);
 
       let customerId = invoiceData.customerId;
+      let resolvedInstitutionId: string | null = invoiceData.institutionId || null;
 
       if (!customerId) {
         // clientEmail updates the customer master record (e.g. primary contact email for a new customer).
@@ -761,16 +780,32 @@ export function registerAccountingRoutes(app: Express) {
           currency: invoiceData.currency || "AUD",
         };
 
-        if (billToType === "institution" && invoiceData.institutionId) {
-          customerData.institutionId = invoiceData.institutionId;
-          const [existing] = await db.select().from(accCustomers)
-            .where(eq(accCustomers.institutionId, invoiceData.institutionId)).limit(1);
-          if (existing) {
-            customerId = existing.id;
-            // Only update name — do not overwrite shared customer email/phone/address with per-invoice data
-            await db.update(accCustomers).set({
-              name: customerData.name,
-            }).where(eq(accCustomers.id, existing.id));
+        if (billToType === "institution") {
+          if (invoiceData.accountId) {
+            // New flow: accountId provided — look up linked CMS institution
+            const [acct] = await db.select({ institutionCmsId: accounts.institutionCmsId })
+              .from(accounts).where(eq(accounts.id, invoiceData.accountId)).limit(1);
+            if (acct?.institutionCmsId) resolvedInstitutionId = acct.institutionCmsId;
+            customerData.accountId = invoiceData.accountId;
+            customerData.institutionId = resolvedInstitutionId;
+            // Dedup by accountId first
+            const [existing] = await db.select().from(accCustomers)
+              .where(eq(accCustomers.accountId, invoiceData.accountId)).limit(1);
+            if (existing) {
+              customerId = existing.id;
+              await db.update(accCustomers).set({ name: customerData.name }).where(eq(accCustomers.id, existing.id));
+            }
+          } else if (invoiceData.institutionId) {
+            // Old flow: institutionId (universities.id) provided
+            resolvedInstitutionId = invoiceData.institutionId;
+            customerData.institutionId = resolvedInstitutionId;
+            // Dedup by institutionId
+            const [existing] = await db.select().from(accCustomers)
+              .where(eq(accCustomers.institutionId, invoiceData.institutionId)).limit(1);
+            if (existing) {
+              customerId = existing.id;
+              await db.update(accCustomers).set({ name: customerData.name }).where(eq(accCustomers.id, existing.id));
+            }
           }
         } else if (billToType === "student" && invoiceData.studentId) {
           customerData.studentId = invoiceData.studentId;
@@ -806,7 +841,7 @@ export function registerAccountingRoutes(app: Express) {
       const [invoice] = await db.insert(accInvoices).values({
         customerId,
         billToType,
-        institutionId: billToType === "institution" ? (invoiceData.institutionId || null) : null,
+        institutionId: billToType === "institution" ? (resolvedInstitutionId || null) : null,
         studentId: billToType === "student" ? (invoiceData.studentId || null) : null,
         applicationId: invoiceData.applicationId || null,
         accountId: invoiceData.accountId || null,

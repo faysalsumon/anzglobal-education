@@ -5546,6 +5546,7 @@ export const accCustomers = pgTable("acc_customers", {
   crmContactId: varchar("crm_contact_id"),
   institutionId: varchar("institution_id").references(() => universities.id, { onDelete: "set null" }),
   studentId: varchar("student_id").references(() => studentProfiles.id, { onDelete: "set null" }),
+  accountId: uuid("account_id").references((): any => accounts.id, { onDelete: "set null" }),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

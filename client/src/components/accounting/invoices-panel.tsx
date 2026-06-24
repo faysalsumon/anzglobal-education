@@ -24,11 +24,26 @@ interface CreditNoteWithItems extends AccCreditNote {
   items: Array<{ id: string; description: string; quantity: string; unitPrice: string; amount: string }>;
 }
 
+interface CrmAccount {
+  id: string;
+  name: string;
+  legalEntityName: string | null;
+  abn: string | null;
+  acn: string | null;
+  taxId: string | null;
+  effectiveBillingAddress: string | null;
+  effectiveBillingCity: string | null;
+  effectiveBillingState: string | null;
+  effectiveBillingCountry: string | null;
+}
+
 interface InvoiceDetail extends AccInvoice {
   customer: AccCustomer | null;
   lineItems: AccInvoiceLineItem[];
   payments: AccPaymentReceived[];
   creditNotes: CreditNoteWithItems[];
+  crmAccount: CrmAccount | null;
+  clientName: string;
 }
 
 interface PaymentFormData {
@@ -56,11 +71,14 @@ interface BillingInfo {
   phone: string | null;
 }
 
-interface InstitutionResult {
+interface AccountResult {
   id: string;
   name: string;
-  country: string | null;
-  contactEmail: string | null;
+  accountType: string;
+  institutionCmsId: string | null;
+  email: string | null;
+  accountsEmail: string | null;
+  admissionEmail: string | null;
 }
 
 interface StudentResult {
@@ -73,6 +91,7 @@ interface StudentResult {
 
 interface InvoiceFormData {
   billToType: "" | "institution" | "student";
+  accountId: string;
   institutionId: string;
   studentId: string;
   clientName: string;
@@ -118,6 +137,7 @@ interface InvoicesPanelProps {
 
 const defaultForm = (): InvoiceFormData => ({
   billToType: "",
+  accountId: "",
   institutionId: "",
   studentId: "",
   clientName: "",
@@ -146,7 +166,7 @@ function BillToSelector({
 
   const activeMode = form.billToType; // "" | "institution" | "student"
 
-  const { data: institutionResults = [] } = useQuery<InstitutionResult[]>({
+  const { data: accountResults = [] } = useQuery<AccountResult[]>({
     queryKey: ["/api/accounting/search/institutions", search],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/accounting/search/institutions?q=${encodeURIComponent(search)}`);
@@ -164,10 +184,19 @@ function BillToSelector({
     enabled: activeMode === "student" && search.length >= 1,
   });
 
+  const ACCOUNT_TYPE_LABELS: Record<string, string> = {
+    institution: "Institution",
+    super_agent: "Super Agent",
+    sub_agent: "Sub Agent",
+    pathway_provider: "Pathway Provider",
+    insurance_company: "Insurance Company",
+    migration_agent: "Migration Agent",
+  };
+
   const results = activeMode === "institution"
-    ? institutionResults.map(r => ({ id: r.id, label: r.name, sublabel: r.country || "" }))
+    ? accountResults.map(r => ({ id: r.id, label: r.name, sublabel: ACCOUNT_TYPE_LABELS[r.accountType] || r.accountType, _raw: r }))
     : activeMode === "student"
-      ? studentResults.map(r => ({ id: r.id, label: r.fullName, sublabel: r.email || "" }))
+      ? studentResults.map(r => ({ id: r.id, label: r.fullName, sublabel: r.email || "", _raw: null }))
       : [];
 
   useEffect(() => {
@@ -180,14 +209,15 @@ function BillToSelector({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  async function handleSelectResult(id: string, name: string) {
+  async function handleSelectResult(id: string, name: string, raw?: AccountResult | null) {
     setSearch("");
     setDropdownOpen(false);
     setBillingEmails([]);
 
     setForm(f => ({
       ...f,
-      institutionId: activeMode === "institution" ? id : "",
+      accountId: activeMode === "institution" ? id : "",
+      institutionId: activeMode === "institution" ? (raw?.institutionCmsId || "") : "",
       studentId: activeMode === "student" ? id : "",
       clientName: name,
       clientEmail: "",
@@ -198,7 +228,6 @@ function BillToSelector({
       const res = await apiRequest("GET", `/api/accounting/billing-info/${activeMode}/${id}`);
       const info: BillingInfo = await res.json();
       setBillingEmails(info.emailOptions);
-      // Auto-select if only one option — set both sendToEmail and clientEmail
       if (info.emailOptions.length >= 1) {
         const autoEmail = info.emailOptions[0].email;
         setForm(f => ({ ...f, sendToEmail: autoEmail, clientEmail: autoEmail }));
@@ -209,7 +238,7 @@ function BillToSelector({
   }
 
   function clearSelection() {
-    setForm(f => ({ ...f, institutionId: "", studentId: "", clientName: "", clientEmail: "", sendToEmail: "" }));
+    setForm(f => ({ ...f, accountId: "", institutionId: "", studentId: "", clientName: "", clientEmail: "", sendToEmail: "" }));
     setBillingEmails([]);
     setSearch("");
   }
@@ -218,6 +247,7 @@ function BillToSelector({
     setForm(f => ({
       ...f,
       billToType: mode,
+      accountId: "",
       institutionId: "",
       studentId: "",
       clientName: "",
@@ -281,7 +311,7 @@ function BillToSelector({
                   key={r.id}
                   type="button"
                   className="w-full text-left px-3 py-2 hover-elevate flex flex-col gap-0.5"
-                  onClick={() => handleSelectResult(r.id, r.label)}
+                  onClick={() => handleSelectResult(r.id, r.label, r._raw as AccountResult | null)}
                   data-testid={`option-bill-to-${r.id}`}
                 >
                   <span className="text-sm font-medium">{r.label}</span>
@@ -834,14 +864,17 @@ function InvoiceDetailView({ invoice, onBack, onSend, onVoid, onReminder, onReco
   const [selectedSendEmail, setSelectedSendEmail] = useState("");
 
   const { data: billingInfo } = useQuery<{ emailOptions: BillingEmailOption[] }>({
-    queryKey: ["/api/accounting/billing-info", invoice.billToType, invoice.institutionId || invoice.studentId],
+    queryKey: ["/api/accounting/billing-info", invoice.billToType, invoice.accountId || invoice.institutionId || invoice.studentId],
     queryFn: async () => {
-      const entityId = invoice.institutionId || invoice.studentId;
+      // Use accountId first (new flow), fall back to institutionId (old flow)
+      const entityId = invoice.billToType === "institution"
+        ? (invoice.accountId || invoice.institutionId)
+        : invoice.studentId;
       if (!entityId) return { emailOptions: [] };
       const res = await apiRequest("GET", `/api/accounting/billing-info/${invoice.billToType}/${entityId}`);
       return res.json();
     },
-    enabled: (invoice.billToType === "institution" && !!invoice.institutionId) || (invoice.billToType === "student" && !!invoice.studentId),
+    enabled: (invoice.billToType === "institution" && !!(invoice.accountId || invoice.institutionId)) || (invoice.billToType === "student" && !!invoice.studentId),
   });
 
   const emailOptions = billingInfo?.emailOptions || [];
@@ -914,9 +947,34 @@ function InvoiceDetailView({ invoice, onBack, onSend, onVoid, onReminder, onReco
             <h3 className="font-semibold text-sm text-muted-foreground">
               {invoice.billToType === "institution" ? "Institution" : invoice.billToType === "student" ? "Student" : "Customer"}
             </h3>
-            <p className="font-medium" data-testid="text-detail-customer">{invoice.customer?.name || "—"}</p>
+            <p className="font-medium" data-testid="text-detail-customer">{invoice.clientName || invoice.customer?.name || "—"}</p>
+            {invoice.crmAccount?.legalEntityName && invoice.crmAccount.legalEntityName !== (invoice.clientName || invoice.customer?.name) && (
+              <p className="text-sm text-muted-foreground">{invoice.crmAccount.legalEntityName}</p>
+            )}
             {invoice.customer?.email && <p className="text-sm text-muted-foreground">{invoice.customer.email}</p>}
             {invoice.customer?.phone && <p className="text-sm text-muted-foreground">{invoice.customer.phone}</p>}
+            {invoice.crmAccount && (
+              <div className="pt-1 space-y-0.5">
+                {invoice.crmAccount.abn && (
+                  <p className="text-xs text-muted-foreground" data-testid="text-detail-abn">
+                    <span className="font-medium">ABN:</span> {invoice.crmAccount.abn}
+                  </p>
+                )}
+                {!invoice.crmAccount.abn && invoice.crmAccount.acn && (
+                  <p className="text-xs text-muted-foreground" data-testid="text-detail-acn">
+                    <span className="font-medium">ACN:</span> {invoice.crmAccount.acn}
+                  </p>
+                )}
+                {invoice.crmAccount.effectiveBillingAddress && (
+                  <p className="text-xs text-muted-foreground">{invoice.crmAccount.effectiveBillingAddress}</p>
+                )}
+                {(invoice.crmAccount.effectiveBillingCity || invoice.crmAccount.effectiveBillingState || invoice.crmAccount.effectiveBillingCountry) && (
+                  <p className="text-xs text-muted-foreground">
+                    {[invoice.crmAccount.effectiveBillingCity, invoice.crmAccount.effectiveBillingState, invoice.crmAccount.effectiveBillingCountry].filter(Boolean).join(", ")}
+                  </p>
+                )}
+              </div>
+            )}
             {allEmails.length > 1 && (
               <div className="pt-1">
                 <p className="text-xs text-muted-foreground font-medium mb-1">Available Billing Emails</p>
