@@ -289,7 +289,7 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
 router.post('/resend-verification', async (req: Request, res: Response) => {
   try {
     const rl = resendVerificationLimiter(getClientIp(req));
-    if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many verification email requests');
+    if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many resend requests');
 
     if (!supabase) {
       return res.status(503).json({ error: 'Supabase is not configured' });
@@ -330,7 +330,7 @@ router.post('/resend-verification', async (req: Request, res: Response) => {
 router.post('/check-email', async (req: Request, res: Response) => {
   try {
     const rl = checkEmailLimiter(getClientIp(req));
-    if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many email check requests');
+    if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many requests');
 
     const { email } = req.body;
 
@@ -361,7 +361,7 @@ router.post('/check-email', async (req: Request, res: Response) => {
 router.post('/reset-password', async (req: Request, res: Response) => {
   try {
     const rl = forgotPasswordLimiter(getClientIp(req));
-    if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many password reset requests');
+    if (!rl.allowed) return replyTooManyRequests(res, rl, 'Too many password reset attempts');
 
     if (!supabase) {
       return res.status(503).json({ error: 'Supabase is not configured' });
@@ -379,13 +379,13 @@ router.post('/reset-password', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(
       user.id,
       { password: newPassword }
     );
 
-    if (updateError) {
-      return res.status(400).json({ error: updateError.message });
+    if (error) {
+      return res.status(400).json({ error: error.message });
     }
 
     res.json({ message: 'Password updated successfully' });
