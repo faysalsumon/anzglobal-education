@@ -347,6 +347,7 @@ export function InvoicesPanel() {
                 <tr className="border-b bg-muted/50">
                   <th className="text-left p-3 font-medium">Invoice #</th>
                   <th className="text-left p-3 font-medium">Customer</th>
+                  <th className="text-left p-3 font-medium">Application</th>
                   <th className="text-left p-3 font-medium">Date</th>
                   <th className="text-left p-3 font-medium">Due</th>
                   <th className="text-left p-3 font-medium">Status</th>
@@ -357,9 +358,9 @@ export function InvoicesPanel() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Loading...</td></tr>
+                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Loading...</td></tr>
                 ) : invoices.length === 0 ? (
-                  <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No invoices found</td></tr>
+                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">No invoices found</td></tr>
                 ) : (
                   invoices.map((inv) => {
                     const balance = parseFloat(inv.total) - parseFloat(inv.amountPaid || "0");
@@ -367,6 +368,19 @@ export function InvoicesPanel() {
                       <tr key={inv.id} className="border-b" data-testid={`row-invoice-${inv.id}`}>
                         <td className="p-3 font-mono font-medium" data-testid={`text-invoice-number-${inv.id}`}>{inv.invoiceNumber}</td>
                         <td className="p-3">{inv.customer?.name || "—"}</td>
+                        <td className="p-3">
+                          {inv.applicationId ? (
+                            <a
+                              href={`/admin/applications/${inv.applicationId}`}
+                              className="text-primary underline underline-offset-2 text-xs hover:no-underline"
+                              data-testid={`link-application-${inv.id}`}
+                            >
+                              View App
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </td>
                         <td className="p-3 text-muted-foreground">{inv.issueDate}</td>
                         <td className="p-3 text-muted-foreground">{inv.dueDate}</td>
                         <td className="p-3"><Badge className={`no-default-hover-elevate no-default-active-elevate ${STATUS_COLORS[inv.status]}`}>{STATUS_LABELS[inv.status]}</Badge></td>

@@ -285,8 +285,14 @@ function AdminApplicationDetailContent() {
   /* ── Role checks ─────────────────────────────────────────────── */
   const showAccountingTab =
     user?.adminRole === "cto" ||
-    user?.adminRole === "accounts_officer" ||
-    user?.userType === "platform_admin";
+    user?.adminRole === "accounts_officer";
+
+  /* ── Invoice count for Accounting tab badge ───────────────────── */
+  const { data: appInvoicesData } = useQuery<{ invoices: unknown[]; summary: { count: number } }>({
+    queryKey: ["/api/accounting/invoices/by-application", applicationId],
+    enabled: showAccountingTab && !!applicationId,
+  });
+  const accountingInvoiceCount = appInvoicesData?.summary?.count ?? 0;
 
   /* ── UI state ─────────────────────────────────────────────────── */
   const [activeTab, setActiveTab] = useState("overview");
@@ -805,8 +811,10 @@ function AdminApplicationDetailContent() {
             { value: "verification", icon: ShieldCheck, label: "Verification" },
             { value: "messages", icon: MessageSquare, label: "Messages" },
             { value: "history", icon: History, label: "History" },
-            ...(showAccountingTab ? [{ value: "accounting", icon: DollarSign, label: "Accounting" }] : []),
-          ].map(({ value, icon: Icon, label }) => (
+            ...(showAccountingTab ? [{ value: "accounting", icon: DollarSign, label: "Accounting", badge: accountingInvoiceCount > 0 ? accountingInvoiceCount : undefined }] : []),
+          ].map(({ value, icon: Icon, label, ...rest }) => {
+            const tabBadge = (rest as { badge?: number }).badge;
+            return (
             <button
               key={value}
               onClick={() => setActiveTab(value)}
@@ -820,8 +828,14 @@ function AdminApplicationDetailContent() {
             >
               <Icon className="h-4 w-4" />
               <span className="hidden sm:inline">{label}</span>
+              {tabBadge !== undefined && (
+                <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate text-xs px-1.5 py-0 min-w-[1.25rem] text-center" data-testid={`badge-tab-count-${value}`}>
+                  {tabBadge}
+                </Badge>
+              )}
             </button>
-          ))}
+            );
+          })}
         </TabsList>
 
         {/* ── OVERVIEW TAB ──────────────────────────────────────── */}
@@ -1125,6 +1139,8 @@ function AdminApplicationDetailContent() {
               studentName={studentName}
               studentEmail={student.email}
               applicationNumber={application.applicationNumber}
+              institutionId={university.id}
+              institutionName={university.name}
             />
           </TabsContent>
         )}
