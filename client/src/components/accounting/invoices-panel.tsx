@@ -846,14 +846,23 @@ function InvoiceDetailView({ invoice, onBack, onSend, onVoid, onReminder, onReco
 
   const emailOptions = billingInfo?.emailOptions || [];
   const customerEmail = invoice.customer?.email;
-  const allEmails: BillingEmailOption[] = emailOptions.length > 0
-    ? emailOptions
-    : customerEmail
-      ? [{ label: "Email on file", email: customerEmail }]
-      : [];
+  // Build a de-duped list of email options, always including the persisted sendToEmail on the invoice
+  const allEmails: BillingEmailOption[] = (() => {
+    const base: BillingEmailOption[] = emailOptions.length > 0
+      ? emailOptions
+      : customerEmail
+        ? [{ label: "Email on file", email: customerEmail }]
+        : [];
+    // Prepend the persisted invoice sendToEmail if it's not already in the list
+    if (invoice.sendToEmail && !base.find(e => e.email === invoice.sendToEmail)) {
+      return [{ label: "Invoice recipient (saved)", email: invoice.sendToEmail }, ...base];
+    }
+    return base;
+  })();
 
   function openSendDialog() {
-    setSelectedSendEmail(allEmails[0]?.email || "");
+    // Default to the persisted invoice sendToEmail, then first available billing option
+    setSelectedSendEmail(invoice.sendToEmail || allEmails[0]?.email || "");
     setSendDialogOpen(true);
   }
 

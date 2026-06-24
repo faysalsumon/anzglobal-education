@@ -750,12 +750,12 @@ export function registerAccountingRoutes(app: Express) {
       let customerId = invoiceData.customerId;
 
       if (!customerId) {
-        // Use sendToEmail as clientEmail if clientEmail not explicitly provided
-        const resolvedClientEmail: string | null = invoiceData.clientEmail || invoiceData.sendToEmail || null;
-
+        // clientEmail updates the customer master record (e.g. primary contact email for a new customer).
+        // sendToEmail is a per-invoice recipient choice and is stored on the invoice record only — it
+        // never overwrites the shared customer master email.
         const customerData: any = {
           name: invoiceData.clientName || "Unknown",
-          email: resolvedClientEmail,
+          email: invoiceData.clientEmail || null,
           phone: invoiceData.clientPhone || null,
           address: invoiceData.clientAddress || null,
           currency: invoiceData.currency || "AUD",
@@ -767,13 +767,9 @@ export function registerAccountingRoutes(app: Express) {
             .where(eq(accCustomers.institutionId, invoiceData.institutionId)).limit(1);
           if (existing) {
             customerId = existing.id;
-            // Only overwrite email if caller explicitly provided one — never null out an existing email
-            const emailUpdate = resolvedClientEmail ? { email: resolvedClientEmail } : {};
+            // Only update name — do not overwrite shared customer email/phone/address with per-invoice data
             await db.update(accCustomers).set({
               name: customerData.name,
-              ...emailUpdate,
-              phone: customerData.phone || existing.phone,
-              address: customerData.address || existing.address,
             }).where(eq(accCustomers.id, existing.id));
           }
         } else if (billToType === "student" && invoiceData.studentId) {
@@ -782,12 +778,8 @@ export function registerAccountingRoutes(app: Express) {
             .where(eq(accCustomers.studentId, invoiceData.studentId)).limit(1);
           if (existing) {
             customerId = existing.id;
-            const emailUpdate = resolvedClientEmail ? { email: resolvedClientEmail } : {};
             await db.update(accCustomers).set({
               name: customerData.name,
-              ...emailUpdate,
-              phone: customerData.phone || existing.phone,
-              address: customerData.address || existing.address,
             }).where(eq(accCustomers.id, existing.id));
           }
         }
@@ -831,6 +823,7 @@ export function registerAccountingRoutes(app: Express) {
         total: total.toFixed(2),
         status: invoiceData.status || "draft",
         clientTaxRef: invoiceData.clientTaxRef || null,
+        sendToEmail: invoiceData.sendToEmail || null,
       }).returning();
 
       if (lineItems && Array.isArray(lineItems) && lineItems.length > 0) {
@@ -1081,7 +1074,8 @@ export function registerAccountingRoutes(app: Express) {
 
       const [customer] = await db.select().from(accCustomers).where(eq(accCustomers.id, invoice.customerId));
 
-      const sendToEmail: string | undefined = req.body?.sendToEmail || customer?.email || undefined;
+      // Priority: explicit override from request body → persisted invoice sendToEmail → customer email on file
+      const sendToEmail: string | undefined = req.body?.sendToEmail || invoice.sendToEmail || customer?.email || undefined;
       if (!sendToEmail) return res.status(400).json({ message: "No email address available. Please specify a send-to email." });
 
       const lineItems = await db.select().from(accInvoiceLineItems).where(eq(accInvoiceLineItems.invoiceId, invoice.id));
