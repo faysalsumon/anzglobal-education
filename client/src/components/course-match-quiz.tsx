@@ -89,8 +89,8 @@ interface FilterOptions {
 
 type StepType = "country" | "discipline" | "level" | "budget" | "name" | "email" | "phone";
 
-const BD_STEPS: StepType[] = ["country", "discipline", "level", "budget", "name", "email", "phone"];
-const AU_STEPS: StepType[] = ["discipline", "level", "budget", "name", "email", "phone"];
+const BD_STEPS: StepType[] = ["country", "discipline", "level", "budget", "name", "phone", "email"];
+const AU_STEPS: StepType[] = ["discipline", "level", "budget", "name", "phone", "email"];
 
 const STEP_CONFIG: Record<StepType, { title: string; subtitle: string; icon: LucideIcon }> = {
   country:    { title: "Where do you want to study?",   subtitle: "Pick your dream study destination",              icon: Globe },
@@ -279,7 +279,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
     if (e.key === "Escape") {
       e.stopPropagation();
       onClose();
-    } else if (e.key === "Enter" && canProceed() && currentStepType !== "phone") {
+    } else if (e.key === "Enter" && canProceed() && currentStepType !== "email") {
       e.preventDefault();
       handleNext();
     }
@@ -523,18 +523,29 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
         <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{STEP_CONFIG.email.title}</h2>
         <p id="quiz-description" className="text-muted-foreground text-base">{STEP_CONFIG.email.subtitle}</p>
       </div>
-      <div className="max-w-md mx-auto space-y-2">
-        <Label htmlFor="quiz-email" className="text-sm font-medium">Email Address</Label>
-        <Input
-          id="quiz-email"
-          type="email"
-          autoFocus
-          value={contactEmail}
-          onChange={(e) => { setContactEmail(e.target.value); setContactErrors(p => ({ ...p, email: "" })); }}
-          placeholder="you@example.com"
-          data-testid="quiz-input-email"
+      <div className="max-w-md mx-auto space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="quiz-email" className="text-sm font-medium">Email Address</Label>
+          <Input
+            id="quiz-email"
+            type="email"
+            autoFocus
+            value={contactEmail}
+            onChange={(e) => { setContactEmail(e.target.value); setContactErrors(p => ({ ...p, email: "" })); }}
+            placeholder="you@example.com"
+            data-testid="quiz-input-email"
+          />
+          {contactErrors.email && <p className="text-xs text-destructive">{contactErrors.email}</p>}
+        </div>
+        <TurnstileWidget
+          onSuccess={handleTurnstileSuccess}
+          onExpire={handleTurnstileExpire}
+          onError={handleTurnstileError}
+          className="flex justify-center"
         />
-        {contactErrors.email && <p className="text-xs text-destructive">{contactErrors.email}</p>}
+        {contactErrors.submit && (
+          <p className="text-sm text-destructive text-center pt-2">{contactErrors.submit}</p>
+        )}
       </div>
     </div>
   );
@@ -562,15 +573,6 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
           />
           {contactErrors.phone && <p className="text-xs text-destructive">{contactErrors.phone}</p>}
         </div>
-        <TurnstileWidget
-          onSuccess={handleTurnstileSuccess}
-          onExpire={handleTurnstileExpire}
-          onError={handleTurnstileError}
-          className="flex justify-center"
-        />
-        {contactErrors.submit && (
-          <p className="text-sm text-destructive text-center pt-2">{contactErrors.submit}</p>
-        )}
       </div>
     </div>
   );
@@ -588,7 +590,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
     }
   };
 
-  const isPhoneStep = currentStepType === "phone";
+  const isEmailStep = currentStepType === "email";
 
   return (
     <div
@@ -645,7 +647,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {isPhoneStep ? (
+            {isEmailStep ? (
               <Button
                 onClick={handleSubmitAndNavigate}
                 disabled={submittingLead || !canProceed()}
