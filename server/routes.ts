@@ -748,25 +748,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ext = filename.split('.').pop()?.toLowerCase() || '';
       if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return next();
 
-      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) return next();
-
-      const { Client: LogoClient } = await import("@replit/object-storage");
-      const logoClient = new LogoClient();
-      const objectPath = `public/institution-logos/${filename}`;
-      const result = await logoClient.downloadAsBytes(objectPath);
-
-      if (result.ok && result.value) {
-        // downloadAsBytes returns an array of chunks — concat them into one buffer
-        const logoBuffer = Buffer.concat((result.value as Buffer[]).map(c => Buffer.isBuffer(c) ? c : Buffer.from(c)));
-        if (logoBuffer.length > 100) {
-          const contentTypeMap: Record<string, string> = {
-            png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
-            gif: 'image/gif', webp: 'image/webp',
-          };
-          res.set('Content-Type', contentTypeMap[ext] || 'image/png');
-          res.set('Cache-Control', 'public, max-age=604800');
-          return res.send(logoBuffer);
-        }
+      const { downloadFile } = await import("./file-storage");
+      const logoBuffer = await downloadFile(`public/institution-logos/${filename}`);
+      if (logoBuffer && logoBuffer.length > 100) {
+        const contentTypeMap: Record<string, string> = {
+          png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+          gif: 'image/gif', webp: 'image/webp',
+        };
+        res.set('Content-Type', contentTypeMap[ext] || 'image/png');
+        res.set('Cache-Control', 'public, max-age=604800');
+        return res.send(logoBuffer);
       }
       return next();
     } catch {
@@ -796,25 +787,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const filePath = `public/thumbnails/${filename}`;
       
-      // Check if object storage is available
-      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
-        return res.status(503).json({ message: "Object storage not configured" });
-      }
-      
-      const { Client } = await import("@replit/object-storage");
-      const storageClient = new Client();
-      
-      console.log(`[Public Storage] Attempting to download: ${filePath}`);
-      const result = await storageClient.downloadAsBytes(filePath);
-      console.log(`[Public Storage] Download result ok: ${result.ok}, buffer type: ${typeof result.value}, buffer length: ${result.value?.length || 0}`);
-      
-      if (!result.ok || !result.value) {
-        console.log(`[Public Storage] File not found: ${filePath}, error:`, result.error);
+      const { downloadFile: downloadPublicFile } = await import("./file-storage");
+      const fileBuffer = await downloadPublicFile(filePath);
+      if (!fileBuffer) {
         return res.status(404).json({ message: "File not found" });
       }
-      
-      // downloadAsBytes returns an array of chunks — concat them into one buffer
-      const fileBuffer = Buffer.concat((result.value as Buffer[]).map(c => Buffer.isBuffer(c) ? c : Buffer.from(c)));
       
       // Set content type based on extension
       const mimeTypes: Record<string, string> = {
@@ -836,7 +813,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Serve institution logos from Replit Object Storage (permanent, survives restarts)
+  // Serve institution logos from Supabase Storage
   app.get("/api/public-storage/public/institution-logos/:filename", async (req, res) => {
     try {
       const filename = req.params.filename;
@@ -850,32 +827,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid file type" });
       }
 
-      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
-        return res.status(503).json({ message: "Object storage not configured" });
-      }
-      const { Client } = await import("@replit/object-storage");
-      const storageClient = new Client();
-      const filePath = `public/institution-logos/${filename}`;
-      const result = await storageClient.downloadAsBytes(filePath);
-
-      if (!result.ok || !result.value) {
+      const { downloadFile } = await import("./file-storage");
+      const fileBuffer = await downloadFile(`public/institution-logos/${filename}`);
+      if (!fileBuffer) {
         return res.status(404).json({ message: "File not found" });
       }
-
       const mimeTypes: Record<string, string> = {
         'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
         'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp',
       };
-      res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 days — logos change rarely
+      res.setHeader('Cache-Control', 'public, max-age=604800');
       res.setHeader('Content-Type', mimeTypes[ext] || 'image/png');
-      res.send(Buffer.concat((result.value as Buffer[]).map(c => Buffer.isBuffer(c) ? c : Buffer.from(c))));
+      res.send(fileBuffer);
     } catch (error) {
       console.error("Error serving institution logo:", error);
       res.status(500).json({ message: "Failed to serve file" });
     }
   });
 
-  // Serve institution gallery images from Replit Object Storage
+  // Serve institution gallery images from Supabase Storage
   app.get("/api/public-storage/public/institution-gallery/:filename", async (req, res) => {
     try {
       const filename = req.params.filename;
@@ -889,25 +859,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid file type" });
       }
 
-      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
-        return res.status(503).json({ message: "Object storage not configured" });
-      }
-      const { Client } = await import("@replit/object-storage");
-      const storageClient = new Client();
-      const filePath = `public/institution-gallery/${filename}`;
-      const result = await storageClient.downloadAsBytes(filePath);
-
-      if (!result.ok || !result.value) {
+      const { downloadFile } = await import("./file-storage");
+      const fileBuffer = await downloadFile(`public/institution-gallery/${filename}`);
+      if (!fileBuffer) {
         return res.status(404).json({ message: "File not found" });
       }
-
       const mimeTypes: Record<string, string> = {
         'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
         'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp',
       };
-      res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 days
+      res.setHeader('Cache-Control', 'public, max-age=604800');
       res.setHeader('Content-Type', mimeTypes[ext] || 'image/jpeg');
-      res.send(Buffer.concat((result.value as Buffer[]).map(c => Buffer.isBuffer(c) ? c : Buffer.from(c))));
+      res.send(fileBuffer);
     } catch (error) {
       console.error("Error serving institution gallery image:", error);
       res.status(500).json({ message: "Failed to serve file" });
@@ -932,26 +895,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid file type" });
       }
 
-      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
-        return res.status(503).json({ message: "Object storage not configured" });
-      }
-
-      const { Client } = await import("@replit/object-storage");
-      const storageClient = new Client();
-      const filePath = `public/note-attachments/${userId}/${filename}`;
-      const result = await storageClient.downloadAsBytes(filePath);
-
-      if (!result.ok || !result.value) {
+      const { downloadFile } = await import("./file-storage");
+      const fileBuffer = await downloadFile(`public/note-attachments/${userId}/${filename}`);
+      if (!fileBuffer) {
         return res.status(404).json({ message: "File not found" });
       }
-
       const mimeTypes: Record<string, string> = {
         'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
         'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp',
         'pdf': 'application/pdf',
       };
       const contentType = mimeTypes[ext] || 'application/octet-stream';
-      const fileBuffer = Buffer.concat((result.value as Buffer[]).map(c => Buffer.isBuffer(c) ? c : Buffer.from(c)));
 
       res.setHeader('Cache-Control', 'public, max-age=86400');
       res.setHeader('Content-Type', contentType);
@@ -1314,14 +1268,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .jpeg({ quality: 85 })
         .toBuffer();
       const filename = `gallery-admin-${Date.now()}.jpg`;
-      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
-        return res.status(503).json({ message: "Object storage not configured" });
-      }
-      const { Client: GalleryStorageClient } = await import("@replit/object-storage");
-      const galleryStorageClient = new GalleryStorageClient();
+      const { uploadFile: uploadGalleryFile } = await import("./file-storage");
       const galleryObjectPath = `public/institution-gallery/${filename}`;
-      const galleryUploadResult = await galleryStorageClient.uploadFromBytes(galleryObjectPath, resizedBuffer);
-      if (!galleryUploadResult.ok) throw new Error(`Object storage upload failed: ${galleryUploadResult.error}`);
+      const galleryUploadResult = await uploadGalleryFile(galleryObjectPath, resizedBuffer, 'image/jpeg');
+      if (!galleryUploadResult.ok) throw new Error(`Storage upload failed: ${galleryUploadResult.error}`);
       const imagePath = `/api/public-storage/public/institution-gallery/${filename}`;
       res.json({ imagePath });
     } catch (error) {
@@ -7366,18 +7316,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if it's an object storage path (starts with .private/) or a local file path
       if (filePath.startsWith('.private/') || filePath.startsWith('private/')) {
-        // Object storage path - use storage client
-        const { Client } = await import("@replit/object-storage");
-        const storageClient = new Client();
-        
-        const { ok, value: fileChunks } = await storageClient.downloadAsBytes(filePath);
-        
-        if (!ok || !fileChunks) {
+        const { downloadFile } = await import("./file-storage");
+        const fileBuffer = await downloadFile(filePath);
+        if (!fileBuffer) {
           return res.status(404).json({ message: "File not found in storage" });
         }
-        
-        // downloadAsBytes returns an array of chunks — concat them into one buffer
-        const fileBuffer = Buffer.concat((fileChunks as Buffer[]).map(c => Buffer.isBuffer(c) ? c : Buffer.from(c)));
 
         // Determine content type from file extension
         const ext = pathModule.extname(document.fileName || filePath).toLowerCase();

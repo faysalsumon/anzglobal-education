@@ -217,15 +217,12 @@ export function registerAttendanceRoutes(app: Express) {
     try {
       const { userId, filename } = req.params;
       const objectPath = `attendance-photos/${userId}/${filename}`;
-      const { Client } = await import("@replit/object-storage");
-      const client = new Client();
-      const result = await client.downloadAsBytes(objectPath);
-      if (!result.ok) {
+      const { downloadFile } = await import("./file-storage");
+      const imgBuffer = await downloadFile(objectPath);
+      if (!imgBuffer) {
         console.warn("[Attendance] Photo not found in storage:", objectPath);
         return res.status(404).json({ message: "Photo not found" });
       }
-      // Google Cloud Storage SDK returns [Buffer] (array), not a raw Buffer
-      const imgBuffer = Array.isArray(result.value) ? result.value[0] : result.value;
       res.setHeader("Content-Type", "image/jpeg");
       res.setHeader("Cache-Control", "public, max-age=86400");
       res.end(imgBuffer);
