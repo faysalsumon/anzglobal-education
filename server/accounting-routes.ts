@@ -298,7 +298,9 @@ export function registerAccountingRoutes(app: Express) {
 
       if (type === "institution") {
         // Try accounts table first (new flow: id is accounts.id UUID)
-        const [acc] = await db.select({
+        // Only query accounts if id looks like a UUID — legacy universities.id values are not UUIDs
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        const [acc] = isUuid ? await db.select({
           id: accounts.id,
           name: accounts.name,
           email: accounts.email,
@@ -309,7 +311,7 @@ export function registerAccountingRoutes(app: Express) {
           city: accounts.city,
           state: accounts.state,
           country: accounts.country,
-        }).from(accounts).where(eq(accounts.id, id)).limit(1);
+        }).from(accounts).where(eq(accounts.id, id)).limit(1) : [];
 
         if (acc) {
           const emailOptions: Array<{ label: string; email: string }> = [];
