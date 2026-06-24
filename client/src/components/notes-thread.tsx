@@ -382,6 +382,16 @@ function NoteComposer({
       Mention.configure({
         HTMLAttributes: { class: "mention" },
         suggestion: {
+          command: ({ editor, range, props }) => {
+            editor
+              .chain()
+              .focus()
+              .insertContentAt(range, [
+                { type: "mention", attrs: { id: props.id, label: props.label } },
+                { type: "text", text: " " },
+              ])
+              .run();
+          },
           items: ({ query }) =>
             teamMembersRef.current
               .filter((m) => {
