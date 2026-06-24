@@ -788,12 +788,22 @@ export function registerAccountingRoutes(app: Express) {
             if (acct?.institutionCmsId) resolvedInstitutionId = acct.institutionCmsId;
             customerData.accountId = invoiceData.accountId;
             customerData.institutionId = resolvedInstitutionId;
-            // Dedup by accountId first
-            const [existing] = await db.select().from(accCustomers)
+            // Dedup: check accountId first
+            const [existingByAccount] = await db.select().from(accCustomers)
               .where(eq(accCustomers.accountId, invoiceData.accountId)).limit(1);
-            if (existing) {
-              customerId = existing.id;
-              await db.update(accCustomers).set({ name: customerData.name }).where(eq(accCustomers.id, existing.id));
+            if (existingByAccount) {
+              customerId = existingByAccount.id;
+              await db.update(accCustomers).set({ name: customerData.name }).where(eq(accCustomers.id, existingByAccount.id));
+            } else if (resolvedInstitutionId) {
+              // Fallback: legacy customer created before account_id existed — reuse and backfill
+              const [existingByInstitution] = await db.select().from(accCustomers)
+                .where(eq(accCustomers.institutionId, resolvedInstitutionId)).limit(1);
+              if (existingByInstitution) {
+                customerId = existingByInstitution.id;
+                await db.update(accCustomers)
+                  .set({ name: customerData.name, accountId: invoiceData.accountId })
+                  .where(eq(accCustomers.id, existingByInstitution.id));
+              }
             }
           } else if (invoiceData.institutionId) {
             // Old flow: institutionId (universities.id) provided
