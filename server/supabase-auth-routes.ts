@@ -370,10 +370,13 @@ router.post('/reset-password', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      user.id,
+      { password: newPassword }
+    );
 
-    if (error) {
-      return res.status(400).json({ error: error.message });
+    if (updateError) {
+      return res.status(400).json({ error: updateError.message });
     }
 
     res.json({ message: 'Password updated successfully' });
