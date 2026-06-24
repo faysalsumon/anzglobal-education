@@ -98,7 +98,10 @@ export function useAuth() {
   const isAccountsOfficer = adminRole === "accounts_officer";
   const isMarketingExecutive = adminRole === "marketing_executive";
   const isAdmissionsDirector = adminRole === "admissions_director";
-  
+  // Consultant-level and above: excludes support_staff, operations_staff, marketing_executive, accounts_officer
+  const isConsultantOrAbove = isCTO || isBranchManager || isConsultant || isAdmissionsDirector ||
+    adminRole === 'cfo' || user?.userType === 'platform_admin';
+
   const hasFullAdminAccess = isCTO || isBranchManager;
 
   const allowedNavSections = useMemo(() => {
@@ -128,6 +131,7 @@ export function useAuth() {
     isStudent: user?.userType === "student",
     isAdmin: user?.userType === "admin" || user?.userType === "platform_admin",
     isStaff,
+    isConsultantOrAbove,
     adminRole,
     isCTO,
     isBranchManager,

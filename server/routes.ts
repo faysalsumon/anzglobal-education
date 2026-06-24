@@ -356,7 +356,11 @@ export const ALL_STAFF_ROLES: RoleName[] = [
 ];
 
 // Roles that can upload/delete documents on behalf of students (consultant level and above)
-export const CONSULTANT_AND_ABOVE_ROLES: RoleName[] = ALL_STAFF_ROLES;
+// Excludes support_staff, operations_staff, marketing_executive, accounts_officer (below consultant tier)
+export const CONSULTANT_AND_ABOVE_ROLES: RoleName[] = [
+  'cto', 'ceo', 'branch_manager', 'cfo', 'admissions_director',
+  'senior_consultant', 'junior_consultant',
+];
 
 // Kept as alias so nothing outside this file breaks
 type AdminRole = RoleName;

@@ -236,7 +236,7 @@ function SaveCancelBar({
 }
 
 export function StudentProfileViewer({ profileId, studentName }: StudentProfileViewerProps) {
-  const { isStaff } = useAuth();
+  const { isConsultantOrAbove: isStaff } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -510,7 +510,7 @@ export function StudentProfileViewer({ profileId, studentName }: StudentProfileV
         {/* ── Education History ────────────────────────────── */}
         <AccordionItem value="education" className="border rounded-lg px-4">
           <SectionHeader icon={GraduationCap} title="Education History" editing={editingSection === "education"} isStaff={isStaff}
-            onEdit={(e) => { e.stopPropagation(); setEditingSection(editingSection === "education" ? null : "education"); }}
+            onEdit={(e) => { e.stopPropagation(); setEditingSection(editingSection === "education" ? null : "education"); setOpenSections(prev => prev.includes("education") ? prev : [...prev, "education"]); }}
             extras={<Badge variant="outline" className="ml-2">{education.length}</Badge>}
           />
           <AccordionContent>
@@ -616,7 +616,7 @@ export function StudentProfileViewer({ profileId, studentName }: StudentProfileV
         {/* ── English Proficiency ──────────────────────────── */}
         <AccordionItem value="english" className="border rounded-lg px-4">
           <SectionHeader icon={Languages} title="English Proficiency" editing={editingSection === "english"} isStaff={isStaff}
-            onEdit={(e) => { e.stopPropagation(); setEditingSection(editingSection === "english" ? null : "english"); }}
+            onEdit={(e) => { e.stopPropagation(); setEditingSection(editingSection === "english" ? null : "english"); setOpenSections(prev => prev.includes("english") ? prev : [...prev, "english"]); }}
             extras={<Badge variant="outline" className="ml-2">{languageScores.length}</Badge>}
           />
           <AccordionContent>
