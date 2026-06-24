@@ -16,6 +16,10 @@ import { runMigrations } from "./migrate";
 import { seedDefaultRoles } from "./seed-roles";
 import { seedDefaultProfiles } from "./seed-profiles";
 
+if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET environment variable is required in production");
+}
+
 if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
