@@ -389,7 +389,8 @@ function buildCspDirectives(nonce: string): string {
     // Nonce allows our known inline GTM / GA4 / gtag blocks; no 'unsafe-inline'.
     // 'unsafe-hashes' is intentionally absent — see audit comment above.
     // clarity.ms: GTM loads the main tag from www.clarity.ms; actual bundle from scripts.clarity.ms
-    `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com https://maps.googleapis.com https://maps.gstatic.com https://connect.facebook.net https://www.clarity.ms https://scripts.clarity.ms`,
+    // challenges.cloudflare.com: Cloudflare Turnstile CAPTCHA widget
+    `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com https://maps.googleapis.com https://maps.gstatic.com https://connect.facebook.net https://www.clarity.ms https://scripts.clarity.ms https://challenges.cloudflare.com`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     // blob: needed for canvas exports; https: allows institution/student image CDNs
@@ -398,8 +399,8 @@ function buildCspDirectives(nonce: string): string {
     // clarity.ms for Microsoft Clarity telemetry
     // https://www.facebook.com: Meta Pixel fires conversion events to /tr on this origin
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://maps.googleapis.com https://api.openai.com https://*.clarity.ms https://www.facebook.com ws://localhost:* wss://localhost:*",
-    // GTM noscript iframe
-    "frame-src 'self' https://www.googletagmanager.com",
+    // GTM noscript iframe + Cloudflare Turnstile (renders challenge in an iframe)
+    "frame-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com",
     // Belt-and-suspenders alongside X-Frame-Options: SAMEORIGIN
     "frame-ancestors 'self'",
     // react-pdf (pdfjs) loads its worker from bundled origin; blob: covers inline worker fallback
