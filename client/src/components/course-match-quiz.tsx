@@ -134,6 +134,9 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
   const [turnstileToken, setTurnstileToken] = useState("");
   const handleTurnstileSuccess = useCallback((token: string) => setTurnstileToken(token), []);
   const handleTurnstileExpire = useCallback(() => setTurnstileToken(""), []);
+  // When Turnstile errors (e.g. domain not whitelisted), clear the token so the
+  // server gracefully allows the submission through rather than blocking real users.
+  const handleTurnstileError = useCallback(() => setTurnstileToken(""), []);
 
   const { data: filterOptions, isLoading: filtersLoading } = useQuery<FilterOptions>({
     queryKey: ["/api/courses/filter-options"],
@@ -562,6 +565,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
         <TurnstileWidget
           onSuccess={handleTurnstileSuccess}
           onExpire={handleTurnstileExpire}
+          onError={handleTurnstileError}
           className="flex justify-center"
         />
         {contactErrors.submit && (
