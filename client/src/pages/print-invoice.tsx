@@ -68,8 +68,10 @@ export default function PrintInvoice() {
         <div className="flex items-start justify-between mb-8">
           <div>
             <img src={logoUrl} alt="ANZ Global Education" className="h-12 mb-2" />
-            <p className="text-sm text-gray-500">ANZ Global Education</p>
-            <p className="text-sm text-gray-500">Melbourne, Australia</p>
+            <p className="text-sm font-semibold text-gray-700">ANZ Global Education Pty Ltd</p>
+            <p className="text-sm text-gray-500">Level 2, Unit 3, 94 Eucumbene Drive</p>
+            <p className="text-sm text-gray-500">Ravenhall, VIC 3023, Australia</p>
+            <p className="text-sm text-gray-500">ABN: 12 541 172 705</p>
           </div>
           <div className="text-right">
             <h1 className="text-3xl font-bold text-gray-900 mb-1">INVOICE</h1>
@@ -209,7 +211,7 @@ export default function PrintInvoice() {
 
         <div className="border-t border-gray-200 pt-4 text-center">
           <p className="text-xs text-gray-400">
-            ANZ Global Education Pty Ltd | ABN: 00 000 000 000 | info@anzglobal.com.au
+            ANZ Global Education Pty Ltd | ABN: 12 541 172 705 | info@anzglobal.com.au
           </p>
         </div>
       </div>

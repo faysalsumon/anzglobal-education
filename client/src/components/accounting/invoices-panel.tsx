@@ -941,7 +941,17 @@ function InvoiceDetailView({ invoice, onBack, onSend, onVoid, onReminder, onReco
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4 space-y-1">
+            <h3 className="font-semibold text-sm text-muted-foreground">From</h3>
+            <p className="font-medium text-sm">ANZ Global Education Pty Ltd</p>
+            <p className="text-xs text-muted-foreground">Level 2, Unit 3, 94 Eucumbene Drive</p>
+            <p className="text-xs text-muted-foreground">Ravenhall, VIC 3023, Australia</p>
+            <p className="text-xs text-muted-foreground"><span className="font-medium">ABN:</span> 12 541 172 705</p>
+            <p className="text-xs text-muted-foreground">info@anzglobal.com.au</p>
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="p-4 space-y-2">
             <h3 className="font-semibold text-sm text-muted-foreground">
