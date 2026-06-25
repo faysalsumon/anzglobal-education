@@ -11,6 +11,7 @@ import { initializePineconeIndex } from "./knowledge-base";
 import { regionDetectionMiddleware, geoRedirectMiddleware } from "./middleware/region-detection";
 import { csrfErrorHandler } from "./middleware/csrf";
 import { supabaseAuthMiddleware } from "./supabase-middleware";
+import { dbContextMiddleware } from "./middleware/db-context";
 import { botProtectionMiddleware, securityHeadersMiddleware, protectedPathsMiddleware, nonceMiddleware } from "./middleware/bot-protection";
 import { runMigrations } from "./migrate";
 import { seedDefaultRoles } from "./seed-roles";
@@ -136,6 +137,12 @@ app.use(regionDetectionMiddleware);
 
 // Add Supabase auth middleware to process JWT tokens
 app.use(supabaseAuthMiddleware);
+
+// Per-request RLS context: acquires an app_user connection and injects
+// app.current_user_id / app.current_user_type so PostgreSQL RLS policies
+// can evaluate them. Only active when APP_DB_URL is set in production.
+// Attaches res.locals.rlsDb for routes that want tenant-isolated queries.
+app.use(dbContextMiddleware);
 
 // Prevent Cloudflare and other CDNs from caching API responses.
 // Without this, Cloudflare serves stale JSON (old course names, missing courses, etc.)

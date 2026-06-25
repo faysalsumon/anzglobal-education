@@ -1,0 +1,27 @@
+-- Migration 0033: app_user role documentation placeholder
+--
+-- This migration is a no-op marker. The app_user PostgreSQL role must be created
+-- MANUALLY in the Supabase Dashboard before RLS enforcement via APP_DB_URL is active.
+-- Creating roles requires superuser privileges that are not available from the
+-- application database connection used by the Drizzle migrator.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- ONE-TIME MANUAL SETUP (Supabase Dashboard > SQL Editor):
+-- ─────────────────────────────────────────────────────────────────────────────
+--   CREATE ROLE app_user WITH LOGIN PASSWORD 'your-secure-password-here';
+--   GRANT USAGE ON SCHEMA public TO app_user;
+--   GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
+--   GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
+--   ALTER DEFAULT PRIVILEGES IN SCHEMA public
+--     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;
+--   ALTER DEFAULT PRIVILEGES IN SCHEMA public
+--     GRANT USAGE, SELECT ON SEQUENCES TO app_user;
+--   ALTER ROLE app_user NOBYPASSRLS;
+--   ALTER ROLE app_user SET app.current_user_id TO '';
+--   ALTER ROLE app_user SET app.current_user_type TO '';
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Then add APP_DB_URL to Replit environment secrets in the format:
+--   postgresql://app_user:<password>@<supabase-host>:5432/postgres?sslmode=require
+-- ─────────────────────────────────────────────────────────────────────────────
+
+SELECT 1;

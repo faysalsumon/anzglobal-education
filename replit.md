@@ -78,6 +78,7 @@ The platform adheres to ANZ Global Education's brand identity, using a specific 
 - **API Logging Sanitization**: Sensitive fields redacted from logs.
 - **Session Security**: HTTPOnly cookies with SameSite protection; sessions stored in PostgreSQL.
 - **Role-Based Access Control**: All API routes protected by authentication and userType checks.
+- **Row-Level Security (RLS)**: Defence-in-depth database-layer tenant isolation on 8 sensitive tables (`universities`, `courses`, `applications`, `student_profiles`, `documents`, `institution_documents`, `notifications`, `conversations`). Architecture: the global `db` pool connects as the `postgres` superuser (BYPASSRLS — used for migrations/seeding/admin ops). A secondary `appUserPool` in `server/db.ts` connects as the `app_user` role (no BYPASSRLS) when `APP_DB_URL` is set. The `server/middleware/db-context.ts` middleware runs after `supabaseAuthMiddleware`, acquires an `app_user` connection, and calls `set_config('app.current_user_id', ...)` + `set_config('app.current_user_type', ...)` so RLS policies can evaluate them via `current_setting()`. The middleware attaches `res.locals.rlsDb` (a Drizzle instance) for routes that want RLS-enforced queries. **Activation**: run migration 0033 on production, then `ALTER ROLE app_user WITH LOGIN PASSWORD 'xxx'` in Supabase Dashboard, then add `APP_DB_URL` to Replit secrets.
 
 ### System Design Choices
 - **AI Web Scraping System**: Combines dynamic schema introspection, GPT-4o-mini, Playwright/Cheerio, and BullMQ.

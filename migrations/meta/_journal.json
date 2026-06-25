@@ -232,6 +232,20 @@
       "when": 1782500000000,
       "tag": "0032_tasks_microservice",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1782600000000,
+      "tag": "0033_rls_app_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1782700000000,
+      "tag": "0034_rls_policies",
+      "breakpoints": true
     }
   ]
 }
