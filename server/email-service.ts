@@ -2063,6 +2063,14 @@ interface InvoiceEmailData {
   amountPaid: string | null;
   notes: string | null;
   terms: string | null;
+  // Optional billing address fields from CRM account
+  clientEmail?: string | null;
+  billingAddress?: string | null;
+  billingCity?: string | null;
+  billingState?: string | null;
+  billingCountry?: string | null;
+  abn?: string | null;
+  taxId?: string | null;
 }
 
 interface LineItemEmailData {
@@ -2128,6 +2136,31 @@ async function generateInvoicePdf(invoice: InvoiceEmailData, lineItems: LineItem
       // Bill To column
       doc.fillColor(DARK_GRAY).fontSize(10).font('Helvetica-Bold')
         .text(customerName, 310, blockY + 18);
+      let billToLineY = blockY + 32;
+      if (invoice.billingAddress) {
+        doc.fillColor(MID_GRAY).fontSize(9).font('Helvetica')
+          .text(invoice.billingAddress, 310, billToLineY);
+        billToLineY += 12;
+      }
+      const cityStateParts = [invoice.billingCity, invoice.billingState, invoice.billingCountry].filter(Boolean);
+      if (cityStateParts.length > 0) {
+        doc.fillColor(MID_GRAY).fontSize(9).font('Helvetica')
+          .text(cityStateParts.join(', '), 310, billToLineY);
+        billToLineY += 12;
+      }
+      if (invoice.abn) {
+        doc.fillColor(MID_GRAY).fontSize(9).font('Helvetica')
+          .text(`ABN: ${invoice.abn}`, 310, billToLineY);
+        billToLineY += 12;
+      } else if (invoice.taxId) {
+        doc.fillColor(MID_GRAY).fontSize(9).font('Helvetica')
+          .text(`Tax ID: ${invoice.taxId}`, 310, billToLineY);
+        billToLineY += 12;
+      }
+      if (invoice.clientEmail) {
+        doc.fillColor(MID_GRAY).fontSize(9).font('Helvetica')
+          .text(invoice.clientEmail, 310, billToLineY);
+      }
 
       // ── Invoice metadata ──────────────────────────────────────────────────
       const metaY = blockY + 98;

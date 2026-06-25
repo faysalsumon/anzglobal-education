@@ -1138,7 +1138,45 @@ export function registerAccountingRoutes(app: Express) {
 
       const lineItems = await db.select().from(accInvoiceLineItems).where(eq(accInvoiceLineItems.invoiceId, invoice.id));
 
-      await sendInvoiceEmail(sendToEmail, customer?.name || "Customer", invoice as any, lineItems as any, invoice.regionCode || undefined);
+      // Fetch CRM account billing details if linked
+      let crmBilling: {
+        clientEmail?: string | null;
+        billingAddress?: string | null;
+        billingCity?: string | null;
+        billingState?: string | null;
+        billingCountry?: string | null;
+        abn?: string | null;
+        taxId?: string | null;
+      } = {};
+      if (invoice.accountId) {
+        const [acc] = await db.select({
+          abn: accounts.abn,
+          taxId: accounts.taxId,
+          address: accounts.address,
+          city: accounts.city,
+          state: accounts.state,
+          country: accounts.country,
+          billingAddress: accounts.billingAddress,
+          billingCity: accounts.billingCity,
+          billingState: accounts.billingState,
+          billingCountry: accounts.billingCountry,
+          billingSameAsLocation: accounts.billingSameAsLocation,
+        }).from(accounts).where(eq(accounts.id, invoice.accountId));
+        if (acc) {
+          const sameAsLocation = acc.billingSameAsLocation ?? true;
+          crmBilling = {
+            clientEmail: sendToEmail,
+            billingAddress: sameAsLocation ? acc.address : acc.billingAddress,
+            billingCity: sameAsLocation ? acc.city : acc.billingCity,
+            billingState: sameAsLocation ? acc.state : acc.billingState,
+            billingCountry: sameAsLocation ? acc.country : acc.billingCountry,
+            abn: acc.abn,
+            taxId: acc.taxId,
+          };
+        }
+      }
+
+      await sendInvoiceEmail(sendToEmail, customer?.name || "Customer", { ...(invoice as any), ...crmBilling }, lineItems as any, invoice.regionCode || undefined);
 
       if (invoice.status === 'draft') {
         await db.update(accInvoices).set({ status: 'sent', updatedAt: new Date() }).where(eq(accInvoices.id, invoice.id));
