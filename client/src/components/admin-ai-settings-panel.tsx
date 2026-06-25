@@ -200,6 +200,18 @@ interface ReplitMigrationState {
   error?: string;
 }
 
+interface NeonMigrationState {
+  status: "idle" | "running" | "completed" | "failed";
+  startedAt: number | null;
+  finishedAt: number | null;
+  tablesTotal: number;
+  tablesDone: number;
+  rowsCopied: number;
+  currentTable: string | null;
+  recentLog: string[];
+  error?: string;
+}
+
 export function AdminAiSettingsPanel() {
   const { toast } = useToast();
   const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
@@ -305,6 +317,29 @@ export function AdminAiSettingsPanel() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/migrate-replit-to-supabase/status"] });
       toast({ title: "Migration started", description: "Files are being copied to Supabase in the background." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Migration failed to start", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const { data: neonMigStatus, refetch: refetchNeonMig } = useQuery<NeonMigrationState>({
+    queryKey: ["/api/admin/migrate-neon-to-supabase/status"],
+    refetchInterval: (query) => {
+      const data = query.state.data as NeonMigrationState | undefined;
+      return data?.status === "running" ? 2000 : false;
+    },
+    retry: false,
+  });
+
+  const startNeonMigMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/migrate-neon-to-supabase");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/migrate-neon-to-supabase/status"] });
+      toast({ title: "Data migration started", description: "Copying Neon data to Supabase in the background." });
     },
     onError: (error: Error) => {
       toast({ title: "Migration failed to start", description: error.message, variant: "destructive" });
@@ -678,6 +713,93 @@ export function AdminAiSettingsPanel() {
               ) : (
                 <>
                   <CloudUpload className="mr-2 h-4 w-4" />
+                  Start Migration
+                </>
+              )}
+            </Button>
+          </div>
+
+          <div className="border-t pt-4" />
+
+          {/* Neon → Supabase Data Migration */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Migrate Neon Data to Supabase</p>
+              <p className="text-xs text-muted-foreground">
+                Copies all app data from Neon (dev database) into Supabase (production). Run this once after
+                deploying to production. Already-existing rows are skipped — safe to re-run.
+                Requires the production server to have access to both{" "}
+                <code className="font-mono">DATABASE_URL</code> (Neon) and{" "}
+                <code className="font-mono">SUPABASE_DB_DIRECT_URL</code>.
+              </p>
+              {neonMigStatus && neonMigStatus.status !== "idle" && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  {neonMigStatus.status === "running" && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Running{neonMigStatus.currentTable ? ` — ${neonMigStatus.currentTable}` : "…"}
+                    </Badge>
+                  )}
+                  {neonMigStatus.status === "completed" && (
+                    <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Completed
+                    </Badge>
+                  )}
+                  {neonMigStatus.status === "failed" && (
+                    <Badge variant="destructive" className="gap-1">
+                      <XCircle className="h-3 w-3" />
+                      Failed
+                    </Badge>
+                  )}
+                  <span className="text-muted-foreground">
+                    {neonMigStatus.rowsCopied} rows copied
+                    {neonMigStatus.tablesTotal > 0 && (
+                      <span className="text-muted-foreground/60">
+                        {" "}· {neonMigStatus.tablesDone}/{neonMigStatus.tablesTotal} tables
+                      </span>
+                    )}
+                  </span>
+                  {neonMigStatus.status === "running" && (
+                    <button
+                      className="text-muted-foreground underline underline-offset-2"
+                      onClick={() => refetchNeonMig()}
+                    >
+                      Refresh
+                    </button>
+                  )}
+                </div>
+              )}
+              {neonMigStatus?.recentLog && neonMigStatus.recentLog.length > 0 && (
+                <div className="mt-2 max-h-28 overflow-y-auto rounded border bg-muted/40 p-2">
+                  {neonMigStatus.recentLog.slice(-10).map((line, i) => (
+                    <p key={i} className="font-mono text-xs text-muted-foreground leading-relaxed">{line}</p>
+                  ))}
+                </div>
+              )}
+              {neonMigStatus?.status === "failed" && neonMigStatus.error && (
+                <p className="mt-1 text-xs text-destructive">{neonMigStatus.error}</p>
+              )}
+            </div>
+            <Button
+              data-testid="button-migrate-neon-to-supabase"
+              onClick={() => startNeonMigMutation.mutate()}
+              disabled={startNeonMigMutation.isPending || neonMigStatus?.status === "running"}
+              className="shrink-0"
+            >
+              {startNeonMigMutation.isPending || neonMigStatus?.status === "running" ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Running…
+                </>
+              ) : neonMigStatus?.status === "completed" ? (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Run Again
+                </>
+              ) : (
+                <>
+                  <Database className="mr-2 h-4 w-4" />
                   Start Migration
                 </>
               )}

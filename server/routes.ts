@@ -24554,6 +24554,47 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
+  // ─── One-time Neon → Supabase data migration ────────────────────────────────
+  // Copies all app data from Neon (DATABASE_URL) into Supabase (SUPABASE_DB_DIRECT_URL).
+  // Requires schema migrations to have already run on Supabase.
+  // Safe to run multiple times — ON CONFLICT DO NOTHING skips existing rows.
+  app.post("/api/admin/migrate-neon-to-supabase", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, CTO_ROLES);
+      if (!access) return res.status(403).json({ message: "Access denied: CTO role required" });
+
+      const { startNeonMigration } = await import("./neon-data-migration");
+      const { state, startedNew } = startNeonMigration();
+
+      res.status(202).json({
+        success: true,
+        message: startedNew
+          ? "Data migration started in the background. Poll the status endpoint for progress."
+          : "Migration already running. Poll the status endpoint for progress.",
+        statusUrl: "/api/admin/migrate-neon-to-supabase/status",
+        state,
+      });
+    } catch (error: any) {
+      console.error("[NeonMigration] Start error:", error);
+      res.status(500).json({ message: "Failed to start migration", error: error.message });
+    }
+  });
+
+  app.get("/api/admin/migrate-neon-to-supabase/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, CTO_ROLES);
+      if (!access) return res.status(403).json({ message: "Access denied: CTO role required" });
+
+      const { getNeonMigrationState } = await import("./neon-data-migration");
+      res.json(getNeonMigrationState());
+    } catch (error: any) {
+      console.error("[NeonMigration] Status error:", error);
+      res.status(500).json({ message: "Failed to get migration status", error: error.message });
+    }
+  });
+
   // ─── One-time Replit Object Storage → Supabase Storage migration ────────────
   // Copies all existing files from Replit Object Storage into Supabase buckets.
   // Safe to run multiple times — already-migrated files are skipped.
