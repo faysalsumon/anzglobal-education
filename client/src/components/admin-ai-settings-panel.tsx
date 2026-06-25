@@ -25,6 +25,8 @@ import {
   FolderSync,
   AlertCircle,
   CheckCircle2,
+  CloudUpload,
+  XCircle,
 } from "lucide-react";
 
 interface AiModel {
@@ -180,6 +182,24 @@ interface MigrationResults {
   [category: string]: MigrationCategoryResult;
 }
 
+interface ReplitMigStats {
+  total: number;
+  copied: number;
+  skipped: number;
+  failed: number;
+  errors: string[];
+}
+
+interface ReplitMigrationState {
+  status: "idle" | "running" | "completed" | "failed";
+  startedAt: number | null;
+  finishedAt: number | null;
+  stats: ReplitMigStats;
+  currentPrefix: string | null;
+  recentLog: string[];
+  error?: string;
+}
+
 export function AdminAiSettingsPanel() {
   const { toast } = useToast();
   const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
@@ -265,6 +285,29 @@ export function AdminAiSettingsPanel() {
         description: error.message || "An error occurred during migration.",
         variant: "destructive",
       });
+    },
+  });
+
+  const { data: replitMigStatus, refetch: refetchReplitMig } = useQuery<ReplitMigrationState>({
+    queryKey: ["/api/admin/migrate-replit-to-supabase/status"],
+    refetchInterval: (query) => {
+      const data = query.state.data as ReplitMigrationState | undefined;
+      return data?.status === "running" ? 3000 : false;
+    },
+    retry: false,
+  });
+
+  const startReplitMigMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/migrate-replit-to-supabase");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/migrate-replit-to-supabase/status"] });
+      toast({ title: "Migration started", description: "Files are being copied to Supabase in the background." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Migration failed to start", description: error.message, variant: "destructive" });
     },
   });
 
@@ -562,6 +605,84 @@ export function AdminAiSettingsPanel() {
               </div>
             </div>
           )}
+
+          <div className="border-t pt-4" />
+
+          {/* Replit → Supabase Storage Migration */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Migrate Replit Storage to Supabase</p>
+              <p className="text-xs text-muted-foreground">
+                Copies all legacy files from Replit Object Storage into Supabase buckets (anz-public / anz-private).
+                Runs in the background — safe to navigate away. Already-migrated files are skipped.
+              </p>
+              {replitMigStatus && replitMigStatus.status !== "idle" && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  {replitMigStatus.status === "running" && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Running{replitMigStatus.currentPrefix ? ` — ${replitMigStatus.currentPrefix}` : "…"}
+                    </Badge>
+                  )}
+                  {replitMigStatus.status === "completed" && (
+                    <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Completed
+                    </Badge>
+                  )}
+                  {replitMigStatus.status === "failed" && (
+                    <Badge variant="destructive" className="gap-1">
+                      <XCircle className="h-3 w-3" />
+                      Failed
+                    </Badge>
+                  )}
+                  <span className="text-muted-foreground">
+                    {replitMigStatus.stats.copied} copied · {replitMigStatus.stats.skipped} skipped
+                    {replitMigStatus.stats.failed > 0 && (
+                      <span className="text-destructive"> · {replitMigStatus.stats.failed} failed</span>
+                    )}
+                    {replitMigStatus.stats.total > 0 && (
+                      <span className="text-muted-foreground/60"> / {replitMigStatus.stats.total} total</span>
+                    )}
+                  </span>
+                  {replitMigStatus.status === "running" && (
+                    <button
+                      className="text-muted-foreground underline underline-offset-2"
+                      onClick={() => refetchReplitMig()}
+                    >
+                      Refresh
+                    </button>
+                  )}
+                </div>
+              )}
+              {replitMigStatus?.status === "failed" && replitMigStatus.error && (
+                <p className="mt-1 text-xs text-destructive">{replitMigStatus.error}</p>
+              )}
+            </div>
+            <Button
+              data-testid="button-migrate-replit-to-supabase"
+              onClick={() => startReplitMigMutation.mutate()}
+              disabled={startReplitMigMutation.isPending || replitMigStatus?.status === "running"}
+              className="shrink-0"
+            >
+              {startReplitMigMutation.isPending || replitMigStatus?.status === "running" ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Running…
+                </>
+              ) : replitMigStatus?.status === "completed" ? (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Run Again
+                </>
+              ) : (
+                <>
+                  <CloudUpload className="mr-2 h-4 w-4" />
+                  Start Migration
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

@@ -1,6 +1,6 @@
 ---
 name: File storage — Supabase migration
-description: Object storage migrated from Replit Object Storage to Supabase Storage; path routing, bucket names, fallback behaviour, and how to trigger migration.
+description: Object storage is exclusively Supabase Storage; path routing, bucket names, migration UI, and long-running job pattern.
 ---
 
 # File storage — Supabase Storage
@@ -23,8 +23,8 @@ description: Object storage migrated from Replit Object Storage to Supabase Stor
 - `attendance-photos/*` → `anz-private`, kept as-is (no prefix)
 - anything else → `anz-private`, kept as-is
 
-## Replit fallback (temporary)
-`downloadFile()` tries Supabase first; if not found, falls back to Replit Object Storage. This ensures zero data loss during migration. Remove the fallback block once `runMigrationFromReplitToSupabase()` has been confirmed successful.
+## Replit fallback — REMOVED
+The Replit Object Storage fallback in `downloadFile()` has been removed. All reads now go exclusively to Supabase. To copy any legacy Replit files to Supabase, use the **"Migrate Replit Storage to Supabase"** button in Admin → AI & System Settings → System Maintenance.
 
 ## Migration endpoints (CTO only)
 - `POST /api/admin/migrate-replit-to-supabase` — starts the Replit → Supabase copy **in the background**, returns `202` immediately (idempotent, skips already-migrated files).
@@ -32,6 +32,11 @@ description: Object storage migrated from Replit Object Storage to Supabase Stor
 - `POST /api/admin/migrate-local-files` — copies local filesystem uploads → Supabase.
 
 **Why background:** the copy moves hundreds of files and takes far longer than the hosting proxy's ~60s request timeout. Awaiting it inline returned a **502 (HTML error page → "Unexpected token '<'" when the client did `res.json()`)** even though the server kept copying. Long-running admin jobs here must be fire-and-forget (no Redis/queue available) + a status-poll endpoint, never awaited in the request. A concurrent-run guard (in-memory `status === "running"`) prevents duplicate clicks from stacking redundant runs.
+
+## Migration UI (admin-ai-settings-panel.tsx)
+The System Maintenance card has two migration actions:
+1. **Migrate Local Files to Storage** — copies legacy disk files to Supabase (one-time after initial deploy).
+2. **Migrate Replit Storage to Supabase** — copies all Replit Object Storage files to Supabase buckets. Shows live status with 3-second polling while running. Uses `ReplitMigrationState` interface.
 
 ## Startup
 `ensureBuckets()` is called after seeds complete in `server/index.ts`. Creates `anz-public` and `anz-private` if they don't exist.

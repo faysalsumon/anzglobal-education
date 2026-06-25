@@ -121,11 +121,12 @@ export async function uploadFile(
 }
 
 /**
- * Download a file. Tries Supabase first; if not found falls back to legacy
- * Replit Object Storage so existing files remain accessible during migration.
+ * Download a file from Supabase Storage.
+ * All files are now served exclusively from Supabase.
+ * Run the "Migrate Replit → Supabase" action in the admin AI settings panel
+ * to copy any legacy Replit Object Storage files before files go missing.
  */
 export async function downloadFile(storagePath: string): Promise<Buffer | null> {
-  // ── Primary: Supabase Storage ──────────────────────────────────────────────
   try {
     const { bucket, filePath } = getBucketAndPath(storagePath);
     const supabase = getSupabase();
@@ -136,35 +137,6 @@ export async function downloadFile(storagePath: string): Promise<Buffer | null> 
   } catch (err: any) {
     console.warn(`[FileStorage] Supabase download error for ${storagePath}:`, err.message);
   }
-
-  // ── Fallback: Replit Object Storage (legacy, removed once migration is done) ─
-  try {
-    const { Client } = await import("@replit/object-storage");
-    const client = new Client();
-    const result = await client.downloadAsBytes(storagePath);
-    if (result.ok && result.value != null) {
-      const val: unknown = result.value;
-      let buf: Buffer;
-      if (Buffer.isBuffer(val)) {
-        buf = val;
-      } else if (Array.isArray(val)) {
-        buf = Buffer.concat(val.map((c: unknown) => Buffer.isBuffer(c) ? c : Buffer.from(c as Uint8Array)));
-      } else if (val instanceof Uint8Array) {
-        buf = Buffer.from(val);
-      } else if (val instanceof ArrayBuffer) {
-        buf = Buffer.from(val);
-      } else {
-        buf = Buffer.from(val as ArrayBufferLike);
-      }
-      if (buf.length > 0) {
-        console.log(`[FileStorage] Served ${storagePath} from legacy Replit storage (not yet migrated)`);
-        return buf;
-      }
-    }
-  } catch {
-    // Replit Object Storage not available (e.g. running on Railway) — skip silently
-  }
-
   return null;
 }
 
