@@ -327,8 +327,9 @@ export function startBackgroundMigration(): { state: MigrationState; startedNew:
 }
 
 // ─── Migration: Replit Object Storage → Supabase ─────────────────────────────
-// Run this once from the admin panel to copy all legacy files to Supabase.
-// After migration is confirmed, the fallback in downloadFile() becomes a no-op.
+// Run once from Admin → AI & System Settings → System Maintenance to copy all
+// legacy Replit Object Storage files into Supabase. downloadFile() no longer
+// has a Replit fallback, so run this before any legacy files are accessed.
 export async function runMigrationFromReplitToSupabase(
   onProgress?: (msg: string) => void,
   externalStats?: MigrationStats
