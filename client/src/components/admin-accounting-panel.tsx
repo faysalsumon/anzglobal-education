@@ -61,6 +61,7 @@ import {
   Info,
   ExternalLink,
   Briefcase,
+  Download,
 } from "lucide-react";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { EntityTasksWidget } from "@/components/entity-tasks-widget";
@@ -346,6 +347,13 @@ function InvoiceDetail({
             data-testid="button-print-invoice"
           >
             <Printer className="h-4 w-4 mr-1" /> Print / PDF
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => window.open(`/api/accounting/invoices/${invoice.id}/pdf`, "_blank")}
+            data-testid="button-download-invoice-pdf"
+          >
+            <Download className="h-4 w-4 mr-1" /> Download PDF
           </Button>
           {invoice.status === "draft" && (
             <Button variant="destructive" size="icon" onClick={() => onDelete()} data-testid="button-delete-invoice">

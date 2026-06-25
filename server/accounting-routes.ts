@@ -37,7 +37,7 @@ import {
   type AccItem,
 } from "@shared/schema";
 import { eq, desc, sql, and, gte, lte, lt, ilike, or } from "drizzle-orm";
-import { sendInvoiceEmail, sendPaymentReceiptEmail, sendInvoiceReminderEmail } from "./email-service";
+import { sendInvoiceEmail, sendPaymentReceiptEmail, sendInvoiceReminderEmail, generateInvoicePdf } from "./email-service";
 
 async function requireFinanceAdmin(req: Request, res: Response): Promise<string | null> {
   const userId = (req as any).supabaseUser?.id || (req as any).user?.claims?.sub || (req as any).user?.id;
@@ -1119,6 +1119,68 @@ export function registerAccountingRoutes(app: Express) {
     } catch (error) {
       console.error("Error creating credit note:", error);
       res.status(500).json({ message: error instanceof Error ? error.message : "Failed to create credit note" });
+    }
+  });
+
+  // ── Download Invoice PDF ────────────────────────────────────────────────
+
+  app.get("/api/accounting/invoices/:id/pdf", isAuthenticated, async (req, res) => {
+    if (!await requireFinanceAdmin(req, res)) return;
+    try {
+      const [invoice] = await db.select().from(accInvoices).where(eq(accInvoices.id, req.params.id));
+      if (!invoice) return res.status(404).json({ message: "Invoice not found" });
+
+      const [customer] = await db.select().from(accCustomers).where(eq(accCustomers.id, invoice.customerId));
+      const lineItems = await db.select().from(accInvoiceLineItems).where(eq(accInvoiceLineItems.invoiceId, invoice.id));
+
+      let crmBilling: {
+        billingAddress?: string | null;
+        billingCity?: string | null;
+        billingState?: string | null;
+        billingCountry?: string | null;
+        abn?: string | null;
+        taxId?: string | null;
+      } = {};
+      if (invoice.accountId) {
+        const [acc] = await db.select({
+          abn: accounts.abn,
+          taxId: accounts.taxId,
+          address: accounts.address,
+          city: accounts.city,
+          state: accounts.state,
+          country: accounts.country,
+          billingAddress: accounts.billingAddress,
+          billingCity: accounts.billingCity,
+          billingState: accounts.billingState,
+          billingCountry: accounts.billingCountry,
+          billingSameAsLocation: accounts.billingSameAsLocation,
+        }).from(accounts).where(eq(accounts.id, invoice.accountId));
+        if (acc) {
+          const sameAsLocation = acc.billingSameAsLocation ?? true;
+          crmBilling = {
+            billingAddress: sameAsLocation ? acc.address : acc.billingAddress,
+            billingCity: sameAsLocation ? acc.city : acc.billingCity,
+            billingState: sameAsLocation ? acc.state : acc.billingState,
+            billingCountry: sameAsLocation ? acc.country : acc.billingCountry,
+            abn: acc.abn,
+            taxId: acc.taxId,
+          };
+        }
+      }
+
+      const pdfBuffer = await generateInvoicePdf(
+        { ...(invoice as any), ...crmBilling },
+        lineItems as any,
+        customer?.name || "Customer"
+      );
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="Invoice-${invoice.invoiceNumber}.pdf"`);
+      res.setHeader("Cache-Control", "no-store");
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating invoice PDF:", error);
+      res.status(500).json({ message: error instanceof Error ? error.message : "Failed to generate PDF" });
     }
   });
 

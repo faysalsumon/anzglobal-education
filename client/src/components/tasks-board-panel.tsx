@@ -76,6 +76,7 @@ interface Task {
   linkedEntityId: string | null;
   tags: string[] | null;
   assignedToId: string | null;
+  applicationId: string | null;
   createdById: string;
   dueDate: string | null;
   createdAt: string | null;

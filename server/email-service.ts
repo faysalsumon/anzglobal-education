@@ -2082,7 +2082,7 @@ interface LineItemEmailData {
 
 const LOGO_PATH = path.resolve('attached_assets/ANZ PNG Logo_1762427712478.png');
 
-async function generateInvoicePdf(invoice: InvoiceEmailData, lineItems: LineItemEmailData[], customerName: string): Promise<Buffer> {
+export async function generateInvoicePdf(invoice: InvoiceEmailData, lineItems: LineItemEmailData[], customerName: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ margin: 50, size: 'A4' });
