@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -691,361 +693,310 @@ const STUDENT_FEE_TYPES = [
 ];
 
 function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
-  const [billToType, setBillToType] = useState<"institution" | "student" | "manual">("manual");
-  const [selectedInstitution, setSelectedInstitution] = useState<any>(null);
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [selectedAccount, setSelectedAccount] = useState<any>(null);
-  const [clientName, setClientName] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
-  const [clientAddress, setClientAddress] = useState("");
-  const [clientTaxRef, setClientTaxRef] = useState("");
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
-  const [dueDate, setDueDate] = useState("");
-  const [currency, setCurrency] = useState("AUD");
-  const [notes, setNotes] = useState("");
-  const [gstEnabled, setGstEnabled] = useState(false);
-  const [items, setItems] = useState([{ description: "", quantity: "1", unitPrice: "" }]);
+  const { toast } = useToast();
+  const [invoiceForm, setInvoiceForm] = useState({
+    billToType: "" as "" | "institution" | "student" | "manual",
+    accountId: "", institutionId: "", studentId: "",
+    clientName: "", clientEmail: "", clientPhone: "", clientAddress: "", clientTaxRef: "",
+    sendToEmail: "",
+    issueDate: new Date().toISOString().split("T")[0],
+    dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
+    currency: "AUD", regionCode: "AU", gstEnabled: false, notes: "", terms: "",
+  });
+  const [lineItems, setLineItems] = useState([{ itemId: "", description: "", quantity: "1", unitPrice: "0" }]);
+  const [search, setSearch] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [billingEmails, setBillingEmails] = useState<{ label: string; email: string }[]>([]);
+  const searchRef = useRef<HTMLDivElement>(null);
 
-  const handleSelectInstitution = (inst: any) => {
-    setSelectedInstitution(inst);
-    setClientName(inst.name || "");
-    setClientEmail(inst.contactEmail || "");
-    setClientPhone(inst.contactPhone || "");
-    const addresses = inst.campusAddresses;
-    if (Array.isArray(addresses) && addresses.length > 0) {
-      const addr = addresses[0];
-      setClientAddress([addr.address, addr.city, addr.state, addr.postcode, addr.country].filter(Boolean).join(", "));
+  const { data: catalogItems = [] } = useQuery<any[]>({ queryKey: ["/api/accounting/items"] });
+  const activeMode = invoiceForm.billToType;
+
+  const { data: accountResults = [] } = useQuery<any[]>({
+    queryKey: ["/api/accounting/search/institutions", search],
+    queryFn: async () => { const res = await apiRequest("GET", `/api/accounting/search/institutions?q=${encodeURIComponent(search)}`); return res.json(); },
+    enabled: activeMode === "institution" && search.length >= 1,
+  });
+  const { data: studentResults = [] } = useQuery<any[]>({
+    queryKey: ["/api/accounting/search/students", search],
+    queryFn: async () => { const res = await apiRequest("GET", `/api/accounting/search/students?q=${encodeURIComponent(search)}`); return res.json(); },
+    enabled: activeMode === "student" && search.length >= 1,
+  });
+
+  const results = activeMode === "institution"
+    ? accountResults.map((r: any) => ({ id: r.id, label: r.name, sublabel: r.accountType, _raw: r }))
+    : activeMode === "student"
+      ? studentResults.map((r: any) => ({ id: r.id, label: r.fullName, sublabel: r.email || "", _raw: null }))
+      : [];
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  async function handleSelectResult(id: string, name: string, raw: any) {
+    setSearch(""); setDropdownOpen(false); setBillingEmails([]);
+    setInvoiceForm(f => ({ ...f, accountId: activeMode === "institution" ? id : "", institutionId: activeMode === "institution" ? (raw?.institutionCmsId || "") : "", studentId: activeMode === "student" ? id : "", clientName: name, clientEmail: "", sendToEmail: "" }));
+    try {
+      const res = await apiRequest("GET", `/api/accounting/billing-info/${activeMode}/${id}`);
+      const info = await res.json();
+      setBillingEmails(info.emailOptions || []);
+      if (info.emailOptions?.length >= 1) { const e = info.emailOptions[0].email; setInvoiceForm(f => ({ ...f, sendToEmail: e, clientEmail: e })); }
+    } catch { setBillingEmails([]); }
+  }
+
+  function switchMode(mode: "" | "institution" | "student" | "manual") {
+    setInvoiceForm(f => ({ ...f, billToType: mode, accountId: "", institutionId: "", studentId: "", clientName: "", clientEmail: "", clientPhone: "", clientAddress: "", clientTaxRef: "", sendToEmail: "" }));
+    setBillingEmails([]); setSearch("");
+  }
+
+  const hasSelection = activeMode !== "manual" && !!invoiceForm.clientName;
+
+  const addLineItem = () => setLineItems([...lineItems, { itemId: "", description: "", quantity: "1", unitPrice: "0" }]);
+  const removeLineItem = (idx: number) => { if (lineItems.length > 1) setLineItems(lineItems.filter((_, i) => i !== idx)); };
+  const updateLineItem = (idx: number, field: string, value: string) => {
+    const updated = [...lineItems] as any[];
+    if (field === "itemId" && value) {
+      const ci = (catalogItems as any[]).find((i: any) => i.id === value);
+      if (ci) { updated[idx] = { ...updated[idx], itemId: value, description: ci.description, unitPrice: ci.defaultPrice || "0" }; setLineItems(updated); return; }
     }
+    updated[idx] = { ...updated[idx], [field]: value };
+    setLineItems(updated);
   };
 
-  const handleSelectStudent = (stud: any) => {
-    setSelectedStudent(stud);
-    setClientName(stud.fullName || "");
-    setClientEmail(stud.email || "");
-    setClientPhone(stud.phone || "");
-    setClientAddress(stud.address || "");
-  };
-
-  const handleSelectAccount = (account: any) => {
-    setSelectedAccount(account);
-    setClientName(account.legalEntityName || account.name || "");
-    setClientEmail(account.accountsEmail || account.email || "");
-    setClientPhone(account.phone || "");
-    setClientAddress(buildAccountAddress(account));
-    setClientTaxRef(buildAccountTaxRef(account));
-  };
-
-  const handleClearEntity = () => {
-    setSelectedInstitution(null);
-    setSelectedStudent(null);
-    setClientName("");
-    setClientEmail("");
-    setClientPhone("");
-    setClientAddress("");
-    setClientTaxRef("");
-  };
-
-  const handleClearAccount = () => {
-    setSelectedAccount(null);
-    setClientName("");
-    setClientEmail("");
-    setClientPhone("");
-    setClientAddress("");
-    setClientTaxRef("");
-  };
-
-  const handleBillToTypeChange = (type: "institution" | "student" | "manual") => {
-    setBillToType(type);
-    handleClearEntity();
-    setSelectedAccount(null);
-    setClientTaxRef("");
-  };
-
-  const addItem = () => setItems([...items, { description: "", quantity: "1", unitPrice: "" }]);
-  const removeItem = (idx: number) => setItems(items.filter((_, i) => i !== idx));
-  const updateItem = (idx: number, field: string, value: string) => {
-    const updated = [...items];
-    (updated[idx] as any)[field] = value;
-    setItems(updated);
-  };
-
-  const addFeeType = (feeType: { description: string }) => {
-    const hasEmpty = items.some(i => !i.description && !i.unitPrice);
-    if (hasEmpty) {
-      const idx = items.findIndex(i => !i.description && !i.unitPrice);
-      updateItem(idx, "description", feeType.description);
-    } else {
-      setItems([...items, { description: feeType.description, quantity: "1", unitPrice: "" }]);
-    }
-  };
-
-  const subtotal = items.reduce((s, i) => s + (parseFloat(i.quantity) || 0) * (parseFloat(i.unitPrice) || 0), 0);
-  const gstAmount = gstEnabled ? subtotal * 0.1 : 0;
+  const subtotal = lineItems.reduce((s, i) => s + (parseFloat(i.quantity) || 0) * (parseFloat(i.unitPrice) || 0), 0);
+  const gstAmount = invoiceForm.gstEnabled ? subtotal * 0.1 : 0;
   const total = subtotal + gstAmount;
 
-  const handleSubmit = () => {
-    if (!clientName || !issueDate || !dueDate || items.some(i => !i.description || !i.unitPrice)) return;
-    const payload: any = {
-      billToType,
-      clientName,
-      clientEmail,
-      clientPhone,
-      clientAddress,
-      clientTaxRef: clientTaxRef || null,
-      issueDate,
-      dueDate,
-      currency,
-      notes,
-      gstEnabled,
-      lineItems: items.map(i => ({ description: i.description, quantity: i.quantity, unitPrice: i.unitPrice })),
-    };
-    if (billToType === "institution" && selectedInstitution) {
-      payload.institutionId = selectedInstitution.id;
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setInvoiceForm({ billToType: "", accountId: "", institutionId: "", studentId: "", clientName: "", clientEmail: "", clientPhone: "", clientAddress: "", clientTaxRef: "", sendToEmail: "", issueDate: new Date().toISOString().split("T")[0], dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0], currency: "AUD", regionCode: "AU", gstEnabled: false, notes: "", terms: "" });
+      setLineItems([{ itemId: "", description: "", quantity: "1", unitPrice: "0" }]);
     }
-    if (billToType === "student" && selectedStudent) {
-      payload.studentId = selectedStudent.id;
-    }
-    if (selectedAccount) {
-      payload.accountId = selectedAccount.id;
-    }
-    onSubmit(payload);
-  };
+  }, [open]);
+
+  function handleSubmit() {
+    if (!invoiceForm.billToType) { toast({ title: "Select a billing type", variant: "destructive" }); return; }
+    if (!invoiceForm.clientName) { toast({ title: "Enter or select a recipient", variant: "destructive" }); return; }
+    if (lineItems.every(li => !li.description.trim())) { toast({ title: "Add at least one line item", variant: "destructive" }); return; }
+    onSubmit({ ...invoiceForm, lineItems: lineItems.filter(li => li.description.trim()) });
+  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create Invoice</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <Label className="mb-2 block">Bill To</Label>
-            <div className="flex gap-1">
-              <Button
-                type="button"
-                variant={billToType === "institution" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleBillToTypeChange("institution")}
-                data-testid="button-billto-institution"
-              >
-                <Building2 className="h-3.5 w-3.5 mr-1" /> Institution
-              </Button>
-              <Button
-                type="button"
-                variant={billToType === "student" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleBillToTypeChange("student")}
-                data-testid="button-billto-student"
-              >
-                <GraduationCap className="h-3.5 w-3.5 mr-1" /> Student
-              </Button>
-              <Button
-                type="button"
-                variant={billToType === "manual" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleBillToTypeChange("manual")}
-                data-testid="button-billto-manual"
-              >
-                <PenLine className="h-3.5 w-3.5 mr-1" /> Manual
-              </Button>
-            </div>
-          </div>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Create Invoice</DialogTitle></DialogHeader>
+        <div className="space-y-5">
 
-          {billToType === "institution" && (
-            <div className="space-y-3">
-              <EntitySearchCombobox
-                type="institution"
-                onSelect={handleSelectInstitution}
-                selected={selectedInstitution}
-                onClear={handleClearEntity}
-              />
-              {(selectedInstitution?.commissionPercentage || selectedInstitution?.paymentTerms) && (
-                <div className="flex items-start gap-2 p-3 rounded-md bg-muted/50 border">
-                  <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <div className="text-sm">
-                    {selectedInstitution.commissionPercentage && <p><span className="font-medium">Commission:</span> {selectedInstitution.commissionPercentage}%</p>}
-                    {selectedInstitution.paymentTerms && <p className="text-muted-foreground">{selectedInstitution.paymentTerms}</p>}
-                  </div>
+          {/* ── Bill To ── */}
+          <div className="space-y-3">
+            <div>
+              <Label className="mb-2 block">Bill To</Label>
+              <div className="flex gap-2">
+                <Button type="button" size="sm" variant={activeMode === "institution" ? "default" : "outline"} onClick={() => switchMode("institution")} data-testid="button-bill-to-institution">
+                  <Building2 className="h-3.5 w-3.5 mr-1.5" />Account
+                </Button>
+                <Button type="button" size="sm" variant={activeMode === "student" ? "default" : "outline"} onClick={() => switchMode("student")} data-testid="button-bill-to-student">
+                  <GraduationCap className="h-3.5 w-3.5 mr-1.5" />Student
+                </Button>
+                <Button type="button" size="sm" variant={activeMode === "manual" ? "default" : "outline"} onClick={() => switchMode("manual")} data-testid="button-bill-to-manual">
+                  <PenLine className="h-3.5 w-3.5 mr-1.5" />Manual
+                </Button>
+              </div>
+              {activeMode === "" && <p className="text-xs text-muted-foreground mt-1.5">Select Account, Student, or Manual to continue.</p>}
+            </div>
+
+            {activeMode !== "" && activeMode !== "manual" && !hasSelection && (
+              <div ref={searchRef} className="relative">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input className="pl-8" placeholder={activeMode === "institution" ? "Search account by name…" : "Search student by name or email…"} value={search} onChange={e => { setSearch(e.target.value); setDropdownOpen(true); }} onFocus={() => setDropdownOpen(true)} data-testid="input-bill-to-search" />
                 </div>
-              )}
-            </div>
-          )}
-
-          {billToType === "student" && (
-            <div className="space-y-3">
-              <EntitySearchCombobox
-                type="student"
-                onSelect={handleSelectStudent}
-                selected={selectedStudent}
-                onClear={handleClearEntity}
-              />
-              {selectedStudent && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1.5">Quick add fee types:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {STUDENT_FEE_TYPES.map(ft => (
-                      <Button
-                        type="button"
-                        key={ft.label}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addFeeType(ft)}
-                        data-testid={`button-fee-${ft.label.toLowerCase().replace(/\s+/g, "-")}`}
-                      >
-                        <Plus className="h-3 w-3 mr-1" /> {ft.label}
-                      </Button>
+                {dropdownOpen && results.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-md max-h-52 overflow-y-auto">
+                    {results.map((r: any) => (
+                      <button key={r.id} type="button" className="w-full text-left px-3 py-2 hover-elevate flex flex-col gap-0.5" onClick={() => handleSelectResult(r.id, r.label, r._raw)} data-testid={`option-bill-to-${r.id}`}>
+                        <span className="text-sm font-medium">{r.label}</span>
+                        {r.sublabel && <span className="text-xs text-muted-foreground">{r.sublabel}</span>}
+                      </button>
                     ))}
                   </div>
+                )}
+                {dropdownOpen && search.length >= 1 && results.length === 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-md px-3 py-4 text-sm text-center text-muted-foreground">No results found</div>
+                )}
+              </div>
+            )}
+
+            {activeMode !== "manual" && hasSelection && (
+              <div className="rounded-md border bg-muted/30 px-3 py-2.5 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-0.5">{activeMode === "institution" ? "Account" : "Student"}</p>
+                    <p className="font-medium text-sm">{invoiceForm.clientName}</p>
+                  </div>
+                  <Button type="button" size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => switchMode(activeMode)} data-testid="button-clear-bill-to"><X className="h-3.5 w-3.5" /></Button>
                 </div>
-              )}
-            </div>
-          )}
+                {billingEmails.length > 0 ? (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Send Invoice To</Label>
+                    <Select value={invoiceForm.sendToEmail} onValueChange={v => setInvoiceForm(f => ({ ...f, sendToEmail: v, clientEmail: v }))}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select email address…" /></SelectTrigger>
+                      <SelectContent>{billingEmails.map((opt: any) => <SelectItem key={opt.email} value={opt.email}><span className="font-medium">{opt.label}:</span> {opt.email}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Send Invoice To (Email)</Label>
+                    <Input className="h-8 text-xs" placeholder="Enter email address…" value={invoiceForm.sendToEmail} onChange={e => setInvoiceForm(f => ({ ...f, sendToEmail: e.target.value, clientEmail: e.target.value }))} />
+                  </div>
+                )}
+              </div>
+            )}
 
-          {billToType === "manual" && (
-            <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">Link to Account (optional)</Label>
-              <AccountSearchCombobox
-                selected={selectedAccount}
-                onSelect={handleSelectAccount}
-                onClear={handleClearAccount}
-              />
-            </div>
-          )}
-
-          {(billToType === "manual" || selectedInstitution || selectedStudent) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Client Name *</Label>
-                <Input
-                  value={clientName}
-                  onChange={e => setClientName(e.target.value)}
-                  readOnly={billToType !== "manual"}
-                  className={billToType !== "manual" ? "bg-muted/30" : ""}
-                  data-testid="input-client-name"
-                />
-              </div>
-              <div>
-                <Label>Client Email</Label>
-                <Input
-                  type="email"
-                  value={clientEmail}
-                  onChange={e => setClientEmail(e.target.value)}
-                  readOnly={billToType !== "manual"}
-                  className={billToType !== "manual" ? "bg-muted/30" : ""}
-                  data-testid="input-client-email"
-                />
-              </div>
-              <div>
-                <Label>Phone</Label>
-                <Input
-                  value={clientPhone}
-                  onChange={e => setClientPhone(e.target.value)}
-                  readOnly={billToType !== "manual"}
-                  className={billToType !== "manual" ? "bg-muted/30" : ""}
-                  data-testid="input-client-phone"
-                />
-              </div>
-              <div>
-                <Label>Address</Label>
-                <Input
-                  value={clientAddress}
-                  onChange={e => setClientAddress(e.target.value)}
-                  readOnly={billToType !== "manual"}
-                  className={billToType !== "manual" ? "bg-muted/30" : ""}
-                  data-testid="input-client-address"
-                />
-              </div>
-              {billToType === "manual" && (
+            {activeMode === "manual" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label>Client Name *</Label>
+                  <Input value={invoiceForm.clientName} onChange={e => setInvoiceForm(f => ({ ...f, clientName: e.target.value }))} data-testid="input-manual-client-name" />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input type="email" value={invoiceForm.clientEmail} onChange={e => setInvoiceForm(f => ({ ...f, clientEmail: e.target.value, sendToEmail: e.target.value }))} data-testid="input-manual-client-email" />
+                </div>
+                <div>
+                  <Label>Phone</Label>
+                  <Input value={invoiceForm.clientPhone} onChange={e => setInvoiceForm(f => ({ ...f, clientPhone: e.target.value }))} data-testid="input-manual-client-phone" />
+                </div>
+                <div>
+                  <Label>Address</Label>
+                  <Input value={invoiceForm.clientAddress} onChange={e => setInvoiceForm(f => ({ ...f, clientAddress: e.target.value }))} data-testid="input-manual-client-address" />
+                </div>
                 <div className="md:col-span-2">
                   <Label>Tax Reference (ABN / ACN / Tax ID)</Label>
-                  <Input
-                    value={clientTaxRef}
-                    onChange={e => setClientTaxRef(e.target.value)}
-                    placeholder="e.g. ABN: 12 345 678 901"
-                    data-testid="input-client-tax-ref"
-                  />
+                  <Input value={invoiceForm.clientTaxRef} onChange={e => setInvoiceForm(f => ({ ...f, clientTaxRef: e.target.value }))} placeholder="e.g. ABN: 12 345 678 901" data-testid="input-manual-client-tax" />
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label>Issue Date *</Label>
-              <Input type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} data-testid="input-issue-date" />
-            </div>
-            <div>
-              <Label>Due Date *</Label>
-              <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} data-testid="input-due-date" />
-            </div>
+          <Separator />
+
+          {/* ── Dates / Currency / Region ── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Currency</Label>
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger data-testid="select-currency"><SelectValue /></SelectTrigger>
+              <Select value={invoiceForm.currency} onValueChange={v => setInvoiceForm(f => ({ ...f, currency: v }))}>
+                <SelectTrigger data-testid="select-invoice-currency"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="AUD">AUD</SelectItem>
                   <SelectItem value="BDT">BDT</SelectItem>
                   <SelectItem value="USD">USD</SelectItem>
+                  <SelectItem value="GBP">GBP</SelectItem>
+                  <SelectItem value="NZD">NZD</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div>
-            <Label>Notes</Label>
-            <Textarea value={notes} onChange={e => setNotes(e.target.value)} data-testid="input-invoice-notes" />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <Label>Line Items</Label>
-              <Button type="button" variant="outline" size="sm" onClick={addItem} data-testid="button-add-line-item">
-                <Plus className="h-3 w-3 mr-1" /> Add Item
-              </Button>
+            <div>
+              <Label>Region</Label>
+              <Select value={invoiceForm.regionCode} onValueChange={v => setInvoiceForm(f => ({ ...f, regionCode: v }))}>
+                <SelectTrigger data-testid="select-invoice-region"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="AU">Australia</SelectItem>
+                  <SelectItem value="BD">Bangladesh</SelectItem>
+                  <SelectItem value="NZ">New Zealand</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            {items.map((item, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-2 items-end">
-                <div className="col-span-5">
-                  {idx === 0 && <Label className="text-xs">Description</Label>}
-                  <Input value={item.description} onChange={e => updateItem(idx, "description", e.target.value)} data-testid={`input-item-desc-${idx}`} />
-                </div>
-                <div className="col-span-2">
-                  {idx === 0 && <Label className="text-xs">Qty</Label>}
-                  <Input type="number" min="1" value={item.quantity} onChange={e => updateItem(idx, "quantity", e.target.value)} data-testid={`input-item-qty-${idx}`} />
-                </div>
-                <div className="col-span-3">
-                  {idx === 0 && <Label className="text-xs">Unit Price</Label>}
-                  <Input type="number" step="0.01" value={item.unitPrice} onChange={e => updateItem(idx, "unitPrice", e.target.value)} data-testid={`input-item-price-${idx}`} />
-                </div>
-                <div className="col-span-2 flex items-center justify-end gap-1">
-                  <span className="text-sm font-medium">{formatCurrency((parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0), currency)}</span>
-                  {items.length > 1 && (
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(idx)} data-testid={`button-remove-item-${idx}`}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-            <div className="flex items-center justify-between gap-2 pt-2 border-t">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" checked={gstEnabled} onChange={e => setGstEnabled(e.target.checked)} className="rounded" data-testid="checkbox-gst" />
-                Include GST (10%)
-              </label>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Subtotal: {formatCurrency(subtotal, currency)}</p>
-                {gstEnabled && <p className="text-sm text-muted-foreground">GST (10%): {formatCurrency(gstAmount, currency)}</p>}
-                <p className="font-bold text-lg" data-testid="text-invoice-total">Total: {formatCurrency(total, currency)}</p>
-              </div>
+            <div>
+              <Label>Issue Date</Label>
+              <Input type="date" value={invoiceForm.issueDate} onChange={e => setInvoiceForm(f => ({ ...f, issueDate: e.target.value }))} data-testid="input-invoice-issue-date" />
+            </div>
+            <div>
+              <Label>Due Date</Label>
+              <Input type="date" value={invoiceForm.dueDate} onChange={e => setInvoiceForm(f => ({ ...f, dueDate: e.target.value }))} data-testid="input-invoice-due-date" />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Switch id="gst-create" checked={invoiceForm.gstEnabled} onCheckedChange={v => setInvoiceForm(f => ({ ...f, gstEnabled: v }))} data-testid="switch-gst-enabled" />
+            <Label htmlFor="gst-create" className="cursor-pointer">Include GST (10%)</Label>
+          </div>
+
+          {/* ── Line Items ── */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Line Items</Label>
+              <Button type="button" variant="outline" size="sm" onClick={addLineItem} data-testid="button-add-line-item"><Plus className="h-3 w-3 mr-1" />Add Line</Button>
+            </div>
+            <div className="rounded-md border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left p-2 font-medium">Description</th>
+                    <th className="text-right p-2 font-medium w-20">Qty</th>
+                    <th className="text-right p-2 font-medium w-28">Unit Price</th>
+                    <th className="text-right p-2 font-medium w-24">Amount</th>
+                    <th className="p-2 w-8" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {lineItems.map((item, idx) => {
+                    const amt = (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0);
+                    return (
+                      <tr key={idx} className="border-b last:border-0">
+                        <td className="p-1.5">
+                          <div className="flex gap-1">
+                            <Select value={item.itemId} onValueChange={v => updateLineItem(idx, "itemId", v)}>
+                              <SelectTrigger className="h-8 w-28 text-xs shrink-0" data-testid={`select-catalog-item-${idx}`}><SelectValue placeholder="Catalog" /></SelectTrigger>
+                              <SelectContent>{(catalogItems as any[]).map((ci: any) => <SelectItem key={ci.id} value={ci.id}>{ci.code}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <Input className="h-8 text-sm flex-1" placeholder="Description" value={item.description} onChange={e => updateLineItem(idx, "description", e.target.value)} data-testid={`input-line-desc-${idx}`} />
+                          </div>
+                        </td>
+                        <td className="p-1.5"><Input type="number" className="h-8 text-right text-sm" value={item.quantity} onChange={e => updateLineItem(idx, "quantity", e.target.value)} data-testid={`input-line-qty-${idx}`} /></td>
+                        <td className="p-1.5"><Input type="number" step="0.01" className="h-8 text-right text-sm" value={item.unitPrice} onChange={e => updateLineItem(idx, "unitPrice", e.target.value)} data-testid={`input-line-price-${idx}`} /></td>
+                        <td className="p-1.5 text-right pr-3 text-muted-foreground">{amt.toFixed(2)}</td>
+                        <td className="p-1.5 text-center">{lineItems.length > 1 && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeLineItem(idx)} data-testid={`button-remove-line-${idx}`}><Trash2 className="h-3 w-3" /></Button>}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* ── Totals ── */}
+          <div className="flex justify-end">
+            <div className="space-y-1 text-right text-sm w-60">
+              <div className="flex justify-between"><span>Subtotal</span><span className="font-medium">{invoiceForm.currency} {subtotal.toFixed(2)}</span></div>
+              {invoiceForm.gstEnabled && <div className="flex justify-between"><span>GST (10%)</span><span>{invoiceForm.currency} {gstAmount.toFixed(2)}</span></div>}
+              <div className="flex justify-between font-bold text-base pt-1 border-t"><span>Total</span><span>{invoiceForm.currency} {total.toFixed(2)}</span></div>
+            </div>
+          </div>
+
+          {/* ── Notes / Terms ── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Notes</Label>
+              <Textarea value={invoiceForm.notes} onChange={e => setInvoiceForm(f => ({ ...f, notes: e.target.value }))} data-testid="input-invoice-notes" />
+            </div>
+            <div>
+              <Label>Terms</Label>
+              <Textarea value={invoiceForm.terms} onChange={e => setInvoiceForm(f => ({ ...f, terms: e.target.value }))} data-testid="input-invoice-terms" />
             </div>
           </div>
         </div>
+
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="button" onClick={handleSubmit} disabled={isPending} data-testid="button-submit-invoice">
-            {isPending ? "Creating..." : "Create Invoice"}
-          </Button>
+          <Button type="button" onClick={handleSubmit} disabled={isPending} data-testid="button-submit-invoice">{isPending ? "Creating..." : "Create Invoice"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

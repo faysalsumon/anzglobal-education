@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus, Eye, Send, Ban, BellRing, CreditCard, FileText,
-  Trash2, ChevronLeft, Building2, User, X, Search,
+  Trash2, ChevronLeft, Building2, User, X, Search, PenLine,
 } from "lucide-react";
 import type { AccCustomer, AccItem, AccInvoice, AccInvoiceLineItem, AccPaymentReceived, AccCreditNote } from "@shared/schema";
 
@@ -90,12 +90,15 @@ interface StudentResult {
 }
 
 interface InvoiceFormData {
-  billToType: "" | "institution" | "student";
+  billToType: "" | "institution" | "student" | "manual";
   accountId: string;
   institutionId: string;
   studentId: string;
   clientName: string;
   clientEmail: string;
+  clientPhone: string;
+  clientAddress: string;
+  clientTaxRef: string;
   sendToEmail: string;
   issueDate: string;
   dueDate: string;
@@ -142,6 +145,9 @@ const defaultForm = (): InvoiceFormData => ({
   studentId: "",
   clientName: "",
   clientEmail: "",
+  clientPhone: "",
+  clientAddress: "",
+  clientTaxRef: "",
   sendToEmail: "",
   issueDate: new Date().toISOString().split("T")[0],
   dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
@@ -243,7 +249,7 @@ function BillToSelector({
     setSearch("");
   }
 
-  function switchMode(mode: "institution" | "student") {
+  function switchMode(mode: "institution" | "student" | "manual") {
     setForm(f => ({
       ...f,
       billToType: mode,
@@ -252,13 +258,16 @@ function BillToSelector({
       studentId: "",
       clientName: "",
       clientEmail: "",
+      clientPhone: "",
+      clientAddress: "",
+      clientTaxRef: "",
       sendToEmail: "",
     }));
     setBillingEmails([]);
     setSearch("");
   }
 
-  const hasSelection = !!form.clientName;
+  const hasSelection = activeMode !== "manual" && !!form.clientName;
 
   return (
     <div className="space-y-3">
@@ -285,13 +294,48 @@ function BillToSelector({
             <User className="h-3.5 w-3.5 mr-1.5" />
             Student
           </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={activeMode === "manual" ? "default" : "outline"}
+            onClick={() => switchMode("manual")}
+            data-testid="button-bill-to-manual"
+          >
+            <PenLine className="h-3.5 w-3.5 mr-1.5" />
+            Manual
+          </Button>
         </div>
         {activeMode === "" && (
-          <p className="text-xs text-muted-foreground mt-1.5">Select Institution or Student to continue.</p>
+          <p className="text-xs text-muted-foreground mt-1.5">Select Account, Student, or Manual to continue.</p>
         )}
       </div>
 
-      {activeMode !== "" && !hasSelection && (
+      {activeMode === "manual" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <Label>Client Name *</Label>
+            <Input value={form.clientName} onChange={e => setForm(f => ({ ...f, clientName: e.target.value }))} data-testid="input-manual-client-name" />
+          </div>
+          <div>
+            <Label>Email</Label>
+            <Input type="email" value={form.clientEmail} onChange={e => setForm(f => ({ ...f, clientEmail: e.target.value, sendToEmail: e.target.value }))} data-testid="input-manual-client-email" />
+          </div>
+          <div>
+            <Label>Phone</Label>
+            <Input value={form.clientPhone} onChange={e => setForm(f => ({ ...f, clientPhone: e.target.value }))} data-testid="input-manual-client-phone" />
+          </div>
+          <div>
+            <Label>Address</Label>
+            <Input value={form.clientAddress} onChange={e => setForm(f => ({ ...f, clientAddress: e.target.value }))} data-testid="input-manual-client-address" />
+          </div>
+          <div className="md:col-span-2">
+            <Label>Tax Reference (ABN / ACN / Tax ID)</Label>
+            <Input value={form.clientTaxRef} onChange={e => setForm(f => ({ ...f, clientTaxRef: e.target.value }))} placeholder="e.g. ABN: 12 345 678 901" data-testid="input-manual-client-tax" />
+          </div>
+        </div>
+      )}
+
+      {activeMode !== "" && activeMode !== "manual" && !hasSelection && (
         <div ref={searchRef} className="relative">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -333,7 +377,7 @@ function BillToSelector({
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-0.5">
-                {activeMode === "institution" ? "Institution" : "Student"}
+                {activeMode === "institution" ? "Account" : "Student"}
               </p>
               <p className="font-medium text-sm" data-testid="text-selected-bill-to">{form.clientName}</p>
             </div>
@@ -506,11 +550,11 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
 
   const handleCreateInvoice = () => {
     if (!invoiceForm.billToType) {
-      toast({ title: "Select a billing type", description: "Choose Institution or Student before continuing.", variant: "destructive" });
+      toast({ title: "Select a billing type", description: "Choose Account, Student, or Manual before continuing.", variant: "destructive" });
       return;
     }
     if (!invoiceForm.clientName) {
-      toast({ title: "Select a recipient", description: "Search and select an institution or student to bill.", variant: "destructive" });
+      toast({ title: "Enter or select a recipient", description: invoiceForm.billToType === "manual" ? "Enter a client name to continue." : "Search and select an account or student to bill.", variant: "destructive" });
       return;
     }
     if (lineItems.every(li => !li.description.trim())) {
