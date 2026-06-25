@@ -105,7 +105,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function BillToTypeBadge({ billToType }: { billToType?: string }) {
   if (billToType === "institution") {
-    return <Badge variant="outline" className="gap-1" data-testid={`badge-billto-${billToType}`}><Building2 className="h-3 w-3" /> Institution</Badge>;
+    return <Badge variant="outline" className="gap-1" data-testid={`badge-billto-${billToType}`}><Building2 className="h-3 w-3" /> Account</Badge>;
   }
   if (billToType === "student") {
     return <Badge variant="outline" className="gap-1" data-testid={`badge-billto-${billToType}`}><GraduationCap className="h-3 w-3" /> Student</Badge>;
