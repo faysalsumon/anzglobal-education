@@ -45,6 +45,7 @@ import { ApplicationStageSelector } from "@/components/application-stage-selecto
 import { ApplicationStage, STAGE_CONFIG, ALL_STAGES } from "@/lib/stage-config";
 import { supabase } from "@/lib/supabase";
 import { DocumentPreviewModal } from "@/components/document-preview-modal";
+import { EntityTasksWidget } from "@/components/entity-tasks-widget";
 
 interface ApplicationCourse {
   id: string;
@@ -1204,6 +1205,13 @@ export function ApplicationDetailsPanel({
         </div>
 
       </div>{/* end flex row */}
+
+      {/* Tasks linked to this application */}
+      <EntityTasksWidget
+        entityType="application"
+        entityId={application.id}
+        entityLabel={`${student.firstName} ${student.lastName} — ${course.title}`}
+      />
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent data-testid="dialog-confirm-delete-application">

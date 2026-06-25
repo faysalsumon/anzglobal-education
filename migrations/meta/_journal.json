@@ -225,6 +225,13 @@
       "when": 1782400000000,
       "tag": "0031_invoice_discount",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1782500000000,
+      "tag": "0032_tasks_microservice",
+      "breakpoints": true
     }
   ]
 }

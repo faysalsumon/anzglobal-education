@@ -71,6 +71,7 @@ import {
   crmContacts,
   tasks,
   taskNotes,
+  taskProjects,
   applicationInternalNotes,
   followUpReminders,
   type Task,
@@ -85,6 +86,8 @@ import {
   type InsertFollowUpReminder,
   type TaskWithRelations,
   type WorkloadSummary,
+  type TaskProject,
+  type InsertTaskProject,
   // CMS imports
   testimonials,
   faqs,
@@ -324,10 +327,19 @@ export interface IStorage {
   // CRM SYSTEM OPERATIONS
   // ============================================
   
+  // Task project operations
+  getAllTaskProjects(): Promise<TaskProject[]>;
+  getTaskProjectById(id: string): Promise<TaskProject | undefined>;
+  createTaskProject(data: InsertTaskProject): Promise<TaskProject>;
+  updateTaskProject(id: string, data: Partial<InsertTaskProject>): Promise<TaskProject>;
+  archiveTaskProject(id: string): Promise<TaskProject>;
+  deleteTaskProject(id: string): Promise<void>;
+
   // Task operations
   getTaskById(id: string): Promise<Task | undefined>;
   getTasksByAssignee(userId: string): Promise<Task[]>;
   getTasksByApplicationId(applicationId: string): Promise<Task[]>;
+  getTasksByEntity(entityType: string, entityId: string): Promise<Task[]>;
   getAllTasks(filters?: { 
     status?: string; 
     priority?: string; 
@@ -335,6 +347,11 @@ export interface IStorage {
     involvedUserId?: string;
     applicationId?: string;
     category?: string;
+    taskType?: string;
+    projectId?: string;
+    linkedEntityType?: string;
+    linkedEntityId?: string;
+    tags?: string[];
   }): Promise<Task[]>;
   getTasksWithRelations(filters?: { 
     status?: string; 
@@ -343,6 +360,11 @@ export interface IStorage {
     involvedUserId?: string;
     applicationId?: string;
     category?: string;
+    taskType?: string;
+    projectId?: string;
+    linkedEntityType?: string;
+    linkedEntityId?: string;
+    tags?: string[];
   }): Promise<TaskWithRelations[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, data: UpdateTask): Promise<Task>;
@@ -2007,6 +2029,43 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(tasks.createdAt));
   }
 
+  async getAllTaskProjects(): Promise<TaskProject[]> {
+    return await db.select().from(taskProjects).orderBy(taskProjects.createdAt);
+  }
+
+  async getTaskProjectById(id: string): Promise<TaskProject | undefined> {
+    const [project] = await db.select().from(taskProjects).where(eq(taskProjects.id, id));
+    return project;
+  }
+
+  async createTaskProject(data: InsertTaskProject): Promise<TaskProject> {
+    const [project] = await db.insert(taskProjects).values(data).returning();
+    return project;
+  }
+
+  async updateTaskProject(id: string, data: Partial<InsertTaskProject>): Promise<TaskProject> {
+    const [project] = await db.update(taskProjects).set({ ...data, updatedAt: new Date() }).where(eq(taskProjects.id, id)).returning();
+    return project;
+  }
+
+  async archiveTaskProject(id: string): Promise<TaskProject> {
+    const [project] = await db.update(taskProjects).set({ status: 'archived', updatedAt: new Date() }).where(eq(taskProjects.id, id)).returning();
+    return project;
+  }
+
+  async deleteTaskProject(id: string): Promise<void> {
+    await db.delete(taskProjects).where(eq(taskProjects.id, id));
+  }
+
+  async getTasksByEntity(entityType: string, entityId: string): Promise<Task[]> {
+    return await db.select().from(tasks).where(
+      and(
+        eq(tasks.linkedEntityType, entityType),
+        eq(tasks.linkedEntityId, entityId)
+      )
+    ).orderBy(desc(tasks.createdAt));
+  }
+
   async getAllTasks(filters?: { 
     status?: string; 
     priority?: string; 
@@ -2014,6 +2073,11 @@ export class DatabaseStorage implements IStorage {
     involvedUserId?: string; // tasks where user is assignee OR creator
     applicationId?: string;
     category?: string;
+    taskType?: string;
+    projectId?: string;
+    linkedEntityType?: string;
+    linkedEntityId?: string;
+    tags?: string[];
   }): Promise<Task[]> {
     const conditions = [];
     
@@ -2037,6 +2101,18 @@ export class DatabaseStorage implements IStorage {
     if (filters?.category) {
       conditions.push(eq(tasks.category, filters.category as any));
     }
+    if (filters?.taskType) {
+      conditions.push(eq(tasks.taskType, filters.taskType as any));
+    }
+    if (filters?.projectId) {
+      conditions.push(eq(tasks.projectId, filters.projectId));
+    }
+    if (filters?.linkedEntityType) {
+      conditions.push(eq(tasks.linkedEntityType, filters.linkedEntityType));
+    }
+    if (filters?.linkedEntityId) {
+      conditions.push(eq(tasks.linkedEntityId, filters.linkedEntityId));
+    }
     
     if (conditions.length > 0) {
       return await db
@@ -2056,6 +2132,11 @@ export class DatabaseStorage implements IStorage {
     involvedUserId?: string;
     applicationId?: string;
     category?: string;
+    taskType?: string;
+    projectId?: string;
+    linkedEntityType?: string;
+    linkedEntityId?: string;
+    tags?: string[];
   }): Promise<TaskWithRelations[]> {
     const taskList = await this.getAllTasks(filters);
     

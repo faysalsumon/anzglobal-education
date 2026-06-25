@@ -261,6 +261,27 @@ export const taskCategoryEnum = pgEnum('task_category', [
   'visa_processing',
   'general',
   'urgent_action',
+  'bug_report',
+  'feature_request',
+  'development',
+  'design',
+  'hr',
+  'finance',
+  'marketing',
+]);
+
+// Task type enum
+export const taskTypeEnum = pgEnum('task_type', [
+  'task',
+  'bug',
+  'feature',
+  'improvement',
+]);
+
+// Task project status enum
+export const taskProjectStatusEnum = pgEnum('task_project_status', [
+  'active',
+  'archived',
 ]);
 
 // CRM Lead rating enum
@@ -2271,6 +2292,29 @@ export const applicationStageDocuments = pgTable("application_stage_documents", 
 // CRM SYSTEM TABLES
 // ============================================
 
+// Task projects for grouping tasks
+export const taskProjects = pgTable("task_projects", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  color: varchar("color", { length: 7 }).default('#3465A5'),
+  status: taskProjectStatusEnum("status").notNull().default('active'),
+  createdById: varchar("created_by_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("task_projects_status_idx").on(table.status),
+  index("task_projects_created_by_idx").on(table.createdById),
+]);
+
+export const insertTaskProjectSchema = createInsertSchema(taskProjects).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertTaskProject = z.infer<typeof insertTaskProjectSchema>;
+export type TaskProject = typeof taskProjects.$inferSelect;
+
 // Tasks table for CRM task management
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2288,7 +2332,20 @@ export const tasks = pgTable("tasks", {
   assignedToId: varchar("assigned_to_id").references(() => users.id, { onDelete: "set null" }),
   assignedByName: text("assigned_by_name"), // Store name for display even if user deleted
   
-  // Related entities
+  // Task type (bug, task, feature, improvement)
+  taskType: taskTypeEnum("task_type").notNull().default('task'),
+
+  // Project grouping
+  projectId: varchar("project_id").references(() => taskProjects.id, { onDelete: "set null" }),
+
+  // Flexible entity linking (replaces hard applicationId FK for non-app tasks)
+  linkedEntityType: varchar("linked_entity_type", { length: 50 }), // application|institution|course|crm_contact|invoice
+  linkedEntityId: varchar("linked_entity_id"),
+
+  // Free-form tags
+  tags: text("tags").array(),
+
+  // Related entities (legacy)
   applicationId: varchar("application_id").references(() => applications.id, { onDelete: "cascade" }),
   studentProfileId: varchar("student_profile_id").references(() => studentProfiles.id, { onDelete: "set null" }),
   relatedStage: applicationStageEnum("related_stage"), // Which application stage this task relates to
@@ -2312,6 +2369,9 @@ export const tasks = pgTable("tasks", {
   index("tasks_priority_idx").on(table.priority),
   index("tasks_due_date_idx").on(table.dueDate),
   index("tasks_created_by_idx").on(table.createdById),
+  index("tasks_project_idx").on(table.projectId),
+  index("tasks_linked_entity_idx").on(table.linkedEntityType, table.linkedEntityId),
+  index("tasks_type_idx").on(table.taskType),
 ]);
 
 // Task notes / comments thread for internal team updates

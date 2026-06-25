@@ -24,6 +24,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { LeadNotes } from "@/components/lead-notes";
 import { EntityFollowUpPanel } from "@/components/entity-follow-up-panel";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
+import { EntityTasksWidget } from "@/components/entity-tasks-widget";
 
 import { 
   Search, 
@@ -2902,6 +2903,13 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
         </div>
 
       </div>{/* end two-column flex */}
+
+      {/* Tasks for this contact */}
+      <EntityTasksWidget
+        entityType="crm_contact"
+        entityId={contact.id}
+        entityLabel={`${contact.firstName} ${contact.lastName}`}
+      />
 
       {roleNeedsInstitution(contact.contactType) && (
           <Card>

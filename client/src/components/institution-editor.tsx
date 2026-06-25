@@ -30,6 +30,7 @@ import { InstitutionScholarshipsPanel } from "@/components/institution-scholarsh
 import { CountrySelect } from "@/components/ui/country-select";
 import { FeaturedCoursesSelector } from "@/components/featured-courses-selector";
 import { DisciplineSelector } from "@/components/discipline-selector";
+import { EntityTasksWidget } from "@/components/entity-tasks-widget";
 
 interface FeaturedCourse {
   id: string;
@@ -1511,6 +1512,11 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                 <InstitutionDocumentsPanel
                   institutionId={institution.id}
                   institutionName={institution.name}
+                />
+                <EntityTasksWidget
+                  entityType="institution"
+                  entityId={institution.id}
+                  entityLabel={institution.name}
                 />
               </div>
             ) : (

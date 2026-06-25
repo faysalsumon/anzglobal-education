@@ -112,6 +112,7 @@ export function AdminMegaSidebar({
       showSection: canSeeNav("crm"),
       routes: [
         { icon: ListTodo, label: "My Tasks", value: "my-tasks", show: true },
+        { icon: LayoutDashboard, label: "Tasks Board", value: "tasks-board", show: true },
         { icon: BarChart3, label: "Team Workload", value: "team-workload", show: isCTO },
         { icon: Target, label: "KPI Reports", value: "kpi-reports", show: true },
         { icon: Mail, label: "Email", value: "email", show: true },

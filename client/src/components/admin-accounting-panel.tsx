@@ -63,6 +63,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
+import { EntityTasksWidget } from "@/components/entity-tasks-widget";
 import {
   BarChart,
   Bar,
@@ -478,6 +479,12 @@ function InvoiceDetail({
           </Table>
         </Card>
       )}
+
+      <EntityTasksWidget
+        entityType="invoice"
+        entityId={invoice.id}
+        entityLabel={invoice.invoiceNumber}
+      />
 
       <RecordPaymentDialog
         open={paymentDialog}

@@ -18102,6 +18102,109 @@ Sitemap: ${baseUrl}/sitemap.xml
     return { isAdmin: false, role: null };
   }
 
+  // ============================================
+  // TASK PROJECTS ROUTES
+  // ============================================
+
+  app.get("/api/task-projects", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const projects = await storage.getAllTaskProjects();
+      res.json(projects);
+    } catch (error: any) {
+      console.error("Error fetching task projects:", error);
+      res.status(500).json({ message: "Failed to fetch task projects" });
+    }
+  });
+
+  app.post("/api/task-projects", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const project = await storage.createTaskProject({ ...req.body, createdById: userId });
+      res.status(201).json(project);
+    } catch (error: any) {
+      console.error("Error creating task project:", error);
+      res.status(400).json({ message: error.message || "Failed to create task project" });
+    }
+  });
+
+  app.patch("/api/task-projects/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+      if (req.body.archive) {
+        const project = await storage.archiveTaskProject(req.params.id);
+        return res.json(project);
+      }
+      const project = await storage.updateTaskProject(req.params.id, req.body);
+      res.json(project);
+    } catch (error: any) {
+      console.error("Error updating task project:", error);
+      res.status(400).json({ message: error.message || "Failed to update task project" });
+    }
+  });
+
+  app.delete("/api/task-projects/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin, role } = await isAdminTeamMember(userId);
+      if (!isAdmin || !['cto'].includes(role || '')) {
+        return res.status(403).json({ message: "Only CTO can delete task projects" });
+      }
+      await storage.deleteTaskProject(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting task project:", error);
+      res.status(500).json({ message: "Failed to delete task project" });
+    }
+  });
+
+  // Get tasks by entity (for embeddable widget)
+  app.get("/api/tasks/by-entity", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const { type, id } = req.query as { type?: string; id?: string };
+      if (!type || !id) return res.status(400).json({ message: "type and id query params are required" });
+      const taskList = await storage.getTasksByEntity(type, id);
+      res.json(taskList);
+    } catch (error: any) {
+      console.error("Error fetching tasks by entity:", error);
+      res.status(500).json({ message: "Failed to fetch tasks by entity" });
+    }
+  });
+
+  // Create reminder for a task
+  app.post("/api/tasks/:id/reminders", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const task = await storage.getTaskById(req.params.id);
+      if (!task) return res.status(404).json({ message: "Task not found" });
+      const reminder = await storage.createReminder({
+        taskId: req.params.id,
+        userId,
+        reminderAt: new Date(req.body.reminderAt),
+        message: req.body.message || `Reminder for task: ${task.title}`,
+      });
+      res.status(201).json(reminder);
+    } catch (error: any) {
+      console.error("Error creating task reminder:", error);
+      res.status(400).json({ message: error.message || "Failed to create reminder" });
+    }
+  });
+
+  // ============================================
+  // TASKS ROUTES
+  // ============================================
+
   // Get all tasks (admin only) with optional filters
   app.get("/api/tasks", isAuthenticated, async (req: any, res) => {
     try {
@@ -18112,7 +18215,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         return res.status(403).json({ message: "Admin access required" });
       }
       
-      const { status, priority, assignedToId, applicationId, category, withRelations } = req.query;
+      const { status, priority, assignedToId, applicationId, category, withRelations, taskType, projectId, linkedEntityType, linkedEntityId } = req.query;
       
       const filters = {
         status: status as string | undefined,
@@ -18120,6 +18223,10 @@ Sitemap: ${baseUrl}/sitemap.xml
         assignedToId: assignedToId as string | undefined,
         applicationId: applicationId as string | undefined,
         category: category as string | undefined,
+        taskType: taskType as string | undefined,
+        projectId: projectId as string | undefined,
+        linkedEntityType: linkedEntityType as string | undefined,
+        linkedEntityId: linkedEntityId as string | undefined,
       };
       
       if (withRelations === 'true') {
