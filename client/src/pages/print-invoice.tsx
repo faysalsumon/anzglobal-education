@@ -211,7 +211,7 @@ export default function PrintInvoice() {
 
         <div className="border-t border-gray-200 pt-4 text-center">
           <p className="text-xs text-gray-400">
-            ANZ Global Education Pty Ltd | ABN: 12 541 172 705 | info@anzglobal.com.au
+            ANZ Global Education Pty Ltd | ABN: 12 541 172 705 | accounts@anzglobal.com.au
           </p>
         </div>
       </div>
