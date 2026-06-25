@@ -438,7 +438,7 @@ export default function AdminDashboard() {
   // Initialize activeTab from hash OR query parameters (for notification deep-linking)
   const getInitialTab = () => {
     const validTabs = ['overview', 'my-tasks', 'team-workload', 'kpi-reports', 'users', 'institutions', 'courses', 'crm-contacts', 'crm-leads', 'applications', 'accounts', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'seo-metadata', 'tags', 'qualification-types', 'entry-requirement-templates', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'email', 'ai-settings', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
-    const fullAdminOnlyTabs = ['team-workload', 'kpi-reports', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
+    const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team', 'notification-settings', 'attendance', 'finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting', 'thumbnails'];
     const financeTabsForAccountsOfficer = ['finance-dashboard', 'finance-invoices', 'finance-customers', 'finance-items', 'finance-accounts', 'accounting'];
     const financeTabsForAdmissionsDirector = ['finance-invoices'];
     const peopleTabsForAdmissionsDirector = ['attendance'];
@@ -1980,7 +1980,7 @@ export default function AdminDashboard() {
         )}
 
         {/* KPI Reports Tab */}
-        {activeTab === "kpi-reports" && isCTO && (
+        {activeTab === "kpi-reports" && isAdmin && (
           <div className="space-y-4">
             <KpiDashboardPanel />
           </div>
