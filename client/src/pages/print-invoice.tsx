@@ -161,17 +161,17 @@ export default function PrintInvoice() {
           <div className="w-64 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Subtotal</span>
-              <span className="text-gray-900">{formatCurrency(invoice.total, invoice.currency)}</span>
+              <span className="text-gray-900">{formatCurrency(parseFloat(invoice.total) || 0, invoice.currency)}</span>
             </div>
-            {invoice.amountPaid > 0 && (
+            {parseFloat(invoice.amountPaid) > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Paid</span>
-                <span className="text-green-700">-{formatCurrency(invoice.amountPaid, invoice.currency)}</span>
+                <span className="text-green-700">-{formatCurrency(parseFloat(invoice.amountPaid) || 0, invoice.currency)}</span>
               </div>
             )}
             <div className="flex justify-between text-lg font-bold border-t-2 border-gray-900 pt-2">
               <span className="text-gray-900">Amount Due</span>
-              <span className="text-gray-900" data-testid="text-print-amount-due">{formatCurrency(invoice.amountDue, invoice.currency)}</span>
+              <span className="text-gray-900" data-testid="text-print-amount-due">{formatCurrency((parseFloat(invoice.total) || 0) - (parseFloat(invoice.amountPaid) || 0), invoice.currency)}</span>
             </div>
           </div>
         </div>
