@@ -22,13 +22,15 @@ if (!connectionString) {
   );
 }
 
-// SSL is always enabled (encrypted connection).
-// rejectUnauthorized is false in dev because Bun 1.x / NixOS fails to parse
-// Neon's certificate name constraints. Supabase uses standard certs so strict
-// verification works in production; override with DB_SSL_VERIFY=false if needed.
-const sslRejectUnauthorized = isProduction
+// SSL certificate verification:
+// - Supabase uses standard CA-signed certs → strict verification is safe.
+// - Neon (DATABASE_URL fallback) uses cert chains that fail rejectUnauthorized
+//   in Bun/NixOS environments, so we always allow self-signed for Neon.
+// - DB_SSL_VERIFY=false overrides strict mode if needed.
+const isSupabaseConnection = connectionString === process.env.SUPABASE_DB_URL;
+const sslRejectUnauthorized = isSupabaseConnection
   ? process.env.DB_SSL_VERIFY !== 'false'
-  : process.env.DB_SSL_VERIFY === 'true';
+  : false;
 
 export const pool = new Pool({
   connectionString,

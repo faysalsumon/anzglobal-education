@@ -12,3 +12,4 @@
 - [Drizzle DO block migration crash](drizzle-do-block-crash.md) — PL/pgSQL DO $$ blocks in migration files crash the server at startup; never use them in migration SQL files
 - [Production startup order](production-startup-order.md) — server.listen() must be called before runMigrations(); Neon wakeup can exceed Replit's ~60s health-check window if listen() is last
 - [File storage (Supabase)](file-storage-supabase.md) — file-storage.ts is the ONLY object-storage layer (2 buckets, Replit fallback in downloadFile until migrated); long migrations must run background + status-poll (inline await → 502 proxy timeout)
+- [Production DB — Neon fallback & SSL](production-db-neon-fallback.md) — prod app uses Neon (DATABASE_URL), not Supabase; SUPABASE_DB_URL is IPv6-only/unreachable; SSL must be rejectUnauthorized:false for Neon
