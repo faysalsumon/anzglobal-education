@@ -2,6 +2,8 @@ import { Resend } from 'resend';
 import { db } from './db';
 import { globalNotificationDefaults, userNotificationOverrides, emailTemplates } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
+import PDFDocument from 'pdfkit';
+import path from 'path';
 
 // Initialize Resend with API key
 const apiKey = process.env.RESEND_API_KEY;
@@ -13,6 +15,7 @@ const resend = apiKey ? new Resend(apiKey) : null;
 
 // Email configuration
 const FROM_EMAIL = 'ANZ Global Education <noreply@anzglobal.com.au>';
+const FROM_EMAIL_ACCOUNTS = 'ANZ Global Education Accounts <accounts@anzglobal.com.au>';
 const ADMIN_EMAIL_AU = 'info@anzglobal.com.au';
 const ADMIN_EMAIL_BD = 'info@anzglobal.com.bd';
 
@@ -2052,6 +2055,8 @@ interface InvoiceEmailData {
   dueDate: string;
   currency: string;
   subtotal: string;
+  discountType?: string | null;
+  discountAmount?: string | null;
   gstAmount: string;
   gstEnabled: boolean | null;
   total: string;
@@ -2065,6 +2070,185 @@ interface LineItemEmailData {
   quantity: string;
   unitPrice: string;
   amount: string;
+}
+
+const LOGO_PATH = path.resolve('attached_assets/ANZ PNG Logo_1762427712478.png');
+
+async function generateInvoicePdf(invoice: InvoiceEmailData, lineItems: LineItemEmailData[], customerName: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ margin: 50, size: 'A4' });
+      const chunks: Buffer[] = [];
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      const PRIMARY_BLUE = '#3465A5';
+      const DARK_GRAY = '#333333';
+      const MID_GRAY = '#666666';
+      const BORDER_GRAY = '#E5E7EB';
+      const PAGE_WIDTH = 595.28;
+      const CONTENT_WIDTH = PAGE_WIDTH - 100;
+
+      // ── Header bar ──────────────────────────────────────────────────────────
+      doc.rect(0, 0, PAGE_WIDTH, 80).fill(PRIMARY_BLUE);
+
+      // ANZ logo (graceful fallback to text if file missing)
+      try {
+        doc.image(LOGO_PATH, 50, 14, { height: 52 });
+      } catch {
+        doc.fillColor('#FFFFFF').fontSize(20).font('Helvetica-Bold').text('ANZ Global Education', 50, 22);
+        doc.fontSize(9).font('Helvetica').text('ANZ Global Education Pty Ltd', 50, 46);
+      }
+
+      // Invoice label on right side of header
+      doc.fontSize(24).font('Helvetica-Bold').fillColor('#FFFFFF')
+        .text('INVOICE', 0, 24, { align: 'right', width: PAGE_WIDTH - 50 });
+      doc.fontSize(11).font('Helvetica').fillColor('#D0E4FF')
+        .text(invoice.invoiceNumber, 0, 52, { align: 'right', width: PAGE_WIDTH - 50 });
+
+      // ── From / Bill To block ──────────────────────────────────────────────
+      const blockY = 110;
+      doc.fillColor(DARK_GRAY).fontSize(8).font('Helvetica-Bold')
+        .text('FROM', 50, blockY)
+        .text('BILL TO', 310, blockY);
+
+      doc.moveTo(50, blockY + 12).lineTo(250, blockY + 12).strokeColor(BORDER_GRAY).stroke();
+      doc.moveTo(310, blockY + 12).lineTo(510, blockY + 12).strokeColor(BORDER_GRAY).stroke();
+
+      // From column
+      doc.fillColor(DARK_GRAY).fontSize(10).font('Helvetica-Bold')
+        .text('ANZ Global Education Pty Ltd', 50, blockY + 18);
+      doc.fillColor(MID_GRAY).fontSize(9).font('Helvetica')
+        .text('Level 2, Unit 3, 94 Eucumbene Drive', 50, blockY + 32)
+        .text('Ravenhall, VIC 3023, Australia', 50, blockY + 44)
+        .text('ABN: 12 541 172 705', 50, blockY + 56)
+        .text('accounts@anzglobal.com.au', 50, blockY + 68);
+
+      // Bill To column
+      doc.fillColor(DARK_GRAY).fontSize(10).font('Helvetica-Bold')
+        .text(customerName, 310, blockY + 18);
+
+      // ── Invoice metadata ──────────────────────────────────────────────────
+      const metaY = blockY + 98;
+      const metaItems = [
+        ['Issue Date', invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString('en-AU', { day: '2-digit', month: 'long', year: 'numeric' }) : ''],
+        ['Due Date', invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('en-AU', { day: '2-digit', month: 'long', year: 'numeric' }) : ''],
+        ['Currency', invoice.currency],
+      ];
+      doc.rect(50, metaY, CONTENT_WIDTH, 24 * metaItems.length + 10).fill('#F8FAFC');
+      metaItems.forEach(([label, value], i) => {
+        const rowY = metaY + 8 + i * 24;
+        doc.fillColor(MID_GRAY).fontSize(9).font('Helvetica').text(label, 60, rowY);
+        doc.fillColor(DARK_GRAY).fontSize(9).font('Helvetica-Bold').text(String(value), 0, rowY, { align: 'right', width: PAGE_WIDTH - 60 });
+      });
+
+      // ── Line items table ──────────────────────────────────────────────────
+      const tableStartY = metaY + 24 * metaItems.length + 30;
+      const colX = { desc: 50, qty: 310, unitPrice: 380, amount: 465 };
+      const colW = { desc: 250, qty: 60, unitPrice: 80, amount: 80 };
+
+      // Table header
+      doc.rect(50, tableStartY, CONTENT_WIDTH, 22).fill(PRIMARY_BLUE);
+      doc.fillColor('#FFFFFF').fontSize(9).font('Helvetica-Bold')
+        .text('Description', colX.desc + 5, tableStartY + 7)
+        .text('Qty', colX.qty, tableStartY + 7, { width: colW.qty, align: 'right' })
+        .text('Unit Price', colX.unitPrice, tableStartY + 7, { width: colW.unitPrice, align: 'right' })
+        .text('Amount', colX.amount, tableStartY + 7, { width: colW.amount, align: 'right' });
+
+      // Table rows
+      let rowY = tableStartY + 22;
+      lineItems.forEach((item, idx) => {
+        const rowBg = idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC';
+        doc.rect(50, rowY, CONTENT_WIDTH, 22).fill(rowBg);
+        doc.fillColor(DARK_GRAY).fontSize(9).font('Helvetica')
+          .text(item.description, colX.desc + 5, rowY + 7, { width: colW.desc - 5, ellipsis: true })
+          .text(String(item.quantity), colX.qty, rowY + 7, { width: colW.qty, align: 'right' })
+          .text(`${invoice.currency} ${parseFloat(item.unitPrice).toFixed(2)}`, colX.unitPrice, rowY + 7, { width: colW.unitPrice, align: 'right' })
+          .text(`${invoice.currency} ${parseFloat(item.amount).toFixed(2)}`, colX.amount, rowY + 7, { width: colW.amount, align: 'right' });
+        rowY += 22;
+      });
+
+      // Bottom border of table
+      doc.moveTo(50, rowY).lineTo(550, rowY).strokeColor(BORDER_GRAY).lineWidth(1).stroke();
+
+      // ── Totals block ───────────────────────────────────────────────────────
+      const totalsX = 350;
+      const totalsW = 200;
+      let totalsY = rowY + 12;
+
+      const addTotalRow = (label: string, value: string, bold = false, color = DARK_GRAY) => {
+        doc.fillColor(MID_GRAY).fontSize(9).font(bold ? 'Helvetica-Bold' : 'Helvetica').text(label, totalsX, totalsY);
+        doc.fillColor(color).fontSize(9).font(bold ? 'Helvetica-Bold' : 'Helvetica')
+          .text(value, totalsX, totalsY, { align: 'right', width: totalsW });
+        totalsY += 16;
+      };
+
+      addTotalRow('Subtotal', `${invoice.currency} ${parseFloat(invoice.subtotal).toFixed(2)}`);
+
+      // Discount row (shown when a discount was applied)
+      const discountAmt = parseFloat(invoice.discountAmount || '0');
+      if (discountAmt > 0) {
+        const discountLabel = invoice.discountType === 'percent' ? 'Discount (%)' : 'Discount';
+        addTotalRow(discountLabel, `- ${invoice.currency} ${discountAmt.toFixed(2)}`, false, '#dc2626');
+      }
+
+      if (invoice.gstEnabled && parseFloat(invoice.gstAmount) > 0) {
+        addTotalRow('GST (10%)', `${invoice.currency} ${parseFloat(invoice.gstAmount).toFixed(2)}`);
+      }
+
+      // Divider before total
+      doc.moveTo(totalsX, totalsY + 2).lineTo(totalsX + totalsW, totalsY + 2).strokeColor(DARK_GRAY).lineWidth(1).stroke();
+      totalsY += 8;
+
+      // Total row highlighted
+      doc.rect(totalsX - 5, totalsY - 3, totalsW + 10, 24).fill(PRIMARY_BLUE);
+      doc.fillColor('#FFFFFF').fontSize(11).font('Helvetica-Bold')
+        .text('Total', totalsX, totalsY + 3)
+        .text(`${invoice.currency} ${parseFloat(invoice.total).toFixed(2)}`, totalsX, totalsY + 3, { align: 'right', width: totalsW });
+      totalsY += 32;
+
+      // Amount paid row (only when a payment has been made)
+      const amountPaid = parseFloat(invoice.amountPaid || '0');
+      if (amountPaid > 0) {
+        doc.fillColor(MID_GRAY).fontSize(9).font('Helvetica').text('Amount Paid', totalsX, totalsY);
+        doc.fillColor('#16a34a').fontSize(9).font('Helvetica')
+          .text(`- ${invoice.currency} ${amountPaid.toFixed(2)}`, totalsX, totalsY, { align: 'right', width: totalsW });
+        totalsY += 16;
+      }
+
+      // Balance due — always shown
+      const balanceDue = (parseFloat(invoice.total) - amountPaid).toFixed(2);
+      doc.moveTo(totalsX, totalsY).lineTo(totalsX + totalsW, totalsY).strokeColor(BORDER_GRAY).lineWidth(0.5).stroke();
+      totalsY += 6;
+      doc.fillColor(DARK_GRAY).fontSize(11).font('Helvetica-Bold').text('Balance Due', totalsX, totalsY);
+      doc.fillColor(PRIMARY_BLUE).fontSize(11).font('Helvetica-Bold')
+        .text(`${invoice.currency} ${balanceDue}`, totalsX, totalsY, { align: 'right', width: totalsW });
+
+      // ── Notes & Terms ──────────────────────────────────────────────────────
+      let contentEndY = Math.max(totalsY + 40, rowY + 120);
+      if (invoice.notes) {
+        doc.fillColor(DARK_GRAY).fontSize(9).font('Helvetica-Bold').text('Notes', 50, contentEndY);
+        contentEndY += 14;
+        doc.fillColor(MID_GRAY).fontSize(9).font('Helvetica').text(invoice.notes, 50, contentEndY, { width: CONTENT_WIDTH });
+        contentEndY += doc.heightOfString(invoice.notes, { width: CONTENT_WIDTH }) + 10;
+      }
+      if (invoice.terms) {
+        doc.fillColor(DARK_GRAY).fontSize(9).font('Helvetica-Bold').text('Terms & Conditions', 50, contentEndY);
+        contentEndY += 14;
+        doc.fillColor(MID_GRAY).fontSize(9).font('Helvetica').text(invoice.terms, 50, contentEndY, { width: CONTENT_WIDTH });
+      }
+
+      // ── Footer ─────────────────────────────────────────────────────────────
+      doc.rect(0, 810, PAGE_WIDTH, 32).fill(PRIMARY_BLUE);
+      doc.fillColor('#FFFFFF').fontSize(8).font('Helvetica')
+        .text('ANZ Global Education Pty Ltd  |  ABN: 12 541 172 705  |  accounts@anzglobal.com.au', 0, 819, { align: 'center', width: PAGE_WIDTH });
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
 }
 
 export async function sendInvoiceEmail(
@@ -2148,7 +2332,15 @@ export async function sendInvoiceEmail(
       html = emailShell(baseUrl, 'Invoice', `Invoice ${invoice.invoiceNumber}`, bodyContent, regionCode);
     }
 
-    const result = await resend.emails.send({ from: FROM_EMAIL, to: recipientEmail, subject, html });
+    let attachments: { filename: string; content: Buffer }[] = [];
+    try {
+      const pdfBuffer = await generateInvoicePdf(invoice, lineItems, customerName);
+      attachments = [{ filename: `Invoice-${invoice.invoiceNumber}.pdf`, content: pdfBuffer }];
+    } catch (pdfErr) {
+      console.warn('[Email] PDF generation failed, sending without attachment:', pdfErr instanceof Error ? pdfErr.message : pdfErr);
+    }
+
+    const result = await resend.emails.send({ from: FROM_EMAIL_ACCOUNTS, to: recipientEmail, subject, html, attachments });
     if (result.error) { console.error('[Email] Resend error:', result.error); return false; }
     console.log(`Invoice email sent to ${recipientEmail}, ID: ${result.data?.id}`);
     return true;
@@ -2200,7 +2392,7 @@ export async function sendPaymentReceiptEmail(
       html = emailShell(baseUrl, 'Payment Receipt', `Invoice ${invoiceNumber}`, bodyContent, regionCode);
     }
 
-    const result = await resend.emails.send({ from: FROM_EMAIL, to: recipientEmail, subject, html });
+    const result = await resend.emails.send({ from: FROM_EMAIL_ACCOUNTS, to: recipientEmail, subject, html });
     if (result.error) { console.error('[Email] Resend error:', result.error); return false; }
     console.log(`Payment receipt email sent to ${recipientEmail}, ID: ${result.data?.id}`);
     return true;
@@ -2255,7 +2447,7 @@ export async function sendInvoiceReminderEmail(
       html = emailShell(baseUrl, 'Payment Reminder', `Invoice ${invoice.invoiceNumber}`, bodyContent, regionCode);
     }
 
-    const result = await resend.emails.send({ from: FROM_EMAIL, to: recipientEmail, subject, html });
+    const result = await resend.emails.send({ from: FROM_EMAIL_ACCOUNTS, to: recipientEmail, subject, html });
     if (result.error) { console.error('[Email] Resend error:', result.error); return false; }
     console.log(`Invoice reminder email sent to ${recipientEmail}, ID: ${result.data?.id}`);
     return true;
