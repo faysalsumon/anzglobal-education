@@ -220,7 +220,7 @@ export function registerAccountingRoutes(app: Express) {
     if (!await requireFinanceAdmin(req, res)) return;
     try {
       const q = (req.query.q as string || "").trim();
-      const conditions: any[] = [eq(accounts.isActive, true)];
+      const conditions: any[] = [];
       if (q) conditions.push(ilike(accounts.name, `%${q}%`));
       const results = await db.select({
         id: accounts.id,
@@ -236,7 +236,7 @@ export function registerAccountingRoutes(app: Express) {
         country: accounts.country,
         abn: accounts.abn,
       }).from(accounts)
-        .where(and(...conditions))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(accounts.name)
         .limit(50);
       res.json(results);
