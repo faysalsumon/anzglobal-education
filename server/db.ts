@@ -4,37 +4,19 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pkg;
 
-const isProduction = process.env.NODE_ENV === 'production';
-
-// Production → Supabase PostgreSQL (SUPABASE_DB_URL, postgres/superuser role).
-// The superuser has BYPASSRLS, so this pool is used for migrations, seeding, and
-// admin operations where RLS must not interfere.
-// Development → Neon (DATABASE_URL).
-const connectionString = isProduction
-  ? (process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL)
-  : process.env.DATABASE_URL;
+// Neon PostgreSQL — used in both development and production.
+// Supabase is used for authentication only (not as the application database).
+// rejectUnauthorized is false because Bun/NixOS environments fail to parse
+// Neon's certificate name constraints in the TLS chain.
+const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error(
-    isProduction
-      ? "SUPABASE_DB_URL must be set in production."
-      : "DATABASE_URL must be set. Did you forget to provision a database?"
-  );
+  throw new Error("DATABASE_URL must be set. Did you forget to provision a database?");
 }
-
-// SSL certificate verification:
-// - Supabase uses standard CA-signed certs → strict verification is safe.
-// - Neon (DATABASE_URL fallback) uses cert chains that fail rejectUnauthorized
-//   in Bun/NixOS environments, so we always allow self-signed for Neon.
-// - DB_SSL_VERIFY=false overrides strict mode if needed.
-const isSupabaseConnection = connectionString === process.env.SUPABASE_DB_URL;
-const sslRejectUnauthorized = isSupabaseConnection
-  ? process.env.DB_SSL_VERIFY !== 'false'
-  : false;
 
 export const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: sslRejectUnauthorized },
+  ssl: { rejectUnauthorized: false },
   max: 5,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
@@ -47,21 +29,21 @@ pool.on('error', (err) => {
 export const db = drizzle({ client: pool, schema });
 
 // Secondary pool for RLS-enforced queries (app_user role, no BYPASSRLS).
-// Only created when APP_DB_URL is configured in production.
+// Only created when APP_DB_URL is configured.
 // Used by server/middleware/db-context.ts to attach res.locals.rlsDb to each
 // authenticated request so routes can optionally use tenant-isolated queries.
 //
 // To activate:
-//   1. Run migration 0033 on Supabase (creates app_user role).
-//   2. In Supabase Dashboard > SQL Editor: ALTER ROLE app_user WITH LOGIN PASSWORD '...';
+//   1. In psql / SQL client: CREATE ROLE app_user WITH LOGIN PASSWORD '...';
+//   2. Grant permissions (see migrations/0033_rls_app_role.sql for the full SQL).
 //   3. Add APP_DB_URL to Replit environment secrets:
-//        postgresql://app_user:<password>@<host>:5432/<dbname>?sslmode=require
+//        postgresql://app_user:<password>@<neon-host>/neondb?sslmode=require
 let _appUserPool: InstanceType<typeof Pool> | null = null;
 
-if (isProduction && process.env.APP_DB_URL) {
+if (process.env.APP_DB_URL) {
   _appUserPool = new Pool({
     connectionString: process.env.APP_DB_URL,
-    ssl: { rejectUnauthorized: sslRejectUnauthorized },
+    ssl: { rejectUnauthorized: false },
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
