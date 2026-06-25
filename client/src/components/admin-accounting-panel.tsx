@@ -701,7 +701,9 @@ function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
     sendToEmail: "",
     issueDate: new Date().toISOString().split("T")[0],
     dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
-    currency: "AUD", regionCode: "AU", gstEnabled: false, notes: "", terms: "",
+    currency: "AUD", regionCode: "AU", gstEnabled: false,
+    discountType: "none" as "none" | "percent" | "fixed", discountValue: "",
+    notes: "", terms: "",
   });
   const [lineItems, setLineItems] = useState([{ itemId: "", description: "", quantity: "1", unitPrice: "0" }]);
   const [search, setSearch] = useState("");
@@ -768,13 +770,16 @@ function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
   };
 
   const subtotal = lineItems.reduce((s, i) => s + (parseFloat(i.quantity) || 0) * (parseFloat(i.unitPrice) || 0), 0);
-  const gstAmount = invoiceForm.gstEnabled ? subtotal * 0.1 : 0;
-  const total = subtotal + gstAmount;
+  const discountOn = invoiceForm.discountType !== "none";
+  const discountValueNum = parseFloat(invoiceForm.discountValue) || 0;
+  const discountAmt = invoiceForm.discountType === "percent" ? subtotal * discountValueNum / 100 : invoiceForm.discountType === "fixed" ? discountValueNum : 0;
+  const gstAmount = invoiceForm.gstEnabled ? (subtotal - discountAmt) * 0.1 : 0;
+  const total = subtotal - discountAmt + gstAmount;
 
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
-      setInvoiceForm({ billToType: "", accountId: "", institutionId: "", studentId: "", clientName: "", clientEmail: "", clientPhone: "", clientAddress: "", clientTaxRef: "", sendToEmail: "", issueDate: new Date().toISOString().split("T")[0], dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0], currency: "AUD", regionCode: "AU", gstEnabled: false, notes: "", terms: "" });
+      setInvoiceForm({ billToType: "", accountId: "", institutionId: "", studentId: "", clientName: "", clientEmail: "", clientPhone: "", clientAddress: "", clientTaxRef: "", sendToEmail: "", issueDate: new Date().toISOString().split("T")[0], dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0], currency: "AUD", regionCode: "AU", gstEnabled: false, discountType: "none", discountValue: "", notes: "", terms: "" });
       setLineItems([{ itemId: "", description: "", quantity: "1", unitPrice: "0" }]);
     }
   }, [open]);
@@ -927,6 +932,26 @@ function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
             <Label htmlFor="gst-create" className="cursor-pointer">Include GST (10%)</Label>
           </div>
 
+          <div className="flex items-start gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <Switch id="discount-create" checked={invoiceForm.discountType !== "none"} onCheckedChange={v => setInvoiceForm(f => ({ ...f, discountType: v ? "percent" : "none", discountValue: "" }))} data-testid="switch-discount-enabled" />
+              <Label htmlFor="discount-create" className="cursor-pointer">Discount</Label>
+            </div>
+            {invoiceForm.discountType !== "none" && (
+              <div className="flex items-center gap-2">
+                <Select value={invoiceForm.discountType} onValueChange={v => setInvoiceForm(f => ({ ...f, discountType: v as "percent" | "fixed" }))} data-testid="select-discount-type">
+                  <SelectTrigger className="h-9 w-28"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percent">% Off</SelectItem>
+                    <SelectItem value="fixed">Fixed Amount</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input type="number" min="0" step="0.01" className="h-9 w-32 text-right" placeholder={invoiceForm.discountType === "percent" ? "0" : "0.00"} value={invoiceForm.discountValue} onChange={e => setInvoiceForm(f => ({ ...f, discountValue: e.target.value }))} data-testid="input-discount-value" />
+                {invoiceForm.discountType === "percent" && <span className="text-sm text-muted-foreground">%</span>}
+              </div>
+            )}
+          </div>
+
           {/* ── Line Items ── */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -976,6 +1001,12 @@ function CreateInvoiceDialog({ open, onClose, onSubmit, isPending }: any) {
           <div className="flex justify-end">
             <div className="space-y-1 text-right text-sm w-60">
               <div className="flex justify-between"><span>Subtotal</span><span className="font-medium">{invoiceForm.currency} {subtotal.toFixed(2)}</span></div>
+              {discountOn && discountAmt > 0 && (
+                <div className="flex justify-between text-red-600 dark:text-red-400">
+                  <span>Discount {invoiceForm.discountType === "percent" ? `(${discountValueNum}%)` : ""}</span>
+                  <span>- {invoiceForm.currency} {discountAmt.toFixed(2)}</span>
+                </div>
+              )}
               {invoiceForm.gstEnabled && <div className="flex justify-between"><span>GST (10%)</span><span>{invoiceForm.currency} {gstAmount.toFixed(2)}</span></div>}
               <div className="flex justify-between font-bold text-base pt-1 border-t"><span>Total</span><span>{invoiceForm.currency} {total.toFixed(2)}</span></div>
             </div>

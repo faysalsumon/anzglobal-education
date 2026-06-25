@@ -161,8 +161,20 @@ export default function PrintInvoice() {
           <div className="w-64 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Subtotal</span>
-              <span className="text-gray-900">{formatCurrency(parseFloat(invoice.total) || 0, invoice.currency)}</span>
+              <span className="text-gray-900">{formatCurrency(parseFloat(invoice.subtotal) || 0, invoice.currency)}</span>
             </div>
+            {invoice.discountType && invoice.discountType !== "none" && parseFloat(invoice.discountAmount || "0") > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-red-600">Discount{invoice.discountType === "percent" ? "" : " (fixed)"}</span>
+                <span className="text-red-600">-{formatCurrency(parseFloat(invoice.discountAmount || "0"), invoice.currency)}</span>
+              </div>
+            )}
+            {invoice.gstEnabled && parseFloat(invoice.gstAmount || "0") > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">GST (10%)</span>
+                <span className="text-gray-900">{formatCurrency(parseFloat(invoice.gstAmount || "0"), invoice.currency)}</span>
+              </div>
+            )}
             {parseFloat(invoice.amountPaid) > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Paid</span>

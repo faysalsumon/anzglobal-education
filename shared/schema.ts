@@ -5581,6 +5581,8 @@ export const accInvoices = pgTable("acc_invoices", {
   dueDate: date("due_date").notNull(),
   currency: varchar("currency", { length: 3 }).notNull().default("AUD"),
   subtotal: decimal("subtotal", { precision: 12, scale: 2 }).notNull().default("0"),
+  discountType: varchar("discount_type", { length: 10 }).notNull().default("none"),
+  discountAmount: decimal("discount_amount", { precision: 12, scale: 2 }).notNull().default("0"),
   gstEnabled: boolean("gst_enabled").default(false),
   gstAmount: decimal("gst_amount", { precision: 12, scale: 2 }).default("0"),
   total: decimal("total", { precision: 12, scale: 2 }).notNull().default("0"),

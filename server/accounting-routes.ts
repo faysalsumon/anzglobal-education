@@ -846,9 +846,12 @@ export function registerAccountingRoutes(app: Express) {
         }, 0);
       }
 
+      const discountType: "none" | "percent" | "fixed" = (invoiceData.discountType === "percent" || invoiceData.discountType === "fixed") ? invoiceData.discountType : "none";
+      const discountValue = parseFloat(String(invoiceData.discountValue || invoiceData.discountAmount || 0)) || 0;
+      const discountAmt = discountType === "percent" ? subtotal * discountValue / 100 : discountType === "fixed" ? discountValue : 0;
       const gstEnabled = invoiceData.gstEnabled || false;
-      const gstAmount = gstEnabled ? subtotal * 0.1 : 0;
-      const total = subtotal + gstAmount;
+      const gstAmount = gstEnabled ? (subtotal - discountAmt) * 0.1 : 0;
+      const total = subtotal - discountAmt + gstAmount;
 
       const [invoice] = await db.insert(accInvoices).values({
         customerId,
@@ -860,6 +863,8 @@ export function registerAccountingRoutes(app: Express) {
         issueDate: invoiceData.issueDate,
         dueDate: invoiceData.dueDate,
         currency: invoiceData.currency || "AUD",
+        discountType,
+        discountAmount: discountAmt.toFixed(2),
         gstEnabled,
         notes: invoiceData.notes,
         terms: invoiceData.terms,
@@ -896,7 +901,8 @@ export function registerAccountingRoutes(app: Express) {
     if (!await requireFinanceAdmin(req, res)) return;
     const { id } = req.params;
     const { lineItems, customerId, issueDate, dueDate, currency, gstEnabled, notes, terms, regionCode, status,
-      billToType, institutionId, studentId, applicationId, clientName, clientEmail, clientPhone, clientAddress, accountId, clientTaxRef } = req.body;
+      billToType, institutionId, studentId, applicationId, clientName, clientEmail, clientPhone, clientAddress, accountId, clientTaxRef,
+      discountType: rawDiscountType, discountValue: rawDiscountValue, discountAmount: rawDiscountAmount } = req.body;
 
     if (billToType !== undefined) {
       if (!["institution", "student", "manual"].includes(billToType)) {
@@ -937,11 +943,16 @@ export function registerAccountingRoutes(app: Express) {
       const subtotal = lineItems.reduce((sum: number, item: { quantity?: string | number; unitPrice?: string | number }) => {
         return sum + (parseFloat(String(item.quantity || 1)) * parseFloat(String(item.unitPrice || 0)));
       }, 0);
+      const resolvedDiscountType: "none" | "percent" | "fixed" = (rawDiscountType === "percent" || rawDiscountType === "fixed") ? rawDiscountType : "none";
+      const resolvedDiscountValue = parseFloat(String(rawDiscountValue ?? rawDiscountAmount ?? 0)) || 0;
+      const discountAmt = resolvedDiscountType === "percent" ? subtotal * resolvedDiscountValue / 100 : resolvedDiscountType === "fixed" ? resolvedDiscountValue : 0;
       const gst = gstEnabled ?? false;
-      const gstAmount = gst ? subtotal * 0.1 : 0;
+      const gstAmount = gst ? (subtotal - discountAmt) * 0.1 : 0;
+      safeUpdates.discountType = resolvedDiscountType;
+      safeUpdates.discountAmount = discountAmt.toFixed(2);
       safeUpdates.subtotal = subtotal.toFixed(2);
       safeUpdates.gstAmount = gstAmount.toFixed(2);
-      safeUpdates.total = (subtotal + gstAmount).toFixed(2);
+      safeUpdates.total = (subtotal - discountAmt + gstAmount).toFixed(2);
 
       await db.delete(accInvoiceLineItems).where(eq(accInvoiceLineItems.invoiceId, id));
       if (lineItems.length > 0) {

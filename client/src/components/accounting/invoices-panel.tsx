@@ -104,6 +104,8 @@ interface InvoiceFormData {
   dueDate: string;
   currency: string;
   gstEnabled: boolean;
+  discountType: "none" | "percent" | "fixed";
+  discountValue: string;
   notes: string;
   terms: string;
   regionCode: string;
@@ -153,6 +155,8 @@ const defaultForm = (): InvoiceFormData => ({
   dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
   currency: "AUD",
   gstEnabled: false,
+  discountType: "none",
+  discountValue: "",
   notes: "",
   terms: "",
   regionCode: "AU",
@@ -545,8 +549,11 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
 
   const calculateSubtotal = () => lineItems.reduce((s, item) => s + (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0), 0);
   const subtotal = calculateSubtotal();
-  const gstAmount = invoiceForm.gstEnabled ? subtotal * 0.1 : 0;
-  const total = subtotal + gstAmount;
+  const discountOn = invoiceForm.discountType !== "none";
+  const discountValue = parseFloat(invoiceForm.discountValue) || 0;
+  const discountAmt = invoiceForm.discountType === "percent" ? subtotal * discountValue / 100 : invoiceForm.discountType === "fixed" ? discountValue : 0;
+  const gstAmount = invoiceForm.gstEnabled ? (subtotal - discountAmt) * 0.1 : 0;
+  const total = subtotal - discountAmt + gstAmount;
 
   const handleCreateInvoice = () => {
     if (!invoiceForm.billToType) {
@@ -821,6 +828,26 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
               <Label htmlFor="gst-main">Include GST (10%)</Label>
             </div>
 
+            <div className="flex items-start gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <Switch id="discount-main" checked={invoiceForm.discountType !== "none"} onCheckedChange={v => setInvoiceForm(f => ({ ...f, discountType: v ? "percent" : "none", discountValue: "" }))} data-testid="switch-discount-enabled" />
+                <Label htmlFor="discount-main">Discount</Label>
+              </div>
+              {invoiceForm.discountType !== "none" && (
+                <div className="flex items-center gap-2">
+                  <Select value={invoiceForm.discountType} onValueChange={v => setInvoiceForm(f => ({ ...f, discountType: v as "percent" | "fixed" }))} data-testid="select-discount-type">
+                    <SelectTrigger className="h-9 w-28"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percent">% Off</SelectItem>
+                      <SelectItem value="fixed">Fixed Amount</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input type="number" min="0" step="0.01" className="h-9 w-32 text-right" placeholder={invoiceForm.discountType === "percent" ? "0" : "0.00"} value={invoiceForm.discountValue} onChange={e => setInvoiceForm(f => ({ ...f, discountValue: e.target.value }))} data-testid="input-discount-value" />
+                  {invoiceForm.discountType === "percent" && <span className="text-sm text-muted-foreground">%</span>}
+                </div>
+              )}
+            </div>
+
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label>Line Items</Label>
@@ -867,6 +894,12 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
             <div className="flex justify-end">
               <div className="space-y-1 text-right text-sm w-60">
                 <div className="flex justify-between"><span>Subtotal</span><span className="font-medium">{invoiceForm.currency} {subtotal.toFixed(2)}</span></div>
+                {discountOn && discountAmt > 0 && (
+                  <div className="flex justify-between text-red-600 dark:text-red-400">
+                    <span>Discount {invoiceForm.discountType === "percent" ? `(${discountValue}%)` : ""}</span>
+                    <span>- {invoiceForm.currency} {discountAmt.toFixed(2)}</span>
+                  </div>
+                )}
                 {invoiceForm.gstEnabled && <div className="flex justify-between"><span>GST (10%)</span><span>{invoiceForm.currency} {gstAmount.toFixed(2)}</span></div>}
                 <Separator />
                 <div className="flex justify-between text-base font-bold"><span>Total</span><span>{invoiceForm.currency} {total.toFixed(2)}</span></div>
@@ -1076,6 +1109,9 @@ function InvoiceDetailView({ invoice, onBack, onSend, onVoid, onReminder, onReco
               </tbody>
               <tfoot>
                 <tr><td colSpan={3} className="p-3 text-right font-medium">Subtotal</td><td className="p-3 text-right">{invoice.currency} {parseFloat(invoice.subtotal).toFixed(2)}</td></tr>
+                {invoice.discountType && invoice.discountType !== "none" && parseFloat(invoice.discountAmount || "0") > 0 && (
+                  <tr><td colSpan={3} className="p-3 text-right text-red-600 dark:text-red-400">Discount{invoice.discountType === "percent" ? "" : " (fixed)"}</td><td className="p-3 text-right text-red-600 dark:text-red-400">- {invoice.currency} {parseFloat(invoice.discountAmount || "0").toFixed(2)}</td></tr>
+                )}
                 {invoice.gstEnabled && <tr><td colSpan={3} className="p-3 text-right">GST (10%)</td><td className="p-3 text-right">{invoice.currency} {parseFloat(invoice.gstAmount || "0").toFixed(2)}</td></tr>}
                 <tr className="bg-muted/30"><td colSpan={3} className="p-3 text-right font-bold">Total</td><td className="p-3 text-right font-bold">{invoice.currency} {parseFloat(invoice.total).toFixed(2)}</td></tr>
                 <tr><td colSpan={3} className="p-3 text-right text-muted-foreground">Amount Paid</td><td className="p-3 text-right">{invoice.currency} {parseFloat(invoice.amountPaid || "0").toFixed(2)}</td></tr>
