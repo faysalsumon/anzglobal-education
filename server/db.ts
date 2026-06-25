@@ -1,24 +1,36 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pkg from 'pg';
 import * as schema from "@shared/schema";
-import https from "https";
-
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
 
 const { Pool } = pkg;
 
-// Bun 1.0.23 / NixOS: the bundled TLS library fails to parse Neon's certificate
-// name constraints ("unsupported name constraint type"). Set DB_SSL_VERIFY=true
-// in production once the environment's CA bundle supports Neon's cert.
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Production → Supabase PostgreSQL (SUPABASE_DB_URL, typically the session/transaction pooler).
+// Development → Neon (DATABASE_URL).
+const connectionString = isProduction
+  ? (process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL)
+  : process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error(
+    isProduction
+      ? "SUPABASE_DB_URL must be set in production."
+      : "DATABASE_URL must be set. Did you forget to provision a database?"
+  );
+}
+
+// SSL is always enabled (encrypted connection).
+// rejectUnauthorized is false in dev because Bun 1.x / NixOS fails to parse
+// Neon's certificate name constraints. Supabase uses standard certs so strict
+// verification works in production; override with DB_SSL_VERIFY=false if needed.
+const sslRejectUnauthorized = isProduction
+  ? process.env.DB_SSL_VERIFY !== 'false'
+  : process.env.DB_SSL_VERIFY === 'true';
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DB_SSL_VERIFY === 'true'
-    ? { rejectUnauthorized: true }
-    : { rejectUnauthorized: false },
+  connectionString,
+  ssl: { rejectUnauthorized: sslRejectUnauthorized },
   max: 5,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
