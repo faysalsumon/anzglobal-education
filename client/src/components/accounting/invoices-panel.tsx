@@ -732,7 +732,7 @@ export function InvoicesPanel({ initialInvoiceId }: InvoicesPanelProps = {}) {
                         <td className="p-3">
                           {inv.billToType === "institution" && (
                             <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate text-xs">
-                              <Building2 className="h-3 w-3 mr-1" />Institution
+                              <Building2 className="h-3 w-3 mr-1" />Account
                             </Badge>
                           )}
                           {inv.billToType === "student" && (
@@ -990,7 +990,7 @@ function InvoiceDetailView({ invoice, onBack, onSend, onVoid, onReminder, onReco
         {isOverdue && <Badge className="no-default-hover-elevate no-default-active-elevate bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">Overdue</Badge>}
         {invoice.billToType === "institution" && (
           <Badge variant="secondary" className="no-default-hover-elevate no-default-active-elevate">
-            <Building2 className="h-3 w-3 mr-1" />Institution
+            <Building2 className="h-3 w-3 mr-1" />Account
           </Badge>
         )}
         {invoice.billToType === "student" && (
@@ -1032,7 +1032,7 @@ function InvoiceDetailView({ invoice, onBack, onSend, onVoid, onReminder, onReco
         <Card>
           <CardContent className="p-4 space-y-2">
             <h3 className="font-semibold text-sm text-muted-foreground">
-              {invoice.billToType === "institution" ? "Institution" : invoice.billToType === "student" ? "Student" : "Customer"}
+              {invoice.billToType === "institution" ? "Account" : invoice.billToType === "student" ? "Student" : "Customer"}
             </h3>
             <p className="font-medium" data-testid="text-detail-customer">{invoice.clientName || invoice.customer?.name || "—"}</p>
             {invoice.crmAccount?.legalEntityName && invoice.crmAccount.legalEntityName !== (invoice.clientName || invoice.customer?.name) && (
