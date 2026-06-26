@@ -1,0 +1,127 @@
+You reached the start of the range
+Jun 26, 2026, 11:30 PM
+Starting Container
+WebSocket server initialized on path /ws with session-based authentication
+Chat routes registered with RAG-powered AI assistant
+[AdminChat] Admin chat routes registered (with data entry tools)
+Scraping routes registered for AI-powered course extraction
+Application workflow routes registered
+Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+Application workflow routes registered for CRM-style application management
+Workflow validation routes registered
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+Workflow validation routes registered for business rules enforcement
+Institution CRM routes registered for contacts, business terms, and documents
+Region management routes registered
+Region management routes registered for global scalability
+To prepare for this change:
+Supabase authentication routes registered
+Attendance routes registered for People/HR module
+Mail routes registered
+Accounting routes registered
+[Accounts] Routes registered
+[routes] CRM routes registered early
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+      at deprecatedSslModeWarning (/app/node_modules/pg-connection-string/index.js:222:13)
+      at parse (/app/node_modules/pg-connection-string/index.js:149:11)
+      at new ConnectionParameters (/app/node_modules/pg/lib/connection-parameters.js:60:42)
+      at new Client (/app/node_modules/pg/lib/client.js:54:33)
+      at newClient (/app/node_modules/pg-pool/index.js:241:20)
+      at connect (/app/node_modules/pg-pool/index.js:235:10)
+      at query (/app/node_modules/pg-pool/index.js:449:10)
+      at <anonymous> (/app/node_modules/drizzle-orm/node-postgres/session.js:124:31)
+      at queryWithCache (/app/node_modules/drizzle-orm/pg-core/session.js:39:22)
+      at <anonymous> (/app/node_modules/drizzle-orm/node-postgres/session.js:117:35)
+      at execute (/app/node_modules/drizzle-orm/node-postgres/session.js:101:19)
+      at then (/app/node_modules/drizzle-orm/query-promise.js:21:17)
+Background job processing disabled (Redis not available)
+Use POST /api/admin/scraping/jobs/:jobId/process for manual scraping
+  [OK]   admin-chat-routes
+  [OK]   scraping-routes
+  [OK]   application-workflow-routes
+  [OK]   accounts-routes
+──────────────────────────────────────────────────────────────────────
+  [OK]   workflow-validation-routes
+[routes] Route-group registration summary
+  [OK]   institution-crm-routes
+──────────────────────────────────────────────────────────────────────
+  All route groups registered successfully.
+  [OK]   region-routes
+  [OK]   crm-routes (early)
+  [OK]   supabase-auth-routes
+──────────────────────────────────────────────────────────────────────
+  [OK]   attendance-routes
+  [OK]   chat-routes
+  [OK]   mail-routes
+  [OK]   accounting-routes
+[Migrate] Running pending migrations…
+1:33:16 PM [express] serving on port 8080
+[Migrate] Migration failed: 36 |   async queryWithCache(queryString, params, query) {
+37 |     if (this.cache === void 0 || is(this.cache, NoopCache) || this.queryMetadata === void 0) {
+38 |       try {
+39 |         return await query();
+40 |       } catch (e) {
+41 |         throw new DrizzleQueryError(queryString, params, e);
+                   ^
+error: Failed query: ALTER TABLE "crm_contacts" ADD COLUMN "referral_contact_id" text;
+params: 
+  query: "ALTER TABLE \"crm_contacts\" ADD COLUMN \"referral_contact_id\" text;",
+ params: [],
+      at queryWithCache (/app/node_modules/drizzle-orm/pg-core/session.js:41:15)
+49586 | });
+49587 | if (typeof Error.captureStackTrace === "function") {
+49588 |   const _originalCaptureStackTrace = Error.captureStackTrace;
+49589 |   Error.captureStackTrace = function(target, constructor) {
+49590 |     try {
+49591 |       _originalCaptureStackTrace(target, constructor);
+              ^
+error: column "referral_contact_id" of relation "crm_contacts" already exists
+     length: 150,
+   severity: "ERROR",
+[Server] Startup task failed (migrations/seeds): 36 |   async queryWithCache(queryString, params, query) {
+     detail: undefined,
+37 |     if (this.cache === void 0 || is(this.cache, NoopCache) || this.queryMetadata === void 0) {
+       hint: undefined,
+38 |       try {
+39 |         return await query();
+   position: undefined,
+40 |       } catch (e) {
+ internalPosition: undefined,
+41 |         throw new DrizzleQueryError(queryString, params, e);
+ internalQuery: undefined,
+                       ^
+      where: undefined,
+error: Failed query: ALTER TABLE "crm_contacts" ADD COLUMN "referral_contact_id" text;
+     schema: undefined,
+      table: undefined,
+   dataType: undefined,
+ constraint: undefined,
+       file: "tablecmds.c",
+    routine: "check_for_column_name_collision",
+       code: "42701"
+      at /app/dist/index.js:49591:7
+      at /app/node_modules/pg/lib/client.js:652:17
+      at processTicksAndRejections (native:7:39)
+params: 
+  query: "ALTER TABLE \"crm_contacts\" ADD COLUMN \"referral_contact_id\" text;",
+ params: [],
+      at queryWithCache (/app/node_modules/drizzle-orm/pg-core/session.js:41:19)
+      at processTicksAndRejections (native:7:39)
+49586 | });
+49587 | if (typeof Error.captureStackTrace === "function") {
+49588 |   const _originalCaptureStackTrace = Error.captureStackTrace;
+49589 |   Error.captureStackTrace = function(target, constructor) {
+49590 |     try {
+49591 |       _originalCaptureStackTrace(target, constructor);
+              ^
+error: column "referral_contact_id" of relation "crm_contacts" already exists
+     length: 150,
+   severity: "ERROR",
+      table: undefined,
+     detail: undefined,
+       hint: undefined,
+   dataType: undefined,
+   position: undefined,
+ constraint: undefined,
