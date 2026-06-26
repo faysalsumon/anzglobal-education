@@ -71,12 +71,15 @@ export function startNeonMigration(): { state: NeonMigrationState; startedNew: b
 }
 
 async function runMigration() {
-  const neonUrl = process.env.DATABASE_URL;
-  const isProduction = process.env.NODE_ENV === "production";
-  const supabaseUrl = process.env.SUPABASE_DB_DIRECT_URL ?? process.env.SUPABASE_DB_URL;
+  // NEON_SOURCE_URL overrides DATABASE_URL so this tool keeps working even after
+  // DATABASE_URL has been switched to Supabase during the cutover process.
+  const neonUrl = process.env.NEON_SOURCE_URL ?? process.env.DATABASE_URL;
+  // Prefer the pooler URL (works from any host including Railway) over the direct
+  // IPv6-only URL (which is unreachable from Replit deployment containers).
+  const supabaseUrl = process.env.SUPABASE_DB_URL ?? process.env.SUPABASE_DB_DIRECT_URL;
 
-  if (!neonUrl) throw new Error("DATABASE_URL (Neon source) not configured");
-  if (!supabaseUrl) throw new Error("SUPABASE_DB_DIRECT_URL (Supabase destination) not configured");
+  if (!neonUrl) throw new Error("NEON_SOURCE_URL or DATABASE_URL (Neon source) not configured");
+  if (!supabaseUrl) throw new Error("SUPABASE_DB_URL (Supabase destination) not configured");
 
   const neonPool = new Pool({
     connectionString: neonUrl,
@@ -87,7 +90,7 @@ async function runMigration() {
 
   const supabasePool = new Pool({
     connectionString: supabaseUrl,
-    ssl: { rejectUnauthorized: isProduction ? process.env.DB_SSL_VERIFY !== "false" : false },
+    ssl: { rejectUnauthorized: false },
     max: 2,
     connectionTimeoutMillis: 20000,
   });

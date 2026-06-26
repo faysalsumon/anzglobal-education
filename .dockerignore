@@ -1,0 +1,38 @@
+# Version control
+.git
+.gitignore
+
+# Dependencies (installed fresh in Docker)
+node_modules
+
+# Build output (rebuilt in Docker)
+dist
+
+# Local dev / editor files
+.local
+.env
+.env.*
+*.log
+
+# Replit-specific
+.replit
+replit.nix
+.upm
+.cache
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Playwright cache (installed fresh in Docker)
+.playwright
+
+# Temporary / uploaded files (not part of the app)
+uploads
+public/students
+public/admins
+public/contacts
+
+# Test / CI artifacts
+coverage
+*.test.ts
