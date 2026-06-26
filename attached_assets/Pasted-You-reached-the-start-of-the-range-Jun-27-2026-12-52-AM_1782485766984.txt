@@ -1,0 +1,81 @@
+You reached the start of the range
+Jun 27, 2026, 12:52 AM
+Starting Container
+Use POST /api/admin/scraping/jobs/:jobId/process for manual scraping
+──────────────────────────────────────────────────────────────────────
+[routes] CRM routes registered early
+Mail routes registered
+WebSocket server initialized on path /ws with session-based authentication
+Accounting routes registered
+Chat routes registered with RAG-powered AI assistant
+[Accounts] Routes registered
+[AdminChat] Admin chat routes registered (with data entry tools)
+Institution CRM routes registered for contacts, business terms, and documents
+Scraping routes registered for AI-powered course extraction
+Background job processing disabled (Redis not available)
+Region management routes registered
+Application workflow routes registered
+Application workflow routes registered for CRM-style application management
+Region management routes registered for global scalability
+Workflow validation routes registered
+Workflow validation routes registered for business rules enforcement
+Supabase authentication routes registered
+Attendance routes registered for People/HR module
+[routes] Route-group registration summary
+──────────────────────────────────────────────────────────────────────
+  [OK]   crm-routes (early)
+  [OK]   chat-routes
+  [OK]   admin-chat-routes
+  [OK]   scraping-routes
+  [OK]   application-workflow-routes
+  [OK]   workflow-validation-routes
+  [OK]   institution-crm-routes
+  [OK]   region-routes
+  [OK]   supabase-auth-routes
+  [OK]   attendance-routes
+  [OK]   mail-routes
+  [OK]   accounting-routes
+  [OK]   accounts-routes
+  All route groups registered successfully.
+──────────────────────────────────────────────────────────────────────
+2:54:49 PM [express] serving on port 8080
+[Accounting] Seeded 20 chart of accounts entries
+[Migrate] No pending migrations
+[SeedRoles] Inserted role: cto
+[SeedRoles] Inserted role: ceo
+[SeedRoles] Inserted role: cfo
+[SeedRoles] Inserted role: accounts_officer
+[SeedRoles] Inserted role: branch_manager
+[SeedRoles] Inserted role: marketing_executive
+[SeedRoles] Inserted role: senior_consultant
+Seeded default email templates
+[SeedRoles] Inserted role: junior_consultant
+[SeedRoles] Inserted role: admissions_director
+[SeedRoles] Role seeding complete
+[SeedProfiles] Inserted profile: full_access
+[SeedProfiles] Inserted profile: standard
+[SeedProfiles] Inserted profile: data_entry
+[SeedProfiles] Inserted profile: read_only
+[SeedProfiles] Profile seeding complete
+[AI] Seeded default settings for job: guest_chat
+[AI] Seeded default settings for job: student_chat
+[AI] Seeded default settings for job: qualification_matching
+[AI] Seeded default settings for job: document_verification
+[AI] Seeded default settings for job: image_generation
+[WS] New WebSocket connection attempt
+[WS] Headers: Has cookie
+[WS] Session cookie: Missing
+[WS] No session cookie - waiting for auth message
+[AI] Seeded default settings for job: web_scraping
+[AI] Seeded default settings for job: content_generation
+[WS] Received auth message
+[AI] Seeded default settings for job: data_extraction
+2:54:58 PM [express] Startup tasks complete (migrations + seeds)
+[FileStorage] Failed to create public bucket: new row violates row-level security policy
+[FileStorage] Supabase Storage buckets ready
+[FileStorage] Failed to create private bucket: The object exceeded the maximum allowed size
+[Pinecone] Initialization attempt 1/3
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+2:54:59 PM [express] GET /api/notifications/unread-count 200 in 80ms
+2:54:59 PM [express] GET /api/notifications 200 in 89ms
+[Pinecone] Using existing index
