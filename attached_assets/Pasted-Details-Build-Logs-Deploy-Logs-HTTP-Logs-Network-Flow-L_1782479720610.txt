@@ -1,0 +1,133 @@
+Details
+Build Logs
+Deploy Logs
+HTTP Logs
+Network Flow Logs
+Filter and search logs
+
+Background job processing disabled (Redis not available)
+Use POST /api/admin/scraping/jobs/:jobId/process for manual scraping
+  All route groups registered successfully.
+──────────────────────────────────────────────────────────────────────
+[Migrate] Running pending migrations…
+  [OK]   supabase-auth-routes
+──────────────────────────────────────────────────────────────────────
+[routes] Route-group registration summary
+  [OK]   attendance-routes
+──────────────────────────────────────────────────────────────────────
+  [OK]   crm-routes (early)
+  [OK]   chat-routes
+  [OK]   mail-routes
+  [OK]   admin-chat-routes
+  [OK]   scraping-routes
+  [OK]   accounting-routes
+  [OK]   application-workflow-routes
+  [OK]   workflow-validation-routes
+  [OK]   institution-crm-routes
+  [OK]   accounts-routes
+  [OK]   region-routes
+1:05:59 PM [express] serving on port 8080
+[Migrate] Migration failed: 36 |   async queryWithCache(queryString, params, query) {
+37 |     if (this.cache === void 0 || is(this.cache, NoopCache) || this.queryMetadata === void 0) {
+38 |       try {
+39 |         return await query();
+40 |       } catch (e) {
+41 |         throw new DrizzleQueryError(queryString, params, e);
+                   ^
+error: Failed query: CREATE INDEX "crm_contacts_created_by_idx" ON "crm_contacts" USING btree ("created_by_user_id");
+params: 
+  query: "CREATE INDEX \"crm_contacts_created_by_idx\" ON \"crm_contacts\" USING btree (\"created_by_user_id\");",
+              ^
+ params: [],
+error: relation "crm_contacts_created_by_idx" already exists
+      at queryWithCache (/app/node_modules/drizzle-orm/pg-core/session.js:41:15)
+49586 | });
+49587 | if (typeof Error.captureStackTrace === "function") {
+49588 |   const _originalCaptureStackTrace = Error.captureStackTrace;
+49589 |   Error.captureStackTrace = function(target, constructor) {
+49590 |     try {
+49591 |       _originalCaptureStackTrace(target, constructor);
+41 |         throw new DrizzleQueryError(queryString, params, e);
+       code: "42P07"
+     schema: undefined,
+                       ^
+37 |     if (this.cache === void 0 || is(this.cache, NoopCache) || this.queryMetadata === void 0) {
+      at /app/dist/index.js:49591:7
+      table: undefined,
+38 |       try {
+39 |         return await query();
+   dataType: undefined,
+      at /app/node_modules/pg/lib/client.js:652:17
+40 |       } catch (e) {
+      at processTicksAndRejections (native:7:39)
+ constraint: undefined,
+ internalQuery: undefined,
+[Server] Startup task failed (migrations/seeds): 36 |   async queryWithCache(queryString, params, query) {
+       file: "index.c",
+      where: undefined,
+    routine: "index_create",
+     length: 109,
+   severity: "ERROR",
+     detail: undefined,
+       hint: undefined,
+   position: undefined,
+ internalPosition: undefined,
+error: Failed query: CREATE INDEX "crm_contacts_created_by_idx" ON "crm_contacts" USING btree ("created_by_user_id");
+params: 
+  query: "CREATE INDEX \"crm_contacts_created_by_idx\" ON \"crm_contacts\" USING btree (\"created_by_user_id\");",
+ params: [],
+      at queryWithCache (/app/node_modules/drizzle-orm/pg-core/session.js:41:19)
+      at processTicksAndRejections (native:7:39)
+49586 | });
+49587 | if (typeof Error.captureStackTrace === "function") {
+49588 |   const _originalCaptureStackTrace = Error.captureStackTrace;
+49589 |   Error.captureStackTrace = function(target, constructor) {
+49590 |     try {
+49591 |       _originalCaptureStackTrace(target, constructor);
+              ^
+error: relation "crm_contacts_created_by_idx" already exists
+     length: 109,
+   severity: "ERROR",
+     detail: undefined,
+       hint: undefined,
+   position: undefined,
+ internalPosition: undefined,
+ internalQuery: undefined,
+      where: undefined,
+     schema: undefined,
+      at /app/dist/index.js:49591:7
+[Pinecone] Using existing index
+      at /app/node_modules/pg/lib/client.js:652:17
+       file: "index.c",
+    routine: "index_create",
+      at processTicksAndRejections (native:7:39)
+[FileStorage] Failed to create public bucket: new row violates row-level security policy
+       code: "42P07"
+[FileStorage] Failed to create private bucket: The object exceeded the maximum allowed size
+[FileStorage] Supabase Storage buckets ready
+[Pinecone] Initialization attempt 1/3
+      table: undefined,
+   dataType: undefined,
+ constraint: undefined,
+1:11:51 PM [express] GET /api/public/featured 200 in 1654ms
+1:11:52 PM [express] GET /api/institutions 200 in 2122ms
+1:11:49 PM [express] GET /api/public/regions 200 in 967ms
+1:11:49 PM [express] GET /api/public/pathways 200 in 251ms
+1:11:50 PM [express] GET /api/blogs 200 in 437ms
+1:11:50 PM [express] GET /api/public/testimonials 200 in 447ms
+[API /api/courses] Loaded 329 courses, 66 universities from DB
+1:11:55 PM [express] GET /api/disciplines 200 in 5776ms
+1:11:56 PM [express] GET /api/courses 200 in 6148ms
+1:11:56 PM [express] GET /api/platform/stats 200 in 6588ms
+1:11:56 PM [express] GET /api/courses/filter-options 200 in 6605ms
+1:12:10 PM [express] GET /api/public/pathways 200 in 370ms
+1:12:10 PM [express] GET /api/public/regions 200 in 202ms
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/auth source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/auth source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/ source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/ source=chrome-extension:14083
+1:12:16 PM [express] POST /api/csp-report 204 in 12ms
+1:12:19 PM [express] GET /api/public/regions 200 in 203ms
+1:12:19 PM [express] GET /api/public/pathways 200 in 186ms
+
+
