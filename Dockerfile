@@ -1,24 +1,30 @@
+# ── Stage 1: Install dependencies via npm (reliable Docker networking) ─────────
+FROM node:20-slim AS deps
+
+WORKDIR /app
+
+COPY package.json ./
+
+RUN npm install --legacy-peer-deps --no-audit --no-fund
+
+# ── Stage 2: Build + Runtime using Bun ─────────────────────────────────────────
 FROM oven/bun:1
 
 WORKDIR /app
 
-# Basic utilities (curl for health checks; playwright install --with-deps handles
-# the Chromium system libraries below)
+# Basic utilities + Playwright OS libraries are handled by playwright --with-deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Dependency layer (cached unless package.json changes) ──────────────────────
-COPY package.json bun.lock* bun.lockb* ./
-RUN bun install
+# Copy node_modules from the npm install stage (avoids bun registry networking)
+COPY --from=deps /app/node_modules ./node_modules
 
 # Native build tools required for sharp (image processing) bindings
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 # ── Playwright: install Chromium + all required OS libraries ───────────────────
-# PLAYWRIGHT_BROWSERS_PATH keeps the browser binaries in a known location.
-# playwright install --with-deps handles libnss3, libatk, libgbm, etc. automatically.
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN ./node_modules/.bin/playwright install --with-deps chromium
 
@@ -30,7 +36,7 @@ COPY . .
 # esbuild     → dist/index.js (server bundle, packages=external so node_modules stay)
 RUN bun run build
 
-# ── Runtime ───────────────────────────────────────────────────────────────────
+# ── Runtime ────────────────────────────────────────────────────────────────────
 EXPOSE 5000
 ENV NODE_ENV=production
 ENV PORT=5000
