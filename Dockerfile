@@ -1,11 +1,11 @@
 # ── Stage 1: Install dependencies via npm (reliable Docker networking) ─────────
-FROM node:20-slim AS deps
+FROM node:20 AS deps
 
 WORKDIR /app
 
 COPY package.json ./
 
-RUN npm install --legacy-peer-deps --no-audit --no-fund
+RUN npm install --legacy-peer-deps --force --no-audit --no-fund
 
 # ── Stage 2: Build + Runtime using Bun ─────────────────────────────────────────
 FROM oven/bun:1
