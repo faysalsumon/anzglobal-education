@@ -1,0 +1,135 @@
+
+Details
+Build Logs
+Deploy Logs
+HTTP Logs
+Network Flow Logs
+Filter and search logs
+
+
+Load more
+     length: 112,
+      at processTicksAndRejections (native:7:39)
+      table: undefined,
+49668 | });
+   severity: "FATAL",
+   dataType: undefined,
+49669 | if (typeof Error.captureStackTrace === "function") {
+     detail: undefined,
+ constraint: undefined,
+      at /app/dist/index.js:49673:7
+       hint: undefined,
+      at /app/node_modules/pg-pool/index.js:56:5
+       file: undefined,
+49670 |   const _originalCaptureStackTrace = Error.captureStackTrace;
+   position: undefined,
+    routine: undefined,
+49671 |   Error.captureStackTrace = function(target, constructor) {
+ internalPosition: undefined,
+       code: "XX000"
+ internalQuery: undefined,
+49672 |     try {
+49673 |       _originalCaptureStackTrace(target, constructor);
+      where: undefined,
+     schema: undefined,
+              ^
+error: (ECIRCUITBREAKER) too many authentication failures, new connections are temporarily blocked
+[WS] Token verification failed
+Supabase auth middleware error: 36 |   async queryWithCache(queryString, params, query) {
+37 |     if (this.cache === void 0 || is(this.cache, NoopCache) || this.queryMetadata === void 0) {
+38 |       try {
+39 |         return await query();
+40 |       } catch (e) {
+41 |         throw new DrizzleQueryError(queryString, params, e);
+                   ^
+error: Failed query: select "id", "email", "password", "email_verified", "verification_token", "verification_token_expiry", "reset_password_token", "reset_password_expiry", "first_name", "last_name", "phone", "date_of_birth", "address_line_1", "address_line_2", "city", "state_province", "postal_code", "country", "emergency_first_name", "emergency_last_name", "emergency_mobile", "emergency_email", "emergency_relationship", "profile_image_url", "user_type", "role", "role_id", "profile_id", "region_id", "branch_id", "availability_status", "custom_status_text", "last_status_update", "is_active", "last_login", "requires_password_reset", "temp_password_issued_at", "approval_status", "approved_by", "approved_at", "rejection_reason", "created_at", "updated_at" from "users" where "users"."email" = $1
+params: faysalbahar@anzglobal.com.au
+  query: "select \"id\", \"email\", \"password\", \"email_verified\", \"verification_token\", \"verification_token_expiry\", \"reset_password_token\", \"reset_password_expiry\", \"first_name\", \"last_name\", \"phone\", \"date_of_birth\", \"address_line_1\", \"address_line_2\", \"city\", \"state_province\", \"postal_code\", \"country\", \"emergency_first_name\", \"emergency_last_name\", \"emergency_mobile\", \"emergency_email\", \"emergency_relationship\", \"profile_image_url\", \"user_type\", \"role\", \"role_id\", \"profile_id\", \"region_id\", \"branch_id\", \"availability_status\", \"custom_status_text\", \"last_status_update\", \"is_active\", \"last_login\", \"requires_password_reset\", \"temp_password_issued_at\", \"approval_status\", \"approved_by\", \"approved_at\", \"rejection_reason\", \"created_at\", \"updated_at\" from \"users\" where \"users\".\"email\" = $1",
+ params: [
+ constraint: undefined,
+"faysalbahar@anzglobal.com.au"
+ internalQuery: undefined,
+error: (ECIRCUITBREAKER) too many authentication failures, new connections are temporarily blocked
+],
+     length: 112,
+      where: undefined,
+   severity: "FATAL",
+      at queryWithCache (/app/node_modules/drizzle-orm/pg-core/session.js:41:15)
+     schema: undefined,
+     detail: undefined,
+      at async <anonymous> (/app/node_modules/drizzle-orm/node-postgres/session.js:117:35)
+       hint: undefined,
+      table: undefined,
+   position: undefined,
+   dataType: undefined,
+49668 | });
+ internalPosition: undefined,
+49669 | if (typeof Error.captureStackTrace === "function") {
+49670 |   const _originalCaptureStackTrace = Error.captureStackTrace;
+49671 |   Error.captureStackTrace = function(target, constructor) {
+49672 |     try {
+49673 |       _originalCaptureStackTrace(target, constructor);
+              ^
+       file: undefined,
+40 |       } catch (e) {
+41 |         throw new DrizzleQueryError(queryString, params, e);
+2:17:48 PM [express] GET /api/notifications 401 in 0ms :: {"message":"Unauthorized"}
+    routine: undefined,
+Supabase auth middleware error: 36 |   async queryWithCache(queryString, params, query) {
+                   ^
+38 |       try {
+       code: "XX000"
+37 |     if (this.cache === void 0 || is(this.cache, NoopCache) || this.queryMetadata === void 0) {
+error: Failed query: select "id", "email", "password", "email_verified", "verification_token", "verification_token_expiry", "reset_password_token", "reset_password_expiry", "first_name", "last_name", "phone", "date_of_birth", "address_line_1", "address_line_2", "city", "state_province", "postal_code", "country", "emergency_first_name", "emergency_last_name", "emergency_mobile", "emergency_email", "emergency_relationship", "profile_image_url", "user_type", "role", "role_id", "profile_id", "region_id", "branch_id", "availability_status", "custom_status_text", "last_status_update", "is_active", "last_login", "requires_password_reset", "temp_password_issued_at", "approval_status", "approved_by", "approved_at", "rejection_reason", "created_at", "updated_at" from "users" where "users"."email" = $1
+39 |         return await query();
+      at /app/dist/index.js:49673:7
+      at /app/node_modules/pg-pool/index.js:56:5
+      at processTicksAndRejections (native:7:39)
+49669 | if (typeof Error.captureStackTrace === "function") {
+params: faysalbahar@anzglobal.com.au
+49670 |   const _originalCaptureStackTrace = Error.captureStackTrace;
+  query: "select \"id\", \"email\", \"password\", \"email_verified\", \"verification_token\", \"verification_token_expiry\", \"reset_password_token\", \"reset_password_expiry\", \"first_name\", \"last_name\", \"phone\", \"date_of_birth\", \"address_line_1\", \"address_line_2\", \"city\", \"state_province\", \"postal_code\", \"country\", \"emergency_first_name\", \"emergency_last_name\", \"emergency_mobile\", \"emergency_email\", \"emergency_relationship\", \"profile_image_url\", \"user_type\", \"role\", \"role_id\", \"profile_id\", \"region_id\", \"branch_id\", \"availability_status\", \"custom_status_text\", \"last_status_update\", \"is_active\", \"last_login\", \"requires_password_reset\", \"temp_password_issued_at\", \"approval_status\", \"approved_by\", \"approved_at\", \"rejection_reason\", \"created_at\", \"updated_at\" from \"users\" where \"users\".\"email\" = $1",
+49671 |   Error.captureStackTrace = function(target, constructor) {
+ params: [
+49672 |     try {
+"faysalbahar@anzglobal.com.au"
+49673 |       _originalCaptureStackTrace(target, constructor);
+],
+      at queryWithCache (/app/node_modules/drizzle-orm/pg-core/session.js:41:15)
+      at async <anonymous> (/app/node_modules/drizzle-orm/node-postgres/session.js:117:35)
+49668 | });
+      where: undefined,
+              ^
+      at processTicksAndRejections (native:7:39)
+     schema: undefined,
+error: (ECIRCUITBREAKER) too many authentication failures, new connections are temporarily blocked
+      table: undefined,
+   dataType: undefined,
+     length: 112,
+2:17:48 PM [express] GET /api/notifications/unread-count 401 in 1ms :: {"message":"Unauthorized"}
+       file: undefined,
+ constraint: undefined,
+   severity: "FATAL",
+    routine: undefined,
+     detail: undefined,
+       code: "XX000"
+       hint: undefined,
+   position: undefined,
+      at /app/dist/index.js:49673:7
+ internalPosition: undefined,
+      at /app/node_modules/pg-pool/index.js:56:5
+ internalQuery: undefined,
+[WS] New WebSocket connection attempt
+[WS] Headers: Has cookie
+[WS] Session cookie: Missing
+[WS] No session cookie - waiting for auth message
+[WS] Received auth message
+[WS] Token verification failed
+[WS] New WebSocket connection attempt
+[WS] Headers: Has cookie
+[WS] Session cookie: Missing
+[WS] No session cookie - waiting for auth message
+[WS] Received auth message
+Region detection middleware error: 36 |   async queryWithCache(queryString, params, query) {
+37 |     if (this.cache === void 0 || is(this.cache, NoopCache) || this.queryMetadata === void 0) {
+      at queryWithCache (/app/node_modules/drizzle-orm/pg-core/session.js:41:15)

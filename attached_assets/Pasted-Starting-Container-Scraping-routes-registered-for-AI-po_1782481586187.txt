@@ -1,0 +1,126 @@
+Starting Container
+Scraping routes registered for AI-powered course extraction
+Application workflow routes registered
+Application workflow routes registered for CRM-style application management
+Workflow validation routes registered
+Workflow validation routes registered for business rules enforcement
+Institution CRM routes registered for contacts, business terms, and documents
+Region management routes registered
+Region management routes registered for global scalability
+Supabase authentication routes registered
+Attendance routes registered for People/HR module
+Mail routes registered
+Accounting routes registered
+[Accounts] Routes registered
+Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+To prepare for this change:
+[routes] CRM routes registered early
+WebSocket server initialized on path /ws with session-based authentication
+Chat routes registered with RAG-powered AI assistant
+[AdminChat] Admin chat routes registered (with data entry tools)
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+      at deprecatedSslModeWarning (/app/node_modules/pg-connection-string/index.js:222:13)
+      at parse (/app/node_modules/pg-connection-string/index.js:149:11)
+      at new ConnectionParameters (/app/node_modules/pg/lib/connection-parameters.js:60:42)
+      at new Client (/app/node_modules/pg/lib/client.js:54:33)
+      at newClient (/app/node_modules/pg-pool/index.js:241:20)
+      at connect (/app/node_modules/pg-pool/index.js:235:10)
+      at query (/app/node_modules/pg-pool/index.js:449:10)
+      at <anonymous> (/app/node_modules/drizzle-orm/node-postgres/session.js:124:31)
+      at queryWithCache (/app/node_modules/drizzle-orm/pg-core/session.js:39:22)
+      at <anonymous> (/app/node_modules/drizzle-orm/node-postgres/session.js:117:35)
+      at execute (/app/node_modules/drizzle-orm/node-postgres/session.js:101:19)
+      at then (/app/node_modules/drizzle-orm/query-promise.js:21:17)
+Background job processing disabled (Redis not available)
+Use POST /api/admin/scraping/jobs/:jobId/process for manual scraping
+──────────────────────────────────────────────────────────────────────
+[routes] Route-group registration summary
+──────────────────────────────────────────────────────────────────────
+  [OK]   crm-routes (early)
+  [OK]   chat-routes
+  [OK]   admin-chat-routes
+  [OK]   scraping-routes
+  [OK]   application-workflow-routes
+  [OK]   workflow-validation-routes
+  [OK]   institution-crm-routes
+  [OK]   region-routes
+  [OK]   supabase-auth-routes
+  [OK]   attendance-routes
+  [OK]   mail-routes
+  [OK]   accounting-routes
+  [OK]   accounts-routes
+  All route groups registered successfully.
+──────────────────────────────────────────────────────────────────────
+1:45:46 PM [express] serving on port 8080
+[Migrate] Running 19 pending migration(s)…
+[Migrate] Applying: 0016_remove_contact_owner_expand_entry_source
+[Migrate] ✓ 0016_remove_contact_owner_expand_entry_source
+[Migrate] Applying: 0017_supreme_wrecking_crew
+[Migrate] ✓ 0017_supreme_wrecking_crew
+[Migrate] Applying: 0018_goofy_living_mummy
+[Migrate]   ↳ skipped (already exists, code 42701): ALTER TABLE "crm_contacts" ADD COLUMN "referral_contact_id" text;…
+[Migrate] ✓ 0018_goofy_living_mummy
+[Migrate] Applying: 0019_lucky_iron_lad
+[Migrate]   ↳ skipped (already exists, code 42710): ALTER TABLE "crm_contacts" ADD CONSTRAINT "crm_contacts_referral_contact_id_crm_…
+[Migrate] ✓ 0019_lucky_iron_lad
+[Migrate] Applying: 0020_reconcile_entry_source_enum
+[Migrate] ✓ 0020_reconcile_entry_source_enum
+[Migrate] Applying: 0021_account_commission_fields
+[Migrate] ✓ 0021_account_commission_fields
+[Migrate] Applying: 0022_account_email_fields
+[Migrate] ✓ 0022_account_email_fields
+[Migrate] Applying: 0023_account_portal_fields
+[WS] New WebSocket connection attempt
+[WS] Headers: Has cookie
+[WS] Session cookie: Missing
+[WS] No session cookie - waiting for auth message
+[Migrate] ✓ 0023_account_portal_fields
+[Migrate] Applying: 0024_account_portal_forms
+[WS] Received auth message
+[Migrate] ✓ 0024_account_portal_forms
+[Migrate] Applying: 0025_silent_slapstick
+[Migrate]   ↳ skipped (already exists, code 42701): ALTER TABLE "accounts" ADD COLUMN "legal_entity_name" text;…
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+[Migrate]   ↳ skipped (already exists, code 42701): ALTER TABLE "accounts" ADD COLUMN "tax_id" text;…
+[Migrate]   ↳ skipped (already exists, code 42701): ALTER TABLE "accounts" ADD COLUMN "billing_address" text;…
+1:45:56 PM [express] GET /api/notifications/unread-count 200 in 189ms
+1:45:56 PM [express] GET /api/notifications 200 in 382ms
+[Migrate]   ↳ skipped (already exists, code 42701): ALTER TABLE "accounts" ADD COLUMN "billing_city" text;…
+[Migrate]   ↳ skipped (already exists, code 42701): ALTER TABLE "accounts" ADD COLUMN "billing_state" text;…
+[Migrate]   ↳ skipped (already exists, code 42701): ALTER TABLE "accounts" ADD COLUMN "billing_country" text;…
+[Migrate]   ↳ skipped (already exists, code 42701): ALTER TABLE "accounts" ADD COLUMN "billing_same_as_location" boolean DEFAULT tru…
+[Migrate] ✓ 0025_silent_slapstick
+[Migrate] Applying: 0026_invoice_client_tax_ref
+[Migrate] ✓ 0026_invoice_client_tax_ref
+[Migrate] Applying: 0027_reminder_entity_links
+[Migrate] ✓ 0027_reminder_entity_links
+[Migrate] Applying: 0028_documents_expiry_date
+[Migrate]   ↳ skipped (already exists, code 42701): ALTER TABLE "documents" ADD COLUMN "expiry_date" date;…
+[Migrate] ✓ 0028_documents_expiry_date
+[Migrate] Applying: 0029_invoice_send_to_email
+[Migrate]   ↳ skipped (already exists, code 42701): ALTER TABLE "acc_invoices" ADD COLUMN "send_to_email" varchar(255);…
+[Migrate] ✓ 0029_invoice_send_to_email
+[Migrate] Applying: 0030_acc_customers_account_id
+[Migrate]   ↳ skipped (already exists, code 42701): ALTER TABLE "acc_customers" ADD COLUMN "account_id" uuid REFERENCES "accounts"("…
+[Migrate] ✓ 0030_acc_customers_account_id
+[Migrate] Applying: 0031_invoice_discount
+[Migrate] ✓ 0031_invoice_discount
+[Migrate] Applying: 0032_tasks_microservice
+[Migrate] ✓ 0032_tasks_microservice
+[Migrate] Applying: 0033_rls_app_role
+[Migrate] ✓ 0033_rls_app_role
+[Migrate] Applying: 0034_rls_policies
+[Migrate] All migrations applied successfully
+[Migrate]   ↳ skipped (already exists, code 42710): -- Migration 0034: Enable Row-Level Security policies on the 8 most sensitive ta…
+[Migrate] ✓ 0034_rls_policies
+[SeedRoles] Role seeding complete
+[SeedProfiles] Profile seeding complete
+1:46:09 PM [express] Startup tasks complete (migrations + seeds)
+[FileStorage] Failed to create public bucket: new row violates row-level security policy
+[FileStorage] Supabase Storage buckets ready
+[FileStorage] Failed to create private bucket: The object exceeded the maximum allowed size
+[Pinecone] Initialization attempt 1/3
+[Pinecone] Using existing index

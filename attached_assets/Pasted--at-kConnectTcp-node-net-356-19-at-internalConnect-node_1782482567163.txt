@@ -1,0 +1,117 @@
+      at kConnectTcp (node:net:356:19)
+      at internalConnect (node:net:1062:200)
+      at emitLookup (node:net:1009:42)
+      at node:dns:200:15
+      at processTicksAndRejections (native:7:39)
+      at queryWithCache (/app/node_modules/drizzle-orm/pg-core/session.js:41:15)
+Region detection middleware error: 36 |   async queryWithCache(queryString, params, query) {
+37 |     if (this.cache === void 0 || is(this.cache, NoopCache) || this.queryMetadata === void 0) {
+38 |       try {
+39 |         return await query();
+40 |       } catch (e) {
+41 |         throw new DrizzleQueryError(queryString, params, e);
+                   ^
+error: Failed query: select "id", "code", "name", "domain_pattern", "primary_domain", "default_locale", "supported_locales", "default_currency", "currency_symbol", "timezone", "flag_emoji", "flag_url", "parent_region_id", "display_order", "is_active", "is_default", "created_at", "updated_at" from "regions" where ("regions"."is_default" = $1 and "regions"."is_active" = $2)
+params: true,true
+  query: "select \"id\", \"code\", \"name\", \"domain_pattern\", \"primary_domain\", \"default_locale\", \"supported_locales\", \"default_currency\", \"currency_symbol\", \"timezone\", \"flag_emoji\", \"flag_url\", \"parent_region_id\", \"display_order\", \"is_active\", \"is_default\", \"created_at\", \"updated_at\" from \"regions\" where (\"regions\".\"is_default\" = $1 and \"regions\".\"is_active\" = $2)",
+ params: [
+  true, true
+],
+      at async <anonymous> (/app/node_modules/drizzle-orm/node-postgres/session.js:117:35)
+      at kConnectTcp (node:net:356:19)
+      at internalConnect (node:net:1062:200)
+      at emitLookup (node:net:1009:42)
+   errno: -111,
+      at <anonymous> (node:dns:200:15)
+ syscall: "connect",
+49668 | });
+    port: 5432,
+49669 | if (typeof Error.captureStackTrace === "function") {
+ address: "2406:da14:271:9921:4034:ef27:d522:4bc1",
+49670 |   const _originalCaptureStackTrace = Error.captureStackTrace;
+    code: "ECONNREFUSED"
+49671 |   Error.captureStackTrace = function(target, constructor) {
+49672 |     try {
+49673 |       _originalCaptureStackTrace(target, constructor);
+      at /app/dist/index.js:49673:7
+              ^
+error: connect ECONNREFUSED 2406:da14:271:9921:4034:ef27:d522:4bc1:5432
+      at /app/node_modules/pg-pool/index.js:56:5
+      at processTicksAndRejections (native:7:39)
+      at doConnect (unknown:1:1)
+      at kConnectTcp (node:net:356:19)
+      at internalConnect (node:net:1062:200)
+      at emitLookup (node:net:1009:42)
+      at node:dns:200:15
+      at processTicksAndRejections (native:7:39)
+[WS] Token verification failed
+Supabase auth middleware error: 36 |   async queryWithCache(queryString, params, query) {
+37 |     if (this.cache === void 0 || is(this.cache, NoopCache) || this.queryMetadata === void 0) {
+38 |       try {
+39 |         return await query();
+40 |       } catch (e) {
+41 |         throw new DrizzleQueryError(queryString, params, e);
+                   ^
+error: Failed query: select "id", "email", "password", "email_verified", "verification_token", "verification_token_expiry", "reset_password_token", "reset_password_expiry", "first_name", "last_name", "phone", "date_of_birth", "address_line_1", "address_line_2", "city", "state_province", "postal_code", "country", "emergency_first_name", "emergency_last_name", "emergency_mobile", "emergency_email", "emergency_relationship", "profile_image_url", "user_type", "role", "role_id", "profile_id", "region_id", "branch_id", "availability_status", "custom_status_text", "last_status_update", "is_active", "last_login", "requires_password_reset", "temp_password_issued_at", "approval_status", "approved_by", "approved_at", "rejection_reason", "created_at", "updated_at" from "users" where "users"."email" = $1
+params: faysalbahar@anzglobal.com.au
+  query: "select \"id\", \"email\", \"password\", \"email_verified\", \"verification_token\", \"verification_token_expiry\", \"reset_password_token\", \"reset_password_expiry\", \"first_name\", \"last_name\", \"phone\", \"date_of_birth\", \"address_line_1\", \"address_line_2\", \"city\", \"state_province\", \"postal_code\", \"country\", \"emergency_first_name\", \"emergency_last_name\", \"emergency_mobile\", \"emergency_email\", \"emergency_relationship\", \"profile_image_url\", \"user_type\", \"role\", \"role_id\", \"profile_id\", \"region_id\", \"branch_id\", \"availability_status\", \"custom_status_text\", \"last_status_update\", \"is_active\", \"last_login\", \"requires_password_reset\", \"temp_password_issued_at\", \"approval_status\", \"approved_by\", \"approved_at\", \"rejection_reason\", \"created_at\", \"updated_at\" from \"users\" where \"users\".\"email\" = $1",
+      at /app/node_modules/pg-pool/index.js:56:5
+ params: [
+      at processTicksAndRejections (native:7:39)
+"faysalbahar@anzglobal.com.au"
+],
+2:02:33 PM [express] GET /api/notifications 401 in 0ms :: {"message":"Unauthorized"}
+      at queryWithCache (/app/node_modules/drizzle-orm/pg-core/session.js:41:15)
+      at async <anonymous> (/app/node_modules/drizzle-orm/node-postgres/session.js:117:35)
+49668 | });
+49669 | if (typeof Error.captureStackTrace === "function") {
+49670 |   const _originalCaptureStackTrace = Error.captureStackTrace;
+49671 |   Error.captureStackTrace = function(target, constructor) {
+49672 |     try {
+49673 |       _originalCaptureStackTrace(target, constructor);
+              ^
+error: connect ECONNREFUSED 2406:da14:271:9921:4034:ef27:d522:4bc1:5432
+   errno: -111,
+ syscall: "connect",
+    port: 5432,
+ address: "2406:da14:271:9921:4034:ef27:d522:4bc1",
+    code: "ECONNREFUSED"
+      at /app/dist/index.js:49673:7
+Supabase auth middleware error: 36 |   async queryWithCache(queryString, params, query) {
+37 |     if (this.cache === void 0 || is(this.cache, NoopCache) || this.queryMetadata === void 0) {
+38 |       try {
+39 |         return await query();
+40 |       } catch (e) {
+41 |         throw new DrizzleQueryError(queryString, params, e);
+                   ^
+error: Failed query: select "id", "email", "password", "email_verified", "verification_token", "verification_token_expiry", "reset_password_token", "reset_password_expiry", "first_name", "last_name", "phone", "date_of_birth", "address_line_1", "address_line_2", "city", "state_province", "postal_code", "country", "emergency_first_name", "emergency_last_name", "emergency_mobile", "emergency_email", "emergency_relationship", "profile_image_url", "user_type", "role", "role_id", "profile_id", "region_id", "branch_id", "availability_status", "custom_status_text", "last_status_update", "is_active", "last_login", "requires_password_reset", "temp_password_issued_at", "approval_status", "approved_by", "approved_at", "rejection_reason", "created_at", "updated_at" from "users" where "users"."email" = $1
+params: faysalbahar@anzglobal.com.au
+  query: "select \"id\", \"email\", \"password\", \"email_verified\", \"verification_token\", \"verification_token_expiry\", \"reset_password_token\", \"reset_password_expiry\", \"first_name\", \"last_name\", \"phone\", \"date_of_birth\", \"address_line_1\", \"address_line_2\", \"city\", \"state_province\", \"postal_code\", \"country\", \"emergency_first_name\", \"emergency_last_name\", \"emergency_mobile\", \"emergency_email\", \"emergency_relationship\", \"profile_image_url\", \"user_type\", \"role\", \"role_id\", \"profile_id\", \"region_id\", \"branch_id\", \"availability_status\", \"custom_status_text\", \"last_status_update\", \"is_active\", \"last_login\", \"requires_password_reset\", \"temp_password_issued_at\", \"approval_status\", \"approved_by\", \"approved_at\", \"rejection_reason\", \"created_at\", \"updated_at\" from \"users\" where \"users\".\"email\" = $1",
+ params: [
+      at processTicksAndRejections (native:7:39)
+    port: 5432,
+"faysalbahar@anzglobal.com.au"
+49672 |     try {
+49673 |       _originalCaptureStackTrace(target, constructor);
+ address: "2406:da14:271:9921:4034:ef27:d522:4bc1",
+],
+2:02:33 PM [express] GET /api/notifications/unread-count 401 in 0ms :: {"message":"Unauthorized"}
+              ^
+      at queryWithCache (/app/node_modules/drizzle-orm/pg-core/session.js:41:15)
+error: connect ECONNREFUSED 2406:da14:271:9921:4034:ef27:d522:4bc1:5432
+    code: "ECONNREFUSED"
+      at async <anonymous> (/app/node_modules/drizzle-orm/node-postgres/session.js:117:35)
+   errno: -111,
+ syscall: "connect",
+49668 | });
+      at /app/dist/index.js:49673:7
+49669 | if (typeof Error.captureStackTrace === "function") {
+      at /app/node_modules/pg-pool/index.js:56:5
+49670 |   const _originalCaptureStackTrace = Error.captureStackTrace;
+49671 |   Error.captureStackTrace = function(target, constructor) {
+[WS] New WebSocket connection attempt
+[WS] Headers: Has cookie
+[WS] Session cookie: Missing
+[WS] No session cookie - waiting for auth message
+[WS] Received auth message
+[WS] Token verification failed
