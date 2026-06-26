@@ -96,6 +96,12 @@ const app = express();
 // Trust proxy for accurate client IP detection behind reverse proxy
 app.set('trust proxy', 1);
 
+// Lightweight healthcheck — no DB, no auth, responds immediately.
+// Railway uses this to determine if the container is alive.
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown

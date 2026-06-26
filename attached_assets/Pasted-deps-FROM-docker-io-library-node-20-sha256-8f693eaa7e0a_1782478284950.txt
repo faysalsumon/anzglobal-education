@@ -1,0 +1,84 @@
+deps
+FROM docker.io/library/node:20@sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5
+13ms
+
+stage-1
+FROM docker.io/oven/bun:1@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4
+14ms
+
+internal
+load build context
+0ms
+
+deps
+WORKDIR /app cached
+1ms
+
+deps
+COPY package.json ./
+1s
+
+deps
+RUN npm install --legacy-peer-deps --force --no-audit --no-fund
+1m 2s
+npm notice
+uploading snapshot
+1.2 GB
+31.5s
+
+stage-1
+RUN apt-get update && apt-get install -y --no-install-recommends     curl     poppler-utils     && rm -rf /var/lib/apt/lists/* cached
+1ms
+
+stage-1
+WORKDIR /app cached
+0ms
+
+stage-1
+COPY --from=deps /app/node_modules ./node_modules
+3s
+
+stage-1
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
+12s
+Processing triggers for libc-bin (2.41-12+deb13u3) ...
+
+stage-1
+RUN ./node_modules/.bin/playwright install --with-deps chromium
+44s
+Chrome Headless Shell 149.0.7827.55 (playwright chromium-headless-shell v1228) downloaded to /ms-playwright/chromium_headless_shell-1228
+
+stage-1
+COPY . .
+2s
+
+stage-1
+RUN bun run build
+15s
+⚡ Done in 130ms
+
+exporting to docker image format
+16s
+containerimage.digest: sha256:3a4c287c3693d16625cc15972283aaced05811b9c4055267da76d65978431f7f
+containerimage.descriptor: eyJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvbi92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJkaWdlc3QiOiJzaGEyNTY6M2E0YzI4N2MzNjkzZDE2NjI1Y2MxNTk3MjI4M2FhY2VkMDU4MTFiOWM0MDU1MjY3ZGE3NmQ2NTk3ODQzMWY3ZiIsInNpemUiOjI3NzcsImFubm90YXRpb25zIjp7Im9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNi0wNi0yNlQxMjo0NDozNloifSwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoiYW1kNjQiLCJvcyI6ImxpbnV4In19
+containerimage.config.digest: sha256:fc4264ee641b8789d3afeb2e2a9adb45e49b6e7b0abb6ad762e3fa3778c7bf6a
+image push
+1.9 GB
+23.7s
+ 
+====================
+Starting Healthcheck
+====================
+Path: /api/public/regions
+Retry window: 2m0s
+ 
+Attempt #1 failed with service unavailable. Continuing to retry for 1m49s
+Attempt #2 failed with service unavailable. Continuing to retry for 1m38s
+Attempt #3 failed with service unavailable. Continuing to retry for 1m26s
+Attempt #4 failed with service unavailable. Continuing to retry for 1m12s
+Attempt #5 failed with service unavailable. Continuing to retry for 54s
+Attempt #6 failed with service unavailable. Continuing to retry for 27s
+ 
+1/1 replicas never became healthy!
+
+Healthcheck failed!

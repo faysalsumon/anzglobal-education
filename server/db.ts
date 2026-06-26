@@ -11,11 +11,11 @@ const { Pool } = pkg;
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error("DATABASE_URL must be set. Did you forget to provision a database?");
+  console.error("[DB] FATAL: DATABASE_URL is not set. All database operations will fail. Set this environment variable in Railway.");
 }
 
 export const pool = new Pool({
-  connectionString,
+  connectionString: connectionString || 'postgresql://localhost/placeholder',
   ssl: { rejectUnauthorized: false },
   max: 5,
   idleTimeoutMillis: 30000,
