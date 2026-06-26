@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY package.json bun.lock* bun.lockb* ./
 RUN bun install
 
+# Native build tools required for sharp (image processing) bindings
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
+
 # ── Playwright: install Chromium + all required OS libraries ───────────────────
 # PLAYWRIGHT_BROWSERS_PATH keeps the browser binaries in a known location.
 # playwright install --with-deps handles libnss3, libatk, libgbm, etc. automatically.
