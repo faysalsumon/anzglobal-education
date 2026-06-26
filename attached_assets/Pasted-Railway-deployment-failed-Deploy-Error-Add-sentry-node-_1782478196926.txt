@@ -1,0 +1,41 @@
+Railway deployment failed — Deploy Error
+
+Add `@sentry/node` to your `package.json` dependencies to fix the startup crash. The server imports `@sentry/node` but only `@sentry/react` was ever added to `package.json`, so the Node.js Sentry SDK is missing from `node_modules` at runtime. Because esbuild bundles with `--packages=external`, the missing module causes an immediate crash before the app can serve any requests, making every healthcheck attempt fail.
+
+Repository: https://github.com/faysalsumon/anzglobal-education
+Branch: main · Commit: 36eed2a — Add PDF processing library to support file uploads
+
+Add the `pdfjs-dist` dependency to `package.json` to enable PDF file processing capabilities.
+
+Replit-Commit-Author: Agent
+Replit-Commit-Session-Id: 844b0bb1-b3c3-4669-b1f8-52a479e2b901
+Replit-Commit-Checkpoint-Type: full_checkpoint
+Replit-Commit-Event-Id: ef8ca923-8524-467b-8d6a-33aebbeac65e
+Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/2a8b9972-f46d-4d13-b475-620eb319c964/844b0bb1-b3c3-4669-b1f8-52a479e2b901/AxruRSP
+Replit-Helium-Checkpoint-Created: true
+Deployment ID: 983a1ffe-bcd6-46ce-89c2-cab30c55ffd4
+Service ID: 9d613f64-002b-4337-adb6-773abd413f6c
+Environment ID: a497fbb3-7c61-4b02-8b28-d5521d1a1c09
+
+---
+
+## Problem
+The deployment fails at the HEALTHCHECK stage because the application crashes immediately on startup. Deploy logs show: `error: Cannot find module '@sentry/node' from '/app/dist/index.js'`. The build succeeds (Dockerfile builder, multi-stage with npm install + Bun runtime), but at runtime Bun cannot find the `@sentry/node` module. The healthcheck is configured via `railway.toml` with `healthcheckPath = "/api/public/regions"` and `healthcheckTimeout = 120`. All 6 healthcheck attempts fail with "service unavailable" because the app never starts.
+
+## Diagnosis
+`server/index.ts` line 1 has `import * as Sentry from "@sentry/node"`. The build script runs `esbuild server/index.ts --bundle --platform=node --packages=external --outfile=dist/index.js`, which marks all npm packages as external — they are NOT bundled and must be present in `node_modules` at runtime. `package.json` contains `"@sentry/react": "^8.0.0"` (the frontend/browser SDK) but does NOT contain `@sentry/node` (the server-side SDK). These are separate packages. A prior Replit Agent commit added `@sentry/react` but never added `@sentry/node`, which is what the server code actually imports. Since `@sentry/node` is not in `package.json`, `npm install` never installs it, and the runtime `node_modules` directory does not contain it. When Bun tries to run `dist/index.js`, the top-level import fails immediately.
+
+## Fix
+1. **File:** `package.json`
+2. **Current content (around the @sentry/react line):**
+```json
+    "@sentry/react": "^8.0.0",
+```
+3. **Replacement:**
+```json
+    "@sentry/node": "^8.0.0",
+    "@sentry/react": "^8.0.0",
+```
+4. **Why:** Adding `@sentry/node` to dependencies ensures `npm install` (in the Dockerfile `deps` stage) installs the package into `node_modules`. At runtime, Bun will find the module and the app will start successfully. The version `^8.0.0` matches `@sentry/react` to keep both Sentry SDKs on compatible versions.
+
+**Important:** After editing `package.json`, run `npm install --legacy-peer-deps --force` locally to regenerate the lockfile (`package-lock.json`), then commit both files. A code agent cannot regenerate the lockfile automatically.
