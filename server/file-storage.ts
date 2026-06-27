@@ -122,10 +122,13 @@ export async function uploadFile(
 }
 
 /**
- * Download a file from Supabase Storage.
- * All files are served exclusively from Supabase.
+ * Download a file. Tries Supabase Storage first; falls back to Replit Object
+ * Storage for any files that haven't been migrated yet (e.g. public/ prefix
+ * files, or documents uploaded after the last migration run).
+ * Once all files are confirmed in Supabase this fallback is never reached.
  */
 export async function downloadFile(storagePath: string): Promise<Buffer | null> {
+  // 1. Try Supabase (primary store for all new uploads)
   try {
     const { bucket, filePath } = getBucketAndPath(storagePath);
     const supabase = getSupabase();
@@ -137,6 +140,26 @@ export async function downloadFile(storagePath: string): Promise<Buffer | null> 
   } catch (err: any) {
     console.warn(`[FileStorage] Supabase download error for ${storagePath}:`, err.message);
   }
+
+  // 2. Fallback: Replit Object Storage (covers pre-migration and public/ files)
+  try {
+    const { Client } = await import("@replit/object-storage");
+    const replitClient = new Client();
+    const dlResult = await replitClient.downloadAsBytes(storagePath);
+    if (dlResult.ok && dlResult.value != null) {
+      const val = dlResult.value;
+      if (Buffer.isBuffer(val)) return val;
+      if (Array.isArray(val))
+        return Buffer.concat(
+          val.map((c: unknown) => (Buffer.isBuffer(c) ? c : Buffer.from(c as Uint8Array)))
+        );
+      return Buffer.from(val as ArrayBufferLike);
+    }
+    console.warn(`[FileStorage] Replit fallback miss: path=${storagePath}`);
+  } catch (err: any) {
+    console.warn(`[FileStorage] Replit fallback error for ${storagePath}:`, err.message);
+  }
+
   return null;
 }
 
