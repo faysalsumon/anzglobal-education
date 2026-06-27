@@ -1,0 +1,218 @@
+
+cf9fc8cf
+User
+[WS] New WebSocket connection attempt
+
+2026-06-27 14:11:14.64
+cf9fc8cf
+User
+[WS] No session cookie - waiting for auth message
+
+2026-06-27 14:11:14.64
+cf9fc8cf
+User
+[WS] Session cookie: Missing
+
+2026-06-27 14:11:14.87
+cf9fc8cf
+User
+[WS] Received auth message
+
+2026-06-27 14:11:15.53
+cf9fc8cf
+User
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+
+2026-06-27 14:11:15.78
+cf9fc8cf
+User
+4:11:15 AM [express] GET /api/notifications/unread-count 200 in 94ms
+
+2026-06-27 14:11:15.79
+cf9fc8cf
+User
+4:11:15 AM [express] GET /api/notifications 200 in 87ms
+
+2026-06-27 14:12:17.70
+cf9fc8cf
+User
+[Migration] Scanning prefix: attendance-photos/
+
+2026-06-27 14:12:17.82
+cf9fc8cf
+User
+[Migration] found 634 objects
+
+2026-06-27 14:16:15.63
+cf9fc8cf
+User
+[WS] Client disconnected: e803626f-4d88-4c87-b878-ec568238c0f6
+
+2026-06-27 14:16:17.53
+cf9fc8cf
+User
+[WS] New WebSocket connection attempt
+
+2026-06-27 14:16:17.53
+cf9fc8cf
+User
+[WS] No session cookie - waiting for auth message
+
+2026-06-27 14:16:17.53
+cf9fc8cf
+User
+[WS] Headers: Has cookie
+
+2026-06-27 14:16:17.53
+cf9fc8cf
+User
+[WS] Session cookie: Missing
+
+2026-06-27 14:16:17.79
+cf9fc8cf
+User
+[WS] Received auth message
+
+2026-06-27 14:16:18.69
+cf9fc8cf
+User
+4:16:18 AM [express] GET /api/notifications/unread-count 200 in 55ms
+
+
+2026-06-27 14:16:18.74
+cf9fc8cf
+User
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+
+2026-06-27 14:16:19.07
+cf9fc8cf
+User
+4:16:19 AM [express] GET /api/notifications 200 in 58ms
+
+2026-06-27 14:19:02.08
+cf9fc8cf
+User
+[Migration] Migration complete — total:8876 copied:0 skipped:8876 failed:0
+
+2026-06-27 14:21:18.52
+cf9fc8cf
+User
+[WS] Client disconnected: e803626f-4d88-4c87-b878-ec568238c0f6
+
+2026-06-27 14:21:20.53
+cf9fc8cf
+User
+[WS] Session cookie: Missing
+
+2026-06-27 14:21:20.53
+cf9fc8cf
+User
+[WS] Headers: Has cookie
+
+2026-06-27 14:21:20.53
+cf9fc8cf
+User
+[WS] No session cookie - waiting for auth message
+
+2026-06-27 14:21:20.53
+cf9fc8cf
+User
+[WS] New WebSocket connection attempt
+
+2026-06-27 14:21:20.76
+cf9fc8cf
+User
+[WS] Received auth message
+
+2026-06-27 14:21:21.34
+cf9fc8cf
+User
+4:21:21 AM [express] GET /api/notifications 200 in 107ms
+
+2026-06-27 14:21:21.35
+cf9fc8cf
+User
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+
+2026-06-27 14:21:21.64
+cf9fc8cf
+User
+4:21:21 AM [express] GET /api/notifications/unread-count 200 in 57ms
+
+2026-06-27 14:26:21.53
+cf9fc8cf
+User
+[WS] Client disconnected: e803626f-4d88-4c87-b878-ec568238c0f6
+
+2026-06-27 14:26:23.55
+cf9fc8cf
+User
+[WS] Headers: Has cookie
+
+2026-06-27 14:26:23.55
+cf9fc8cf
+User
+[WS] New WebSocket connection attempt
+
+2026-06-27 14:26:23.55
+cf9fc8cf
+User
+[WS] No session cookie - waiting for auth message
+
+2026-06-27 14:26:23.55
+cf9fc8cf
+User
+[WS] Session cookie: Missing
+
+2026-06-27 14:26:23.78
+cf9fc8cf
+User
+[WS] Received auth message
+
+2026-06-27 14:26:24.51
+cf9fc8cf
+User
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+
+2026-06-27 14:26:24.92
+cf9fc8cf
+User
+4:26:24 AM [express] GET /api/notifications 200 in 110ms
+
+2026-06-27 14:26:24.94
+cf9fc8cf
+User
+4:26:24 AM [express] GET /api/notifications/unread-count 200 in 35ms
+
+2026-06-27 14:26:31.62
+cf9fc8cf
+User
+[Security] BOT_BLOCKED ip=185.170.167.18 method=GET path=/courses/master-of-human-resource-management/ ua=Mozilla/5.0 (compatible; BacklinksExtendedBot)
+
+2026-06-27 14:26:56.86
+cf9fc8cf
+User
+4:26:56 AM [express] GET /api/supabase-auth/user 200 in 353ms
+
+2026-06-27 14:26:57.25
+cf9fc8cf
+User
+4:26:57 AM [express] GET /api/admin/migrate-replit-to-supabase/status 200 in 58ms
+
+2026-06-27 14:27:05.04
+cf9fc8cf
+User
+4:27:05 AM [express] GET /api/conversations/unread-count 200 in 107ms
+
+2026-06-27 14:27:06.18
+cf9fc8cf
+User
+4:27:06 AM [express] GET /api/conversations 200 in 573ms
+
+2026-06-27 14:27:06.18
+cf9fc8cf
+User
+4:27:06 AM [express] GET /api/conversations 200 in 573ms
+
+Wrap
+
