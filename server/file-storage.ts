@@ -130,11 +130,13 @@ export async function downloadFile(storagePath: string): Promise<Buffer | null> 
   // 1. Try Supabase (primary store for all new uploads)
   try {
     const { bucket, filePath } = getBucketAndPath(storagePath);
+    console.log(`[FileStorage] Supabase download: bucket=${bucket} path=${filePath}`);
     const supabase = getSupabase();
     const { data, error } = await supabase.storage.from(bucket).download(filePath);
     if (!error && data) {
       return Buffer.from(await data.arrayBuffer());
     }
+    if (error) console.warn(`[FileStorage] Supabase miss: bucket=${bucket} path=${filePath} err=${error.message}`);
   } catch (err: any) {
     console.warn(`[FileStorage] Supabase download error for ${storagePath}:`, err.message);
   }
@@ -143,6 +145,7 @@ export async function downloadFile(storagePath: string): Promise<Buffer | null> 
   try {
     const { Client } = await import("@replit/object-storage");
     const replitClient = new Client();
+    console.log(`[FileStorage] Replit fallback: path=${storagePath}`);
     const dlResult = await replitClient.downloadAsBytes(storagePath);
     if (dlResult.ok && dlResult.value != null) {
       const val = dlResult.value;
@@ -153,6 +156,7 @@ export async function downloadFile(storagePath: string): Promise<Buffer | null> 
         );
       return Buffer.from(val as ArrayBufferLike);
     }
+    console.warn(`[FileStorage] Replit fallback miss: path=${storagePath} ok=${dlResult.ok}`);
   } catch (err: any) {
     console.warn(`[FileStorage] Replit fallback error for ${storagePath}:`, err.message);
   }

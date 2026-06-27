@@ -1446,9 +1446,11 @@ export function registerApplicationWorkflowRoutes(app: Express) {
       }
 
       const filePath = document.documentUrl;
+      console.log(`[DocDownload] documentId=${documentId} filePath=${JSON.stringify(filePath)}`);
       const { readDocumentBuffer, getMimeType } = await import("./file-storage");
       const fileBuffer = await readDocumentBuffer(filePath);
       if (!fileBuffer) {
+        console.warn(`[DocDownload] NOT FOUND in storage: ${JSON.stringify(filePath)}`);
         return res.status(404).json({ error: "File not found in storage" });
       }
 
