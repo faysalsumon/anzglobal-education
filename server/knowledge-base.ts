@@ -559,8 +559,19 @@ Intakes:
   }));
 }
 
+// 24-hour cooldown — admin CRUD triggers won't burn write units on every edit.
+// The weekly scheduler bypasses this via forceRebuild=true.
+const REBUILD_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
 // Build and upload knowledge base to Pinecone
-export async function buildKnowledgeBase() {
+export async function buildKnowledgeBase(forceRebuild = false) {
+  // Skip if a successful build ran within the cooldown window
+  if (!forceRebuild && lastBuildTime && (Date.now() - lastBuildTime.getTime()) < REBUILD_COOLDOWN_MS) {
+    const hoursAgo = Math.round((Date.now() - lastBuildTime.getTime()) / 3_600_000);
+    console.log(`[Knowledge Base] Skipping rebuild — built ${hoursAgo}h ago (24h cooldown). Use the admin endpoint to force.`);
+    return { success: true, skipped: true, documentsProcessed: 0, vectorsCreated: 0 };
+  }
+
   console.log('[KnowledgeBase] Starting build...');
 
   try {
@@ -620,6 +631,7 @@ export async function buildKnowledgeBase() {
     }
 
     console.log('Knowledge base build completed successfully!');
+    lastBuildTime = new Date();
     return {
       success: true,
       documentsProcessed: allDocuments.length,
@@ -642,11 +654,11 @@ export function resetKnowledgeBaseInitialization(): void {
   console.log('[Knowledge Base] Initialization flag reset - will rebuild on next query');
 }
 
-// Check if knowledge base is empty or stale (older than 1 hour)
+// Check if knowledge base is empty or stale (older than 24 hours)
 async function isKnowledgeBaseStale(): Promise<boolean> {
   try {
-    // If never built or built more than 1 hour ago, consider stale
-    if (!lastBuildTime || (Date.now() - lastBuildTime.getTime()) > 60 * 60 * 1000) {
+    // If never built or built more than 24 hours ago, consider stale
+    if (!lastBuildTime || (Date.now() - lastBuildTime.getTime()) > 24 * 60 * 60 * 1000) {
       return true;
     }
     
@@ -657,8 +669,28 @@ async function isKnowledgeBaseStale(): Promise<boolean> {
     return totalVectors === 0;
   } catch (error) {
     console.error('[Knowledge Base] Error checking if stale:', error);
-    return true; // Assume stale on error
+    return false; // Don't assume stale on error — avoids spurious rebuilds
   }
+}
+
+// Weekly cron job — forces a full rebuild every 7 days regardless of cooldown.
+// Called once from server/index.ts on startup.
+export function scheduleWeeklyKnowledgeBaseRebuild(): void {
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  console.log('[Knowledge Base] Weekly rebuild scheduler started — next rebuild in 7 days');
+  setInterval(() => {
+    console.log('[Knowledge Base] Weekly scheduled rebuild triggered');
+    // Reset flags so the cooldown and auto-init don't block the forced rebuild
+    lastBuildTime = null;
+    autoInitializationAttempted = false;
+    buildKnowledgeBase(true)
+      .then((result) => {
+        if (!result.skipped) {
+          console.log(`[Knowledge Base] Weekly rebuild done — ${result.vectorsCreated} vectors`);
+        }
+      })
+      .catch((err: Error) => console.error('[Knowledge Base] Weekly rebuild failed:', err.message));
+  }, WEEK_MS);
 }
 
 // Query knowledge base
@@ -672,7 +704,9 @@ export async function queryKnowledgeBase(query: string, topK = 5): Promise<Array
       if (isStale) {
         console.log('[Knowledge Base] Stale — rebuilding in background, continuing with current index...');
         buildKnowledgeBase()
-          .then(() => { lastBuildTime = new Date(); console.log('[Knowledge Base] Background rebuild completed'); })
+          .then((result) => {
+            if (!result.skipped) console.log('[Knowledge Base] Background rebuild completed');
+          })
           .catch((err: Error) => console.error('[Knowledge Base] Background rebuild failed:', err.message));
       }
     }

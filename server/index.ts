@@ -7,7 +7,7 @@ import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log, injectNonce } from "./vite";
 import { injectPageMeta } from "./meta-injector";
-import { initializePineconeIndex } from "./knowledge-base";
+import { initializePineconeIndex, scheduleWeeklyKnowledgeBaseRebuild } from "./knowledge-base";
 import { regionDetectionMiddleware, geoRedirectMiddleware } from "./middleware/region-detection";
 import { csrfErrorHandler } from "./middleware/csrf";
 import { supabaseAuthMiddleware } from "./supabase-middleware";
@@ -350,5 +350,10 @@ app.use((req, res, next) => {
       console.error('[Pinecone] Failed to initialize index:', error);
       console.error('[Pinecone] Chat agent will not function until index is ready');
     });
+
+    // Schedule a full Pinecone knowledge-base rebuild once per week.
+    // Day-to-day admin edits are handled by the 24-hour cooldown inside
+    // buildKnowledgeBase(), so write units are not burned on every CRUD op.
+    scheduleWeeklyKnowledgeBaseRebuild();
   })();
 })();
