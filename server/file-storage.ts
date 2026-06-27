@@ -31,7 +31,8 @@ const PRIVATE_BUCKET = "anz-private";
 // ─── Supabase client (service-role, server-side only) ────────────────────────
 function getSupabase() {
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // Accept both the canonical name and the _PROD-suffixed variant used in Railway
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY_PROD;
   if (!url || !key) throw new Error("[FileStorage] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing");
   return createClient(url, key, { auth: { persistSession: false } });
 }
