@@ -381,6 +381,11 @@ export function CrmLeadsPanel() {
     navigate(`/admin/leads/${lead.id}/edit`);
   };
 
+  // Reset to page 1 whenever filters or search change (must be before any early return)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, ratingFilter, branchFilter, sourceFilter, countryFilter, assignedFilter, searchQuery]);
+
   if (selectedLead && !isDeleteOpen) {
     return (
       <LeadDetailView
@@ -440,11 +445,6 @@ export function CrmLeadsPanel() {
   const totalPages = Math.max(1, Math.ceil(allLeads.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedLeads = allLeads.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
-  // Reset to page 1 whenever filters or search change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [statusFilter, ratingFilter, branchFilter, sourceFilter, countryFilter, assignedFilter, searchQuery]);
 
   return (
     <div className="space-y-4">
