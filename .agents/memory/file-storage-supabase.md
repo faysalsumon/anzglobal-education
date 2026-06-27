@@ -23,8 +23,8 @@ description: Object storage is exclusively Supabase Storage; path routing, bucke
 - `attendance-photos/*` → `anz-private`, kept as-is (no prefix)
 - anything else → `anz-private`, kept as-is
 
-## Replit fallback — REMOVED
-The Replit Object Storage fallback in `downloadFile()` has been removed. All reads now go exclusively to Supabase. To copy any legacy Replit files to Supabase, use the **"Migrate Replit Storage to Supabase"** button in Admin → AI & System Settings → System Maintenance.
+## Replit fallback — PRESENT (read-only safety net)
+`downloadFile()` tries Supabase first; if not found it falls back to Replit Object Storage. This covers pre-migration documents uploaded before the Supabase switch. Once the "Migrate Replit → Supabase" job has run (all files copied), the Replit branch is never reached. Do NOT remove this fallback until that migration is confirmed complete on production.
 
 ## Migration endpoints (CTO only)
 - `POST /api/admin/migrate-replit-to-supabase` — starts the Replit → Supabase copy **in the background**, returns `202` immediately (idempotent, skips already-migrated files).
