@@ -359,7 +359,7 @@ export function TasksBoardPanel() {
   };
 
   const KanbanView = () => (
-    <div className="flex gap-4 overflow-x-auto pb-4 min-h-[500px]">
+    <div className="flex gap-4 overflow-x-auto pb-4 flex-1 min-h-0">
       {STATUS_COLUMNS.map(col => {
         const colTasks = tasks.filter(t => t.status === col.id);
         return (
@@ -550,7 +550,7 @@ export function TasksBoardPanel() {
       </div>
 
       {/* Main board */}
-      <div className="flex-1 min-w-0 space-y-4">
+      <div className="flex-1 min-w-0 flex flex-col gap-4">
         {/* Header */}
         <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-2">

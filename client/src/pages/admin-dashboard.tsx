@@ -1940,6 +1940,10 @@ export default function AdminDashboard() {
             <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
               <AdminMailTab />
             </div>
+          ) : activeTab === "tasks-board" ? (
+            <div className="flex flex-col flex-1 min-h-0 overflow-hidden px-4 md:px-6 py-4 pb-16 lg:pb-4">
+              <TasksBoardPanel />
+            </div>
           ) : activeTab === "crm-contacts" ? (
             <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 py-4 pb-16 lg:pb-4">
               <CrmContactsPanel />
