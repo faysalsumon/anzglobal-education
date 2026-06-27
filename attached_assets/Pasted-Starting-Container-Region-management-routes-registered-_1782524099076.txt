@@ -1,0 +1,131 @@
+Starting Container
+Region management routes registered for global scalability
+Supabase authentication routes registered
+Attendance routes registered for People/HR module
+Mail routes registered
+Application workflow routes registered
+Accounting routes registered
+[Accounts] Routes registered
+Background job processing disabled (Redis not available)
+Application workflow routes registered for CRM-style application management
+Use POST /api/admin/scraping/jobs/:jobId/process for manual scraping
+Workflow validation routes registered
+[routes] CRM routes registered early
+Workflow validation routes registered for business rules enforcement
+──────────────────────────────────────────────────────────────────────
+Institution CRM routes registered for contacts, business terms, and documents
+WebSocket server initialized on path /ws with session-based authentication
+Region management routes registered
+Chat routes registered with RAG-powered AI assistant
+[AdminChat] Admin chat routes registered (with data entry tools)
+Scraping routes registered for AI-powered course extraction
+[routes] Route-group registration summary
+──────────────────────────────────────────────────────────────────────
+  [OK]   crm-routes (early)
+  [OK]   chat-routes
+  [OK]   admin-chat-routes
+  [OK]   scraping-routes
+  [OK]   application-workflow-routes
+  [OK]   workflow-validation-routes
+  [OK]   institution-crm-routes
+  [OK]   region-routes
+  [OK]   supabase-auth-routes
+  [OK]   attendance-routes
+  [OK]   mail-routes
+  [OK]   accounting-routes
+  [OK]   accounts-routes
+  All route groups registered successfully.
+──────────────────────────────────────────────────────────────────────
+1:32:22 AM [express] serving on port 8080
+[Migrate] No pending migrations
+[SeedRoles] Role seeding complete
+[SeedProfiles] Profile seeding complete
+1:32:26 AM [express] Startup tasks complete (migrations + seeds)
+[Pinecone] Initialization attempt 1/3
+[FileStorage] Failed to create public bucket: new row violates row-level security policy
+[FileStorage] Supabase Storage buckets ready
+[FileStorage] Failed to create private bucket: The object exceeded the maximum allowed size
+[Pinecone] Using existing index
+[WS] New WebSocket connection attempt
+[WS] Headers: Has cookie
+[WS] Session cookie: Missing
+[WS] No session cookie - waiting for auth message
+[WS] Received auth message
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+1:32:30 AM [express] GET /api/notifications 200 in 77ms
+1:32:30 AM [express] GET /api/notifications/unread-count 200 in 74ms
+1:32:34 AM [express] GET /api/conversations 200 in 79ms
+1:32:34 AM [express] GET /api/conversations/unread-count 200 in 87ms
+1:32:34 AM [express] GET /api/supabase-auth/user 200 in 392ms
+[WS] Client disconnected: e803626f-4d88-4c87-b878-ec568238c0f6
+1:32:36 AM [express] GET /api/public/regions 200 in 76ms
+1:32:36 AM [express] GET /api/public/pathways 200 in 79ms
+1:32:36 AM [express] GET /api/supabase-auth/user 200 in 364ms
+[WS] New WebSocket connection attempt
+[WS] Headers: Has cookie
+[WS] Session cookie: Missing
+[WS] No session cookie - waiting for auth message
+1:32:37 AM [express] GET /api/conversations 200 in 264ms
+1:32:37 AM [express] GET /api/notifications 200 in 278ms
+[WS] Received auth message
+1:32:38 AM [express] GET /api/notifications/unread-count 200 in 291ms
+1:32:38 AM [express] GET /api/conversations/unread-count 200 in 295ms
+1:32:38 AM [express] GET /api/admin/roles 200 in 958ms
+1:32:38 AM [express] GET /api/admin/profiles 200 in 1167ms
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+1:32:38 AM [express] GET /api/admin/migrate-replit-to-supabase/status 200 in 768ms
+1:32:38 AM [express] GET /api/super-admin/applications 200 in 1427ms
+1:32:38 AM [express] GET /api/admin/ai-models 200 in 934ms
+1:32:38 AM [express] GET /api/super-admin/institutions 200 in 1139ms
+1:32:38 AM [express] GET /api/admin/regions 200 in 990ms
+1:32:38 AM [express] GET /api/supabase-auth/user 200 in 1047ms
+1:32:38 AM [express] GET /api/admin/ai-settings 200 in 1011ms
+1:32:38 AM [express] GET /api/admin/messaging/team 200 in 521ms
+1:32:38 AM [express] GET /api/attendance/status 200 in 1005ms
+1:32:38 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 785ms
+1:32:38 AM [express] GET /api/super-admin/users 200 in 978ms
+1:32:38 AM [express] GET /api/super-admin/courses 200 in 1004ms
+1:32:38 AM [express] GET /api/admin/branches 200 in 980ms
+1:32:41 AM [express] GET /api/csrf-token 200 in 3ms
+[NeonMigration] Connected to Neon (source) and Supabase (destination)
+      at newClient (/app/node_modules/pg-pool/index.js:241:20)
+      at connect (/app/node_modules/pg-pool/index.js:235:10)
+      at query (/app/node_modules/pg-pool/index.js:449:10)
+      at runMigration (/app/dist/index.js:30066:41)
+      at startNeonMigration (/app/dist/index.js:30039:3)
+      at <anonymous> (/app/dist/index.js:48731:45)
+Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+      at deprecatedSslModeWarning (/app/node_modules/pg-connection-string/index.js:222:13)
+      at parse (/app/node_modules/pg-connection-string/index.js:149:11)
+      at new ConnectionParameters (/app/node_modules/pg/lib/connection-parameters.js:60:42)
+      at new Client (/app/node_modules/pg/lib/client.js:54:33)
+1:32:42 AM [express] POST /api/admin/migrate-neon-to-supabase 202 in 218ms
+1:32:43 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 211ms
+[NeonMigration] Found 121 tables to migrate (3 skipped)
+[NeonMigration] FK triggers disabled
+1:32:45 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 210ms
+[NeonMigration]   [acc_bills] 0 rows — skipped
+[NeonMigration]   [academic_qualification_types] 168 rows copied
+[NeonMigration]   [acc_bill_payments] 0 rows — skipped
+[NeonMigration]   [acc_chart_of_accounts] 20 rows copied
+[NeonMigration]   [acc_credit_note_items] 0 rows — skipped
+[NeonMigration]   [acc_credit_notes] 0 rows — skipped
+[NeonMigration]   [acc_customers] 0 rows — skipped
+[NeonMigration]   [acc_expense_categories] 0 rows — skipped
+[NeonMigration]   [acc_expenses] 0 rows — skipped
+[NeonMigration]   [acc_invoice_line_items] 0 rows — skipped
+[NeonMigration]   [acc_invoices] 0 rows — skipped
+[NeonMigration]   [acc_items] 0 rows — skipped
+[NeonMigration]   [acc_payments_received] 0 rows — skipped
+[NeonMigration]   [acc_reminder_logs] 0 rows — skipped
+1:32:48 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 224ms
+[NeonMigration]   [account_notes] 0 rows — skipped
+[NeonMigration]   [account_portal_forms] 0 rows — skipped
+[NeonMigration]   [account_products] 0 rows — skipped
+[NeonMigration]   [account_restricted_details] 7 rows copied
+[NeonMigration]   [accounts] 7 rows copied

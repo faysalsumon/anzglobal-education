@@ -115,6 +115,22 @@ async function runMigration() {
     await supabasePool.query("SET session_replication_role = replica");
     log("FK triggers disabled");
 
+    // Pre-fetch column types for all tables so we can serialize correctly.
+    // json/jsonb columns need JSON.stringify(); native array columns pass through as-is.
+    const colTypeCache = new Map<string, Map<string, string>>();
+    async function getColTypes(tbl: string): Promise<Map<string, string>> {
+      if (colTypeCache.has(tbl)) return colTypeCache.get(tbl)!;
+      const res = await neonPool.query<{ column_name: string; data_type: string }>(
+        `SELECT column_name, data_type
+         FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = $1`,
+        [tbl]
+      );
+      const map = new Map(res.rows.map((r) => [r.column_name, r.data_type]));
+      colTypeCache.set(tbl, map);
+      return map;
+    }
+
     for (const tableName of tables) {
       state.currentTable = tableName;
 
@@ -129,6 +145,7 @@ async function runMigration() {
         continue;
       }
 
+      const colTypes = await getColTypes(tableName);
       let offset = 0;
       let tableCopied = 0;
 
@@ -151,14 +168,21 @@ async function runMigration() {
           placeholders.push(`(${rowPlaceholders.join(", ")})`);
           for (const col of columns) {
             const v = row[col];
-            // pg returns JSON/JSONB columns as parsed JS objects. Re-stringify them
-            // so the destination pg driver receives a valid JSON string, not [object Object].
-            if (v !== null && v !== undefined && typeof v === "object" && !(v instanceof Date) && !Buffer.isBuffer(v) && !Array.isArray(v)) {
-              // Plain objects (JSONB columns) must be stringified — pg won't auto-serialize them.
+            const pgType = colTypes.get(col) ?? "";
+            if (
+              v !== null &&
+              v !== undefined &&
+              typeof v === "object" &&
+              !(v instanceof Date) &&
+              !Buffer.isBuffer(v) &&
+              // json/jsonb columns must be stringified regardless of whether the
+              // value is a plain object OR a JSON array stored in a jsonb column.
+              // Native array columns (data_type = 'ARRAY') pass through as-is so
+              // pg can format them as {a,b,c} PostgreSQL array literals.
+              (pgType === "json" || pgType === "jsonb")
+            ) {
               values.push(JSON.stringify(v));
             } else {
-              // Arrays (text[], int[], etc.) and primitives pass through as-is.
-              // pg formats JS arrays as PostgreSQL array literals {a,b,c} automatically.
               values.push(v);
             }
           }
