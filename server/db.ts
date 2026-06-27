@@ -17,9 +17,10 @@ if (!connectionString) {
 export const pool = new Pool({
   connectionString: connectionString || 'postgresql://localhost/placeholder',
   ssl: { rejectUnauthorized: false },
-  max: 5,
+  max: 3,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
+  statement_timeout: 30000,
 });
 
 pool.on('error', (err) => {

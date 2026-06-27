@@ -1,0 +1,48 @@
+You reached the start of the range
+Jun 28, 2026, 12:37 AM
+Starting Container
+Application workflow routes registered
+Application workflow routes registered for CRM-style application management
+Workflow validation routes registered
+Workflow validation routes registered for business rules enforcement
+Institution CRM routes registered for contacts, business terms, and documents
+Region management routes registered
+Region management routes registered for global scalability
+Supabase authentication routes registered
+Attendance routes registered for People/HR module
+Mail routes registered
+Accounting routes registered
+[Accounts] Routes registered
+Background job processing disabled (Redis not available)
+Use POST /api/admin/scraping/jobs/:jobId/process for manual scraping
+[routes] CRM routes registered early
+──────────────────────────────────────────────────────────────────────
+WebSocket server initialized on path /ws with session-based authentication
+Chat routes registered with RAG-powered AI assistant
+[AdminChat] Admin chat routes registered (with data entry tools)
+Scraping routes registered for AI-powered course extraction
+──────────────────────────────────────────────────────────────────────
+[routes] Route-group registration summary
+2:39:53 PM [express] serving on port 8080
+──────────────────────────────────────────────────────────────────────
+  [OK]   accounting-routes
+  [OK]   crm-routes (early)
+  [OK]   chat-routes
+  [OK]   accounts-routes
+  [OK]   workflow-validation-routes
+  [OK]   admin-chat-routes
+  [OK]   scraping-routes
+  [OK]   institution-crm-routes
+  All route groups registered successfully.
+  [OK]   application-workflow-routes
+  [OK]   region-routes
+  [OK]   supabase-auth-routes
+  [OK]   attendance-routes
+  [OK]   mail-routes
+[Migrate] No pending migrations
+[SeedRoles] Role seeding complete
+[SeedProfiles] Profile seeding complete
+2:39:58 PM [express] Startup tasks complete (migrations + seeds)
+[FileStorage] Supabase Storage buckets ready
+[Pinecone] Initialization attempt 1/3
+[Pinecone] Using existing index

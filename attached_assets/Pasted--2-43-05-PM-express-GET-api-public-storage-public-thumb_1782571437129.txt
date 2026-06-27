@@ -1,0 +1,20 @@
+
+2:43:05 PM [express] GET /api/public-storage/public/thumbnails/course_Diploma_of_Civil_Construction_Design_1773664510473.jpg 304 in 959ms
+2:43:12 PM [express] GET /api/platform/stats 200 in 9577ms
+2:43:28 PM [express] GET /api/supabase-auth/user 200 in 796ms
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/ source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/admin/dashboard source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/admin/dashboard source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/admin/login source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/admin/login source=chrome-extension:14083
+2:43:33 PM [express] GET /api/public/regions 200 in 156ms
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/admin/dashboard source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/admin/dashboard source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/ source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/ source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/ source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/ source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/ source=chrome-extension:14083
+2:43:33 PM [express] POST /api/csp-report 204 in 2ms
+2:43:33 PM [express] GET /api/public/pathways 200 in 448ms
+2:43:33 PM [express] GET /api/supabase-auth/user 200 in 805ms
