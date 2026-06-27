@@ -131,6 +131,7 @@ interface StageDocument {
   verifiedAt: string | null;
   verificationNotes: string | null;
   rejectionReason: string | null;
+  mimeType: string | null;
   createdAt: string;
 }
 
@@ -142,6 +143,7 @@ interface PersonalDocument {
   fileUrl: string | null;
   filePath: string | null;
   fileSize: number | null;
+  mimeType: string | null;
   status: string;
   createdAt: string;
 }
