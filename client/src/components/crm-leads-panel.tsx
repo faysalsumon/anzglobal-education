@@ -668,7 +668,7 @@ export function CrmLeadsPanel() {
               </DragOverlay>
             </DndContext>
           ) : (
-            <div className="overflow-x-auto rounded-lg border">
+            <div className="overflow-auto rounded-lg border max-h-[calc(100vh-22rem)]">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
