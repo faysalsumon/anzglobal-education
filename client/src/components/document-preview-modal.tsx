@@ -71,7 +71,9 @@ export function DocumentPreviewModal({
     mimeType?.startsWith("image/") ||
     /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(documentName);
   const isPdf =
-    mimeType === "application/pdf" || /\.pdf$/i.test(documentName);
+    mimeType === "application/pdf" ||
+    /\.pdf$/i.test(documentName) ||
+    /\.pdf/i.test(documentUrl);
 
   // ── 1. Fetch document bytes ────────────────────────────────────
   const fetchDocument = useCallback(async () => {

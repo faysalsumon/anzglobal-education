@@ -967,7 +967,7 @@ export function ApplicationDetailsPanel({
                             variant="ghost" 
                             size="icon" 
                             className="h-7 w-7"
-                            onClick={() => openDocumentPreview(`/api/admin/documents/${doc.id}/download`, doc.fileName || doc.title)}
+                            onClick={() => openDocumentPreview(`/api/admin/documents/${doc.id}/download`, doc.fileName || doc.title, doc.mimeType || undefined)}
                             data-testid={`button-view-lib-doc-${doc.id}`}
                           >
                             <Eye className="h-3.5 w-3.5" />
@@ -1054,7 +1054,7 @@ export function ApplicationDetailsPanel({
                                     variant="ghost" 
                                     size="icon" 
                                     className="h-7 w-7"
-                                    onClick={() => openDocumentPreview(`/api/admin/applications/${application.id}/documents/${doc.id}/download`, doc.documentName || 'document')}
+                                    onClick={() => openDocumentPreview(`/api/admin/applications/${application.id}/documents/${doc.id}/download`, doc.documentName || 'document', doc.mimeType || undefined)}
                                     data-testid={`button-view-doc-${doc.id}`}
                                   >
                                     <Eye className="h-3.5 w-3.5" />
