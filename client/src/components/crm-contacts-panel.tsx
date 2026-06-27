@@ -38,6 +38,7 @@ import {
   Edit,
   Eye,
   ChevronLeft,
+  ChevronRight,
   Bell,
   Building2,
   Globe,
@@ -699,6 +700,18 @@ export function CrmContactsPanel() {
   const uniqueCountries = Array.from(new Set(contactsData?.contacts?.map(c => c.country).filter(Boolean) || []));
   const uniqueNationalities = Array.from(new Set(contactsData?.contacts?.map(c => c.nationality).filter(Boolean) || []));
 
+  // Pagination (list view only)
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 25;
+  const allContacts = contactsData?.contacts ?? [];
+  const totalPages = Math.max(1, Math.ceil(allContacts.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedContacts = allContacts.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [typeFilter, clientStatusFilter, leadStageFilter, entrySourceFilter, branchFilter, countryFilter, nationalityFilter, assignedFilter, searchQuery]);
+
   if (selectedContact && !isDeleteOpen) {
     return (
       <ContactDetailView
@@ -1117,7 +1130,7 @@ export function CrmContactsPanel() {
               </tr>
             </thead>
             <tbody>
-              {contactsData?.contacts?.map((contact) => (
+              {paginatedContacts.map((contact) => (
                 <tr
                   key={contact.id}
                   className="border-b last:border-b-0 cursor-pointer group hover:bg-muted/40 even:bg-muted/20 transition-colors"
@@ -1209,6 +1222,79 @@ export function CrmContactsPanel() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Pagination footer — list view only */}
+      {viewMode === 'list' && !isLoading && allContacts.length > 0 && (
+        <div className="flex items-center justify-between pt-2" data-testid="pagination-contacts">
+          <p className="text-xs text-muted-foreground">
+            Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, allContacts.length)} of {allContacts.length} contact{allContacts.length !== 1 ? 's' : ''}
+          </p>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentPage(1)}
+                disabled={safePage === 1}
+                data-testid="pagination-contacts-first"
+              >
+                <ChevronLeft className="h-3 w-3" />
+                <ChevronLeft className="h-3 w-3 -ml-2" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                data-testid="pagination-contacts-prev"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                .reduce<(number | '...')[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push('...');
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((item, idx) =>
+                  item === '...' ? (
+                    <span key={`ellipsis-${idx}`} className="px-1 text-xs text-muted-foreground">…</span>
+                  ) : (
+                    <Button
+                      key={item}
+                      variant={safePage === item ? 'default' : 'outline'}
+                      size="icon"
+                      onClick={() => setCurrentPage(item as number)}
+                      data-testid={`pagination-contacts-page-${item}`}
+                    >
+                      <span className="text-xs">{item}</span>
+                    </Button>
+                  )
+                )}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                data-testid="pagination-contacts-next"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={safePage === totalPages}
+                data-testid="pagination-contacts-last"
+              >
+                <ChevronRight className="h-3 w-3" />
+                <ChevronRight className="h-3 w-3 -ml-2" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
