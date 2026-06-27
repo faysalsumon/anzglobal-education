@@ -43,7 +43,12 @@ function readMigrations(migrationsFolder: string): MigrationEntry[] {
 }
 
 export async function runMigrations() {
-  const connectionString = process.env.DATABASE_URL;
+  // Prefer the direct (un-pooled) connection for migrations — pgBouncer in
+  // transaction mode doesn't support DDL (CREATE TABLE, ALTER TABLE, etc.).
+  // In Railway: set DATABASE_DIRECT_URL to the Neon direct URL (port 5432)
+  // and DATABASE_URL to the pooled URL (port 6543) for the app pool.
+  const connectionString =
+    process.env.DATABASE_DIRECT_URL ?? process.env.DATABASE_URL;
 
   if (!connectionString) {
     console.error("[Migrate] DATABASE_URL not set — skipping migrations");

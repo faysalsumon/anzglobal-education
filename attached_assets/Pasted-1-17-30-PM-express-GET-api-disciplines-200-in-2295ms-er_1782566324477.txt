@@ -1,0 +1,97 @@
+1:17:30 PM [express] GET /api/disciplines 200 in 2295ms
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+1:17:31 PM [express] GET /api/courses/filter-options 200 in 3001ms
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/auth source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/admin/dashboard source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/ source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/ source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/ source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/ source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/admin/dashboard source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/admin/dashboard source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/auth source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/admin/dashboard source=chrome-extension:14083
+1:17:33 PM [express] POST /api/csp-report 204 in 255ms
+1:17:34 PM [express] GET /api/logout 302 in 155ms
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/courses
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/platform/stats
+1:17:36 PM [express] GET /api/public/pathways 200 in 151ms
+1:17:36 PM [express] GET /api/public/regions 200 in 156ms
+[WS] Client disconnected: e803626f-4d88-4c87-b878-ec568238c0f6
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/public/featured
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/blogs
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/institutions
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/public/testimonials
+1:17:38 PM [express] GET /api/courses/filter-options 200 in 2201ms
+1:17:40 PM [express] GET /api/disciplines 200 in 4158ms
+1:17:57 PM [express] GET /api/public/testimonials 200 in 237ms
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+    at processTicksAndRejections (native:7:39)
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+1:18:00 PM [express] GET /api/public/featured 500 in 150ms :: {"message":"(EMAXCONNSESSION) max clients reached in session mode - max client…
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+1:18:00 PM [express] GET /api/blogs 200 in 230ms
+1:18:01 PM [express] GET /api/institutions 200 in 633ms
+1:18:04 PM [express] GET /api/platform/stats 200 in 3924ms
+[API /api/courses] Loaded 329 courses, 66 universities from DB
+1:18:07 PM [express] GET /api/courses 200 in 7188ms
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at <anonymous> (/app/dist/index.js:49737:7)
+    at <anonymous> (/app/node_modules/pg-pool/index.js:45:11)
+    at processTicksAndRejections (native:7:39)
+1:18:18 PM [express] GET /api/public/featured 200 in 277ms
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
