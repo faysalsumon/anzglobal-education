@@ -1,0 +1,34 @@
+4:45:22 AM [express] GET /api/supabase-auth/user 200 in 403ms
+4:45:22 AM [express] GET /api/crm/tasks/stats 200 in 588ms
+4:45:24 AM [express] GET /api/saved-filters 200 in 80ms
+4:45:24 AM [express] GET /api/admin/users 200 in 373ms
+4:45:24 AM [express] GET /api/supabase-auth/user 200 in 398ms
+4:45:25 AM [express] GET /api/admin/applications 200 in 1569ms
+4:45:36 AM [express] GET /api/conversations/unread-count 200 in 77ms
+4:45:36 AM [express] GET /api/conversations 200 in 381ms
+[WS] Client disconnected: e803626f-4d88-4c87-b878-ec568238c0f6
+4:45:41 AM [express] GET /api/admin/assignable-users 200 in 123ms
+4:45:41 AM [express] GET /api/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/courses 200 in 184ms
+4:45:41 AM [express] GET /api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/documents 200 in 159ms
+4:45:41 AM [express] GET /api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c 200 in 607ms
+4:45:41 AM [express] GET /api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/history 200 in 241ms
+[WS] New WebSocket connection attempt
+[WS] Headers: Has cookie
+[WS] Session cookie: Missing
+[WS] No session cookie - waiting for auth message
+4:45:41 AM [express] GET /api/supabase-auth/user 200 in 431ms
+4:45:41 AM [express] GET /api/accounting/invoices/by-application/9bb23a0c-14ea-423e-94ed-2adeb537057c 200 in 412ms
+[WS] Received auth message
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+4:45:42 AM [express] GET /api/reminders/by-entity 200 in 160ms
+4:45:42 AM [express] GET /api/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/mentionable-users 200 in 234ms
+4:45:42 AM [express] GET /api/admin/students/ae1ee655-9a6e-43d4-8019-56c360bd8e72/application-slots 200 in 229ms
+4:45:43 AM [express] GET /api/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/unified-notes 200 in 553ms
+4:45:44 AM [express] GET /api/admin/students/ae1ee655-9a6e-43d4-8019-56c360bd8e72/documents 200 in 318ms
+4:45:44 AM [express] GET /api/admin/students/ae1ee655-9a6e-43d4-8019-56c360bd8e72/folders 200 in 340ms
+4:45:44 AM [express] GET /api/supabase-auth/user 200 in 512ms
+4:45:48 AM [express] GET /api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/documents/84dd393d-a30f-4260-8d34-c59aa1bfa2e5/downloa…
+4:45:56 AM [express] GET /api/conversations/unread-count 200 in 77ms
+4:45:56 AM [express] GET /api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/documents/f2b59159-e364-4aa8-bd66-1712d0662532/downloa…
+4:45:56 AM [express] GET /api/conversations 200 in 385ms
+4:46:00 AM [express] GET /api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/documents/2b6cd5e2-2722-4ab8-884b-4d21c41983cf/downloa…
