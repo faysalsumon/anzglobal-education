@@ -150,7 +150,14 @@ async function runMigration() {
           const rowPlaceholders = columns.map(() => `$${paramIdx++}`);
           placeholders.push(`(${rowPlaceholders.join(", ")})`);
           for (const col of columns) {
-            values.push(row[col]);
+            const v = row[col];
+            // pg returns JSON/JSONB columns as parsed JS objects. Re-stringify them
+            // so the destination pg driver receives a valid JSON string, not [object Object].
+            if (v !== null && v !== undefined && typeof v === "object" && !(v instanceof Date) && !Buffer.isBuffer(v)) {
+              values.push(JSON.stringify(v));
+            } else {
+              values.push(v);
+            }
           }
         }
 

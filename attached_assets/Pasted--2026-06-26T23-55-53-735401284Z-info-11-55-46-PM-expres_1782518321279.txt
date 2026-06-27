@@ -1,0 +1,101 @@
+[2026-06-26T23:55:53.735401284Z] [info] 11:55:46 PM [express] GET /api/public/pathways 200 in 77ms
+[2026-06-26T23:55:53.735410015Z] [info] 11:55:47 PM [express] GET /api/public/regions 200 in 74ms
+[2026-06-26T23:56:23.619562052Z] [info] [WS] New WebSocket connection attempt
+[2026-06-26T23:56:23.619579006Z] [info] [WS] Headers: Has cookie
+[2026-06-26T23:56:23.619606987Z] [info] [WS] Session cookie: Missing
+[2026-06-26T23:56:23.619613232Z] [info] 11:56:16 PM [express] GET /api/supabase-auth/user 200 in 376ms
+[2026-06-26T23:56:23.619619830Z] [info] [WS] No session cookie - waiting for auth message
+[2026-06-26T23:56:23.619628361Z] [info] 11:56:15 PM [express] GET /api/notifications/unread-count 200 in 80ms
+[2026-06-26T23:56:23.619644001Z] [info] 11:56:15 PM [express] GET /api/student/profile 200 in 159ms
+[2026-06-26T23:56:23.619645488Z] [info] [WS] New WebSocket connection attempt
+[2026-06-26T23:56:23.619658985Z] [info] 11:56:15 PM [express] GET /api/notifications 200 in 73ms
+[2026-06-26T23:56:23.619659654Z] [info] [WS] Headers: Has cookie
+[2026-06-26T23:56:23.619668089Z] [info] 11:56:15 PM [express] GET /api/supabase-auth/user 200 in 400ms
+[2026-06-26T23:56:23.619677194Z] [info] [WS] Session cookie: Missing
+[2026-06-26T23:56:23.619678501Z] [info] [WS] Received auth message
+[2026-06-26T23:56:23.619701636Z] [info] [WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+[2026-06-26T23:56:23.619709390Z] [info] [WS] Client disconnected: e803626f-4d88-4c87-b878-ec568238c0f6
+[2026-06-26T23:56:23.621133547Z] [info] [WS] No session cookie - waiting for auth message
+[2026-06-26T23:56:23.621149015Z] [info] [WS] Received auth message
+[2026-06-26T23:56:23.621157681Z] [error] [CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/auth source=chrome-extension:14083
+[2026-06-26T23:56:23.621166050Z] [error] [CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/auth source=chrome-extension:14083
+[2026-06-26T23:56:23.621174425Z] [info] 11:56:17 PM [express] POST /api/csp-report 204 in 2ms
+[2026-06-26T23:56:23.621508366Z] [info] [WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+[2026-06-26T23:56:23.621513875Z] [info] [WS] Client disconnected: e803626f-4d88-4c87-b878-ec568238c0f6
+[2026-06-26T23:56:23.621519939Z] [info] 11:56:17 PM [express] GET /api/public/regions 200 in 73ms
+[2026-06-26T23:56:23.621524154Z] [info] 11:56:17 PM [express] GET /api/public/pathways 200 in 73ms
+[2026-06-26T23:56:23.621529900Z] [info] 11:56:18 PM [express] GET /api/supabase-auth/user 200 in 370ms
+[2026-06-26T23:56:23.621535148Z] [info] [WS] New WebSocket connection attempt
+[2026-06-26T23:56:23.621540293Z] [info] [WS] Headers: Has cookie
+[2026-06-26T23:56:23.621546362Z] [info] [WS] Session cookie: Missing
+[2026-06-26T23:56:23.621552515Z] [info] [WS] No session cookie - waiting for auth message
+[2026-06-26T23:56:23.621558876Z] [info] 11:56:19 PM [express] GET /api/conversations 200 in 247ms
+[2026-06-26T23:56:23.621565646Z] [info] 11:56:19 PM [express] GET /api/notifications 200 in 276ms
+[2026-06-26T23:56:23.621571336Z] [info] 11:56:19 PM [express] GET /api/notifications/unread-count 200 in 273ms
+[2026-06-26T23:56:23.621576685Z] [info] 11:56:19 PM [express] GET /api/admin/messaging/team 200 in 481ms
+[2026-06-26T23:56:23.621582146Z] [info] [WS] Received auth message
+[2026-06-26T23:56:23.621586571Z] [info] 11:56:19 PM [express] GET /api/conversations/unread-count 200 in 277ms
+[2026-06-26T23:56:23.621596362Z] [info] [WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+[2026-06-26T23:56:23.621603531Z] [info] 11:56:20 PM [express] GET /api/attendance/status 200 in 953ms
+[2026-06-26T23:56:23.621610225Z] [info] 11:56:20 PM [express] GET /api/admin/applications/count 200 in 967ms
+[2026-06-26T23:56:23.621616489Z] [info] 11:56:20 PM [express] GET /api/admin/institutions/count 200 in 970ms
+[2026-06-26T23:56:23.621623669Z] [info] 11:56:20 PM [express] GET /api/supabase-auth/user 200 in 1100ms
+[2026-06-26T23:56:23.621631994Z] [info] 11:56:20 PM [express] GET /api/super-admin/applications 200 in 977ms
+[2026-06-26T23:56:23.622597204Z] [info] 11:56:20 PM [express] GET /api/admin/roles 200 in 973ms
+[2026-06-26T23:56:23.622602676Z] [info] 11:56:20 PM [express] GET /api/super-admin/courses 200 in 1020ms
+[2026-06-26T23:56:23.622607015Z] [info] 11:56:20 PM [express] GET /api/admin/branches 200 in 956ms
+[2026-06-26T23:56:23.622611525Z] [info] 11:56:20 PM [express] GET /api/admin/courses/count 200 in 975ms
+[2026-06-26T23:56:23.622616305Z] [info] 11:56:20 PM [express] GET /api/super-admin/institutions 200 in 950ms
+[2026-06-26T23:56:23.622621888Z] [info] 11:56:20 PM [express] GET /api/super-admin/users 200 in 894ms
+[2026-06-26T23:56:23.622626884Z] [info] 11:56:20 PM [express] GET /api/admin/regions 200 in 801ms
+[2026-06-26T23:56:23.622631188Z] [info] 11:56:20 PM [express] GET /api/crm/tasks/stats 200 in 1292ms
+[2026-06-26T23:56:23.622644591Z] [info] 11:56:20 PM [express] GET /api/admin/profiles 200 in 987ms
+[2026-06-26T23:56:23.622649388Z] [info] 11:56:20 PM [express] GET /api/crm/leads/stats 200 in 1104ms
+[2026-06-26T23:56:43.121134751Z] [info] 11:56:40 PM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 220ms
+[2026-06-26T23:56:43.121154078Z] [info] 11:56:40 PM [express] GET /api/admin/migrate-replit-to-supabase/status 200 in 214ms
+[2026-06-26T23:56:43.121161996Z] [info] 11:56:40 PM [express] GET /api/admin/ai-settings 200 in 289ms
+[2026-06-26T23:56:43.121169944Z] [info] 11:56:40 PM [express] GET /api/admin/ai-models 200 in 362ms
+[2026-06-26T23:56:43.121396768Z] [info] 11:56:35 PM [express] GET /api/supabase-auth/user 200 in 372ms
+[2026-06-26T23:56:43.121402800Z] [info] 11:56:38 PM [express] GET /api/admin/api-keys 200 in 300ms
+[2026-06-26T23:56:44.979143653Z] [info] 11:56:44 PM [express] GET /api/csrf-token 200 in 3ms
+[2026-06-26T23:56:45.996198445Z] [info] [NeonMigration] Connected to Neon (source) and Supabase (destination)
+[2026-06-26T23:56:45.996223878Z] [error] Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+[2026-06-26T23:56:45.996233909Z] [error] In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+[2026-06-26T23:56:45.996242425Z] [error] 
+[2026-06-26T23:56:45.996251746Z] [error] To prepare for this change:
+[2026-06-26T23:56:45.996260008Z] [error] - If you want the current behavior, explicitly use 'sslmode=verify-full'
+[2026-06-26T23:56:45.996268792Z] [error] - If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+[2026-06-26T23:56:45.996277389Z] [error] 
+[2026-06-26T23:56:45.996303057Z] [error] See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+[2026-06-26T23:56:45.996313090Z] [error]       at deprecatedSslModeWarning (/app/node_modules/pg-connection-string/index.js:222:13)
+[2026-06-26T23:56:45.996321259Z] [error]       at parse (/app/node_modules/pg-connection-string/index.js:149:11)
+[2026-06-26T23:56:45.996328485Z] [error]       at new ConnectionParameters (/app/node_modules/pg/lib/connection-parameters.js:60:42)
+[2026-06-26T23:56:45.996337087Z] [error]       at new Client (/app/node_modules/pg/lib/client.js:54:33)
+[2026-06-26T23:56:45.996487071Z] [error]       at newClient (/app/node_modules/pg-pool/index.js:241:20)
+[2026-06-26T23:56:45.996497351Z] [error]       at connect (/app/node_modules/pg-pool/index.js:235:10)
+[2026-06-26T23:56:45.996507089Z] [error]       at query (/app/node_modules/pg-pool/index.js:449:10)
+[2026-06-26T23:56:45.996513525Z] [error]       at runMigration (/app/dist/index.js:30066:41)
+[2026-06-26T23:56:45.996520154Z] [error]       at startNeonMigration (/app/dist/index.js:30039:3)
+[2026-06-26T23:56:45.996526987Z] [error]       at <anonymous> (/app/dist/index.js:48726:45)
+[2026-06-26T23:56:45.997622709Z] [error] 
+[2026-06-26T23:56:45.997641587Z] [info] 11:56:45 PM [express] POST /api/admin/migrate-neon-to-supabase 202 in 219ms
+[2026-06-26T23:56:46.372541179Z] [info] 11:56:46 PM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 213ms
+[2026-06-26T23:56:47.101731856Z] [info] [NeonMigration] Found 121 tables to migrate (3 skipped)
+[2026-06-26T23:56:47.374885748Z] [info] [NeonMigration] FK triggers disabled
+[2026-06-26T23:56:49.047663466Z] [info] [NeonMigration]   [academic_qualification_types] 168 rows copied
+[2026-06-26T23:56:49.047669485Z] [info] [NeonMigration]   [acc_bill_payments] 0 rows — skipped
+[2026-06-26T23:56:49.047675637Z] [info] [NeonMigration]   [acc_bills] 0 rows — skipped
+[2026-06-26T23:56:49.283767854Z] [info] 11:56:49 PM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 213ms
+[2026-06-26T23:56:50.027445469Z] [info] [NeonMigration]   [acc_chart_of_accounts] 20 rows copied
+[2026-06-26T23:56:50.027456877Z] [info] [NeonMigration]   [acc_credit_note_items] 0 rows — skipped
+[2026-06-26T23:56:50.027468330Z] [info] [NeonMigration]   [acc_credit_notes] 0 rows — skipped
+[2026-06-26T23:56:50.027480119Z] [info] [NeonMigration]   [acc_customers] 0 rows — skipped
+[2026-06-26T23:56:50.194258108Z] [info] 11:56:50 PM [express] GET /api/notifications 200 in 73ms
+[2026-06-26T23:56:50.194283936Z] [info] 11:56:50 PM [express] GET /api/conversations 200 in 72ms
+[2026-06-26T23:56:50.194292633Z] [info] [NeonMigration]   [acc_expense_categories] 0 rows — skipped
+[2026-06-26T23:56:50.211900388Z] [info] 11:56:50 PM [express] GET /api/notifications/unread-count 200 in 74ms
+[2026-06-26T23:56:50.323258114Z] [info] 11:56:50 PM [express] GET /api/conversations/unread-count 200 in 71ms
+[2026-06-26T23:56:50.408042678Z] [info] [NeonMigration]   [acc_expenses] 0 rows — skipped
+[2026-06-26T23:56:51.179543056Z] [info] [NeonMigration]   [acc_invoice_line_items] 0 rows — skipped
+[2026-06-26T23:56:51.179552922Z] [info] [NeonMigration]   [acc_invoices] 0 rows — skipped
+... (46 more lines)
