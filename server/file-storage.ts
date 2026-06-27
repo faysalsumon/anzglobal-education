@@ -122,26 +122,51 @@ export async function uploadFile(
 }
 
 /**
- * Download a file. Tries Supabase Storage first; falls back to Replit Object
- * Storage for any files that haven't been migrated yet (e.g. public/ prefix
- * files, or documents uploaded after the last migration run).
- * Once all files are confirmed in Supabase this fallback is never reached.
+ * Download a file.
+ *
+ * Strategy:
+ *  1a. PUBLIC bucket  → unauthenticated public URL fetch (no service-role key
+ *      required; works even when the JWT is stale/rotated on a deployment).
+ *  1b. PRIVATE bucket → authenticated Supabase JS client .download() call.
+ *  2.  Fallback       → Replit Object Storage (covers files not yet migrated;
+ *      silently unavailable on Railway, which is fine once all files are in
+ *      Supabase).
  */
 export async function downloadFile(storagePath: string): Promise<Buffer | null> {
-  // 1. Try Supabase (primary store for all new uploads)
-  try {
-    const { bucket, filePath } = getBucketAndPath(storagePath);
-    const supabase = getSupabase();
-    const { data, error } = await supabase.storage.from(bucket).download(filePath);
-    if (!error && data) {
-      return Buffer.from(await data.arrayBuffer());
+  const { bucket, filePath } = getBucketAndPath(storagePath);
+
+  // 1a. Public bucket — use the unauthenticated public URL so a stale/rotated
+  //     service-role key on Railway never blocks access.
+  if (bucket === PUBLIC_BUCKET) {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    if (supabaseUrl) {
+      try {
+        const publicUrl = `${supabaseUrl}/storage/v1/object/public/${PUBLIC_BUCKET}/${filePath}`;
+        const response = await fetch(publicUrl);
+        if (response.ok) {
+          return Buffer.from(await response.arrayBuffer());
+        }
+        console.warn(`[FileStorage] Public URL miss: ${publicUrl} status=${response.status}`);
+      } catch (err: any) {
+        console.warn(`[FileStorage] Public URL error for ${storagePath}:`, err.message);
+      }
     }
-    if (error) console.warn(`[FileStorage] Supabase miss: bucket=${bucket} path=${filePath} err=${error.message}`);
-  } catch (err: any) {
-    console.warn(`[FileStorage] Supabase download error for ${storagePath}:`, err.message);
+  } else {
+    // 1b. Private bucket — authenticated download via Supabase JS client.
+    try {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.storage.from(bucket).download(filePath);
+      if (!error && data) {
+        return Buffer.from(await data.arrayBuffer());
+      }
+      if (error) console.warn(`[FileStorage] Supabase miss: bucket=${bucket} path=${filePath} err=${error.message}`);
+    } catch (err: any) {
+      console.warn(`[FileStorage] Supabase download error for ${storagePath}:`, err.message);
+    }
   }
 
-  // 2. Fallback: Replit Object Storage (covers pre-migration and public/ files)
+  // 2. Fallback: Replit Object Storage (covers pre-migration files; unavailable
+  //    on Railway so this is effectively Replit-dev-only).
   try {
     const { Client } = await import("@replit/object-storage");
     const replitClient = new Client();

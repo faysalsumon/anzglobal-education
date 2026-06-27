@@ -1,0 +1,102 @@
+
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+11:31:32 AM [express] GET /api/notifications 200 in 985ms
+11:31:33 AM [express] GET /api/admin/messaging/team 200 in 1784ms
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/ source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/ source=chrome-extension:14083
+11:31:35 AM [express] POST /api/csp-report 204 in 10ms
+11:31:35 AM [express] GET /api/admin/regions 200 in 4273ms
+11:31:35 AM [express] GET /api/notifications/unread-count 200 in 1552ms
+11:31:36 AM [express] GET /api/platform/stats 200 in 11250ms
+11:31:36 AM [express] GET /api/admin/applications/count 200 in 4780ms
+11:31:36 AM [express] GET /api/admin/roles 200 in 4877ms
+11:31:36 AM [express] GET /api/conversations/unread-count 200 in 1874ms
+11:31:36 AM [express] GET /api/admin/branches 200 in 4786ms
+11:31:36 AM [express] GET /api/admin/institutions/count 200 in 4672ms
+11:31:36 AM [express] GET /api/supabase-auth/user 200 in 4615ms
+11:31:36 AM [express] GET /api/disciplines 200 in 12045ms
+[API /api/courses] Loaded 329 courses, 66 universities from DB
+11:31:36 AM [express] GET /api/courses/filter-options 200 in 12001ms
+11:31:36 AM [express] GET /api/super-admin/institutions 200 in 5566ms
+11:31:36 AM [express] GET /api/admin/profiles 200 in 5184ms
+11:31:37 AM [express] GET /api/crm/leads/stats 200 in 5644ms
+11:31:37 AM [express] GET /api/conversations 200 in 3206ms
+11:31:37 AM [express] GET /api/attendance/status 200 in 3057ms
+11:31:37 AM [express] GET /api/super-admin/users 200 in 2992ms
+11:31:37 AM [express] GET /api/admin/courses/count 200 in 3291ms
+11:31:38 AM [express] GET /api/courses 200 in 13469ms
+[WS] Client disconnected: e803626f-4d88-4c87-b878-ec568238c0f6
+11:31:39 AM [express] GET /api/public/regions 200 in 74ms
+11:31:39 AM [express] GET /api/public/pathways 200 in 95ms
+11:31:40 AM [express] GET /api/supabase-auth/user 200 in 441ms
+11:31:41 AM [express] GET /api/conversations/unread-count 200 in 74ms
+11:31:41 AM [express] GET /api/crm/tasks/stats 200 in 314ms
+[WS] New WebSocket connection attempt
+[WS] Headers: Has cookie
+[WS] Session cookie: Missing
+[WS] No session cookie - waiting for auth message
+11:31:41 AM [express] GET /api/super-admin/institutions 200 in 505ms
+11:31:41 AM [express] GET /api/admin/roles 200 in 291ms
+[WS] Received auth message
+11:31:41 AM [express] GET /api/attendance/status 200 in 321ms
+11:31:42 AM [express] GET /api/conversations 200 in 1032ms
+11:31:42 AM [express] GET /api/admin/messaging/team 200 in 420ms
+11:31:42 AM [express] GET /api/admin/institutions/count 200 in 754ms
+11:31:42 AM [express] GET /api/admin/branches 200 in 746ms
+11:31:42 AM [express] GET /api/supabase-auth/user 200 in 1675ms
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+11:31:42 AM [express] GET /api/admin/regions 200 in 827ms
+11:31:42 AM [express] GET /api/notifications/unread-count 200 in 233ms
+11:31:43 AM [express] GET /api/notifications 200 in 234ms
+11:31:43 AM [express] GET /api/crm/leads/stats 200 in 446ms
+11:31:43 AM [express] GET /api/saved-filters 200 in 219ms
+11:31:43 AM [express] GET /api/super-admin/users 200 in 800ms
+11:31:43 AM [express] GET /api/admin/applications/count 200 in 856ms
+11:31:43 AM [express] GET /api/admin/courses/count 200 in 927ms
+11:31:44 AM [express] GET /api/admin/users 200 in 1663ms
+11:31:44 AM [express] GET /api/admin/profiles 200 in 2032ms
+11:31:45 AM [express] GET /api/super-admin/applications 200 in 2522ms
+11:31:45 AM [express] GET /api/super-admin/courses 200 in 3212ms
+11:31:46 AM [express] GET /api/admin/applications 200 in 3025ms
+[FileStorage] Supabase miss: bucket=anz-public path=admins/admin-profile-56687ee5-6c13-49ef-b8e7-6b1c868875a2-1768541222945.jpg err=Object not found
+[FileStorage] Replit fallback error for public/admins/admin-profile-56687ee5-6c13-49ef-b8e7-6b1c868875a2-1768541222945.jpg: Unable to connect. Is the computer able to access the url?
+[FileStorage] Supabase miss: bucket=anz-public path=admins/admin-profile-75d11260-8b0b-4b2b-be30-719a3513c07b-1768984449288.jpg err=Object not found
+[FileStorage] Replit fallback error for public/admins/admin-profile-75d11260-8b0b-4b2b-be30-719a3513c07b-1768984449288.jpg: Unable to connect. Is the computer able to access the url?
+[FileStorage] Supabase miss: bucket=anz-public path=admins/admin-profile-14502c4c-5664-4822-9f24-a400c22266b9-1768983076244.jpg err=Object not found
+[FileStorage] Replit fallback error for public/admins/admin-profile-14502c4c-5664-4822-9f24-a400c22266b9-1768983076244.jpg: Unable to connect. Is the computer able to access the url?
+[FileStorage] Supabase miss: bucket=anz-public path=admins/admin-profile-22dd0386-0421-4697-842f-268eb1f6fbf1-1781651004342.jpg err=Object not found
+[FileStorage] Replit fallback error for public/admins/admin-profile-22dd0386-0421-4697-842f-268eb1f6fbf1-1781651004342.jpg: Unable to connect. Is the computer able to access the url?
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/courses
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/documents
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/admin/assignable-users
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/supabase-auth/user
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/accounting/invoices/by-application/9bb23a0c-14ea-423e-94ed-2adeb537057c
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/history
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/notifications
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/supabase-auth/user
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/notifications/unread-count
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/supabase-auth/user
+[FileStorage] Supabase miss: bucket=anz-public path=admins/admin-profile-75d11260-8b0b-4b2b-be30-719a3513c07b-1768984449288.jpg err=Object not found
+[FileStorage] Replit fallback error for public/admins/admin-profile-75d11260-8b0b-4b2b-be30-719a3513c07b-1768984449288.jpg: Unable to connect. Is the computer able to access the url?
+[FileStorage] Supabase miss: bucket=anz-public path=admins/admin-profile-56687ee5-6c13-49ef-b8e7-6b1c868875a2-1768541222945.jpg err=Object not found
+[FileStorage] Replit fallback error for public/admins/admin-profile-56687ee5-6c13-49ef-b8e7-6b1c868875a2-1768541222945.jpg: Unable to connect. Is the computer able to access the url?
+[FileStorage] Supabase miss: bucket=anz-public path=admins/admin-profile-22dd0386-0421-4697-842f-268eb1f6fbf1-1781651004342.jpg err=Object not found
+[FileStorage] Replit fallback error for public/admins/admin-profile-22dd0386-0421-4697-842f-268eb1f6fbf1-1781651004342.jpg: Unable to connect. Is the computer able to access the url?
+[FileStorage] Supabase miss: bucket=anz-public path=admins/admin-profile-14502c4c-5664-4822-9f24-a400c22266b9-1768983076244.jpg err=Object not found
+[FileStorage] Replit fallback error for public/admins/admin-profile-14502c4c-5664-4822-9f24-a400c22266b9-1768983076244.jpg: Unable to connect. Is the computer able to access the url?
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/supabase-auth/user
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/history
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/accounting/invoices/by-application/9bb23a0c-14ea-423e-94ed-2adeb537057c
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/documents
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/courses
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/admin/assignable-users
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/supabase-auth/user
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/supabase-auth/user
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/notifications
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/notifications/unread-count
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/notifications/unread-count
+[Security] RATE_LIMITED ip=120.146.69.69 method=GET path=/api/notifications

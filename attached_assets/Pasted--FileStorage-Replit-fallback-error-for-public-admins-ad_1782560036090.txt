@@ -1,0 +1,41 @@
+[FileStorage] Replit fallback error for public/admins/admin-profile-22dd0386-0421-4697-842f-268eb1f6fbf1-1781651004342.jpg: Unable to connect. Is the computer able to access the url?
+11:32:55 AM [express] GET /api/notifications 200 in 74ms
+11:32:55 AM [express] GET /api/notifications/unread-count 200 in 79ms
+11:32:55 AM [express] GET /api/supabase-auth/user 200 in 381ms
+11:32:58 AM [express] GET /api/applications/7e51a597-193e-49c1-a0b7-5cc2bfa9b74f/courses 200 in 153ms
+11:32:58 AM [express] GET /api/admin/applications/7e51a597-193e-49c1-a0b7-5cc2bfa9b74f/documents 200 in 154ms
+11:32:58 AM [express] GET /api/admin/applications/7e51a597-193e-49c1-a0b7-5cc2bfa9b74f/history 200 in 269ms
+11:32:58 AM [express] GET /api/supabase-auth/user 200 in 391ms
+11:32:58 AM [express] GET /api/accounting/invoices/by-application/7e51a597-193e-49c1-a0b7-5cc2bfa9b74f 200 in 380ms
+11:32:58 AM [express] GET /api/admin/applications/7e51a597-193e-49c1-a0b7-5cc2bfa9b74f 200 in 522ms
+11:32:59 AM [express] GET /api/reminders/by-entity 200 in 154ms
+11:32:59 AM [express] GET /api/applications/7e51a597-193e-49c1-a0b7-5cc2bfa9b74f/mentionable-users 200 in 222ms
+11:32:59 AM [express] GET /api/admin/students/7c7dd157-811e-4ff1-ab78-62945908d650/application-slots 200 in 219ms
+11:32:59 AM [express] GET /api/applications/7e51a597-193e-49c1-a0b7-5cc2bfa9b74f/unified-notes 200 in 517ms
+[FileStorage] Supabase miss: bucket=anz-public path=admins/admin-profile-75d11260-8b0b-4b2b-be30-719a3513c07b-1768984449288.jpg err=Object not found
+[FileStorage] Replit fallback error for public/admins/admin-profile-75d11260-8b0b-4b2b-be30-719a3513c07b-1768984449288.jpg: Unable to connect. Is the computer able to access the url?
+11:33:00 AM [express] GET /api/admin/students/7c7dd157-811e-4ff1-ab78-62945908d650/documents 200 in 148ms
+11:33:00 AM [express] GET /api/admin/students/7c7dd157-811e-4ff1-ab78-62945908d650/folders 200 in 229ms
+11:33:00 AM [express] GET /api/supabase-auth/user 200 in 394ms
+[FileStorage] Supabase miss: bucket=anz-public path=admins/admin-profile-75d11260-8b0b-4b2b-be30-719a3513c07b-1768984449288.jpg err=Object not found
+[FileStorage] Replit fallback error for public/admins/admin-profile-75d11260-8b0b-4b2b-be30-719a3513c07b-1768984449288.jpg: Unable to connect. Is the computer able to access the url?
+[FileStorage] Supabase miss: bucket=anz-public path=admins/admin-profile-56687ee5-6c13-49ef-b8e7-6b1c868875a2-1768541222945.jpg err=Object not found
+[FileStorage] Replit fallback error for public/admins/admin-profile-56687ee5-6c13-49ef-b8e7-6b1c868875a2-1768541222945.jpg: Unable to connect. Is the computer able to access the url?
+[FileStorage] Supabase miss: bucket=anz-public path=admins/admin-profile-22dd0386-0421-4697-842f-268eb1f6fbf1-1781651004342.jpg err=Object not found
+[FileStorage] Replit fallback error for public/admins/admin-profile-22dd0386-0421-4697-842f-268eb1f6fbf1-1781651004342.jpg: Unable to connect. Is the computer able to access the url?
+11:33:03 AM [express] GET /api/notifications/unread-count 200 in 72ms
+11:33:03 AM [express] GET /api/notifications 200 in 77ms
+[FileStorage] Supabase miss: bucket=anz-public path=admins/admin-profile-14502c4c-5664-4822-9f24-a400c22266b9-1768983076244.jpg err=Object not found
+[FileStorage] Replit fallback error for public/admins/admin-profile-14502c4c-5664-4822-9f24-a400c22266b9-1768983076244.jpg: Unable to connect. Is the computer able to access the url?
+11:33:03 AM [express] GET /api/supabase-auth/user 200 in 409ms
+[FileStorage] Supabase miss: bucket=anz-public path=admins/admin-profile-22dd0386-0421-4697-842f-268eb1f6fbf1-1781651004342.jpg err=Object not found
+[FileStorage] Replit fallback error for public/admins/admin-profile-22dd0386-0421-4697-842f-268eb1f6fbf1-1781651004342.jpg: Unable to connect. Is the computer able to access the url?
+11:33:04 AM [express] GET /api/supabase-auth/user 200 in 414ms
+11:33:06 AM [express] GET /api/admin/students/ae1ee655-9a6e-43d4-8019-56c360bd8e72/folders 200 in 230ms
+11:33:06 AM [express] GET /api/admin/students/ae1ee655-9a6e-43d4-8019-56c360bd8e72/documents 200 in 324ms
+11:33:06 AM [express] GET /api/supabase-auth/user 200 in 526ms
+[DocDownload] documentId=b30c2bec-f9f1-409d-bebb-2e4716ae886d filePath=".private/documents/ae1ee655-9a6e-43d4-8019-56c360bd8e72/1781850871902-NID_Card_MdAfwanHossainTalukder.pdf"
+[FileStorage] Supabase miss: bucket=anz-private path=documents/ae1ee655-9a6e-43d4-8019-56c360bd8e72/1781850871902-NID_Card_MdAfwanHossainTalukder.pdf err=Object not found
+[FileStorage] Replit fallback error for .private/documents/ae1ee655-9a6e-43d4-8019-56c360bd8e72/1781850871902-NID_Card_MdAfwanHossainTalukder.pdf: Unable to connect. Is the computer able to access the url?
+[DocDownload] NOT FOUND in storage: ".private/documents/ae1ee655-9a6e-43d4-8019-56c360bd8e72/1781850871902-NID_Card_MdAfwanHossainTalukder.pdf"
+11:33:10 AM [express] GET /api/admin/applications/9bb23a0c-14ea-423e-94ed-2adeb537057c/documents/b30c2bec-f9f1-409d-bebb-2e4716ae886d/downloa…

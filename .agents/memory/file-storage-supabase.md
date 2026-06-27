@@ -23,8 +23,11 @@ description: Object storage is exclusively Supabase Storage; path routing, bucke
 - `attendance-photos/*` → `anz-private`, kept as-is (no prefix)
 - anything else → `anz-private`, kept as-is
 
+## Public bucket downloads — use unauthenticated public URL (not JS client)
+`downloadFile()` for `anz-public` files fetches via the unauthenticated Supabase public URL (`${SUPABASE_URL}/storage/v1/object/public/anz-public/${filePath}`) rather than the JS client `.download()`. **Why:** the Supabase JS client always sends the service-role JWT in the Authorization header; if that JWT was generated before a secret rotation, Supabase rejects it and returns "Object not found" even though the public URL (no auth header) serves the file correctly. This manifested on Railway where `SUPABASE_SERVICE_ROLE_KEY` was an older JWT — admin profile photos 404'd via the JS client but loaded fine at the direct public URL.
+
 ## Replit fallback — PRESENT (required safety net)
-`downloadFile()` tries Supabase first; falls back to Replit Object Storage. Do NOT remove until migration is confirmed complete on Railway.
+`downloadFile()` falls back to Replit Object Storage after the primary Supabase attempt. Unavailable on Railway (network block) so it only helps Replit dev. Do NOT remove until migration is confirmed complete on Railway.
 
 ## Migration prefix mismatch (critical)
 Older uploads stored files in Replit Object Storage under `private/documents/` (no leading dot) while the DB stores paths as `.private/documents/` (with dot). The migration was only scanning `.private/documents/` so student documents were NEVER copied to Supabase. Fix: both dotted and undotted variants are now in the prefixes list for all four private sub-paths. `getBucketAndPath()` already handles both variants → same Supabase destination path.
