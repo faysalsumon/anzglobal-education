@@ -1,0 +1,151 @@
+anzglobal-education
+/
+d2db9b5b
+Active
+
+Jun 27, 2026, 10:49 AM GMT+10
+anzglobal-education-production.up.railway.app
+Details
+Build Logs
+Deploy Logs
+HTTP Logs
+Network Flow Logs
+Filter and search logs
+
+Supabase authentication routes registered
+Attendance routes registered for People/HR module
+Mail routes registered
+  [OK]   attendance-routes
+  All route groups registered successfully.
+  [OK]   mail-routes
+  [OK]   accounting-routes
+──────────────────────────────────────────────────────────────────────
+  [OK]   accounts-routes
+  [OK]   admin-chat-routes
+12:52:09 AM [express] serving on port 8080
+  [OK]   scraping-routes
+  [OK]   application-workflow-routes
+  [OK]   workflow-validation-routes
+  [OK]   institution-crm-routes
+[routes] Route-group registration summary
+──────────────────────────────────────────────────────────────────────
+  [OK]   region-routes
+  [OK]   crm-routes (early)
+  [OK]   supabase-auth-routes
+  [OK]   chat-routes
+[Migrate] No pending migrations
+[SeedRoles] Role seeding complete
+[SeedProfiles] Profile seeding complete
+12:52:13 AM [express] Startup tasks complete (migrations + seeds)
+[FileStorage] Failed to create public bucket: new row violates row-level security policy
+[FileStorage] Supabase Storage buckets ready
+[FileStorage] Failed to create private bucket: The object exceeded the maximum allowed size
+[Pinecone] Initialization attempt 1/3
+[Pinecone] Using existing index
+[WS] New WebSocket connection attempt
+[WS] Headers: Has cookie
+[WS] Session cookie: Missing
+[WS] No session cookie - waiting for auth message
+[WS] Received auth message
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+12:52:19 AM [express] GET /api/notifications/unread-count 200 in 81ms
+12:52:19 AM [express] GET /api/notifications 200 in 74ms
+1:07:34 AM [express] GET /api/conversations 200 in 74ms
+1:07:34 AM [express] GET /api/attendance/status 200 in 304ms
+[WS] Received auth message
+1:07:33 AM [express] GET /api/student/profile/completion 200 in 83ms
+1:07:34 AM [express] GET /api/notifications 200 in 73ms
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+1:07:33 AM [express] GET /api/notifications/unread-count 200 in 72ms
+1:07:34 AM [express] GET /api/student/referral/stats 404 in 76ms :: {"message":"Student profile not found"}
+1:07:32 AM [express] GET /api/supabase-auth/user 401 in 87ms :: {"error":"Invalid or expired token"}
+[WS] New WebSocket connection attempt
+[WS] Client disconnected: e803626f-4d88-4c87-b878-ec568238c0f6
+1:07:34 AM [express] GET /api/student/referral/code 404 in 73ms :: {"message":"Student profile not found"}
+1:07:33 AM [express] GET /api/supabase-auth/user 401 in 82ms :: {"error":"Invalid or expired token"}
+[WS] Headers: Has cookie
+1:07:33 AM [express] GET /api/notifications 200 in 75ms
+[WS] Session cookie: Missing
+1:07:33 AM [express] GET /api/student/applications 200 in 76ms
+[WS] No session cookie - waiting for auth message
+1:07:33 AM [express] GET /api/student/profile 200 in 237ms
+1:07:34 AM [express] GET /api/conversations/unread-count 200 in 96ms
+1:07:34 AM [express] GET /api/notifications/unread-count 200 in 73ms
+1:07:38 AM [express] GET /api/notifications/unread-count 200 in 72ms
+1:07:39 AM [express] GET /api/notifications 200 in 74ms
+1:07:38 AM [express] GET /api/notifications 200 in 72ms
+[WS] Client disconnected: e803626f-4d88-4c87-b878-ec568238c0f6
+1:07:38 AM [express] GET /api/institutions 200 in 74ms
+1:07:38 AM [express] GET /api/public/featured 200 in 89ms
+1:07:38 AM [express] GET /api/blogs 200 in 168ms
+1:07:38 AM [express] GET /api/disciplines 200 in 268ms
+1:07:38 AM [express] GET /api/courses/filter-options 200 in 250ms
+[API /api/courses] Loaded 0 courses, 0 universities from DB
+1:07:38 AM [express] GET /api/public/testimonials 200 in 81ms
+1:07:39 AM [express] GET /api/courses 200 in 150ms
+1:07:39 AM [express] GET /api/supabase-auth/user 200 in 509ms
+1:07:38 AM [express] GET /api/platform/stats 200 in 145ms
+1:07:39 AM [express] GET /api/notifications/unread-count 200 in 71ms
+1:07:40 AM [express] GET /api/supabase-auth/user 200 in 375ms
+[WS] New WebSocket connection attempt
+[WS] Headers: Has cookie
+[WS] Session cookie: Missing
+[WS] No session cookie - waiting for auth message
+[WS] Received auth message
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+1:07:41 AM [express] GET /api/notifications/unread-count 200 in 71ms
+1:07:41 AM [express] GET /api/notifications 200 in 76ms
+1:07:41 AM [express] GET /api/admin/institutions/count 200 in 309ms
+1:07:41 AM [express] GET /api/supabase-auth/user 200 in 432ms
+1:07:41 AM [express] GET /api/admin/courses/count 200 in 358ms
+1:07:41 AM [express] GET /api/crm/leads/stats 200 in 446ms
+1:07:41 AM [express] GET /api/admin/applications/count 200 in 351ms
+1:07:41 AM [express] GET /api/crm/tasks/stats 200 in 590ms
+1:07:45 AM [express] GET /api/admin/notification-settings/meta 200 in 73ms
+1:07:45 AM [express] GET /api/admin/notification-settings/defaults 200 in 148ms
+1:08:22 AM [express] GET /api/tasks/my-tasks 200 in 146ms
+1:08:23 AM [express] GET /api/supabase-auth/user 200 in 375ms
+1:08:16 AM [express] GET /api/supabase-auth/user 200 in 364ms
+1:08:24 AM [express] GET /api/super-admin/admin-users 200 in 360ms
+1:08:17 AM [express] GET /api/admin/accounts 200 in 294ms
+1:08:21 AM [express] GET /api/notifications/unread-count 200 in 71ms
+1:08:21 AM [express] GET /api/supabase-auth/user 200 in 374ms
+1:08:21 AM [express] GET /api/notifications 200 in 71ms
+1:08:21 AM [express] GET /api/admin/profile 200 in 145ms
+1:08:22 AM [express] GET /api/notifications/unread-count 200 in 71ms
+1:08:22 AM [express] GET /api/notifications 200 in 71ms
+1:08:22 AM [express] GET /api/reminders/upcoming 200 in 146ms
+1:08:22 AM [express] GET /api/supabase-auth/user 200 in 368ms
+1:08:34 AM [express] GET /api/admin/invitations 200 in 290ms
+1:08:34 AM [express] GET /api/admin/invitations/roles 200 in 287ms
+1:08:34 AM [express] GET /api/supabase-auth/user 200 in 375ms
+1:08:36 AM [express] GET /api/admin/course-variants 400 in 1ms :: {"message":"courseId or regionId query parameter required"}
+1:08:36 AM [express] GET /api/admin/pathways 200 in 76ms
+[API /api/courses] Loaded 0 courses, 0 universities from DB
+1:08:36 AM [express] GET /api/courses 200 in 148ms
+1:08:37 AM [express] GET /api/conversations/unread-count 200 in 74ms
+1:08:37 AM [express] GET /api/conversations 200 in 72ms
+1:08:37 AM [express] GET /api/admin/affiliates 200 in 287ms
+1:08:40 AM [express] GET /api/supabase-auth/user 200 in 367ms
+1:08:40 AM [express] GET /api/tasks 401 in 0ms :: {"message":"Unauthorized"}
+1:08:40 AM [express] GET /api/admin/assignable-users 200 in 74ms
+1:08:40 AM [express] GET /api/task-projects 200 in 146ms
+1:08:41 AM [express] GET /api/admin/team-status 200 in 144ms
+1:08:41 AM [express] GET /api/tasks/workload-summary 200 in 366ms
+1:08:43 AM [express] GET /api/kpi/team-report 200 in 511ms
+1:08:44 AM [express] GET /api/mail/config 200 in 77ms
+1:08:44 AM [express] GET /api/mail/my-accounts 200 in 85ms
+1:08:44 AM [express] GET /api/mail/accounts 200 in 145ms
+1:08:45 AM [express] GET /api/mail/messages 200 in 149ms
+1:08:45 AM [express] GET /api/crm/leads 200 in 148ms
+1:08:46 AM [express] GET /api/admin/users 200 in 290ms
+1:08:46 AM [express] GET /api/supabase-auth/user 200 in 368ms
+[mail] listFolders error: Command failed
+1:08:46 AM [express] GET /api/mail/folders 502 in 1307ms :: {"error":"Failed to connect to mail server","detail":"Command failed"}
+1:08:47 AM [express] GET /api/saved-filters 200 in 77ms
+1:08:47 AM [express] GET /api/crm/contacts 200 in 217ms
+1:08:47 AM [express] GET /api/admin/users 200 in 283ms
+1:08:47 AM [express] GET /api/supabase-auth/user 200 in 365ms
+1:08:48 AM [express] GET /api/saved-filters 200 in 71ms
+1:08:48 AM [express] GET /api/supabase-auth/user 200 in 365ms
+1:08:49 AM [express] GET /api/admin/applications 200 in 665ms

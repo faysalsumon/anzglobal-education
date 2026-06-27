@@ -153,9 +153,12 @@ async function runMigration() {
             const v = row[col];
             // pg returns JSON/JSONB columns as parsed JS objects. Re-stringify them
             // so the destination pg driver receives a valid JSON string, not [object Object].
-            if (v !== null && v !== undefined && typeof v === "object" && !(v instanceof Date) && !Buffer.isBuffer(v)) {
+            if (v !== null && v !== undefined && typeof v === "object" && !(v instanceof Date) && !Buffer.isBuffer(v) && !Array.isArray(v)) {
+              // Plain objects (JSONB columns) must be stringified — pg won't auto-serialize them.
               values.push(JSON.stringify(v));
             } else {
+              // Arrays (text[], int[], etc.) and primitives pass through as-is.
+              // pg formats JS arrays as PostgreSQL array literals {a,b,c} automatically.
               values.push(v);
             }
           }

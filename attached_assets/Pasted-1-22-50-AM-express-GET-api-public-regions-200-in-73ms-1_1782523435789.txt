@@ -1,0 +1,79 @@
+1:22:50 AM [express] GET /api/public/regions 200 in 73ms
+1:22:53 AM [express] GET /api/admin/regions 200 in 983ms
+1:22:53 AM [express] GET /api/admin/profiles 200 in 1360ms
+1:22:53 AM [express] GET /api/admin/applications/count 200 in 1006ms
+1:22:51 AM [express] GET /api/supabase-auth/user 200 in 379ms
+1:22:53 AM [express] GET /api/crm/tasks/stats 200 in 1640ms
+1:22:53 AM [express] GET /api/super-admin/courses 200 in 1028ms
+[WS] New WebSocket connection attempt
+1:22:53 AM [express] GET /api/super-admin/institutions 200 in 1000ms
+[WS] Headers: Has cookie
+[WS] Session cookie: Missing
+[WS] No session cookie - waiting for auth message
+1:22:52 AM [express] GET /api/conversations 200 in 236ms
+1:22:52 AM [express] GET /api/conversations/unread-count 200 in 239ms
+[WS] Received auth message
+1:22:52 AM [express] GET /api/notifications 200 in 264ms
+1:22:52 AM [express] GET /api/notifications/unread-count 200 in 263ms
+1:22:56 AM [express] GET /api/admin/ai-models 200 in 320ms
+1:23:00 AM [express] GET /api/csrf-token 200 in 2ms
+      at new Client (/app/node_modules/pg/lib/client.js:54:33)
+[NeonMigration] Connected to Neon (source) and Supabase (destination)
+      at newClient (/app/node_modules/pg-pool/index.js:241:20)
+      at connect (/app/node_modules/pg-pool/index.js:235:10)
+Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+      at query (/app/node_modules/pg-pool/index.js:449:10)
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+      at runMigration (/app/dist/index.js:30066:41)
+      at startNeonMigration (/app/dist/index.js:30039:3)
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+      at <anonymous> (/app/dist/index.js:48731:45)
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+1:23:01 AM [express] POST /api/admin/migrate-neon-to-supabase 202 in 214ms
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+      at deprecatedSslModeWarning (/app/node_modules/pg-connection-string/index.js:222:13)
+      at parse (/app/node_modules/pg-connection-string/index.js:149:11)
+      at new ConnectionParameters (/app/node_modules/pg/lib/connection-parameters.js:60:42)
+1:23:02 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 210ms
+[NeonMigration] Found 121 tables to migrate (3 skipped)
+[NeonMigration] FK triggers disabled
+[NeonMigration]   [academic_qualification_types] 168 rows copied
+[NeonMigration]   [acc_bill_payments] 0 rows — skipped
+[NeonMigration]   [acc_bills] 0 rows — skipped
+1:23:05 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 211ms
+[NeonMigration]   [acc_chart_of_accounts] 20 rows copied
+[NeonMigration]   [acc_credit_note_items] 0 rows — skipped
+[NeonMigration]   [acc_credit_notes] 0 rows — skipped
+[NeonMigration]   [acc_customers] 0 rows — skipped
+[NeonMigration]   [acc_expense_categories] 0 rows — skipped
+[NeonMigration]   [acc_expenses] 0 rows — skipped
+[NeonMigration]   [acc_invoice_line_items] 0 rows — skipped
+[NeonMigration]   [acc_invoices] 0 rows — skipped
+[NeonMigration]   [acc_items] 0 rows — skipped
+[NeonMigration]   [acc_payments_received] 0 rows — skipped
+[NeonMigration]   [acc_reminder_logs] 0 rows — skipped
+[NeonMigration]   [account_notes] 0 rows — skipped
+[NeonMigration]   [account_portal_forms] 0 rows — skipped
+[NeonMigration]   [account_products] 0 rows — skipped
+1:23:07 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 209ms
+1:23:08 AM [express] GET /api/conversations 200 in 72ms
+1:23:08 AM [express] GET /api/conversations/unread-count 200 in 72ms
+[NeonMigration]   [account_restricted_details] 7 rows copied
+[NeonMigration]   [accounts] 7 rows copied
+1:23:10 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 216ms
+[NeonMigration]   [activity_logs] 893 rows copied
+[NeonMigration]   [admin_team_members] 1 rows copied
+[NeonMigration]   [ai_settings] 9 rows copied
+1:23:13 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 215ms
+[NeonMigration]   [api_key_usage_logs] 583 rows copied
+[NeonMigration] Migration failed: malformed array literal: "["institutions:create","courses:create","institutions:read","courses:read"]"
+1:23:16 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 213ms
+1:23:16 AM [express] GET /api/supabase-auth/user 200 in 376ms
+1:23:23 AM [express] GET /api/notifications 200 in 72ms
+1:23:23 AM [express] GET /api/notifications/unread-count 200 in 72ms
+1:23:23 AM [express] GET /api/conversations/unread-count 200 in 73ms
+1:23:23 AM [express] GET /api/conversations 200 in 70ms
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.woff directive=font-src document=https://anzglobal-education-production.up.railway.app/admin/ source=chrome-extension:14083
+[CSP] Violation blocked-uri=https://webfonts.zohostatic.com/latoregular/font.ttf directive=font-src document=https://anzglobal-education-production.up.railway.app/admin/ source=chrome-extension:14083
+1:23:32 AM [express] POST /api/csp-report 204 in 9ms

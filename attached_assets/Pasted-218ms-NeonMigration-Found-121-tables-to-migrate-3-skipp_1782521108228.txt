@@ -1,0 +1,59 @@
+218ms
+[NeonMigration] Found 121 tables to migrate (3 skipped)
+[NeonMigration] FK triggers disabled
+[NeonMigration]   [academic_qualification_types] 168 rows copied
+[NeonMigration]   [acc_bill_payments] 0 rows — skipped
+[NeonMigration]   [acc_bills] 0 rows — skipped
+12:43:48 AM [express] GET /api/conversations 200 in 73ms
+[NeonMigration]   [acc_chart_of_accounts] 20 rows copied
+[NeonMigration]   [acc_credit_note_items] 0 rows — skipped
+12:43:48 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 216ms
+[NeonMigration]   [acc_credit_notes] 0 rows — skipped
+12:43:49 AM [express] GET /api/conversations/unread-count 200 in 74ms
+[NeonMigration]   [acc_customers] 0 rows — skipped
+[NeonMigration]   [acc_expense_categories] 0 rows — skipped
+[NeonMigration]   [acc_expenses] 0 rows — skipped
+[NeonMigration]   [acc_invoice_line_items] 0 rows — skipped
+[NeonMigration]   [acc_invoices] 0 rows — skipped
+[NeonMigration]   [acc_items] 0 rows — skipped
+[NeonMigration]   [acc_payments_received] 0 rows — skipped
+[NeonMigration]   [acc_reminder_logs] 0 rows — skipped
+[NeonMigration]   [account_notes] 0 rows — skipped
+[NeonMigration]   [account_portal_forms] 0 rows — skipped
+[NeonMigration]   [account_products] 0 rows — skipped
+[NeonMigration]   [account_restricted_details] 7 rows copied
+12:43:51 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 217ms
+[NeonMigration]   [accounts] 7 rows copied
+12:43:54 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 219ms
+[NeonMigration]   [activity_logs] 893 rows copied
+[NeonMigration]   [admin_team_members] 1 rows copied
+[NeonMigration]   [ai_settings] 9 rows copied
+12:43:57 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 217ms
+[NeonMigration]   [api_key_usage_logs] 583 rows copied
+[NeonMigration]   [api_keys] 10 rows copied
+[NeonMigration]   [application_courses] 12 rows copied
+[NeonMigration]   [application_internal_notes] 7 rows copied
+[NeonMigration]   [application_notes] 1 rows copied
+[NeonMigration]   [application_profile_snapshots] 0 rows — skipped
+[NeonMigration]   [application_stage_documents] 18 rows copied
+12:44:00 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 217ms
+[NeonMigration]   [application_stage_history] 23 rows copied
+[NeonMigration]   [applications] 12 rows copied
+[NeonMigration]   [attendance_breaks] 4 rows copied
+[NeonMigration]   [attendance_records] 39 rows copied
+[NeonMigration]   [blogs] 10 rows copied
+[NeonMigration]   [branches] 2 rows copied
+12:44:03 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 217ms
+[NeonMigration]   [channel_members] 5 rows copied
+12:44:03 AM [express] GET /api/notifications/unread-count 200 in 76ms
+[NeonMigration]   [channel_messages] 1 rows copied
+12:44:03 AM [express] GET /api/conversations 200 in 99ms
+[NeonMigration]   [channels] 1 rows copied
+12:44:04 AM [express] GET /api/conversations/unread-count 200 in 92ms
+[NeonMigration]   [chat_conversations] 59 rows copied
+12:44:04 AM [express] GET /api/attendance/status 200 in 304ms
+[NeonMigration] Migration failed: invalid input syntax for type json
+12:44:05 AM [express] GET /api/notifications 200 in 76ms
+12:44:06 AM [express] GET /api/admin/migrate-neon-to-supabase/status 200 in 216ms
+12:44:19 AM [express] GET /api/conversations 200 in 77ms
+12:44:20 AM [express] GET /api/conversations/unread-count 200 in 76ms
