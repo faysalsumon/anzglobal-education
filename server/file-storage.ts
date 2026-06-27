@@ -364,7 +364,10 @@ export async function runMigrationFromReplitToSupabase(
 
   const stats = externalStats ?? { total: 0, copied: 0, skipped: 0, failed: 0, errors: [] as string[] };
 
-  // All known prefixes in Replit Object Storage
+  // All known prefixes in Replit Object Storage.
+  // Both dotted (.private/) and undotted (private/) variants are included
+  // because older uploads used the undotted path in Replit while the DB
+  // stores them with the dot prefix. getBucketAndPath() handles both.
   const prefixes = [
     "public/students/",
     "public/admins/",
@@ -376,9 +379,13 @@ export async function runMigrationFromReplitToSupabase(
     "public/thumbnails/",
     "public/note-attachments/",
     ".private/documents/",
+    "private/documents/",
     ".private/institutions/",
+    "private/institutions/",
     ".private/chat-files/",
+    "private/chat-files/",
     ".private/account-portal-forms/",
+    "private/account-portal-forms/",
     "attendance-photos/",
   ];
 

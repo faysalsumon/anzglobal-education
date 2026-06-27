@@ -24,7 +24,10 @@ description: Object storage is exclusively Supabase Storage; path routing, bucke
 - anything else → `anz-private`, kept as-is
 
 ## Replit fallback — PRESENT (required safety net)
-`downloadFile()` tries Supabase first; falls back to Replit Object Storage. The "8876 skipped" migration result only covered `.private/` and `attendance-photos/` prefixes — it did NOT cover `public/admins/`, `public/students/`, etc., so public files were never copied to Supabase. Admin profile images, logos, and thumbnails remain in Replit Object Storage until the migration endpoint is run again (it now scans all `public/` sub-prefixes). Do NOT remove this fallback until the migration has been run and downloads confirmed working on Railway.
+`downloadFile()` tries Supabase first; falls back to Replit Object Storage. Do NOT remove until migration is confirmed complete on Railway.
+
+## Migration prefix mismatch (critical)
+Older uploads stored files in Replit Object Storage under `private/documents/` (no leading dot) while the DB stores paths as `.private/documents/` (with dot). The migration was only scanning `.private/documents/` so student documents were NEVER copied to Supabase. Fix: both dotted and undotted variants are now in the prefixes list for all four private sub-paths. `getBucketAndPath()` already handles both variants → same Supabase destination path.
 
 ## SUPABASE_SERVICE_ROLE_KEY_PROD env var fix
 On Railway, the service role key is named `SUPABASE_SERVICE_ROLE_KEY_PROD` (not `SUPABASE_SERVICE_ROLE_KEY`). `getSupabase()` in `file-storage.ts` and `supabase.ts` now accept either name via `process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY_PROD`. This was the root cause of document downloads silently failing on Railway production.

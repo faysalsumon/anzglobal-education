@@ -1,0 +1,112 @@
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+
+
+2026-06-27 19:37:16.15
+cf9fc8cf
+User
+9:37:16 AM [express] GET /api/notifications/unread-count 200 in 58ms
+
+2026-06-27 19:37:16.47
+cf9fc8cf
+User
+9:37:16 AM [express] GET /api/notifications 200 in 59ms
+
+2026-06-27 19:42:12.48
+cf9fc8cf
+User
+[WS] Client disconnected: e803626f-4d88-4c87-b878-ec568238c0f6
+
+2026-06-27 19:42:14.48
+cf9fc8cf
+User
+[WS] Session cookie: Missing
+
+2026-06-27 19:42:14.48
+cf9fc8cf
+User
+[WS] No session cookie - waiting for auth message
+
+2026-06-27 19:42:14.48
+cf9fc8cf
+User
+[WS] New WebSocket connection attempt
+
+2026-06-27 19:42:14.48
+cf9fc8cf
+User
+[WS] Headers: Has cookie
+
+2026-06-27 19:42:14.71
+cf9fc8cf
+User
+[WS] Received auth message
+
+2026-06-27 19:42:15.44
+cf9fc8cf
+User
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+
+2026-06-27 19:42:15.58
+cf9fc8cf
+User
+9:42:15 AM [express] GET /api/notifications/unread-count 200 in 55ms
+
+2026-06-27 19:42:15.58
+cf9fc8cf
+User
+9:42:15 AM [express] GET /api/notifications 200 in 55ms
+
+2026-06-27 19:42:16.43
+cf9fc8cf
+User
+[WS] Client disconnected: e803626f-4d88-4c87-b878-ec568238c0f6
+
+2026-06-27 19:42:18.50
+cf9fc8cf
+User
+[WS] New WebSocket connection attempt
+
+2026-06-27 19:42:18.50
+cf9fc8cf
+User
+[WS] No session cookie - waiting for auth message
+
+2026-06-27 19:42:18.50
+cf9fc8cf
+User
+[WS] Session cookie: Missing
+
+2026-06-27 19:42:18.50
+cf9fc8cf
+User
+[WS] Headers: Has cookie
+
+2026-06-27 19:42:18.77
+cf9fc8cf
+User
+[WS] Received auth message
+
+2026-06-27 19:42:19.02
+cf9fc8cf
+User
+[WS] ✅ Supabase auth successful: e803626f-4d88-4c87-b878-ec568238c0f6
+
+2026-06-27 19:42:19.13
+cf9fc8cf
+User
+9:42:19 AM [express] GET /api/notifications 200 in 60ms
+
+2026-06-27 19:42:19.31
+cf9fc8cf
+User
+9:42:19 AM [express] GET /api/notifications/unread-count 200 in 56ms
+
+2026-06-27 19:42:20.51
+cf9fc8cf
+User
+[Bot Protection] Allowed search engine bot: Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chr from 34.27.179.131
+
+2026-06-27 19:42:20.51
+cf9fc8cf
+User
+[Bot Protection] Allowed search engine bot: Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chr from 34.27.179.131
