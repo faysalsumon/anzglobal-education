@@ -1941,7 +1941,7 @@ export default function AdminDashboard() {
               <AdminMailTab />
             </div>
           ) : (
-          <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">
+          <div className="flex-1 min-h-0 overflow-y-auto pb-16 lg:pb-0">
             <div className="mx-auto w-full max-w-6xl px-4 md:px-6 py-4">
               {/* Simple single-column layout */}
               <div className="space-y-4">
