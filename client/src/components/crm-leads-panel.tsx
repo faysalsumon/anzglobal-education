@@ -769,74 +769,75 @@ export function CrmLeadsPanel() {
           )}
 
           {/* Pagination controls — list view only */}
-          {viewMode === 'list' && !isLoading && allLeads.length > PAGE_SIZE && (
+          {viewMode === 'list' && !isLoading && allLeads.length > 0 && (
             <div className="flex items-center justify-between pt-2" data-testid="pagination-leads">
               <p className="text-xs text-muted-foreground">
-                Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, allLeads.length)} of {allLeads.length} leads
+                Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, allLeads.length)} of {allLeads.length} lead{allLeads.length !== 1 ? 's' : ''}
               </p>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={safePage === 1}
-                  data-testid="pagination-first"
-                >
-                  <ChevronLeft className="h-3 w-3" />
-                  <ChevronLeft className="h-3 w-3 -ml-2" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={safePage === 1}
-                  data-testid="pagination-prev"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                {/* Page number pills */}
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
-                  .reduce<(number | '...')[]>((acc, p, idx, arr) => {
-                    if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push('...');
-                    acc.push(p);
-                    return acc;
-                  }, [])
-                  .map((item, idx) =>
-                    item === '...' ? (
-                      <span key={`ellipsis-${idx}`} className="px-1 text-xs text-muted-foreground">…</span>
-                    ) : (
-                      <Button
-                        key={item}
-                        variant={safePage === item ? 'default' : 'outline'}
-                        size="icon"
-                        onClick={() => setCurrentPage(item as number)}
-                        data-testid={`pagination-page-${item}`}
-                      >
-                        <span className="text-xs">{item}</span>
-                      </Button>
-                    )
-                  )}
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={safePage === totalPages}
-                  data-testid="pagination-next"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={safePage === totalPages}
-                  data-testid="pagination-last"
-                >
-                  <ChevronRight className="h-3 w-3" />
-                  <ChevronRight className="h-3 w-3 -ml-2" />
-                </Button>
-              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={safePage === 1}
+                    data-testid="pagination-first"
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                    <ChevronLeft className="h-3 w-3 -ml-2" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={safePage === 1}
+                    data-testid="pagination-prev"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                    .reduce<(number | '...')[]>((acc, p, idx, arr) => {
+                      if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push('...');
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((item, idx) =>
+                      item === '...' ? (
+                        <span key={`ellipsis-${idx}`} className="px-1 text-xs text-muted-foreground">…</span>
+                      ) : (
+                        <Button
+                          key={item}
+                          variant={safePage === item ? 'default' : 'outline'}
+                          size="icon"
+                          onClick={() => setCurrentPage(item as number)}
+                          data-testid={`pagination-page-${item}`}
+                        >
+                          <span className="text-xs">{item}</span>
+                        </Button>
+                      )
+                    )}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={safePage === totalPages}
+                    data-testid="pagination-next"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={safePage === totalPages}
+                    data-testid="pagination-last"
+                  >
+                    <ChevronRight className="h-3 w-3" />
+                    <ChevronRight className="h-3 w-3 -ml-2" />
+                  </Button>
+                </div>
+              )}
             </div>
           )}
       </div>
