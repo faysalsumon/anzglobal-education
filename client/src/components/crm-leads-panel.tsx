@@ -55,6 +55,7 @@ import {
   BookOpen,
   Eye,
   ChevronLeft,
+  ChevronRight,
   List,
   LayoutGrid,
   ChevronDown,
@@ -225,6 +226,8 @@ export function CrmLeadsPanel() {
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [assignedFilter, setAssignedFilter] = useState<string>("all");
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 25;
   const [selectedLead, setSelectedLead] = useState<CrmLead | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -431,6 +434,17 @@ export function CrmLeadsPanel() {
     .filter(f => f !== 'all').length;
 
   const uniqueCountries = Array.from(new Set(leadsData?.leads?.map(l => l.country).filter(Boolean) || []));
+
+  // Pagination helpers (list view only)
+  const allLeads = leadsData?.leads ?? [];
+  const totalPages = Math.max(1, Math.ceil(allLeads.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedLeads = allLeads.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // Reset to page 1 whenever filters or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, ratingFilter, branchFilter, sourceFilter, countryFilter, assignedFilter, searchQuery]);
 
   return (
     <div className="space-y-4">
@@ -671,7 +685,7 @@ export function CrmLeadsPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {leadsData?.leads?.map((lead) => (
+                  {paginatedLeads.map((lead) => (
                     <tr
                       key={lead.id}
                       className="border-b last:border-b-0 cursor-pointer group hover:bg-muted/40 even:bg-muted/20 transition-colors"
@@ -751,6 +765,78 @@ export function CrmLeadsPanel() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination controls — list view only */}
+          {viewMode === 'list' && !isLoading && allLeads.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between pt-2" data-testid="pagination-leads">
+              <p className="text-xs text-muted-foreground">
+                Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, allLeads.length)} of {allLeads.length} leads
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={safePage === 1}
+                  data-testid="pagination-first"
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                  <ChevronLeft className="h-3 w-3 -ml-2" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  data-testid="pagination-prev"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {/* Page number pills */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                  .reduce<(number | '...')[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push('...');
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((item, idx) =>
+                    item === '...' ? (
+                      <span key={`ellipsis-${idx}`} className="px-1 text-xs text-muted-foreground">…</span>
+                    ) : (
+                      <Button
+                        key={item}
+                        variant={safePage === item ? 'default' : 'outline'}
+                        size="icon"
+                        onClick={() => setCurrentPage(item as number)}
+                        data-testid={`pagination-page-${item}`}
+                      >
+                        <span className="text-xs">{item}</span>
+                      </Button>
+                    )
+                  )}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  data-testid="pagination-next"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={safePage === totalPages}
+                  data-testid="pagination-last"
+                >
+                  <ChevronRight className="h-3 w-3" />
+                  <ChevronRight className="h-3 w-3 -ml-2" />
+                </Button>
+              </div>
             </div>
           )}
       </div>
