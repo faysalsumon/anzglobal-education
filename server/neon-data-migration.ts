@@ -189,7 +189,9 @@ async function runMigration() {
         }
 
         const colList = columns.map((c) => `"${c}"`).join(", ");
-        const sql = `INSERT INTO "${tableName}" (${colList}) VALUES ${placeholders.join(", ")} ON CONFLICT DO NOTHING`;
+        // OVERRIDING SYSTEM VALUE lets us insert explicit values into
+        // GENERATED ALWAYS AS IDENTITY columns (safe no-op for other tables).
+        const sql = `INSERT INTO "${tableName}" (${colList}) OVERRIDING SYSTEM VALUE VALUES ${placeholders.join(", ")} ON CONFLICT DO NOTHING`;
 
         await supabasePool.query(sql, values);
         tableCopied += rows.length;
