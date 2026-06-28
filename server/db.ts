@@ -4,10 +4,13 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pkg;
 
-// Neon PostgreSQL — used in both development and production.
-// Supabase is used for authentication only (not as the application database).
-// rejectUnauthorized is false because Bun/NixOS environments fail to parse
-// Neon's certificate name constraints in the TLS chain.
+// Application database. The project has migrated to Supabase Postgres:
+// DATABASE_URL should point at the Supabase pooler (port 6543) for the app
+// pool, while schema migrations run against the Supabase direct URL — see
+// server/migrate.ts. (The legacy Neon database remains only as the migration
+// source via NEON_SOURCE_URL.)
+// rejectUnauthorized is false to tolerate Bun/NixOS TLS cert-parsing quirks;
+// once verified against Supabase's CA it can be tightened to true.
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
@@ -36,8 +39,8 @@ export const db = drizzle({ client: pool, schema });
 // To activate:
 //   1. In psql / SQL client: CREATE ROLE app_user WITH LOGIN PASSWORD '...';
 //   2. Grant permissions (see migrations/0033_rls_app_role.sql for the full SQL).
-//   3. Add APP_DB_URL to Replit environment secrets:
-//        postgresql://app_user:<password>@<neon-host>/neondb?sslmode=require
+//   3. Add APP_DB_URL to the Railway environment variables:
+//        postgresql://app_user:<password>@<supabase-host>:5432/postgres?sslmode=require
 let _appUserPool: InstanceType<typeof Pool> | null = null;
 
 if (process.env.APP_DB_URL) {

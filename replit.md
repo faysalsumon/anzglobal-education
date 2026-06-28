@@ -21,7 +21,7 @@ The platform adheres to ANZ Global Education's brand identity, using a specific 
 - **API**: RESTful.
 - **Real-time**: WebSockets for chat and notifications.
 - **AI Integration**: OpenAI API (GPT-4o for content, GPT-4o-mini for web scraping).
-- **Database**: PostgreSQL (Neon, Drizzle ORM). Safe migration system: `bun run db:generate` creates migration files from schema changes, `bun run db:migrate` applies them. Server auto-runs pending migrations on startup via `server/migrate.ts`. `bun run db:push:dev` exists for dev-only destructive sync — never use against production.
+- **Database**: PostgreSQL (Supabase, Drizzle ORM). Migrated from Neon — `DATABASE_URL` points at the Supabase pooler (6543) for the app pool, while schema migrations run against the Supabase direct URL (`SUPABASE_DB_DIRECT_URL` / `DATABASE_DIRECT_URL`, port 5432) via `server/migrate.ts`. Safe migration system: `bun run db:generate` creates migration files from schema changes, `bun run db:migrate` applies them. Server auto-runs pending migrations on startup via `server/migrate.ts`. `bun run db:push:dev` exists for dev-only destructive sync — never use against production.
 - **Job Queue**: BullMQ with Redis.
 - **Web Scraping**: Playwright, Cheerio, robots-parser.
 - **Object Storage**: Replit Object Storage for persistent logo backups and general file storage, with a fallback mechanism for missing files.
@@ -90,9 +90,9 @@ The platform adheres to ANZ Global Education's brand identity, using a specific 
 - **Authentication Service**: Supabase Auth.
 - **AI Service**: OpenAI API (GPT-4o, GPT-4o-mini).
 - **Vector Database**: Pinecone.
-- **Database**: PostgreSQL (Neon).
+- **Database**: PostgreSQL (Supabase). Migrated from Neon; the legacy Neon DB is retained only as the migration source (`NEON_SOURCE_URL`).
 - **Job Queue**: Redis (via BullMQ).
-- **Object Storage**: Replit Object Storage.
+- **Object Storage**: Supabase Storage (buckets `anz-public` / `anz-private`). Migrated from Replit Object Storage.
 - **CDN**: Google Fonts CDN.
 - **Mapping/Location**: Google Maps JavaScript API, Google Places API.
 - **Email Service**: Resend API (transactional), Zoho Mail (team IMAP/SMTP via imapflow + nodemailer).
