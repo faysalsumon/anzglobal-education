@@ -45,19 +45,24 @@ function readMigrations(migrationsFolder: string): MigrationEntry[] {
 export async function runMigrations() {
   // Prefer the direct (un-pooled) connection for migrations — pgBouncer in
   // transaction mode doesn't support DDL (CREATE TABLE, ALTER TABLE, etc.).
-  // In Railway, schema migrations must run against a direct (port 5432) URL,
-  // never the pooled (port 6543) URL.
   //
   // Resolution order:
-  //   1. DATABASE_DIRECT_URL    — explicit direct URL (preferred if set)
-  //   2. SUPABASE_DB_DIRECT_URL — Supabase's direct URL (the var name actually
-  //      provisioned in Railway for this project)
-  //   3. DATABASE_URL           — last-resort fallback (may be pooled; DDL can
-  //      fail through pgBouncer, so this is only correct when DATABASE_URL is
-  //      itself a direct connection, e.g. local/dev).
+  //   1. DATABASE_DIRECT_URL — explicit direct URL (set this in Railway to the
+  //      Supabase Session-mode pooler URL, port 5432 on the pooler host, which
+  //      is IPv4 and supports DDL). Get it from Supabase Dashboard → Connect →
+  //      "Session mode" tab. Example:
+  //        postgresql://postgres.xxxx:pass@aws-0-region.pooler.supabase.com:5432/postgres
+  //   2. DATABASE_URL        — fallback (Neon direct URL during migration phase;
+  //      Supabase pooler port 6543 once fully cut over — note: DDL through 6543
+  //      transaction-mode pooler can fail, so set DATABASE_DIRECT_URL instead).
+  //
+  // NOTE: SUPABASE_DB_DIRECT_URL is intentionally NOT used here — Supabase's
+  // direct host resolves to an IPv6 address which Railway containers cannot
+  // reach (ECONNREFUSED). Schema must be applied manually via Supabase SQL
+  // Editor (scripts/supabase-schema.sql) or via DATABASE_DIRECT_URL set to
+  // the Session-mode pooler URL.
   const connectionString =
     process.env.DATABASE_DIRECT_URL ??
-    process.env.SUPABASE_DB_DIRECT_URL ??
     process.env.DATABASE_URL;
 
   if (!connectionString) {
