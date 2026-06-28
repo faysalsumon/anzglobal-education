@@ -45,10 +45,20 @@ function readMigrations(migrationsFolder: string): MigrationEntry[] {
 export async function runMigrations() {
   // Prefer the direct (un-pooled) connection for migrations — pgBouncer in
   // transaction mode doesn't support DDL (CREATE TABLE, ALTER TABLE, etc.).
-  // In Railway: set DATABASE_DIRECT_URL to the Neon direct URL (port 5432)
-  // and DATABASE_URL to the pooled URL (port 6543) for the app pool.
+  // In Railway, schema migrations must run against a direct (port 5432) URL,
+  // never the pooled (port 6543) URL.
+  //
+  // Resolution order:
+  //   1. DATABASE_DIRECT_URL    — explicit direct URL (preferred if set)
+  //   2. SUPABASE_DB_DIRECT_URL — Supabase's direct URL (the var name actually
+  //      provisioned in Railway for this project)
+  //   3. DATABASE_URL           — last-resort fallback (may be pooled; DDL can
+  //      fail through pgBouncer, so this is only correct when DATABASE_URL is
+  //      itself a direct connection, e.g. local/dev).
   const connectionString =
-    process.env.DATABASE_DIRECT_URL ?? process.env.DATABASE_URL;
+    process.env.DATABASE_DIRECT_URL ??
+    process.env.SUPABASE_DB_DIRECT_URL ??
+    process.env.DATABASE_URL;
 
   if (!connectionString) {
     console.error("[Migrate] DATABASE_URL not set — skipping migrations");
