@@ -1234,7 +1234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const regionContext = getRegionContext(req);
       const regionCode = (req.query.region as string)?.toUpperCase() || regionContext.region?.code;
       const cacheKey = `institutions:filter-metadata:${regionCode || 'all'}`;
-      const cached = getCached<object>(cacheKey);
+      const cached = await getCached<object>(cacheKey);
       if (cached) return res.json(cached);
 
       const allInstitutions = await storage.getAllUniversities();
@@ -1362,7 +1362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         totalCount: approvedInstitutions.length,
       };
-      setCached(cacheKey, filterMetadata, 5 * 60 * 1000);
+      await setCached(cacheKey, filterMetadata, 5 * 60 * 1000);
       res.json(filterMetadata);
     } catch (error) {
       console.error("Error fetching filter metadata:", error);
@@ -1969,7 +1969,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get disciplines with course counts
   app.get("/api/disciplines", async (req, res) => {
     try {
-      const cached = getCached<object[]>('courses:disciplines');
+      const cached = await getCached<object[]>('courses:disciplines');
       if (cached) return res.json(cached);
 
       const allCourses = await storage.getAllCourses();
@@ -2003,7 +2003,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter(d => d.count > 0)
         .sort((a, b) => a.name.localeCompare(b.name));
 
-      setCached('courses:disciplines', disciplines, 10 * 60 * 1000);
+      await setCached('courses:disciplines', disciplines, 10 * 60 * 1000);
       res.json(disciplines);
     } catch (error) {
       console.error("Error fetching disciplines:", error);
@@ -2014,7 +2014,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get course levels with counts
   app.get("/api/course-levels", async (req, res) => {
     try {
-      const cached = getCached<object[]>('courses:levels');
+      const cached = await getCached<object[]>('courses:levels');
       if (cached) return res.json(cached);
 
       const allCourses = await storage.getAllCourses();
@@ -2064,7 +2064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .map(name => ({ name, count: levelCounts[name] || 0 }))
         .filter(l => l.count > 0);
 
-      setCached('courses:levels', levels, 10 * 60 * 1000);
+      await setCached('courses:levels', levels, 10 * 60 * 1000);
       res.json(levels);
     } catch (error) {
       console.error("Error fetching course levels:", error);
@@ -2392,7 +2392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Lightweight endpoint for course filter options (used by quiz and search)
   app.get("/api/courses/filter-options", async (req, res) => {
     try {
-      const cached = getCached<object>('courses:filter-options');
+      const cached = await getCached<object>('courses:filter-options');
       if (cached) return res.json(cached);
 
       const allCourses = await storage.getAllCourses();
@@ -2450,7 +2450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         levels: Array.from(levels).sort(),
         countries: Array.from(countries).sort(),
       };
-      setCached('courses:filter-options', filterOptions, 10 * 60 * 1000);
+      await setCached('courses:filter-options', filterOptions, 10 * 60 * 1000);
       res.json(filterOptions);
     } catch (error) {
       console.error("Error fetching filter options:", error);

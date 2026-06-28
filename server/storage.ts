@@ -147,6 +147,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or, desc, isNull, sql, lt, lte, gte, count, getTableColumns } from "drizzle-orm";
+import { invalidateCache } from "./lib/cache";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -638,6 +639,7 @@ export class DatabaseStorage implements IStorage {
       .insert(universities)
       .values(universityData as any)
       .returning();
+    await invalidateCache("institutions:");
     return university;
   }
 
@@ -660,12 +662,13 @@ export class DatabaseStorage implements IStorage {
       .set({ ...processedData, updatedAt: new Date() })
       .where(eq(universities.id, id))
       .returning();
-    
+    await invalidateCache("institutions:");
     return university;
   }
 
   async deleteUniversity(id: string): Promise<void> {
     await db.delete(universities).where(eq(universities.id, id));
+    await invalidateCache("institutions:");
   }
 
   // Course operations
@@ -748,6 +751,7 @@ export class DatabaseStorage implements IStorage {
       .insert(courses)
       .values(courseData as any)
       .returning();
+    await invalidateCache("courses:");
     return course;
   }
 
@@ -770,11 +774,13 @@ export class DatabaseStorage implements IStorage {
       .set(processedData)
       .where(eq(courses.id, id))
       .returning();
+    await invalidateCache("courses:");
     return course;
   }
 
   async deleteCourse(id: string): Promise<void> {
     await db.delete(courses).where(eq(courses.id, id));
+    await invalidateCache("courses:");
   }
 
   // Sub-discipline operations

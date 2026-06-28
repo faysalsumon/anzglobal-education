@@ -56,15 +56,12 @@ export async function checkRedisAvailability(): Promise<boolean> {
   }
 
   return new Promise((resolve) => {
-    const testConnection = new Redis({
-      host: process.env.REDIS_HOST || "localhost",
-      port: parseInt(process.env.REDIS_PORT || "6379"),
-      maxRetriesPerRequest: null,
-      retryStrategy: () => null,
-      lazyConnect: true,
-      connectTimeout: 1500,
-      enableOfflineQueue: false,
-    });
+    const redisOpts = process.env.REDIS_URL
+      ? { maxRetriesPerRequest: null as null, retryStrategy: () => null as null, lazyConnect: true, connectTimeout: 1500, enableOfflineQueue: false }
+      : { host: process.env.REDIS_HOST || "localhost", port: parseInt(process.env.REDIS_PORT || "6379"), maxRetriesPerRequest: null as null, retryStrategy: () => null as null, lazyConnect: true, connectTimeout: 1500, enableOfflineQueue: false };
+    const testConnection = process.env.REDIS_URL
+      ? new Redis(process.env.REDIS_URL, redisOpts)
+      : new Redis(redisOpts);
 
     // Suppress all errors during check
     testConnection.on("error", () => {});
