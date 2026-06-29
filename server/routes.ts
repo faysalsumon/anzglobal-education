@@ -6,7 +6,7 @@ import { verifyTurnstileToken } from "./turnstile";
 import { parse as parseCookie } from "cookie";
 import { unsign as unsignCookie } from "cookie-signature";
 import { storage } from "./storage";
-import { wsClients, broadcastDocumentEvent, broadcastToUsers } from "./websocket-clients";
+import { wsClients, broadcastDocumentEvent, broadcastToUsers, sendToUser } from "./websocket-clients";
 import { db } from "./db";
 import { isAuthenticated, getAuthenticatedUserId } from "./supabase-middleware";
 import { getRegionContext } from "./middleware/region-detection";
@@ -7866,12 +7866,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status,
             applicationId: application.id,
           });
+          // Push real-time update to student if connected via WebSocket
+          sendToUser(studentProfile.userId, {
+            type: 'application_status_changed',
+            applicationId: req.params.id,
+            status,
+          });
         }
       } catch (notificationError) {
         console.error("Error sending notification:", notificationError);
         // Don't fail the status update if notification fails
       }
-      
+
       res.json(updated);
     } catch (error) {
       console.error("Error updating application:", error);
@@ -16307,8 +16313,12 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
   // Get published blogs with pagination
   app.get("/api/blogs", async (req, res) => {
     try {
+      res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
       const { category, tag, market, limit, offset } = req.query;
-      
+      const cacheKey = `blogs:list:${category || ''}:${tag || ''}:${market || ''}:${limit || '10'}:${offset || '0'}`;
+      const cached = await getCached<any>(cacheKey);
+      if (cached) return res.json(cached);
+
       const result = await storage.getPublishedBlogs({
         category: category as string,
         tag: tag as string,
@@ -16316,7 +16326,8 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
         limit: limit ? parseInt(limit as string) : 10,
         offset: offset ? parseInt(offset as string) : 0,
       });
-      
+
+      await setCached(cacheKey, result, 60 * 60 * 1000);
       res.json(result);
     } catch (error) {
       console.error("Error fetching published blogs:", error);
@@ -16327,12 +16338,21 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
   // Get single published blog by slug
   app.get("/api/blogs/:slug", async (req, res) => {
     try {
+      res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+      const cacheKey = `blogs:slug:${req.params.slug}`;
+      const cached = await getCached<any>(cacheKey);
+      if (cached) {
+        if (cached._notFound) return res.status(404).json({ message: "Blog not found" });
+        return res.json(cached);
+      }
+
       const blog = await storage.getBlogBySlug(req.params.slug);
-      
+
       if (!blog || blog.status !== "published") {
         return res.status(404).json({ message: "Blog not found" });
       }
-      
+
+      await setCached(cacheKey, blog, 60 * 60 * 1000);
       res.json(blog);
     } catch (error) {
       console.error("Error fetching blog:", error);
@@ -19524,8 +19544,13 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Public endpoint for testimonials
   app.get("/api/public/testimonials", async (req, res) => {
     try {
+      res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
       const { page } = req.query;
+      const cacheKey = `testimonials:${page || 'all'}`;
+      const cached = await getCached<any>(cacheKey);
+      if (cached) return res.json(cached);
       const testimonials = await storage.getPublishedTestimonials(page as string);
+      await setCached(cacheKey, testimonials, 60 * 60 * 1000);
       res.json(testimonials);
     } catch (error: any) {
       console.error("Error fetching public testimonials:", error);
@@ -19688,8 +19713,13 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Public endpoint for FAQs
   app.get("/api/public/faqs", async (req, res) => {
     try {
+      res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
       const { category, page } = req.query;
+      const cacheKey = `faqs:${category || 'all'}:${page || '1'}`;
+      const cached = await getCached<any>(cacheKey);
+      if (cached) return res.json(cached);
       const faqs = await storage.getPublishedFaqs(category as string, page as string);
+      await setCached(cacheKey, faqs, 60 * 60 * 1000);
       res.json(faqs);
     } catch (error: any) {
       console.error("Error fetching public FAQs:", error);
@@ -20014,12 +20044,16 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Public endpoint for site settings
   app.get("/api/public/site-settings", async (_req, res) => {
     try {
+      res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+      const cacheKey = 'site-settings:public';
+      const cached = await getCached<Record<string, any>>(cacheKey);
+      if (cached) return res.json(cached);
       const settings = await storage.getPublicSiteSettings();
-      // Convert to key-value pairs for easy consumption
       const settingsMap: Record<string, any> = {};
       settings.forEach(s => {
         settingsMap[s.settingKey] = s.settingValue;
       });
+      await setCached(cacheKey, settingsMap, 60 * 60 * 1000);
       res.json(settingsMap);
     } catch (error: any) {
       console.error("Error fetching public site settings:", error);
@@ -20187,13 +20221,17 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Public endpoint for content snippets
   app.get("/api/public/content-snippets", async (req, res) => {
     try {
+      res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
       const { pageLocation } = req.query;
+      const cacheKey = `content-snippets:${pageLocation || 'all'}`;
+      const cached = await getCached<Record<string, { content: string; title: string }>>(cacheKey);
+      if (cached) return res.json(cached);
       const snippets = await storage.getPublishedContentSnippets(pageLocation as string);
-      // Convert to key-value pairs for easy consumption
       const snippetsMap: Record<string, { content: string; title: string }> = {};
       snippets.forEach(s => {
         snippetsMap[s.snippetKey] = { content: s.content, title: s.title };
       });
+      await setCached(cacheKey, snippetsMap, 60 * 60 * 1000);
       res.json(snippetsMap);
     } catch (error: any) {
       console.error("Error fetching public content snippets:", error);
@@ -20204,11 +20242,17 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Get content snippet by key (public)
   app.get("/api/public/content-snippets/:key", async (req, res) => {
     try {
+      res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+      const cacheKey = `content-snippets:key:${req.params.key}`;
+      const cached = await getCached<{ content: string; title: string }>(cacheKey);
+      if (cached) return res.json(cached);
       const snippet = await storage.getContentSnippetByKey(req.params.key);
       if (!snippet || snippet.status !== 'published') {
         return res.status(404).json({ message: "Content snippet not found" });
       }
-      res.json({ content: snippet.content, title: snippet.title });
+      const result = { content: snippet.content, title: snippet.title };
+      await setCached(cacheKey, result, 60 * 60 * 1000);
+      res.json(result);
     } catch (error: any) {
       console.error("Error fetching public content snippet:", error);
       res.status(500).json({ message: "Failed to fetch content snippet" });
@@ -24433,10 +24477,48 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // Start scraping worker only if Redis is available
   try {
-    const { checkRedisAvailability } = await import('./scraping-queue');
+    const { checkRedisAvailability, addScrapingJob } = await import('./scraping-queue');
     const redisAvailable = await checkRedisAvailability();
 
     if (redisAvailable) {
+      // Reconcile: re-queue jobs stuck in pending/running from before this boot
+      try {
+        const { scrapingJobs } = await import('../shared/schema');
+        const { lt } = await import('drizzle-orm');
+        const stuckJobs = await db
+          .select()
+          .from(scrapingJobs)
+          .where(
+            and(
+              inArray(scrapingJobs.status, ['pending', 'running']),
+              lt(scrapingJobs.createdAt, new Date(Date.now() - 2 * 60 * 1000))
+            )
+          );
+
+        const runningIds = stuckJobs.filter(j => j.status === 'running').map(j => j.id);
+        if (runningIds.length > 0) {
+          await db.update(scrapingJobs)
+            .set({ status: 'pending', startedAt: null } as any)
+            .where(inArray(scrapingJobs.id, runningIds));
+        }
+
+        for (const job of stuckJobs) {
+          await addScrapingJob({
+            jobId: job.id,
+            institutionId: job.institutionId ?? undefined,
+            institutionUrl: job.institutionUrl,
+            institutionName: job.institutionName ?? undefined,
+            templateId: job.templateId ?? undefined,
+          });
+        }
+
+        if (stuckJobs.length > 0) {
+          console.log(`[Startup] Re-queued ${stuckJobs.length} stuck scraping job(s)`);
+        }
+      } catch (reconcileErr) {
+        console.error('[Startup] Failed to reconcile stuck jobs:', reconcileErr);
+      }
+
       const { startScrapingWorker } = await import('./scraping-worker');
       const { startThumbnailWorker } = await import('./thumbnail-worker');
       startScrapingWorker();
