@@ -651,6 +651,8 @@ export default function Landing() {
                         <img
                           src={getFlagUrl(dest.flagCode)}
                           alt={`${dest.name} flag`}
+                          width={56}
+                          height={36}
                           className="w-14 h-9 object-cover rounded shadow-sm"
                         />
                       </div>
@@ -1158,10 +1160,10 @@ export default function Landing() {
                           data-testid="button-play-video"
                         >
                           <img
-                            src="https://img.youtube.com/vi/pJSJAu4Piws/maxresdefault.jpg"
+                            src="https://img.youtube.com/vi/pJSJAu4Piws/hqdefault.jpg"
                             alt="ANZ Global Education - Study in Australia"
-                            width={1280}
-                            height={720}
+                            width={480}
+                            height={360}
                             loading="lazy"
                             className="w-full h-full object-cover"
                           />

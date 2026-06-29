@@ -9,6 +9,7 @@ interface CourseThumbnailProps {
   aspectRatio?: "video" | "square" | "wide";
   testId?: string;
   status?: string | null;
+  priority?: boolean;
 }
 
 export function CourseThumbnail({
@@ -18,10 +19,11 @@ export function CourseThumbnail({
   aspectRatio = "video",
   testId,
   status,
+  priority = false,
 }: CourseThumbnailProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [isInView, setIsInView] = useState(false);
+  const [isInView, setIsInView] = useState(priority);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const aspectClasses = {
@@ -83,12 +85,15 @@ export function CourseThumbnail({
         <img
           src={src}
           alt={alt}
+          width={400}
+          height={225}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
             isLoaded ? "opacity-100" : "opacity-0"
           }`}
           onLoad={handleLoad}
           onError={handleError}
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
         />
       )}
     </div>

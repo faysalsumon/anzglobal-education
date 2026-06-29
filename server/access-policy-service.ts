@@ -174,6 +174,11 @@ export async function getModulePermissions(
       if (roleName && writeRoles.includes(roleName)) {
         return { canCreate: true, canRead: true, canUpdate: true, canDelete: false };
       }
+      // All admin team members can create and update leads regardless of role —
+      // every team member can bring leads into the system.
+      if (module === 'leads' && user.userType === 'admin') {
+        return { canCreate: true, canRead: true, canUpdate: true, canDelete: false };
+      }
       // All other roles without a profile: read-only
       return { canCreate: false, canRead: true, canUpdate: false, canDelete: false };
     }
