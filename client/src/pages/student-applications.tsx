@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FileText, AlertCircle, RefreshCw } from "lucide-react";
 import { ApplicationCard } from "@/components/application-card";
 import { StudentLayout } from "@/components/student-layout";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { queryClient } from "@/lib/queryClient";
 
 type ApplicationStage = 
   | "Assessment"
@@ -62,7 +65,17 @@ function StudentApplicationsContent() {
   const { data, isLoading, isError, error, refetch} = useQuery<{ applications: ApplicationWithDetails[] }>({
     queryKey: ["/api/student/applications"],
   });
-  
+
+  const { lastMessage } = useWebSocket();
+  useEffect(() => {
+    if (lastMessage?.type === 'application_status_changed') {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/applications"] });
+      if (lastMessage.applicationId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/applications", lastMessage.applicationId] });
+      }
+    }
+  }, [lastMessage]);
+
   const applications = data?.applications || [];
 
   return (

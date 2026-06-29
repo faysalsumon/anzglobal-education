@@ -1,11 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { getCached, setCached } from './lib/cache';
 import { WebSocketServer, WebSocket } from "ws";
 import { verifyTurnstileToken } from "./turnstile";
 import { parse as parseCookie } from "cookie";
 import { unsign as unsignCookie } from "cookie-signature";
 import { storage } from "./storage";
-import { wsClients, broadcastDocumentEvent, broadcastToUsers } from "./websocket-clients";
+import { wsClients, broadcastDocumentEvent, broadcastToUsers, sendToUser } from "./websocket-clients";
 import { db } from "./db";
 import { isAuthenticated, getAuthenticatedUserId } from "./supabase-middleware";
 import { getRegionContext } from "./middleware/region-detection";
@@ -772,155 +773,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve attached assets (stock images, generated images, etc.)
   app.use('/attached_assets', express.static(path.join(process.cwd(), 'attached_assets')));
 
-  // Public object storage endpoint for serving thumbnails and other public files
-  app.get("/api/public-storage/public/thumbnails/:filename", async (req, res) => {
-    try {
-      const filename = req.params.filename;
-      
-      // Security: Validate filename - only allow alphanumeric, underscores, dots, and hyphens
-      if (!filename || !/^[a-zA-Z0-9_\-.]+$/.test(filename)) {
-        return res.status(400).json({ message: "Invalid filename" });
-      }
-      
-      // Security: Only allow image extensions
-      const ext = filename.split('.').pop()?.toLowerCase() || '';
-      const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-      if (!allowedExtensions.includes(ext)) {
-        return res.status(400).json({ message: "Invalid file type" });
-      }
-      
-      const filePath = `public/thumbnails/${filename}`;
-      
-      const { downloadFile: downloadPublicFile } = await import("./file-storage");
-      const fileBuffer = await downloadPublicFile(filePath);
-      if (!fileBuffer) {
-        return res.status(404).json({ message: "File not found" });
-      }
-      
-      // Set content type based on extension
-      const mimeTypes: Record<string, string> = {
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'png': 'image/png',
-        'gif': 'image/gif',
-        'webp': 'image/webp',
-      };
-      const contentType = mimeTypes[ext] || 'image/png';
-      
-      // Set cache headers for thumbnails (cache for 1 day)
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      res.setHeader('Content-Type', contentType);
-      res.send(fileBuffer);
-    } catch (error) {
-      console.error("Error serving public storage file:", error);
-      res.status(500).json({ message: "Failed to serve file" });
+  const SUPABASE_CDN = 'https://gqcrrciewuldswxonfem.supabase.co/storage/v1/object/public/anz-public';
+  const SAFE_FILENAME = /^[a-zA-Z0-9_\-.]+$/;
+  const SAFE_ID = /^[a-zA-Z0-9_\-]+$/;
+  const IMG_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
+
+  // Redirect public storage routes to Supabase CDN instead of proxying through Express.
+  // Eliminates Railway bandwidth cost and latency; Supabase Storage CDN serves from edge.
+
+  app.get("/api/public-storage/public/thumbnails/:filename", (req, res) => {
+    const { filename } = req.params;
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    if (!SAFE_FILENAME.test(filename) || !IMG_EXTS.has(ext)) {
+      return res.status(400).json({ message: "Invalid filename" });
     }
+    res.redirect(301, `${SUPABASE_CDN}/public/thumbnails/${filename}`);
   });
 
-  // Serve institution logos from Supabase Storage
-  app.get("/api/public-storage/public/institution-logos/:filename", async (req, res) => {
-    try {
-      const filename = req.params.filename;
-
-      if (!filename || !/^[a-zA-Z0-9_\-.]+$/.test(filename)) {
-        return res.status(400).json({ message: "Invalid filename" });
-      }
-      const ext = filename.split('.').pop()?.toLowerCase() || '';
-      const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-      if (!allowedExtensions.includes(ext)) {
-        return res.status(400).json({ message: "Invalid file type" });
-      }
-
-      const { downloadFile } = await import("./file-storage");
-      const fileBuffer = await downloadFile(`public/institution-logos/${filename}`);
-      if (!fileBuffer) {
-        return res.status(404).json({ message: "File not found" });
-      }
-      const mimeTypes: Record<string, string> = {
-        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
-        'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp',
-      };
-      res.setHeader('Cache-Control', 'public, max-age=604800');
-      res.setHeader('Content-Type', mimeTypes[ext] || 'image/png');
-      res.send(fileBuffer);
-    } catch (error) {
-      console.error("Error serving institution logo:", error);
-      res.status(500).json({ message: "Failed to serve file" });
+  app.get("/api/public-storage/public/institution-logos/:filename", (req, res) => {
+    const { filename } = req.params;
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    if (!SAFE_FILENAME.test(filename) || !IMG_EXTS.has(ext)) {
+      return res.status(400).json({ message: "Invalid filename" });
     }
+    res.redirect(301, `${SUPABASE_CDN}/public/institution-logos/${filename}`);
   });
 
-  // Serve institution gallery images from Supabase Storage
-  app.get("/api/public-storage/public/institution-gallery/:filename", async (req, res) => {
-    try {
-      const filename = req.params.filename;
-
-      if (!filename || !/^[a-zA-Z0-9_\-.]+$/.test(filename)) {
-        return res.status(400).json({ message: "Invalid filename" });
-      }
-      const ext = filename.split('.').pop()?.toLowerCase() || '';
-      const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-      if (!allowedExtensions.includes(ext)) {
-        return res.status(400).json({ message: "Invalid file type" });
-      }
-
-      const { downloadFile } = await import("./file-storage");
-      const fileBuffer = await downloadFile(`public/institution-gallery/${filename}`);
-      if (!fileBuffer) {
-        return res.status(404).json({ message: "File not found" });
-      }
-      const mimeTypes: Record<string, string> = {
-        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
-        'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp',
-      };
-      res.setHeader('Cache-Control', 'public, max-age=604800');
-      res.setHeader('Content-Type', mimeTypes[ext] || 'image/jpeg');
-      res.send(fileBuffer);
-    } catch (error) {
-      console.error("Error serving institution gallery image:", error);
-      res.status(500).json({ message: "Failed to serve file" });
+  app.get("/api/public-storage/public/institution-gallery/:filename", (req, res) => {
+    const { filename } = req.params;
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    if (!SAFE_FILENAME.test(filename) || !IMG_EXTS.has(ext)) {
+      return res.status(400).json({ message: "Invalid filename" });
     }
+    res.redirect(301, `${SUPABASE_CDN}/public/institution-gallery/${filename}`);
   });
 
-  // Public serving route for note attachments (images + PDFs) — no auth required
-  // Files live in the public/ path of object storage so this is safe to expose
-  app.get("/api/public-storage/public/note-attachments/:userId/:filename", async (req, res) => {
-    try {
-      const { userId, filename } = req.params;
-
-      if (!userId || !/^[a-zA-Z0-9_\-]+$/.test(userId)) {
-        return res.status(400).json({ message: "Invalid user id" });
-      }
-      if (!filename || !/^[a-zA-Z0-9_\-.]+$/.test(filename)) {
-        return res.status(400).json({ message: "Invalid filename" });
-      }
-      const ext = filename.split('.').pop()?.toLowerCase() || '';
-      const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'];
-      if (!allowedExtensions.includes(ext)) {
-        return res.status(400).json({ message: "Invalid file type" });
-      }
-
-      const { downloadFile } = await import("./file-storage");
-      const fileBuffer = await downloadFile(`public/note-attachments/${userId}/${filename}`);
-      if (!fileBuffer) {
-        return res.status(404).json({ message: "File not found" });
-      }
-      const mimeTypes: Record<string, string> = {
-        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
-        'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp',
-        'pdf': 'application/pdf',
-      };
-      const contentType = mimeTypes[ext] || 'application/octet-stream';
-
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      res.setHeader('Content-Type', contentType);
-      if (ext === 'pdf') {
-        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-      }
-      res.send(fileBuffer);
-    } catch (error) {
-      console.error("Error serving note attachment:", error);
-      res.status(500).json({ message: "Failed to serve file" });
+  app.get("/api/public-storage/public/note-attachments/:userId/:filename", (req, res) => {
+    const { userId, filename } = req.params;
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    if (!SAFE_ID.test(userId) || !SAFE_FILENAME.test(filename) || !new Set([...IMG_EXTS, 'pdf']).has(ext)) {
+      return res.status(400).json({ message: "Invalid path" });
     }
+    res.redirect(301, `${SUPABASE_CDN}/public/note-attachments/${userId}/${filename}`);
   });
 
   // Get current authenticated user
@@ -1337,6 +1231,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Filter metadata endpoint - returns available filter options with counts
   app.get("/api/institutions/filter-metadata", async (req, res) => {
     try {
+      const regionContext = getRegionContext(req);
+      const regionCode = (req.query.region as string)?.toUpperCase() || regionContext.region?.code;
+      const cacheKey = `institutions:filter-metadata:${regionCode || 'all'}`;
+      const cached = await getCached<object>(cacheKey);
+      if (cached) return res.json(cached);
+
       const allInstitutions = await storage.getAllUniversities();
       // Only include published, approved, active, and publicly visible institutions in filter metadata
       let approvedInstitutions = allInstitutions.filter(i => 
@@ -1345,8 +1245,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Region-based market filtering for filter metadata
       const SUPPORTED_MARKETS = ['AU', 'BD'];
-      const regionContext = getRegionContext(req);
-      const regionCode = (req.query.region as string)?.toUpperCase() || regionContext.region?.code;
       if (regionCode && SUPPORTED_MARKETS.includes(regionCode)) {
         approvedInstitutions = approvedInstitutions.filter(i => 
           i.availableMarkets && i.availableMarkets.includes(regionCode)
@@ -1450,7 +1348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .map(i => ({ min: i.scholarshipPercentageMin, max: i.scholarshipPercentageMax }))
         .filter(r => r.min !== null || r.max !== null);
 
-      res.json({
+      const filterMetadata = {
         countries: countries.sort(),
         statesByCountry,
         citiesByState,
@@ -1463,7 +1361,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           max: scholarshipRanges.some(r => r.max && r.max > 0) ? Math.max(...scholarshipRanges.map(r => r.max || 0).filter(v => v > 0)) : 100,
         },
         totalCount: approvedInstitutions.length,
-      });
+      };
+      await setCached(cacheKey, filterMetadata, 5 * 60 * 1000);
+      res.json(filterMetadata);
     } catch (error) {
       console.error("Error fetching filter metadata:", error);
       res.status(500).json({ message: "Failed to fetch filter metadata" });
@@ -2069,9 +1969,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get disciplines with course counts
   app.get("/api/disciplines", async (req, res) => {
     try {
+      const cached = await getCached<object[]>('courses:disciplines');
+      if (cached) return res.json(cached);
+
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
-      
+
       // Count courses per discipline (only published, approved and active courses from published institutions)
       const disciplineCounts: Record<string, number> = {};
       
@@ -2097,9 +2000,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert to array format with discipline name and count
       const disciplines = Object.entries(disciplineCounts)
         .map(([name, count]) => ({ name, count }))
-        .filter(d => d.count > 0) // Only return disciplines with at least one course
-        .sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
-      
+        .filter(d => d.count > 0)
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      await setCached('courses:disciplines', disciplines, 10 * 60 * 1000);
       res.json(disciplines);
     } catch (error) {
       console.error("Error fetching disciplines:", error);
@@ -2110,6 +2014,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get course levels with counts
   app.get("/api/course-levels", async (req, res) => {
     try {
+      const cached = await getCached<object[]>('courses:levels');
+      if (cached) return res.json(cached);
+
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
       
@@ -2153,11 +2060,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'ELICOS',
       ];
       
-      // Convert to array format with level name and count, ordered by educational progression
       const levels = levelOrder
         .map(name => ({ name, count: levelCounts[name] || 0 }))
-        .filter(l => l.count > 0); // Only return levels with at least one course
-      
+        .filter(l => l.count > 0);
+
+      await setCached('courses:levels', levels, 10 * 60 * 1000);
       res.json(levels);
     } catch (error) {
       console.error("Error fetching course levels:", error);
@@ -2485,6 +2392,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Lightweight endpoint for course filter options (used by quiz and search)
   app.get("/api/courses/filter-options", async (req, res) => {
     try {
+      const cached = await getCached<object>('courses:filter-options');
+      if (cached) return res.json(cached);
+
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
 
@@ -2535,11 +2445,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      res.json({
+      const filterOptions = {
         disciplines: Array.from(disciplines).sort(),
         levels: Array.from(levels).sort(),
         countries: Array.from(countries).sort(),
-      });
+      };
+      await setCached('courses:filter-options', filterOptions, 10 * 60 * 1000);
+      res.json(filterOptions);
     } catch (error) {
       console.error("Error fetching filter options:", error);
       res.status(500).json({ message: "Failed to fetch filter options" });
@@ -7954,12 +7866,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status,
             applicationId: application.id,
           });
+          // Push real-time update to student if connected via WebSocket
+          sendToUser(studentProfile.userId, {
+            type: 'application_status_changed',
+            applicationId: req.params.id,
+            status,
+          });
         }
       } catch (notificationError) {
         console.error("Error sending notification:", notificationError);
         // Don't fail the status update if notification fails
       }
-      
+
       res.json(updated);
     } catch (error) {
       console.error("Error updating application:", error);
@@ -16395,8 +16313,12 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
   // Get published blogs with pagination
   app.get("/api/blogs", async (req, res) => {
     try {
+      res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
       const { category, tag, market, limit, offset } = req.query;
-      
+      const cacheKey = `blogs:list:${category || ''}:${tag || ''}:${market || ''}:${limit || '10'}:${offset || '0'}`;
+      const cached = await getCached<any>(cacheKey);
+      if (cached) return res.json(cached);
+
       const result = await storage.getPublishedBlogs({
         category: category as string,
         tag: tag as string,
@@ -16404,7 +16326,8 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
         limit: limit ? parseInt(limit as string) : 10,
         offset: offset ? parseInt(offset as string) : 0,
       });
-      
+
+      await setCached(cacheKey, result, 60 * 60 * 1000);
       res.json(result);
     } catch (error) {
       console.error("Error fetching published blogs:", error);
@@ -16415,12 +16338,21 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
   // Get single published blog by slug
   app.get("/api/blogs/:slug", async (req, res) => {
     try {
+      res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+      const cacheKey = `blogs:slug:${req.params.slug}`;
+      const cached = await getCached<any>(cacheKey);
+      if (cached) {
+        if (cached._notFound) return res.status(404).json({ message: "Blog not found" });
+        return res.json(cached);
+      }
+
       const blog = await storage.getBlogBySlug(req.params.slug);
-      
+
       if (!blog || blog.status !== "published") {
         return res.status(404).json({ message: "Blog not found" });
       }
-      
+
+      await setCached(cacheKey, blog, 60 * 60 * 1000);
       res.json(blog);
     } catch (error) {
       console.error("Error fetching blog:", error);
@@ -19612,8 +19544,13 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Public endpoint for testimonials
   app.get("/api/public/testimonials", async (req, res) => {
     try {
+      res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
       const { page } = req.query;
+      const cacheKey = `testimonials:${page || 'all'}`;
+      const cached = await getCached<any>(cacheKey);
+      if (cached) return res.json(cached);
       const testimonials = await storage.getPublishedTestimonials(page as string);
+      await setCached(cacheKey, testimonials, 60 * 60 * 1000);
       res.json(testimonials);
     } catch (error: any) {
       console.error("Error fetching public testimonials:", error);
@@ -19776,8 +19713,13 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Public endpoint for FAQs
   app.get("/api/public/faqs", async (req, res) => {
     try {
+      res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
       const { category, page } = req.query;
+      const cacheKey = `faqs:${category || 'all'}:${page || '1'}`;
+      const cached = await getCached<any>(cacheKey);
+      if (cached) return res.json(cached);
       const faqs = await storage.getPublishedFaqs(category as string, page as string);
+      await setCached(cacheKey, faqs, 60 * 60 * 1000);
       res.json(faqs);
     } catch (error: any) {
       console.error("Error fetching public FAQs:", error);
@@ -20102,12 +20044,16 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Public endpoint for site settings
   app.get("/api/public/site-settings", async (_req, res) => {
     try {
+      res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+      const cacheKey = 'site-settings:public';
+      const cached = await getCached<Record<string, any>>(cacheKey);
+      if (cached) return res.json(cached);
       const settings = await storage.getPublicSiteSettings();
-      // Convert to key-value pairs for easy consumption
       const settingsMap: Record<string, any> = {};
       settings.forEach(s => {
         settingsMap[s.settingKey] = s.settingValue;
       });
+      await setCached(cacheKey, settingsMap, 60 * 60 * 1000);
       res.json(settingsMap);
     } catch (error: any) {
       console.error("Error fetching public site settings:", error);
@@ -20275,13 +20221,17 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Public endpoint for content snippets
   app.get("/api/public/content-snippets", async (req, res) => {
     try {
+      res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
       const { pageLocation } = req.query;
+      const cacheKey = `content-snippets:${pageLocation || 'all'}`;
+      const cached = await getCached<Record<string, { content: string; title: string }>>(cacheKey);
+      if (cached) return res.json(cached);
       const snippets = await storage.getPublishedContentSnippets(pageLocation as string);
-      // Convert to key-value pairs for easy consumption
       const snippetsMap: Record<string, { content: string; title: string }> = {};
       snippets.forEach(s => {
         snippetsMap[s.snippetKey] = { content: s.content, title: s.title };
       });
+      await setCached(cacheKey, snippetsMap, 60 * 60 * 1000);
       res.json(snippetsMap);
     } catch (error: any) {
       console.error("Error fetching public content snippets:", error);
@@ -20292,11 +20242,17 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Get content snippet by key (public)
   app.get("/api/public/content-snippets/:key", async (req, res) => {
     try {
+      res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+      const cacheKey = `content-snippets:key:${req.params.key}`;
+      const cached = await getCached<{ content: string; title: string }>(cacheKey);
+      if (cached) return res.json(cached);
       const snippet = await storage.getContentSnippetByKey(req.params.key);
       if (!snippet || snippet.status !== 'published') {
         return res.status(404).json({ message: "Content snippet not found" });
       }
-      res.json({ content: snippet.content, title: snippet.title });
+      const result = { content: snippet.content, title: snippet.title };
+      await setCached(cacheKey, result, 60 * 60 * 1000);
+      res.json(result);
     } catch (error: any) {
       console.error("Error fetching public content snippet:", error);
       res.status(500).json({ message: "Failed to fetch content snippet" });
@@ -24521,10 +24477,47 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // Start scraping worker only if Redis is available
   try {
-    const { checkRedisAvailability } = await import('./scraping-queue');
+    const { checkRedisAvailability, addScrapingJob } = await import('./scraping-queue');
     const redisAvailable = await checkRedisAvailability();
 
     if (redisAvailable) {
+      // Reconcile: re-queue jobs stuck in pending/running from before this boot
+      try {
+        const { scrapingJobs } = await import('../shared/schema');
+        const stuckJobs = await db
+          .select()
+          .from(scrapingJobs)
+          .where(
+            and(
+              inArray(scrapingJobs.status, ['pending', 'running']),
+              lt(scrapingJobs.createdAt, new Date(Date.now() - 2 * 60 * 1000))
+            )
+          );
+
+        const runningIds = stuckJobs.filter(j => j.status === 'running').map(j => j.id);
+        if (runningIds.length > 0) {
+          await db.update(scrapingJobs)
+            .set({ status: 'pending', startedAt: null } as any)
+            .where(inArray(scrapingJobs.id, runningIds));
+        }
+
+        for (const job of stuckJobs) {
+          await addScrapingJob({
+            jobId: job.id,
+            institutionId: job.institutionId ?? undefined,
+            institutionUrl: job.institutionUrl,
+            institutionName: job.institutionName ?? undefined,
+            templateId: job.templateId ?? undefined,
+          });
+        }
+
+        if (stuckJobs.length > 0) {
+          console.log(`[Startup] Re-queued ${stuckJobs.length} stuck scraping job(s)`);
+        }
+      } catch (reconcileErr) {
+        console.error('[Startup] Failed to reconcile stuck jobs:', reconcileErr);
+      }
+
       const { startScrapingWorker } = await import('./scraping-worker');
       const { startThumbnailWorker } = await import('./thumbnail-worker');
       startScrapingWorker();

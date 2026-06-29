@@ -147,6 +147,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or, desc, isNull, sql, lt, lte, gte, count, getTableColumns } from "drizzle-orm";
+import { invalidateCache } from "./lib/cache";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -638,6 +639,7 @@ export class DatabaseStorage implements IStorage {
       .insert(universities)
       .values(universityData as any)
       .returning();
+    await invalidateCache("institutions:");
     return university;
   }
 
@@ -660,12 +662,13 @@ export class DatabaseStorage implements IStorage {
       .set({ ...processedData, updatedAt: new Date() })
       .where(eq(universities.id, id))
       .returning();
-    
+    await invalidateCache("institutions:");
     return university;
   }
 
   async deleteUniversity(id: string): Promise<void> {
     await db.delete(universities).where(eq(universities.id, id));
+    await invalidateCache("institutions:");
   }
 
   // Course operations
@@ -748,6 +751,7 @@ export class DatabaseStorage implements IStorage {
       .insert(courses)
       .values(courseData as any)
       .returning();
+    await invalidateCache("courses:");
     return course;
   }
 
@@ -770,11 +774,13 @@ export class DatabaseStorage implements IStorage {
       .set(processedData)
       .where(eq(courses.id, id))
       .returning();
+    await invalidateCache("courses:");
     return course;
   }
 
   async deleteCourse(id: string): Promise<void> {
     await db.delete(courses).where(eq(courses.id, id));
+    await invalidateCache("courses:");
   }
 
   // Sub-discipline operations
@@ -1897,6 +1903,7 @@ export class DatabaseStorage implements IStorage {
 
   async createBlog(blog: InsertBlog): Promise<Blog> {
     const [newBlog] = await db.insert(blogs).values(blog as any).returning();
+    await invalidateCache("blogs:");
     return newBlog;
   }
 
@@ -1906,36 +1913,40 @@ export class DatabaseStorage implements IStorage {
       .set({ ...data, updatedAt: new Date() })
       .where(eq(blogs.id, id))
       .returning();
+    await invalidateCache("blogs:");
     return blog;
   }
 
   async publishBlog(id: string): Promise<Blog> {
     const [blog] = await db
       .update(blogs)
-      .set({ 
-        status: "published", 
+      .set({
+        status: "published",
         publishedAt: new Date(),
-        updatedAt: new Date() 
+        updatedAt: new Date()
       })
       .where(eq(blogs.id, id))
       .returning();
+    await invalidateCache("blogs:");
     return blog;
   }
 
   async unpublishBlog(id: string): Promise<Blog> {
     const [blog] = await db
       .update(blogs)
-      .set({ 
+      .set({
         status: "draft",
-        updatedAt: new Date() 
+        updatedAt: new Date()
       })
       .where(eq(blogs.id, id))
       .returning();
+    await invalidateCache("blogs:");
     return blog;
   }
 
   async deleteBlog(id: string): Promise<void> {
     await db.delete(blogs).where(eq(blogs.id, id));
+    await invalidateCache("blogs:");
   }
 
   // Contact inquiry operations
@@ -2552,6 +2563,7 @@ export class DatabaseStorage implements IStorage {
 
   async createTestimonial(testimonialData: InsertTestimonial): Promise<Testimonial> {
     const [testimonial] = await db.insert(testimonials).values(testimonialData).returning();
+    await invalidateCache("testimonials:");
     return testimonial;
   }
 
@@ -2565,11 +2577,13 @@ export class DatabaseStorage implements IStorage {
       .set(updateData)
       .where(eq(testimonials.id, id))
       .returning();
+    await invalidateCache("testimonials:");
     return testimonial;
   }
 
   async deleteTestimonial(id: string): Promise<void> {
     await db.delete(testimonials).where(eq(testimonials.id, id));
+    await invalidateCache("testimonials:");
   }
 
   // FAQ operations
@@ -2618,6 +2632,7 @@ export class DatabaseStorage implements IStorage {
 
   async createFaq(faqData: InsertFaq): Promise<Faq> {
     const [faq] = await db.insert(faqs).values(faqData).returning();
+    await invalidateCache("faqs:");
     return faq;
   }
 
@@ -2627,11 +2642,13 @@ export class DatabaseStorage implements IStorage {
       .set({ ...data, updatedAt: new Date() })
       .where(eq(faqs.id, id))
       .returning();
+    await invalidateCache("faqs:");
     return faq;
   }
 
   async deleteFaq(id: string): Promise<void> {
     await db.delete(faqs).where(eq(faqs.id, id));
+    await invalidateCache("faqs:");
   }
 
   // Public team member operations
@@ -2712,11 +2729,13 @@ export class DatabaseStorage implements IStorage {
       .set({ ...data, updatedAt: new Date() })
       .where(eq(siteSettings.settingKey, key))
       .returning();
+    await invalidateCache("site-settings:");
     return setting;
   }
 
   async deleteSiteSetting(id: string): Promise<void> {
     await db.delete(siteSettings).where(eq(siteSettings.id, id));
+    await invalidateCache("site-settings:");
   }
 
   // Content snippet operations
@@ -2763,34 +2782,37 @@ export class DatabaseStorage implements IStorage {
 
   async createContentSnippet(snippetData: InsertContentSnippet): Promise<ContentSnippet> {
     const [snippet] = await db.insert(contentSnippets).values(snippetData).returning();
+    await invalidateCache("content-snippets:");
     return snippet;
   }
 
   async updateContentSnippet(id: string, data: UpdateContentSnippet): Promise<ContentSnippet> {
     // Get current snippet for version tracking
     const [current] = await db.select().from(contentSnippets).where(eq(contentSnippets.id, id));
-    
-    const updateData: any = { 
-      ...data, 
+
+    const updateData: any = {
+      ...data,
       updatedAt: new Date(),
       version: (current?.version || 0) + 1,
       previousVersionId: current?.id
     };
-    
+
     if (data.status === 'published') {
       updateData.publishedAt = new Date();
     }
-    
+
     const [snippet] = await db
       .update(contentSnippets)
       .set(updateData)
       .where(eq(contentSnippets.id, id))
       .returning();
+    await invalidateCache("content-snippets:");
     return snippet;
   }
 
   async deleteContentSnippet(id: string): Promise<void> {
     await db.delete(contentSnippets).where(eq(contentSnippets.id, id));
+    await invalidateCache("content-snippets:");
   }
 
   // ============================================
