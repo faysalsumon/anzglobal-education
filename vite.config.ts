@@ -61,7 +61,7 @@ export default defineConfig({
           ],
           "vendor-charts": ["recharts"],
           "vendor-editor": [
-            "@tiptap/react", "@tiptap/starter-kit", "@tiptap/pm",
+            "@tiptap/react", "@tiptap/starter-kit",
             "@tiptap/extension-mention", "@tiptap/extension-placeholder",
             "@tiptap/suggestion",
           ],
