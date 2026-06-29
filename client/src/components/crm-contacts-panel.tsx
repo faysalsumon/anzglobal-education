@@ -775,12 +775,10 @@ export function CrmContactsPanel() {
               </SelectContent>
             </Select>
           )}
-          {!isAccountsOfficer && (
-            <Button type="button" onClick={() => navigate("/admin/contacts/new")} data-testid="button-create-contact">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Contact
-            </Button>
-          )}
+          <Button type="button" onClick={() => navigate("/admin/contacts/new")} data-testid="button-create-contact">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Contact
+          </Button>
         </div>
       </div>
 
@@ -2356,16 +2354,14 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
               <Button type="button" variant="outline" size="sm" onClick={() => setReminderOpen(true)} data-testid="button-set-reminder-contact">
                 <Bell className="h-3.5 w-3.5 mr-1" />Reminder
               </Button>
-              {!isAccountsOfficer && (
-                <>
-                  <Button type="button" variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-contact">
-                    <Edit className="h-3.5 w-3.5 mr-1" />Edit
-                  </Button>
-                  <Button type="button" variant="destructive" size="sm" onClick={onDelete} data-testid="button-delete-contact">
-                    <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
-                  </Button>
-                </>
-              )}
+              <>
+                <Button type="button" variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-contact">
+                  <Edit className="h-3.5 w-3.5 mr-1" />Edit
+                </Button>
+                <Button type="button" variant="destructive" size="sm" onClick={onDelete} data-testid="button-delete-contact">
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
+                </Button>
+              </>
             </div>
           </div>
           <CreateReminderModal
@@ -2451,7 +2447,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 <Phone className="h-4 w-4 text-muted-foreground" />
                 Contact Information
               </span>
-              {editingSection !== 'contact_info' && !isAccountsOfficer && (
+              {editingSection !== 'contact_info' && (
                 <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                   data-testid="button-edit-contact_info"
                   onClick={() => startEdit('contact_info', { email: contact.email, mobile: contact.mobile, whatsapp: contact.whatsapp, phone: contact.phone })}>
@@ -2530,7 +2526,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 <MapPin className="h-4 w-4 text-muted-foreground" />
                 Address
               </span>
-              {editingSection !== 'address' && !isAccountsOfficer && (
+              {editingSection !== 'address' && (
                 <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                   data-testid="button-edit-address"
                   onClick={() => startEdit('address', { unitNo: contact.unitNo, street: contact.street, suburb: contact.suburb, city: contact.city, state: contact.state, postcode: contact.postcode, country: contact.country })}>
@@ -2613,7 +2609,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 <FileText className="h-4 w-4 text-muted-foreground" />
                 Inquiry Details
               </span>
-              {editingSection !== 'inquiry' && !isAccountsOfficer && (
+              {editingSection !== 'inquiry' && (
                 <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                   data-testid="button-edit-inquiry"
                   onClick={() => startEdit('inquiry', {
@@ -2902,7 +2898,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
           <CardHeader>
             <CardTitle className="text-lg flex items-center justify-between gap-2">
               Emergency Contact
-              {editingSection !== 'emergency' && !isAccountsOfficer && (
+              {editingSection !== 'emergency' && (
                 <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                   data-testid="button-edit-emergency"
                   onClick={() => startEdit('emergency', { emergencyContactName: contact.emergencyContactName, emergencyContactMobile: contact.emergencyContactMobile, emergencyContactRelationship: contact.emergencyContactRelationship, emergencyContactAddress: contact.emergencyContactAddress })}>
