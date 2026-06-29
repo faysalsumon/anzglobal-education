@@ -55,9 +55,13 @@ export async function runMigrations() {
   //   3. DATABASE_URL           — last-resort fallback (may be pooled; DDL can
   //      fail through pgBouncer, so this is only correct when DATABASE_URL is
   //      itself a direct connection, e.g. local/dev).
+  // Prefer SESSION-mode pooler URLs (IPv4, works on Railway) over the Supabase
+  // direct host which now resolves to IPv6 only in ap-northeast-1 and will be
+  // ECONNREFUSED on Railway. Session-mode pooler (port 5432) supports DDL.
   const connectionString =
     process.env.DATABASE_DIRECT_URL ??
     process.env.SUPABASE_DB_DIRECT_URL ??
+    process.env.DATABASE_MIGRATE_URL ??
     process.env.DATABASE_URL;
 
   if (!connectionString) {

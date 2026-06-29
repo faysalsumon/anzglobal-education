@@ -131,7 +131,7 @@ import {
   permissions,
   rolePermissions,
 } from "@shared/schema";
-import { eq, and, or, desc, asc, not, inArray, sql as dsql, isNull, isNotNull, ne, count, sum } from "drizzle-orm";
+import { eq, and, or, desc, asc, not, inArray, sql as dsql, isNull, isNotNull, ne, count, sum, lt } from "drizzle-orm";
 import { z } from "zod";
 import { 
   isAdmin as checkIsAdmin, 
