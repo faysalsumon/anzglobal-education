@@ -24484,7 +24484,6 @@ Sitemap: ${baseUrl}/sitemap.xml
       // Reconcile: re-queue jobs stuck in pending/running from before this boot
       try {
         const { scrapingJobs } = await import('../shared/schema');
-        const { lt } = await import('drizzle-orm');
         const stuckJobs = await db
           .select()
           .from(scrapingJobs)
