@@ -43,36 +43,47 @@ function readMigrations(migrationsFolder: string): MigrationEntry[] {
 }
 
 export async function runMigrations() {
-  // Prefer the direct (un-pooled) connection for migrations — pgBouncer in
-  // transaction mode doesn't support DDL (CREATE TABLE, ALTER TABLE, etc.).
-  // In Railway, schema migrations must run against a direct (port 5432) URL,
-  // never the pooled (port 6543) URL.
-  //
-  // Resolution order:
-  //   1. DATABASE_DIRECT_URL    — explicit direct URL (preferred if set)
-  //   2. SUPABASE_DB_DIRECT_URL — Supabase's direct URL (the var name actually
-  //      provisioned in Railway for this project)
-  //   3. DATABASE_URL           — last-resort fallback (may be pooled; DDL can
-  //      fail through pgBouncer, so this is only correct when DATABASE_URL is
-  //      itself a direct connection, e.g. local/dev).
-  const connectionString =
-    process.env.DATABASE_DIRECT_URL ??
-    process.env.SUPABASE_DB_DIRECT_URL ??
-    process.env.DATABASE_URL;
+  // Try each candidate URL in order, skipping any that refuse the connection
+  // (e.g. the Supabase direct host resolves to IPv6 on ap-northeast-1 which
+  // Railway cannot reach). The Session-mode pooler URL (*.pooler.supabase.com,
+  // port 5432) uses IPv4 and supports DDL — it is the reliable fallback.
+  const candidates = [
+    process.env.DATABASE_DIRECT_URL,
+    process.env.SUPABASE_DB_DIRECT_URL,
+    process.env.DATABASE_MIGRATE_URL,
+    process.env.DATABASE_URL,
+  ].filter(Boolean) as string[];
 
-  if (!connectionString) {
-    console.error("[Migrate] DATABASE_URL not set — skipping migrations");
+  if (candidates.length === 0) {
+    console.error("[Migrate] No database URL set — skipping migrations");
     return;
   }
 
-  const pool = new Pool({
-    connectionString,
-    ssl: { rejectUnauthorized: false },
-    max: 1,
-    connectionTimeoutMillis: 20000,
-  });
+  let client: pkg.PoolClient | null = null;
+  let activePool: pkg.Pool | null = null;
 
-  const client = await pool.connect();
+  for (const url of candidates) {
+    const pool = new Pool({
+      connectionString: url,
+      ssl: { rejectUnauthorized: false },
+      max: 1,
+      connectionTimeoutMillis: 8000,
+    });
+    try {
+      client = await pool.connect();
+      activePool = pool;
+      try { console.log(`[Migrate] Connected via: ${new URL(url).host}`); } catch {}
+      break;
+    } catch (err: any) {
+      await pool.end();
+      try { console.warn(`[Migrate] ${new URL(url).host} unreachable (${err.code ?? err.message}) — trying next`); } catch {}
+    }
+  }
+
+  if (!client || !activePool) {
+    console.error("[Migrate] All connection URLs failed — skipping migrations");
+    return;
+  }
 
   try {
     // Ensure the Drizzle migrations tracking schema + table exist
@@ -152,7 +163,7 @@ export async function runMigrations() {
     console.error("[Migrate] Migration runner failed:", err.message);
     throw err;
   } finally {
-    client.release();
-    await pool.end();
+    client!.release();
+    await activePool!.end();
   }
 }

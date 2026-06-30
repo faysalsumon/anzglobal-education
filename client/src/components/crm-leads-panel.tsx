@@ -479,12 +479,10 @@ export function CrmLeadsPanel() {
               <LayoutGrid className="h-4 w-4" />
             </Button>
           </div>
-          {!isAccountsOfficer && (
-            <Button onClick={() => navigate("/admin/leads/new")} data-testid="button-create-lead">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Lead
-            </Button>
-          )}
+          <Button onClick={() => navigate("/admin/leads/new")} data-testid="button-create-lead">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Lead
+          </Button>
         </div>
       </div>
 
@@ -1337,16 +1335,14 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, isAccountsOfficer = fa
               <ChevronLeft className="h-4 w-4" />Back
             </Button>
             <div className="flex gap-2">
-              {!isAccountsOfficer && (
-                <>
-                  <Button type="button" variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-lead">
-                    <Edit className="h-3.5 w-3.5 mr-1" />Edit
-                  </Button>
-                  <Button type="button" variant="destructive" size="sm" onClick={onDelete} data-testid="button-delete-lead">
-                    <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
-                  </Button>
-                </>
-              )}
+              <>
+                <Button type="button" variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-lead">
+                  <Edit className="h-3.5 w-3.5 mr-1" />Edit
+                </Button>
+                <Button type="button" variant="destructive" size="sm" onClick={onDelete} data-testid="button-delete-lead">
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
+                </Button>
+              </>
             </div>
           </div>
 
@@ -1428,7 +1424,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, isAccountsOfficer = fa
                   <Phone className="h-4 w-4 text-muted-foreground" />
                   Contact Information
                 </span>
-                {editingSection !== 'contact_info' && !isAccountsOfficer && (
+                {editingSection !== 'contact_info' && (
                   <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                     data-testid="button-edit-contact_info"
                     onClick={() => startEdit('contact_info', { email: lead.email, mobile: lead.mobile, whatsapp: lead.whatsapp, phone: lead.phone })}>
@@ -1507,7 +1503,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, isAccountsOfficer = fa
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   Address
                 </span>
-                {editingSection !== 'address' && !isAccountsOfficer && (
+                {editingSection !== 'address' && (
                   <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                     data-testid="button-edit-address"
                     onClick={() => startEdit('address', { unitNo: lead.unitNo, street: lead.street, suburb: lead.suburb, city: lead.city, state: lead.state, postcode: lead.postcode, country: lead.country })}>
@@ -1778,7 +1774,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, isAccountsOfficer = fa
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold flex items-center justify-between gap-2">
                 <span>Emergency Contact</span>
-                {editingSection !== 'emergency' && !isAccountsOfficer && (
+                {editingSection !== 'emergency' && (
                   <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                     data-testid="button-edit-emergency"
                     onClick={() => startEdit('emergency', { emergencyContactName: lead.emergencyContactName, emergencyContactMobile: lead.emergencyContactMobile, emergencyContactRelationship: lead.emergencyContactRelationship, emergencyContactAddress: lead.emergencyContactAddress })}>

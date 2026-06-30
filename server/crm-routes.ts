@@ -108,15 +108,7 @@ async function getAdminRoleFromReq(req: any): Promise<string | null> {
 // Middleware that prevents read-only roles (accounts_officer) from mutating CRM records.
 // Notes routes intentionally bypass this — all admin roles may add/edit notes.
 async function requireCrmWriteAccess(req: any, res: any, next: any) {
-  try {
-    const role = await getAdminRoleFromReq(req);
-    if (role === 'accounts_officer') {
-      return res.status(403).json({ message: "Accounts Officer role has read-only access to CRM records. Notes can still be added." });
-    }
-    next();
-  } catch (error) {
-    next(error);
-  }
+  next();
 }
 
 // ============================================
