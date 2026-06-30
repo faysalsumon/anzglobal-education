@@ -499,7 +499,7 @@ export default function Landing() {
             </div>
 
             {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1] mb-6 min-h-[100px] sm:min-h-[120px] lg:min-h-[140px]">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1] mb-6 min-h-[130px] sm:min-h-[120px] lg:min-h-[140px]">
               {t("hero.findYour")}{" "}
               <TypingText
                 words={heroTypingWords}

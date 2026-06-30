@@ -1,3 +1,26 @@
+/*
+ * Metric-matched fallback fonts: these @font-face rules define adjusted versions of
+ * the system fallbacks with the same ascent/descent/size as Nunito and Open Sans.
+ * This minimises layout shift (CLS) when the custom fonts swap in on first load.
+ */
+@font-face {
+  font-family: 'Nunito Fallback';
+  src: local('-apple-system'), local('BlinkMacSystemFont'), local('Arial');
+  size-adjust: 106%;
+  ascent-override: 103%;
+  descent-override: 28%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Open Sans Fallback';
+  src: local('-apple-system'), local('BlinkMacSystemFont'), local('Arial');
+  size-adjust: 100%;
+  ascent-override: 108%;
+  descent-override: 29%;
+  line-gap-override: 0%;
+}
+
 /* Nunito — latin-ext (weights 400, 600, 700 share same variable font file) */
 @font-face {
   font-family: 'Nunito';
